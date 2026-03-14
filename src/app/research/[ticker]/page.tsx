@@ -14,6 +14,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ChartConfirmation from '@/components/ChartConfirmation';
 import ResearchProgress from '@/components/ResearchProgress';
+import ResearchReport from '@/components/ResearchReport';
 import type { ChartDataPoint, AnalysisResult } from '@/lib/types';
 
 interface ChartRouteResponse {
@@ -117,33 +118,12 @@ export default function ResearchPage() {
   // Complete state — AnalysisResult received
   if (pageState === 'complete' && analysisResult) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-start bg-gray-50 px-4 py-12">
-        <div className="w-full max-w-2xl">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
-            <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              Report ready &mdash; Phase 3 will render here
-            </h1>
-            <p className="text-sm text-gray-500 mb-4">
-              Analysis complete for <span className="font-mono font-semibold text-gray-700">{ticker}</span>.
-              The full report renderer will be built in Phase 3.
-            </p>
-            <Link
-              href="/"
-              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-colors duration-150"
-            >
-              Search Another Ticker
-            </Link>
-          </div>
-          <details className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <summary className="px-6 py-4 cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800">
-              AnalysisResult JSON (Phase 3 input)
-            </summary>
-            <pre className="px-6 pb-6 text-xs text-gray-700 overflow-auto">
-              {JSON.stringify(analysisResult, null, 2)}
-            </pre>
-          </details>
-        </div>
-      </main>
+      <div className="min-h-screen bg-zinc-950">
+        <ResearchReport
+          analysisResult={analysisResult}
+          ticker={ticker}
+        />
+      </div>
     );
   }
 
