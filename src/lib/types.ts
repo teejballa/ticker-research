@@ -112,6 +112,19 @@ export interface AnalysisSource {
   key_fact: string;
 }
 
+// ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
+
+export interface MarketSnapshot {
+  price: number | null;
+  percent_change_today: number | null;
+  market_cap: number | null;
+  fifty_two_week_high: number | null;
+  fifty_two_week_low: number | null;
+  pe_ratio: number | null;
+  eps: number | null;
+  revenue: number | null;
+}
+
 export interface AnalysisResult {
   ticker: string;
   company_name: string;
@@ -125,4 +138,5 @@ export interface AnalysisResult {
   confidence_explanation: string;
   sources_used: AnalysisSource[];
   source_warnings: string[];
+  market_snapshot?: MarketSnapshot;  // optional — populated by Python script (Phase 3)
 }
