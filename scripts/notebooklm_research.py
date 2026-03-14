@@ -302,6 +302,20 @@ def parse_answers(answers: list, pkg: dict, source_warnings: list) -> dict:
     a5 = answers[5] if len(answers) > 5 else ''
     sources_used = _parse_sources(a5)
 
+    # Extract market snapshot from source package for report stats header
+    md = pkg.get('market_data', {})
+    fund = pkg.get('fundamentals', {})
+    market_snapshot = {
+        'price': md.get('price'),
+        'percent_change_today': md.get('percent_change_today'),
+        'market_cap': md.get('market_cap'),
+        'fifty_two_week_high': md.get('fifty_two_week_high'),
+        'fifty_two_week_low': md.get('fifty_two_week_low'),
+        'pe_ratio': fund.get('pe_ratio'),
+        'eps': fund.get('eps'),
+        'revenue': fund.get('revenue'),
+    }
+
     return {
         'ticker': ticker,
         'company_name': company_name,
@@ -315,6 +329,7 @@ def parse_answers(answers: list, pkg: dict, source_warnings: list) -> dict:
         'confidence_explanation': confidence_explanation,
         'sources_used': sources_used,
         'source_warnings': source_warnings,
+        'market_snapshot': market_snapshot,
     }
 
 
