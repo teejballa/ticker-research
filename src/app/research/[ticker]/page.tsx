@@ -1,6 +1,20 @@
+'use client';
+
+// src/app/research/[ticker]/page.tsx
+// Research page — handles chart confirmation and analysis flow.
+//
+// States:
+//   idle     — no ?file= param — show existing chart confirmation (fetched client-side)
+//   analyzing — ?file= param present, no result yet — show ResearchProgress
+//   complete  — AnalysisResult received — show placeholder for Phase 3 report
+//   error    — show error message + Try Again button
+
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ChartConfirmation from '@/components/ChartConfirmation';
-import type { ChartDataPoint } from '@/lib/types';
+import ResearchProgress from '@/components/ResearchProgress';
+import type { ChartDataPoint, AnalysisResult } from '@/lib/types';
 
 interface ChartRouteResponse {
   points: ChartDataPoint[];
@@ -13,49 +27,186 @@ interface ChartRouteResponse {
   error?: string;
 }
 
-interface PageProps {
-  params: Promise<{ ticker: string }>;
-}
+type PageState = 'loading' | 'idle' | 'analyzing' | 'complete' | 'error';
 
-export default async function ResearchPage({ params }: PageProps) {
-  const { ticker } = await params;
-  const symbol = ticker.toUpperCase();
+export default function ResearchPage() {
+  const params = useParams<{ ticker: string }>();
+  const searchParams = useSearchParams();
+  const ticker = params.ticker?.toUpperCase() ?? '';
+  const filePath = searchParams.get('file');
 
-  // Determine the base URL for server-side fetch
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const [pageState, setPageState] = useState<PageState>(filePath ? 'analyzing' : 'loading');
+  const [chartData, setChartData] = useState<ChartRouteResponse | null>(null);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  let data: ChartRouteResponse | null = null;
-  let fetchError: string | null = null;
+  // beforeunload warning when analysis is in progress
+  useEffect(() => {
+    if (pageState !== 'analyzing') return;
 
-  try {
-    const res = await fetch(`${baseUrl}/api/ticker/chart?symbol=${encodeURIComponent(symbol)}`, {
-      cache: 'no-store',
-    });
-    const json = (await res.json()) as ChartRouteResponse;
-    if (!res.ok || json.error) {
-      fetchError = json.error ?? 'Ticker not found';
-    } else {
-      data = json;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+
+    window.addEventListener('beforeunload', handler);
+    return () => {
+      window.removeEventListener('beforeunload', handler);
+    };
+  }, [pageState]);
+
+  // Fetch chart data when in idle/loading state (no file param)
+  useEffect(() => {
+    if (filePath) return; // analysis mode — no chart fetch needed
+
+    async function fetchChart() {
+      try {
+        const res = await fetch(`/api/ticker/chart?symbol=${encodeURIComponent(ticker)}`, {
+          cache: 'no-store',
+        });
+        const json = (await res.json()) as ChartRouteResponse;
+        if (!res.ok || json.error) {
+          setChartError(json.error ?? 'Ticker not found');
+        } else {
+          setChartData(json);
+        }
+      } catch {
+        setChartError('Failed to load chart data. Please try again.');
+      } finally {
+        setPageState('idle');
+      }
     }
-  } catch {
-    fetchError = 'Failed to load chart data. Please try again.';
+
+    fetchChart();
+  }, [ticker, filePath]);
+
+  const handleComplete = useCallback((result: AnalysisResult) => {
+    setAnalysisResult(result);
+    setPageState('complete');
+  }, []);
+
+  const handleError = useCallback((message: string) => {
+    setErrorMessage(message);
+    setPageState('error');
+  }, []);
+
+  const handleTryAgain = useCallback(() => {
+    setErrorMessage(null);
+    setAnalysisResult(null);
+    setPageState('loading');
+    // Navigate back to the ticker page without file param
+    window.location.href = `/research/${encodeURIComponent(ticker)}`;
+  }, [ticker]);
+
+  // Analysis mode — file param present
+  if (filePath && pageState === 'analyzing') {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-start bg-gray-50 px-4 py-12">
+        <div className="w-full max-w-lg">
+          <ResearchProgress
+            ticker={ticker}
+            filePath={filePath}
+            onComplete={handleComplete}
+            onError={handleError}
+          />
+        </div>
+      </main>
+    );
   }
 
-  if (fetchError || !data) {
+  // Complete state — AnalysisResult received
+  if (pageState === 'complete' && analysisResult) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-start bg-gray-50 px-4 py-12">
+        <div className="w-full max-w-2xl">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
+            <h1 className="text-xl font-semibold text-gray-900 mb-2">
+              Report ready &mdash; Phase 3 will render here
+            </h1>
+            <p className="text-sm text-gray-500 mb-4">
+              Analysis complete for <span className="font-mono font-semibold text-gray-700">{ticker}</span>.
+              The full report renderer will be built in Phase 3.
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-colors duration-150"
+            >
+              Search Another Ticker
+            </Link>
+          </div>
+          <details className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <summary className="px-6 py-4 cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-800">
+              AnalysisResult JSON (Phase 3 input)
+            </summary>
+            <pre className="px-6 pb-6 text-xs text-gray-700 overflow-auto">
+              {JSON.stringify(analysisResult, null, 2)}
+            </pre>
+          </details>
+        </div>
+      </main>
+    );
+  }
+
+  // Error state
+  if (pageState === 'error') {
+    const isRateLimit =
+      errorMessage?.toLowerCase().includes('daily limit') ||
+      errorMessage?.toLowerCase().includes('midnight pst');
+
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="text-5xl mb-4">&#x26A0;</div>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Analysis Failed</h1>
+          {isRateLimit ? (
+            <p className="text-gray-600 mb-6">
+              NotebookLM daily limit reached. Resets at midnight PST &mdash; try again tomorrow.
+            </p>
+          ) : (
+            <p className="text-gray-600 mb-6">
+              {errorMessage ?? 'An unexpected error occurred during analysis.'}
+            </p>
+          )}
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={handleTryAgain}
+              className="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-150"
+            >
+              Try Again
+            </button>
+            <Link
+              href="/"
+              className="inline-flex items-center px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors duration-150"
+            >
+              Back to Search
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Loading state
+  if (pageState === 'loading') {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+        <div className="text-gray-400 text-sm">Loading...</div>
+      </main>
+    );
+  }
+
+  // Idle state — chart confirmation (existing Phase 1 behavior)
+  if (chartError || !chartData) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-md text-center">
           <div className="text-5xl mb-4">&#x26A0;</div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Ticker Not Found</h1>
           <p className="text-gray-500 mb-6">
-            <span className="font-mono font-semibold text-gray-700">{symbol}</span> could not be
+            <span className="font-mono font-semibold text-gray-700">{ticker}</span> could not be
             found. Please check the symbol and try again.
           </p>
-          {fetchError && (
-            <p className="text-sm text-red-500 mb-4">{fetchError}</p>
-          )}
+          {chartError && <p className="text-sm text-red-500 mb-4">{chartError}</p>}
           <Link
             href="/"
             className="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-150"
@@ -70,15 +221,15 @@ export default async function ResearchPage({ params }: PageProps) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start bg-gray-50 px-4 py-12">
       <ChartConfirmation
-        ticker={symbol}
-        chartData={data.points}
+        ticker={ticker}
+        chartData={chartData.points}
         meta={{
-          companyName: data.companyName,
-          currentPrice: data.currentPrice,
-          percentChange: data.percentChange,
-          marketCap: data.marketCap,
-          exchange: data.exchange,
-          sector: data.sector,
+          companyName: chartData.companyName,
+          currentPrice: chartData.currentPrice,
+          percentChange: chartData.percentChange,
+          marketCap: chartData.marketCap,
+          exchange: chartData.exchange,
+          sector: chartData.sector,
         }}
       />
     </main>
