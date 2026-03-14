@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-14T01:47:47.061Z"
+stopped_at: Completed 02-04-PLAN.md tasks 1-2, paused at Task 3 human-verify checkpoint
+last_updated: "2026-03-14T01:48:02.328Z"
 last_activity: 2026-03-10 — Roadmap created; requirements mapped to 4 phases
 progress:
   total_phases: 4
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-research-integration P02 | 3 | 3 tasks | 2 files |
 | Phase 02-research-integration P01 | 3 | 2 tasks | 7 files |
 | Phase 02-research-integration P03 | 3 | 2 tasks | 1 files |
+| Phase 02-research-integration P04 | 3 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 02-research-integration]: Install step auto-triggers when pythonOk but not notebooklmOk; auth step is the only manual user action
 - [Phase 02-research-integration]: Graceful ImportError guard added to notebooklm_research.py so argv validation works even without notebooklm-py installed
 - [Phase 02-research-integration]: Assessment percentage normalization: clamp 0-100 first, then proportional scale, final sell_pct avoids rounding drift
+- [Phase 02-research-integration]: Research page converted from async server component to 'use client' component to support URL-driven analysis state machine
+- [Phase 02-research-integration]: ResearchProgress step matching uses lowercase substring match on PROGRESS: messages for loose coupling to Python script output format
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-14T01:47:32.953Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-03-14T01:48:02.326Z
+Stopped at: Completed 02-04-PLAN.md tasks 1-2, paused at Task 3 human-verify checkpoint
 Resume file: None
