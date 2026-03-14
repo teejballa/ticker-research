@@ -24,7 +24,7 @@
 
 ### Research & Analysis
 
-- [ ] **RSRCH-01**: Structured source package is fed to NotebookLM via Claude Code SDK NotebookLM skill
+- [x] **RSRCH-01**: Structured source package is fed to NotebookLM via Claude Code SDK NotebookLM skill
 - [ ] **RSRCH-02**: NotebookLM produces market sentiment analysis (bullish / neutral / bearish)
 - [ ] **RSRCH-03**: NotebookLM identifies and lists key bullish signals from sources
 - [ ] **RSRCH-04**: NotebookLM identifies and lists key bearish signals from sources
@@ -95,7 +95,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-06 | Phase 1 | Complete |
 | DATA-07 | Phase 1 | Complete |
 | DATA-08 | Phase 1 | Complete |
-| RSRCH-01 | Phase 2 | Pending |
+| RSRCH-01 | Phase 2 | Complete |
 | RSRCH-02 | Phase 2 | Pending |
 | RSRCH-03 | Phase 2 | Pending |
 | RSRCH-04 | Phase 2 | Pending |
