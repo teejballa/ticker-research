@@ -143,28 +143,30 @@ export default function ResearchProgress({
   }, [ticker, filePath]);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">Analyzing {ticker}...</h2>
+    <div className="bg-zinc-900 border border-zinc-700 p-6">
+      <h2 className="text-sm font-mono font-semibold text-amber-400 uppercase tracking-widest mb-4">
+        Analyzing {ticker}...
+      </h2>
       <ul className="space-y-3">
         {steps.map((step, i) => (
           <li key={i} className="flex items-center gap-3 text-sm">
             {step.status === 'done' ? (
-              <span className="text-green-600 font-bold w-5 text-center">&#x2713;</span>
+              <span className="text-emerald-400 font-mono font-bold w-5 text-center">&#x2713;</span>
             ) : step.status === 'active' ? (
               <span
-                className="animate-spin inline-block w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"
+                className="animate-spin inline-block w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full"
                 aria-label="loading"
               />
             ) : (
-              <span className="text-gray-300 w-5 text-center">&#x25CB;</span>
+              <span className="text-zinc-600 w-5 text-center font-mono">&#x25CB;</span>
             )}
             <span
               className={
                 step.status === 'done'
-                  ? 'text-gray-800'
+                  ? 'text-emerald-400 font-mono'
                   : step.status === 'active'
-                    ? 'text-blue-700 font-medium'
-                    : 'text-gray-400'
+                    ? 'text-amber-400 font-mono font-medium'
+                    : 'text-zinc-600 font-mono'
               }
             >
               {step.label}
