@@ -13,6 +13,7 @@
 //   - Confidence Level (terminal bar)
 //   - Sources Used
 
+import Link from 'next/link';
 import { formatTimestamp, formatMarketCap, formatPercent, formatPrice } from '@/lib/formatters';
 import type { AnalysisResult, MarketSnapshot } from '@/lib/types';
 
@@ -154,12 +155,20 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           <span className="font-mono font-bold text-amber-400 text-lg">{ticker}</span>
           <span className="text-zinc-400 text-sm">{company_name}</span>
         </div>
-        <button
-          onClick={handleDownloadPDF}
-          className="font-mono text-xs border border-amber-400 text-amber-400 px-3 py-1 hover:bg-amber-400 hover:text-black transition-colors"
-        >
-          DOWNLOAD PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="font-mono text-xs border border-zinc-700 text-zinc-400 px-3 py-1 hover:border-amber-400 hover:text-amber-400 transition-colors"
+          >
+            NEW RESEARCH
+          </Link>
+          <button
+            onClick={handleDownloadPDF}
+            className="font-mono text-xs border border-amber-400 text-amber-400 px-3 py-1 hover:bg-amber-400 hover:text-black transition-colors"
+          >
+            DOWNLOAD PDF
+          </button>
+        </div>
       </div>
 
       {/* SCROLLABLE CONTENT */}
