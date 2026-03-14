@@ -25,12 +25,12 @@
 ### Research & Analysis
 
 - [x] **RSRCH-01**: Structured source package is fed to NotebookLM via Claude Code SDK NotebookLM skill
-- [ ] **RSRCH-02**: NotebookLM produces market sentiment analysis (bullish / neutral / bearish)
-- [ ] **RSRCH-03**: NotebookLM identifies and lists key bullish signals from sources
-- [ ] **RSRCH-04**: NotebookLM identifies and lists key bearish signals from sources
-- [ ] **RSRCH-05**: NotebookLM produces a Buy / Hold / Sell assessment with supporting reasoning
-- [ ] **RSRCH-06**: NotebookLM assigns a confidence level to the overall assessment
-- [ ] **RSRCH-07**: All conclusions reference their supporting source (no unsupported claims)
+- [x] **RSRCH-02**: NotebookLM produces market sentiment analysis (bullish / neutral / bearish)
+- [x] **RSRCH-03**: NotebookLM identifies and lists key bullish signals from sources
+- [x] **RSRCH-04**: NotebookLM identifies and lists key bearish signals from sources
+- [x] **RSRCH-05**: NotebookLM produces a Buy / Hold / Sell assessment with supporting reasoning
+- [x] **RSRCH-06**: NotebookLM assigns a confidence level to the overall assessment
+- [x] **RSRCH-07**: All conclusions reference their supporting source (no unsupported claims)
 
 ### Report Output
 
@@ -96,12 +96,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-07 | Phase 1 | Complete |
 | DATA-08 | Phase 1 | Complete |
 | RSRCH-01 | Phase 2 | Complete |
-| RSRCH-02 | Phase 2 | Pending |
-| RSRCH-03 | Phase 2 | Pending |
-| RSRCH-04 | Phase 2 | Pending |
-| RSRCH-05 | Phase 2 | Pending |
-| RSRCH-06 | Phase 2 | Pending |
-| RSRCH-07 | Phase 2 | Pending |
+| RSRCH-02 | Phase 2 | Complete |
+| RSRCH-03 | Phase 2 | Complete |
+| RSRCH-04 | Phase 2 | Complete |
+| RSRCH-05 | Phase 2 | Complete |
+| RSRCH-06 | Phase 2 | Complete |
+| RSRCH-07 | Phase 2 | Complete |
 | REPT-01 | Phase 3 | Pending |
 | REPT-02 | Phase 3 | Pending |
 | REPT-03 | Phase 3 | Pending |
