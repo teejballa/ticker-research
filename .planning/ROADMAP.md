@@ -2,7 +2,7 @@
 
 ## Overview
 
-The project delivers a financial research tool in four phases. Phase 1 builds the data pipeline — ticker confirmation, market data, fundamentals, news, filings, and analyst sentiment — producing a clean, timestamped source package ready for reasoning. Phase 2 integrates NotebookLM as the reasoning engine via `notebooklm-py` (teng-lin, PyPI); the source package is formatted into structured text and URL sources, programmatically ingested into a fresh NotebookLM notebook, queried with 6 structured questions, and the notebook is deleted after analysis — no manual steps from the user. Phase 3 assembles the pipeline outputs into a formatted, downloadable report with full source attribution. Phase 4 packages the system for both local execution and web deployment via Daytona container.
+The project delivers a financial research tool in five phases. Phase 1 builds the data pipeline — ticker confirmation, market data, fundamentals, news, filings, and analyst sentiment — producing a clean, timestamped source package ready for reasoning. Phase 2 integrates NotebookLM as the reasoning engine via `notebooklm-py` (teng-lin, PyPI); the source package is formatted into structured text and URL sources, programmatically ingested into a fresh NotebookLM notebook, queried with 6 structured questions, and the notebook is deleted after analysis — no manual steps from the user. Phase 3 assembles the pipeline outputs into a formatted, downloadable report with full source attribution. Phase 4 packages the system for both local execution and web deployment via Daytona container.
 
 ## Phases
 
@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Research Integration** - NotebookLM API verification spike, then full research analysis pipeline (completed 2026-03-14)
 - [ ] **Phase 3: Report Output** - Formatted research report rendering with source attribution and PDF export
 - [ ] **Phase 4: Deployment** - Local execution packaging and web application deployment
+- [ ] **Phase 5: User Identity & Report History** - Google auth as app identity, persistent report storage, home page history with regeneration
 
 ## Phase Details
 
@@ -74,12 +75,12 @@ Plans:
   3. Report displays a "data as of [datetime]" timestamp reflecting when data was collected
   4. Report includes a "Not financial advice" disclaimer section
   5. Sources section lists all sources used with attribution — no conclusion is left without a traceable source
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Report page layout — section structure, typography, responsive design matching defined output format
-- [ ] 03-02: PDF export — PDF generation from report page, download trigger
-- [ ] 03-03: Disclaimer, timestamp, and sources section — financial disclaimer block, data timestamp display, attributed sources list
+- [ ] 03-01-PLAN.md — Type contracts, formatter utilities, Python market_snapshot extraction, Wave 0 test stubs
+- [ ] 03-02-PLAN.md — ResearchReport component with all 7 sections, sticky top bar, PDF download trigger, wired into page.tsx
+- [ ] 03-03-PLAN.md — Full app Bloomberg terminal restyle: all existing components and pages + visual checkpoint
 
 ### Phase 4: Deployment
 **Goal**: System runs on a user's local device via a single setup command, and is deployable as a production web application using a Daytona container for the `notebooklm-py` research layer
@@ -101,14 +102,32 @@ Plans:
 - [ ] 04-02: Daytona container — Dockerfile/devcontainer with Node.js 18+, Python 3.10+, Chromium, `notebooklm-py` pre-installed via `pip install -r scripts/requirements.txt && playwright install chromium`; auth NOT baked in — user runs `notebooklm login` once; `~/.notebooklm/storage_state.json` persists across restarts; container exposes endpoint that accepts research job requests and streams results; user runs one-time `daytona create` command
 - [ ] 04-03: Vercel + Daytona integration — Next.js API routes detect deployment mode (env var `DEPLOYMENT_MODE=cloud`), forward research jobs to Daytona container URL, SSE stream results to browser; environment variable management; production smoke test
 
+### Phase 5: User Identity & Report History
+**Goal**: The connected Google account is the user's app identity with no separate signup, completed reports are persisted locally and visible on the home page, and any past report can be regenerated with fresh data
+**Depends on**: Phase 3
+**Requirements**: AUTH-01, HIST-01, HIST-02, HIST-03
+**Success Criteria** (what must be TRUE):
+  1. The Google account connected during setup is displayed as the user's identity in the app (e.g., "Connected as you@gmail.com") — no separate signup required
+  2. Each completed research report is saved locally (ticker, timestamp, sentiment verdict, full AnalysisResult JSON)
+  3. Home page shows a history of past reports grouped by ticker, each with date and sentiment verdict, openable without re-running analysis
+  4. A "Regenerate" action on any past report kicks off a fresh data collection and analysis run for the same ticker, storing the result as a new timestamped report
+**Plans**: TBD
+
+Plans:
+- [ ] 05-01: Report persistence — local JSON store (or SQLite) for AnalysisResult + metadata; write on analysis complete; read on home page load
+- [ ] 05-02: Google identity display — extract connected email from notebooklm auth check; show "Connected as [email]" in app header/nav; reconnect flow when session expires
+- [ ] 05-03: Report history UI — home page past reports section (ticker, date, sentiment chip, open/regenerate actions); Bloomberg-terminal style to match report design
+- [ ] 05-04: Regenerate flow — "Run New Analysis" on a past report triggers full Phase 1+2 pipeline for that ticker; result stored as new entry; old reports preserved
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Pipeline | 5/5 | Complete   | 2026-03-13 |
-| 2. Research Integration | 4/4 | Complete   | 2026-03-14 |
+| 1. Data Pipeline | 5/5 | Complete | 2026-03-13 |
+| 2. Research Integration | 4/4 | Complete | 2026-03-14 |
 | 3. Report Output | 0/3 | Not started | - |
 | 4. Deployment | 0/3 | Not started | - |
+| 5. User Identity & Report History | 0/4 | Not started | - |
