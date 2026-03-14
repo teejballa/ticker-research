@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs: initialize project\" --files .planning/PROJECT.md)",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"chore: add project config\" --files .planning/config.json)",
+      "Bash(git add .planning/config.json && git commit -m \"chore: add project config\")",
+      "Bash(git add .gitignore .planning/config.json && git commit -m \"chore: add project config and allow planning json files\")",
+      "Bash(git add .planning/research/ && git commit -m \"docs: add project research \\(stack, features, architecture, pitfalls, summary\\)\")",
+      "Bash(git add .planning/REQUIREMENTS.md && git commit -m \"docs: define v1 requirements\")",
+      "Bash(git add .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md && git commit -m \"docs: create roadmap \\(4 phases, 26 requirements\\)\")",
+      "Skill(gsd:discuss-phase)",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs\\(01\\): capture phase context\" --files \".planning/phases/01-data-pipeline/01-CONTEXT.md\")",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs: update data sources to yahoo-finance2 + Anthropic web search\" --files \".planning/ROADMAP.md .planning/REQUIREMENTS.md .planning/PROJECT.md .planning/STATE.md claude.md\")",
+      "Bash(git add .planning/ROADMAP.md .planning/REQUIREMENTS.md .planning/PROJECT.md .planning/STATE.md claude.md && git commit -m \"docs: update data sources to yahoo-finance2 + Anthropic web search\n\nRemove Finnhub, SEC EDGAR direct, Reddit/Stocktwits API requirements.\nReplace with yahoo-finance2 \\(free, no key\\) for market data/fundamentals\nand Anthropic web search for news, filings, analyst content, and sentiment.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\")",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" state record-session \\\\\n  --stopped-at \"Phase 1 context gathered\" \\\\\n  --resume-file \".planning/phases/01-data-pipeline/01-CONTEXT.md\" && \\\\\nnode \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs\\(state\\): record phase 1 context session\" --files .planning/STATE.md)"
+    ]
+  }
+}
