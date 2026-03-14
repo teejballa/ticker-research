@@ -90,3 +90,39 @@ export interface SourcePackage {
   social_sentiment: SocialSentimentSection;
   collection_errors: string[];
 }
+
+// ---- AnalysisResult types (Phase 2 — NotebookLM research output) ----
+
+export interface AnalysisSignal {
+  signal: string;
+  source_citation: string;
+}
+
+export interface BuySellBreakdown {
+  buy_pct: number;
+  hold_pct: number;
+  sell_pct: number;
+  buy_rationale: string;
+  hold_rationale: string;
+  sell_rationale: string;
+}
+
+export interface AnalysisSource {
+  name: string;
+  key_fact: string;
+}
+
+export interface AnalysisResult {
+  ticker: string;
+  company_name: string;
+  analyzed_at: string;         // ISO 8601
+  market_sentiment: 'bullish' | 'neutral' | 'bearish';
+  sentiment_reasoning: string;
+  bullish_signals: AnalysisSignal[];   // exactly 3
+  bearish_signals: AnalysisSignal[];   // exactly 3
+  assessment: BuySellBreakdown;
+  confidence_level: 'Low' | 'Medium' | 'High';
+  confidence_explanation: string;
+  sources_used: AnalysisSource[];
+  source_warnings: string[];
+}
