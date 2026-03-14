@@ -84,6 +84,7 @@ export default function ResearchPage() {
   const handleComplete = useCallback((result: AnalysisResult) => {
     setAnalysisResult(result);
     setPageState('complete');
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
   const handleError = useCallback((message: string) => {
