@@ -102,7 +102,7 @@ export default function ResearchPage() {
   // Analysis mode — file param present
   if (filePath && pageState === 'analyzing') {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-start bg-gray-50 px-4 py-12">
+      <main className="flex min-h-screen flex-col items-center justify-start bg-zinc-950 px-4 py-12">
         <div className="w-full max-w-lg">
           <ResearchProgress
             ticker={ticker}
@@ -134,29 +134,29 @@ export default function ResearchPage() {
       errorMessage?.toLowerCase().includes('midnight pst');
 
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
         <div className="w-full max-w-md text-center">
-          <div className="text-5xl mb-4">&#x26A0;</div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Analysis Failed</h1>
+          <div className="text-5xl mb-4 text-amber-400 font-mono">&#x26A0;</div>
+          <h1 className="text-xl font-mono font-semibold text-amber-400 uppercase tracking-widest mb-2">Analysis Failed</h1>
           {isRateLimit ? (
-            <p className="text-gray-600 mb-6">
+            <p className="text-zinc-400 font-mono mb-6">
               NotebookLM daily limit reached. Resets at midnight PST &mdash; try again tomorrow.
             </p>
           ) : (
-            <p className="text-gray-600 mb-6">
+            <p className="text-zinc-400 font-mono mb-6">
               {errorMessage ?? 'An unexpected error occurred during analysis.'}
             </p>
           )}
           <div className="flex gap-3 justify-center">
             <button
               onClick={handleTryAgain}
-              className="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-150"
+              className="inline-flex items-center px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-black font-mono font-bold transition-colors duration-150"
             >
               Try Again
             </button>
             <Link
               href="/"
-              className="inline-flex items-center px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors duration-150"
+              className="inline-flex items-center px-5 py-2.5 border border-zinc-700 hover:border-amber-400 text-zinc-400 hover:text-amber-400 font-mono transition-colors duration-150"
             >
               Back to Search
             </Link>
@@ -169,8 +169,8 @@ export default function ResearchPage() {
   // Loading state
   if (pageState === 'loading') {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
-        <div className="text-gray-400 text-sm">Loading...</div>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
+        <div className="text-zinc-500 text-sm font-mono">Loading...</div>
       </main>
     );
   }
@@ -178,18 +178,18 @@ export default function ResearchPage() {
   // Idle state — chart confirmation (existing Phase 1 behavior)
   if (chartError || !chartData) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
         <div className="w-full max-w-md text-center">
-          <div className="text-5xl mb-4">&#x26A0;</div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Ticker Not Found</h1>
-          <p className="text-gray-500 mb-6">
-            <span className="font-mono font-semibold text-gray-700">{ticker}</span> could not be
+          <div className="text-5xl mb-4 text-amber-400 font-mono">&#x26A0;</div>
+          <h1 className="text-xl font-mono font-semibold text-amber-400 uppercase tracking-widest mb-2">Ticker Not Found</h1>
+          <p className="text-zinc-400 font-mono mb-6">
+            <span className="font-mono font-semibold text-zinc-200">{ticker}</span> could not be
             found. Please check the symbol and try again.
           </p>
-          {chartError && <p className="text-sm text-red-500 mb-4">{chartError}</p>}
+          {chartError && <p className="text-sm text-red-400 font-mono mb-4">{chartError}</p>}
           <Link
             href="/"
-            className="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors duration-150"
+            className="inline-flex items-center px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-black font-mono font-bold transition-colors duration-150"
           >
             Back to Search
           </Link>
@@ -199,7 +199,7 @@ export default function ResearchPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start bg-gray-50 px-4 py-12">
+    <main className="flex min-h-screen flex-col items-center justify-start bg-zinc-950 px-4 py-12">
       <ChartConfirmation
         ticker={ticker}
         chartData={chartData.points}
