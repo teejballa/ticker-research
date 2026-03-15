@@ -59,7 +59,7 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
       if (!res.ok) {
         setPipelineError(data.error ?? 'Pipeline failed');
       } else {
-        setPipelineResult(data);
+        router.push(`/research/${encodeURIComponent(ticker)}?file=${encodeURIComponent(data.filePath)}`);
       }
     } catch (err) {
       setPipelineError(err instanceof Error ? err.message : 'Network error');
