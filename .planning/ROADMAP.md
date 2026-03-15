@@ -98,9 +98,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: Local install packaging — `npm install && npm start` setup script that auto-installs all dependencies, documents environment variables (ANTHROPIC_API_KEY), validates Python 3.10+ and Node versions, runs setup wizard on first boot
-- [ ] 04-02: Daytona container — Dockerfile/devcontainer with Node.js 18+, Python 3.10+, Chromium, `notebooklm-py` pre-installed via `pip install -r scripts/requirements.txt && playwright install chromium`; auth NOT baked in — user runs `notebooklm login` once; `~/.notebooklm/storage_state.json` persists across restarts; container exposes endpoint that accepts research job requests and streams results; user runs one-time `daytona create` command
-- [ ] 04-03: Vercel + Daytona integration — Next.js API routes detect deployment mode (env var `DEPLOYMENT_MODE=cloud`), forward research jobs to Daytona container URL, SSE stream results to browser; environment variable management; production smoke test
+- [ ] 04-01-PLAN.md — Local install packaging: prestart validator (scripts/setup.sh), `next build && next start`, .env.local.example
+- [ ] 04-02-PLAN.md — Daytona devcontainer spec (.devcontainer/devcontainer.json) with Python 3.12 + Node 18 + notebooklm-py; vercel.json maxDuration
+- [ ] 04-03-PLAN.md — DEPLOYMENT_MODE=cloud proxy branch in analysis route, force-dynamic exports, extended tests, production smoke test checkpoint
 
 ### Phase 5: User Identity & Report History
 **Goal**: The connected Google account is the user's app identity with no separate signup, completed reports are persisted locally and visible on the home page, and any past report can be regenerated with fresh data
