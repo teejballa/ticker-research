@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// SSE event shapes from the setup API routes
 interface SetupStatus {
   pythonOk: boolean;
   pythonVersion?: string;
@@ -14,81 +13,44 @@ interface SetupStatus {
 
 type StepState = 'pending' | 'active' | 'complete' | 'error';
 
-// Detect OS from user agent for platform-specific Python install instructions
 function detectOS(): 'mac' | 'windows' | 'linux' | 'unknown' {
   if (typeof window === 'undefined') return 'unknown';
   const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes('mac')) return 'mac';
-  if (ua.includes('win')) return 'windows';
+  if (ua.includes('mac'))   return 'mac';
+  if (ua.includes('win'))   return 'windows';
   if (ua.includes('linux')) return 'linux';
   return 'unknown';
 }
 
-// Icon components
-function CheckIcon() {
-  return (
-    <span className="text-emerald-400 text-lg font-bold leading-none select-none" aria-label="Complete">
-      ✓
-    </span>
-  );
+function StepIndicator({ state }: { state: StepState }) {
+  if (state === 'complete')
+    return <span className="text-emerald-500/80 text-xs">✓</span>;
+  if (state === 'active')
+    return <span className="w-3 h-3 border border-[#f59e0b]/60 border-t-transparent rounded-full animate-spin inline-block" />;
+  if (state === 'error')
+    return <span className="text-red-500/60 text-xs">✗</span>;
+  return <span className="text-[#0d1a27] text-xs">○</span>;
 }
 
-function SpinnerIcon() {
-  return (
-    <span
-      className="inline-block w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"
-      aria-label="In progress"
-    />
-  );
-}
-
-function PendingIcon() {
-  return (
-    <span className="text-zinc-600 text-lg leading-none select-none" aria-label="Pending">
-      ○
-    </span>
-  );
-}
-
-function ErrorIcon() {
-  return (
-    <span className="text-red-400 text-lg font-bold leading-none select-none" aria-label="Error">
-      ✗
-    </span>
-  );
-}
-
-function StepIcon({ state }: { state: StepState }) {
-  if (state === 'complete') return <CheckIcon />;
-  if (state === 'active') return <SpinnerIcon />;
-  if (state === 'error') return <ErrorIcon />;
-  return <PendingIcon />;
-}
-
-// Python install instructions per OS
 function PythonInstallInstructions() {
   const os = detectOS();
   return (
-    <div className="mt-2 ml-7 text-sm">
-      <p className="text-zinc-400 font-mono mb-1">Install Python 3.11:</p>
-      {(os === 'mac' || os === 'unknown') && (
-        <code className="block bg-zinc-800 border border-zinc-700 px-2 py-1 text-xs font-mono text-amber-400 mb-1">
-          brew install python@3.11
+    <div className="mt-2 space-y-1">
+      {(os === 'mac'     || os === 'unknown') && (
+        <code className="block bg-[#080a0f] border border-[#0d1a27] px-2.5 py-1.5 text-[10px] text-[#f59e0b]/60">
+          $ brew install python@3.11
         </code>
       )}
       {(os === 'windows' || os === 'unknown') && (
-        <code className="block bg-zinc-800 border border-zinc-700 px-2 py-1 text-xs font-mono text-amber-400 mb-1">
-          winget install Python.Python.3.11
+        <code className="block bg-[#080a0f] border border-[#0d1a27] px-2.5 py-1.5 text-[10px] text-[#f59e0b]/60">
+          $ winget install Python.Python.3.11
         </code>
       )}
-      {(os === 'linux' || os === 'unknown') && (
-        <code className="block bg-zinc-800 border border-zinc-700 px-2 py-1 text-xs font-mono text-amber-400 mb-1">
-          sudo apt install python3.11
+      {(os === 'linux'   || os === 'unknown') && (
+        <code className="block bg-[#080a0f] border border-[#0d1a27] px-2.5 py-1.5 text-[10px] text-[#f59e0b]/60">
+          $ sudo apt install python3.11
         </code>
       )}
-      <p className="text-zinc-600 text-xs font-mono mt-1">
-        After installing, click Re-check below.
-      </p>
     </div>
   );
 }
@@ -98,81 +60,60 @@ interface SetupWizardProps {
 }
 
 export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
-  const [status, setStatus] = useState<SetupStatus | null>(null);
+  const [status, setStatus]               = useState<SetupStatus | null>(null);
   const [installProgress, setInstallProgress] = useState<string[]>([]);
-  const [installState, setInstallState] = useState<StepState>('pending');
-  const [authState, setAuthState] = useState<StepState>('pending');
-  const [authMessage, setAuthMessage] = useState<string>('');
-  const [dots, setDots] = useState('');
-  const installStartedRef = useRef(false);
-  const authStartedRef = useRef(false);
+  const [installState, setInstallState]   = useState<StepState>('pending');
+  const [authState, setAuthState]         = useState<StepState>('pending');
+  const [authMessage, setAuthMessage]     = useState('');
+  const [dots, setDots]                   = useState('');
+  const installStartedRef                 = useRef(false);
+  const authStartedRef                    = useRef(false);
 
-  // Animated dots for the "waiting for login" state
   useEffect(() => {
     if (authState !== 'active') return;
-    const interval = setInterval(() => {
-      setDots(d => (d.length >= 3 ? '' : d + '.'));
-    }, 500);
-    return () => clearInterval(interval);
+    const id = setInterval(() => setDots((d) => (d.length >= 3 ? '' : d + '.')), 500);
+    return () => clearInterval(id);
   }, [authState]);
 
   async function fetchStatus() {
     try {
       const res = await fetch('/api/setup/status');
-      if (!res.ok) return;
+      if (!res.ok) return null;
       const data: SetupStatus = await res.json();
       setStatus(data);
       return data;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }
 
   async function startInstall() {
     if (installStartedRef.current) return;
     installStartedRef.current = true;
     setInstallState('active');
-
     try {
       const res = await fetch('/api/setup/install', { method: 'POST' });
-      if (!res.ok || !res.body) {
-        setInstallState('error');
-        return;
-      }
+      if (!res.ok || !res.body) { setInstallState('error'); return; }
 
-      const reader = res.body.getReader();
+      const reader  = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      let buffer    = '';
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           try {
             const event = JSON.parse(line.slice('data: '.length));
-            if (event.type === 'progress') {
-              setInstallProgress(prev => [...prev.slice(-10), event.message]);
-            } else if (event.type === 'complete') {
-              setInstallState('complete');
-              // Refresh status to confirm notebooklmOk
-              await fetchStatus();
-            } else if (event.type === 'error') {
-              setInstallState('error');
-            }
-          } catch {
-            // ignore malformed lines
-          }
+            if      (event.type === 'progress') setInstallProgress((p) => [...p.slice(-8), event.message]);
+            else if (event.type === 'complete') { setInstallState('complete'); await fetchStatus(); }
+            else if (event.type === 'error')    setInstallState('error');
+          } catch { /* skip */ }
         }
       }
-    } catch {
-      setInstallState('error');
-    }
+    } catch { setInstallState('error'); }
   }
 
   async function startAuth() {
@@ -180,26 +121,20 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
     authStartedRef.current = true;
     setAuthState('active');
     setAuthMessage('Opening browser...');
-
     try {
       const res = await fetch('/api/setup/auth', { method: 'POST' });
-      if (!res.ok || !res.body) {
-        setAuthState('error');
-        return;
-      }
+      if (!res.ok || !res.body) { setAuthState('error'); return; }
 
-      const reader = res.body.getReader();
+      const reader  = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      let buffer    = '';
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
-
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           try {
@@ -209,20 +144,14 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
             } else if (event.type === 'complete') {
               setAuthState('complete');
               setAuthMessage('');
-              // Trigger re-render of parent
-              if (onSetupComplete) {
-                onSetupComplete();
-              } else {
-                window.location.reload();
-              }
+              if (onSetupComplete) onSetupComplete();
+              else window.location.reload();
             } else if (event.type === 'error') {
               setAuthState('error');
               setAuthMessage(event.message ?? 'Login failed');
               authStartedRef.current = false;
             }
-          } catch {
-            // ignore malformed lines
-          }
+          } catch { /* skip */ }
         }
       }
     } catch {
@@ -231,21 +160,15 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
     }
   }
 
-  // On mount: fetch status, then trigger install automatically if needed
   useEffect(() => {
-    fetchStatus().then(data => {
+    fetchStatus().then((data) => {
       if (!data) return;
-
-      // Sync install state
       if (data.notebooklmOk) {
         setInstallState('complete');
         installStartedRef.current = true;
       } else if (data.pythonOk && !installStartedRef.current) {
-        // Auto-trigger install
         startInstall();
       }
-
-      // Sync auth state
       if (data.authOk) {
         setAuthState('complete');
         authStartedRef.current = true;
@@ -253,120 +176,117 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When install completes and auth is not yet done, auth step becomes available
-  // Auth is NOT auto-triggered — user must click "Connect Account"
-  const pythonState: StepState = !status
-    ? 'pending'
-    : status.pythonOk
-    ? 'complete'
-    : 'error';
+  const pythonState: StepState = !status ? 'pending' : status.pythonOk ? 'complete' : 'error';
+  const showPythonInstructions  = status && !status.pythonOk;
+  const authEnabled             = installState === 'complete' && authState === 'pending';
 
-  const showPythonInstructions = status && !status.pythonOk;
-  const installEnabled = status?.pythonOk && !status.notebooklmOk;
-  const authEnabled = installState === 'complete' && authState === 'pending';
+  const steps = [
+    {
+      state: pythonState,
+      title: (
+        <span>
+          Python 3.10+ installed
+          {status?.pythonVersion && (
+            <span className="ml-2 text-[#1a2a3a] font-normal text-[10px]">
+              v{status.pythonVersion}
+            </span>
+          )}
+        </span>
+      ),
+      body: showPythonInstructions ? (
+        <>
+          <PythonInstallInstructions />
+          <button
+            type="button"
+            onClick={() => fetchStatus()}
+            className="mt-2 text-[10px] text-[#f59e0b]/50 hover:text-[#f59e0b] tracking-wider transition-colors"
+          >
+            RE-CHECK →
+          </button>
+        </>
+      ) : null,
+    },
+    {
+      state: installState,
+      title: 'NotebookLM tools installed',
+      body: installState === 'active' && installProgress.length > 0 ? (
+        <div className="mt-1.5 space-y-0.5">
+          {installProgress.slice(-3).map((msg, i) => (
+            <p key={i} className="text-[9px] text-[#1a2a3a] truncate">{msg}</p>
+          ))}
+        </div>
+      ) : installState === 'error' ? (
+        <p className="mt-1 text-[10px] text-red-400/60">
+          Install failed — check pip3 is available
+        </p>
+      ) : null,
+    },
+    {
+      state: authState,
+      title: 'Connect Google account',
+      body: authEnabled ? (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={startAuth}
+            className="text-[10px] bg-[#f59e0b] hover:bg-[#fbbf24] text-black px-3 py-1 font-bold tracking-wider transition-colors"
+          >
+            CONNECT ACCOUNT →
+          </button>
+          <p className="mt-1 text-[9px] text-[#0d1a27]">
+            Opens your browser for a one-time Google login
+          </p>
+        </div>
+      ) : authState === 'active' ? (
+        <p className="mt-1 text-[10px] text-[#2a3d52]">{authMessage}{dots}</p>
+      ) : authState === 'error' ? (
+        <div className="mt-1">
+          <p className="text-[10px] text-red-400/60 mb-1">
+            {authMessage || 'Login failed. Please try again.'}
+          </p>
+          <button
+            type="button"
+            onClick={startAuth}
+            className="text-[10px] bg-[#f59e0b] hover:bg-[#fbbf24] text-black px-3 py-1 font-bold tracking-wider transition-colors"
+          >
+            TRY AGAIN →
+          </button>
+        </div>
+      ) : null,
+    },
+  ];
 
   return (
-    <div className="bg-zinc-900 border border-zinc-700 p-5 mb-6">
-      <div className="mb-4">
-        <h2 className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-widest">Before you start</h2>
-        <p className="text-sm text-zinc-500 font-mono mt-0.5">
-          A few one-time setup steps are needed to run NotebookLM research.
-        </p>
+    <div className="panel">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-[#0a1520]">
+        <div className="text-[9px] text-[#f59e0b]/50 tracking-[0.4em] mb-0.5">SYSTEM INITIALIZATION</div>
+        <div className="text-xs text-[#1e2d3d]">
+          One-time setup required to enable NotebookLM research pipeline
+        </div>
       </div>
 
-      <ol className="space-y-3">
-        {/* Step 1: Python 3.10+ */}
-        <li className="flex items-start gap-3">
-          <div className="mt-0.5 w-5 flex-shrink-0 flex items-center justify-center">
-            <StepIcon state={pythonState} />
-          </div>
-          <div className="flex-1">
-            <span className={`text-sm font-mono font-medium ${pythonState === 'error' ? 'text-red-400' : 'text-zinc-200'}`}>
-              Python 3.10+ installed
-              {status?.pythonVersion && (
-                <span className="ml-1 text-zinc-600 font-normal text-xs">v{status.pythonVersion}</span>
-              )}
-            </span>
-            {showPythonInstructions && <PythonInstallInstructions />}
-            {showPythonInstructions && (
-              <button
-                type="button"
-                onClick={() => fetchStatus()}
-                className="mt-2 ml-7 text-xs text-amber-400 underline hover:text-amber-300 font-mono"
-              >
-                Re-check
-              </button>
-            )}
-          </div>
-        </li>
+      <div className="p-4 space-y-4">
+        {steps.map((step, idx) => {
+          const labelColor =
+            step.state === 'complete' ? 'text-[#2a4a3a]' :
+            step.state === 'active'   ? 'text-[#c9d4e0]' :
+            step.state === 'error'    ? 'text-red-400/70' :
+            'text-[#131e2b]';
 
-        {/* Step 2: NotebookLM tools installed */}
-        <li className="flex items-start gap-3">
-          <div className="mt-0.5 w-5 flex-shrink-0 flex items-center justify-center">
-            <StepIcon state={installState} />
-          </div>
-          <div className="flex-1">
-            <span className={`text-sm font-mono font-medium ${installEnabled || installState === 'active' ? 'text-zinc-200' : 'text-zinc-600'}`}>
-              NotebookLM tools installed
-            </span>
-            {installState === 'active' && installProgress.length > 0 && (
-              <p className="mt-1 text-xs text-zinc-500 font-mono truncate">
-                {installProgress[installProgress.length - 1]}
-              </p>
-            )}
-            {installState === 'error' && (
-              <p className="mt-1 text-xs text-red-400 font-mono">
-                Install failed. Check that pip3 is available and try restarting the app.
-              </p>
-            )}
-          </div>
-        </li>
-
-        {/* Step 3: Connect Google account */}
-        <li className="flex items-start gap-3">
-          <div className="mt-0.5 w-5 flex-shrink-0 flex items-center justify-center">
-            <StepIcon state={authState} />
-          </div>
-          <div className="flex-1">
-            <span className={`text-sm font-mono font-medium ${authState === 'pending' && !authEnabled ? 'text-zinc-600' : 'text-zinc-200'}`}>
-              Connect Google account
-            </span>
-            {authEnabled && (
-              <div className="mt-1">
-                <button
-                  type="button"
-                  onClick={startAuth}
-                  className="text-xs bg-amber-400 hover:bg-amber-300 text-black px-3 py-1 font-mono font-bold transition-colors"
-                >
-                  Connect Account
-                </button>
-                <p className="mt-1 text-xs text-zinc-500 font-mono">
-                  Opens your browser for a one-time Google login.
-                </p>
+          return (
+            <div key={idx} className="flex items-start gap-3">
+              <div className="w-4 shrink-0 flex justify-center mt-0.5">
+                <StepIndicator state={step.state} />
               </div>
-            )}
-            {authState === 'active' && (
-              <p className="mt-1 text-xs text-zinc-400 font-mono">
-                {authMessage}{dots}
-              </p>
-            )}
-            {authState === 'error' && (
-              <div className="mt-1">
-                <p className="text-xs text-red-400 font-mono mb-1">
-                  {authMessage || 'Login failed. Please try again.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={startAuth}
-                  className="text-xs bg-amber-400 hover:bg-amber-300 text-black px-3 py-1 font-mono font-bold transition-colors"
-                >
-                  Try Again
-                </button>
+              <div className="flex-1">
+                <div className={`text-xs font-medium ${labelColor}`}>{step.title}</div>
+                {step.body}
               </div>
-            )}
-          </div>
-        </li>
-      </ol>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

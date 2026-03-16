@@ -16,34 +16,46 @@ export default function PriceLineChart({ data }: PriceLineChartProps) {
 
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#ffffff' },
-        textColor: '#374151',
+        background: { type: ColorType.Solid, color: '#0d1117' },
+        textColor: '#2a3d52',
       },
       grid: {
-        vertLines: { color: '#f3f4f6' },
-        horzLines: { color: '#f3f4f6' },
+        vertLines: { color: '#0a1520' },
+        horzLines: { color: '#0a1520' },
       },
       width: containerRef.current.clientWidth,
-      height: 200,
+      height: 180,
       rightPriceScale: {
-        borderColor: '#e5e7eb',
+        borderColor: '#131e2b',
+        textColor: '#2a3d52',
       },
       timeScale: {
-        borderColor: '#e5e7eb',
+        borderColor: '#131e2b',
         timeVisible: false,
+      },
+      crosshair: {
+        vertLine: {
+          color: 'rgba(245, 158, 11, 0.15)',
+          labelBackgroundColor: '#0d1117',
+        },
+        horzLine: {
+          color: 'rgba(245, 158, 11, 0.15)',
+          labelBackgroundColor: '#0d1117',
+        },
       },
     });
 
-    // lightweight-charts v5: use addSeries(LineSeries) pattern
     const lineSeries = chart.addSeries(LineSeries, {
-      color: '#3b82f6',
-      lineWidth: 2,
+      color: '#f59e0b',
+      lineWidth: 1,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 3,
+      crosshairMarkerBackgroundColor: '#f59e0b',
     });
 
     lineSeries.setData(data);
     chart.timeScale().fitContent();
 
-    // Handle container resize
     const resizeObserver = new ResizeObserver(() => {
       if (containerRef.current) {
         chart.applyOptions({ width: containerRef.current.clientWidth });
@@ -59,5 +71,5 @@ export default function PriceLineChart({ data }: PriceLineChartProps) {
 
   if (data.length === 0) return null;
 
-  return <div ref={containerRef} className="w-full" style={{ height: '200px' }} />;
+  return <div ref={containerRef} className="w-full" style={{ height: '180px' }} />;
 }

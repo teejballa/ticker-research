@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "Ticker Research Assistant",
-  description: "AI-powered financial ticker research with transparent, source-backed analysis",
+  title: "Equinfo — AI Financial Research Terminal",
+  description: "Source-grounded equity intelligence with transparent, traceable analysis powered by Anthropic and Gemini",
 };
 
 export default function RootLayout({
@@ -23,9 +20,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-zinc-950">
+    <html lang="en" className="bg-[#080a0f]">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-200`}
+        className={`${ibmPlexMono.className} antialiased bg-[#080a0f] text-[#c9d4e0] scanlines`}
       >
         {children}
       </body>

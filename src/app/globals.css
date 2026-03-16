@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+/* ── Keyframes ───────────────────────────────────────── */
+
 @keyframes shake {
   0%   { transform: translateX(0); }
   15%  { transform: translateX(-6px); }
@@ -11,9 +13,538 @@
   100% { transform: translateX(0); }
 }
 
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
+}
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes spinnerBorder {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes chevronBounce {
+  0%, 100% { transform: rotate(45deg) translateY(0);   opacity: 0.45; }
+  50%       { transform: rotate(45deg) translateY(5px); opacity: 0.9; }
+}
+
+@keyframes orbPulse {
+  0%, 100% { opacity: 0.06; transform: translate(-50%, -50%) scale(1); }
+  50%       { opacity: 0.10; transform: translate(-50%, -50%) scale(1.12); }
+}
+
+/* Mockup step spinner */
+@keyframes stepSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Mockup live dot pulse */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(1.5); }
+}
+
+/* ── Utility classes ─────────────────────────────────── */
+
 .animate-shake {
   animation: shake 0.4s ease-in-out;
 }
+
+.fade-in {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.fade-in-d1 {
+  opacity: 0;
+  animation: fadeInUp 0.5s 0.12s ease-out forwards;
+}
+
+.fade-in-d2 {
+  opacity: 0;
+  animation: fadeInUp 0.5s 0.24s ease-out forwards;
+}
+
+.fade-in-d3 {
+  opacity: 0;
+  animation: fadeInUp 0.5s 0.36s ease-out forwards;
+}
+
+.fade-in-d4 {
+  opacity: 0;
+  animation: fadeInUp 0.5s 0.48s ease-out forwards;
+}
+
+.status-dot-live {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+.animate-ticker {
+  animation: tickerScroll 80s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* ── Background patterns ─────────────────────────────── */
+
+.dot-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(30, 55, 90, 0.55) 1px,
+    transparent 0
+  );
+  background-size: 28px 28px;
+}
+
+/* ── Hero ambient orb ─────────────────────────────────── */
+
+.hero-orb {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(245, 158, 11, 1) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  opacity: 0.06;
+  pointer-events: none;
+  animation: orbPulse 6s ease-in-out infinite;
+}
+
+/* ── Scroll cue chevron ───────────────────────────────── */
+
+.scroll-cue {
+  width: 18px;
+  height: 18px;
+  position: relative;
+}
+
+.scroll-cue-chevron {
+  width: 12px;
+  height: 12px;
+  border-right: 1.5px solid #3a5a78;
+  border-bottom: 1.5px solid #3a5a78;
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  animation: chevronBounce 1.6s ease-in-out infinite;
+}
+
+/* ── Scroll scene: animation is 100% React-state-driven ──────────
+   All opacity/transform values come from inline style= props in JSX.
+   Only static layout/typography properties live here.              */
+
+.scene-hero-wordmark {
+  font-size: clamp(56px, 9vw, 100px);
+  letter-spacing: 0.18em;   /* overridden by React inline style on scroll */
+  text-shadow: 0 0 40px rgba(245, 158, 11, 0.25);
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100vw;
+}
+
+/* ── Monitor glow ─────────────────────────────────────── */
+
+.monitor-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 900px;
+  height: 600px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse, rgba(245, 158, 11, 0.07) 0%, transparent 60%);
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+/* ── App preview screenshot ───────────────────────────── */
+
+.preview-screenshot {
+  width: min(1020px, 92vw);
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.08),
+    0 32px 90px rgba(0, 0, 0, 0.85),
+    0 0 160px rgba(245, 158, 11, 0.05);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Scanlines overlay ───────────────────────────────── */
+
+.scanlines::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.016) 3px,
+    rgba(0, 0, 0, 0.016) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Glow effects ─────────────────────────────────────── */
+
+.glow-amber-text {
+  text-shadow:
+    0 0 28px rgba(245, 158, 11, 0.35),
+    0 0 70px rgba(245, 158, 11, 0.10);
+}
+
+.glow-amber-border {
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.28),
+    0 0 18px rgba(245, 158, 11, 0.07);
+}
+
+.text-glow-sm {
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.24);
+}
+
+/* ── Panel primitive ─────────────────────────────────── */
+
+.panel {
+  background: #0d1117;
+  border: 1px solid #1a2d42;
+}
+
+/* ── How-it-works step cards ─────────────────────────── */
+
+.how-step {
+  background: #080a0f;
+  padding: 32px 28px;
+  transition: background 0.25s;
+}
+
+.how-step:hover {
+  background: #0a0e17;
+}
+
+.how-step-number {
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  opacity: 0.18;
+  margin-bottom: 16px;
+  transition: opacity 0.25s;
+}
+
+.how-step:hover .how-step-number {
+  opacity: 0.38;
+}
+
+.how-step-bar {
+  width: 24px;
+  height: 2px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.how-step-title {
+  color: #6b8fa8;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.how-step-desc {
+  color: #3d5e7a;
+  font-size: 11px;
+  line-height: 1.75;
+}
+
+/* ── App Mockup Shell ─────────────────────────────────── */
+
+.app-mockup-shell {
+  width: min(680px, 88vw);
+  background: #090d16;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px #1a2d42,
+    0 28px 70px rgba(0, 0, 0, 0.85),
+    0 0 140px rgba(245, 158, 11, 0.04);
+  font-size: 10px;
+  position: relative;
+}
+
+/* Browser chrome bar */
+.mockup-chrome {
+  height: 38px;
+  background: #0d1420;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 12px;
+  border-bottom: 1px solid #1a2d42;
+}
+
+.mockup-traffic-lights {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mockup-traffic-lights span {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.mockup-url-bar {
+  flex: 1;
+  height: 22px;
+  background: #080c14;
+  border-radius: 4px;
+  border: 1px solid #1a2d42;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 5px;
+  max-width: 260px;
+  margin: 0 auto;
+  color: #4a6a8a;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.mockup-lock {
+  font-size: 8px;
+  opacity: 0.6;
+}
+
+/* App interior */
+.mockup-app {
+  background: #080a0f;
+}
+
+/* Sim nav */
+.mockup-nav {
+  border-bottom: 1px solid #1a2d42;
+  padding: 0 16px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #080a0f;
+}
+
+.mockup-brand {
+  color: #f59e0b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+.mockup-nav-items {
+  display: flex;
+  gap: 14px;
+  color: #3d5e7a;
+  font-size: 8px;
+  letter-spacing: 0.15em;
+}
+
+.mockup-live {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #10b981;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.mockup-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* Research body */
+.mockup-body {
+  padding: 18px 22px 20px;
+  min-height: 290px;
+}
+
+/* Ticker header */
+.mockup-ticker-header {
+  margin-bottom: 16px;
+}
+
+.mockup-analyzing {
+  color: #2a4560;
+  font-size: 8px;
+  letter-spacing: 0.35em;
+  margin-bottom: 4px;
+}
+
+.mockup-ticker-name {
+  color: #f59e0b;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+  line-height: 1;
+}
+
+.mockup-ticker-sub {
+  color: #4a6a8a;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  margin-top: 3px;
+}
+
+/* Progress steps */
+.mockup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.mockup-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 9px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.mockup-step-active {
+  background: #0c1624;
+  border-color: #1a3a5a;
+}
+
+.mockup-step-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mockup-step-icon-done {
+  background: #10b981;
+  color: #080a0f;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.mockup-step-icon-active {
+  border: 1.5px solid #f59e0b;
+  border-top-color: transparent;
+  animation: stepSpin 1s linear infinite;
+}
+
+.mockup-step-icon-pending {
+  border: 1.5px solid #2a4560;
+}
+
+.mockup-step-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.mockup-step-done .mockup-step-label   { color: #4a7a5a; }
+.mockup-step-active .mockup-step-label { color: #c9d4e0; }
+.mockup-step-pending .mockup-step-label { color: #2a4560; }
+
+.mockup-step-sub {
+  color: #2a4560;
+  font-size: 8px;
+  margin-top: 1px;
+}
+
+/* Result preview */
+.mockup-result {
+  background: #0d1117;
+  border: 1px solid #1a2d42;
+  border-radius: 4px;
+  padding: 11px 13px;
+}
+
+.mockup-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mockup-result-label {
+  color: #3d5e7a;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+}
+
+.mockup-verdict {
+  background: #064e3b;
+  color: #10b981;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.mockup-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mockup-bullet {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.mockup-bullet .bull { color: #10b981; flex-shrink: 0; }
+.mockup-bullet .bear { color: #ef4444; flex-shrink: 0; }
+.mockup-bullet span:last-child { color: #4a6a8a; }
+
+/* ── Scrollbar ────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: #080a0f; }
+::-webkit-scrollbar-thumb { background: #1a2d42; }
+::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
+
+/* ── Selection ────────────────────────────────────────── */
+
+::selection {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+/* ── Print ────────────────────────────────────────────── */
 
 @media print {
   * {
@@ -21,21 +552,17 @@
     color: black !important;
     border-color: #ccc !important;
     box-shadow: none !important;
+    text-shadow: none !important;
   }
 
-  .print\:hidden {
-    display: none !important;
-  }
-
-  .sticky {
-    position: static !important;
-  }
+  .print\:hidden    { display: none !important; }
+  .sticky           { position: static !important; }
+  .scanlines::after { display: none !important; }
+  .dot-grid         { background-image: none !important; }
 
   .font-mono {
     font-family: "Courier New", Courier, monospace !important;
   }
 
-  @page {
-    margin: 1.5cm;
-  }
+  @page { margin: 1.5cm; }
 }

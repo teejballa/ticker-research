@@ -33,12 +33,23 @@ export async function GET(request: NextRequest) {
       yahooFinance.quoteSummary(ticker, { modules: ['price', 'summaryProfile'] }),
     ]);
 
-    const points: ChartDataPoint[] = (chartResult.quotes ?? [])
+    const rawPoints: ChartDataPoint[] = (chartResult.quotes ?? [])
       .filter((q) => q.close != null)
       .map((q) => ({
         time: q.date.toISOString().split('T')[0],
         value: q.close as number,
       }));
+
+    // lightweight-charts requires strictly ascending time with no duplicates.
+    // Yahoo Finance occasionally returns duplicate timestamps at timezone boundaries.
+    const seen = new Set<string>();
+    const points = rawPoints
+      .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0))
+      .filter((p) => {
+        if (seen.has(p.time)) return false;
+        seen.add(p.time);
+        return true;
+      });
 
     const priceData = summaryResult.price;
     const profileData = summaryResult.summaryProfile;
