@@ -65,9 +65,20 @@ function checkNotebooklm(): boolean {
 }
 
 function checkAuth(): boolean {
-  const notebooklmHome = process.env.NOTEBOOKLM_HOME ?? path.join(homedir(), '.notebooklm');
-  const authFilePath = path.join(notebooklmHome, 'storage_state.json');
-  return existsSync(authFilePath);
+  // Use `notebooklm auth check --json` for real session validation — catches
+  // expired sessions that have a file but invalid/missing required cookies.
+  try {
+    const result = execSync('notebooklm auth check --json', {
+      encoding: 'utf-8',
+      timeout: 8000,
+    });
+    const data = JSON.parse(result);
+    return data?.status === 'ok' || data?.checks?.cookies_present === true;
+  } catch {
+    // Fallback: plain file existence check (notebooklm CLI not in PATH, etc.)
+    const notebooklmHome = process.env.NOTEBOOKLM_HOME ?? path.join(homedir(), '.notebooklm');
+    return existsSync(path.join(notebooklmHome, 'storage_state.json'));
+  }
 }
 
 export async function GET(_request: NextRequest): Promise<NextResponse> {

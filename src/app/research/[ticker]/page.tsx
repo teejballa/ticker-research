@@ -1,13 +1,7 @@
 'use client';
 
 // src/app/research/[ticker]/page.tsx
-// Research page — handles chart confirmation and analysis flow.
-//
-// States:
-//   idle     — no ?file= param — show existing chart confirmation (fetched client-side)
-//   analyzing — ?file= param present, no result yet — show ResearchProgress
-//   complete  — AnalysisResult received — show placeholder for Phase 3 report
-//   error    — show error message + Try Again button
+// Research page — chart confirmation → analysis → report.
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -30,41 +24,52 @@ interface ChartRouteResponse {
 
 type PageState = 'loading' | 'idle' | 'analyzing' | 'complete' | 'error';
 
+// ── Shared nav bar ────────────────────────────────────────
+
+function NavBar({ label }: { label?: string }) {
+  return (
+    <header className="border-b border-[#0d1a27] bg-[#080a0f] h-11 flex items-center px-5 shrink-0">
+      <div className="flex items-center gap-3">
+        <Link href="/" className="text-[#f59e0b] font-bold text-base tracking-[0.22em] glow-amber-text">
+          EQUINFO
+        </Link>
+        {label && (
+          <>
+            <span className="text-[#0d1a27]">│</span>
+            <span className="text-[#1a2a3a] text-[10px] tracking-widest">{label}</span>
+          </>
+        )}
+      </div>
+    </header>
+  );
+}
+
 export default function ResearchPage() {
-  const params = useParams<{ ticker: string }>();
+  const params       = useParams<{ ticker: string }>();
   const searchParams = useSearchParams();
-  const ticker = params.ticker?.toUpperCase() ?? '';
-  const filePath = searchParams.get('file');
+  const ticker       = params.ticker?.toUpperCase() ?? '';
+  const filePath     = searchParams.get('file');
 
-  const [pageState, setPageState] = useState<PageState>(filePath ? 'analyzing' : 'loading');
-  const [chartData, setChartData] = useState<ChartRouteResponse | null>(null);
-  const [chartError, setChartError] = useState<string | null>(null);
+  const [pageState,      setPageState]      = useState<PageState>(filePath ? 'analyzing' : 'loading');
+  const [chartData,      setChartData]      = useState<ChartRouteResponse | null>(null);
+  const [chartError,     setChartError]     = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage,   setErrorMessage]   = useState<string | null>(null);
 
-  // beforeunload warning when analysis is in progress
+  // Warn before unload during analysis
   useEffect(() => {
     if (pageState !== 'analyzing') return;
-
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
     window.addEventListener('beforeunload', handler);
-    return () => {
-      window.removeEventListener('beforeunload', handler);
-    };
+    return () => window.removeEventListener('beforeunload', handler);
   }, [pageState]);
 
-  // Fetch chart data when in idle/loading state (no file param)
+  // Fetch chart for idle state
   useEffect(() => {
-    if (filePath) return; // analysis mode — no chart fetch needed
-
+    if (filePath) return;
     async function fetchChart() {
       try {
-        const res = await fetch(`/api/ticker/chart?symbol=${encodeURIComponent(ticker)}`, {
-          cache: 'no-store',
-        });
+        const res  = await fetch(`/api/ticker/chart?symbol=${encodeURIComponent(ticker)}`, { cache: 'no-store' });
         const json = (await res.json()) as ChartRouteResponse;
         if (!res.ok || json.error) {
           setChartError(json.error ?? 'Ticker not found');
@@ -77,7 +82,6 @@ export default function ResearchPage() {
         setPageState('idle');
       }
     }
-
     fetchChart();
   }, [ticker, filePath]);
 
@@ -96,123 +100,141 @@ export default function ResearchPage() {
     setErrorMessage(null);
     setAnalysisResult(null);
     setPageState('loading');
-    // Navigate back to the ticker page without file param
     window.location.href = `/research/${encodeURIComponent(ticker)}`;
   }, [ticker]);
 
-  // Analysis mode — file param present
+  // ── Analyzing ───────────────────────────────────────────
   if (filePath && pageState === 'analyzing') {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-start bg-zinc-950 px-4 py-12">
-        <div className="w-full max-w-lg">
+      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
+        <NavBar label={`ANALYZING ${ticker}`} />
+        <main className="flex-1 flex flex-col items-center justify-center px-4 py-10">
           <ResearchProgress
             ticker={ticker}
             filePath={filePath}
             onComplete={handleComplete}
             onError={handleError}
           />
-        </div>
-      </main>
-    );
-  }
-
-  // Complete state — AnalysisResult received
-  if (pageState === 'complete' && analysisResult) {
-    return (
-      <div className="min-h-screen bg-zinc-950">
-        <ResearchReport
-          analysisResult={analysisResult}
-          ticker={ticker}
-        />
+        </main>
       </div>
     );
   }
 
-  // Error state
+  // ── Complete ─────────────────────────────────────────────
+  if (pageState === 'complete' && analysisResult) {
+    return (
+      <div className="min-h-screen bg-[#080a0f]">
+        <ResearchReport analysisResult={analysisResult} ticker={ticker} />
+      </div>
+    );
+  }
+
+  // ── Error ────────────────────────────────────────────────
   if (pageState === 'error') {
     const isRateLimit =
       errorMessage?.toLowerCase().includes('daily limit') ||
       errorMessage?.toLowerCase().includes('midnight pst');
 
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
-        <div className="w-full max-w-md text-center">
-          <div className="text-5xl mb-4 text-amber-400 font-mono">&#x26A0;</div>
-          <h1 className="text-xl font-mono font-semibold text-amber-400 uppercase tracking-widest mb-2">Analysis Failed</h1>
-          {isRateLimit ? (
-            <p className="text-zinc-400 font-mono mb-6">
-              NotebookLM daily limit reached. Resets at midnight PST &mdash; try again tomorrow.
-            </p>
-          ) : (
-            <p className="text-zinc-400 font-mono mb-6">
-              {errorMessage ?? 'An unexpected error occurred during analysis.'}
-            </p>
-          )}
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={handleTryAgain}
-              className="inline-flex items-center px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-black font-mono font-bold transition-colors duration-150"
-            >
-              Try Again
-            </button>
-            <Link
-              href="/"
-              className="inline-flex items-center px-5 py-2.5 border border-zinc-700 hover:border-amber-400 text-zinc-400 hover:text-amber-400 font-mono transition-colors duration-150"
-            >
-              Back to Search
-            </Link>
+      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
+        <NavBar label="ANALYSIS ERROR" />
+        <main className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="w-full max-w-md panel p-6 fade-in">
+            <div className="text-[10px] text-[#f59e0b]/50 tracking-[0.4em] mb-4">SYSTEM ERROR</div>
+            <h1 className="text-sm text-[#c9d4e0] font-bold tracking-[0.2em] mb-2">ANALYSIS FAILED</h1>
+            {isRateLimit ? (
+              <p className="text-xs text-[#2a3d52] leading-relaxed mb-5">
+                NotebookLM daily limit reached. Resets at midnight PST — try again tomorrow.
+              </p>
+            ) : (
+              <p className="text-xs text-[#2a3d52] leading-relaxed mb-5">
+                {errorMessage ?? 'An unexpected error occurred during analysis.'}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleTryAgain}
+                className="flex-1 py-2 bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-bold text-xs tracking-[0.2em] uppercase transition-colors"
+              >
+                TRY AGAIN
+              </button>
+              <Link
+                href="/"
+                className="flex-1 py-2 text-center border border-[#131e2b] hover:border-[#f59e0b]/25 text-[#1e2d3d] hover:text-[#f59e0b]/50 text-xs tracking-[0.2em] uppercase transition-all"
+              >
+                ← HOME
+              </Link>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     );
   }
 
-  // Loading state
+  // ── Loading ──────────────────────────────────────────────
   if (pageState === 'loading') {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
-        <div className="text-zinc-500 text-sm font-mono">Loading...</div>
-      </main>
+      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
+        <NavBar />
+        <main className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="flex flex-col items-center gap-4 fade-in">
+            <span className="text-[#f59e0b] text-sm tracking-[0.3em] glow-amber-text">EQUINFO</span>
+            <span className="w-4 h-4 border border-[#f59e0b]/40 border-t-transparent rounded-full animate-spin" />
+            <span className="text-[10px] text-[#1a2a3a] tracking-widest">
+              LOADING {ticker}...
+            </span>
+          </div>
+        </main>
+      </div>
     );
   }
 
-  // Idle state — chart confirmation (existing Phase 1 behavior)
+  // ── Ticker not found ─────────────────────────────────────
   if (chartError || !chartData) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
-        <div className="w-full max-w-md text-center">
-          <div className="text-5xl mb-4 text-amber-400 font-mono">&#x26A0;</div>
-          <h1 className="text-xl font-mono font-semibold text-amber-400 uppercase tracking-widest mb-2">Ticker Not Found</h1>
-          <p className="text-zinc-400 font-mono mb-6">
-            <span className="font-mono font-semibold text-zinc-200">{ticker}</span> could not be
-            found. Please check the symbol and try again.
-          </p>
-          {chartError && <p className="text-sm text-red-400 font-mono mb-4">{chartError}</p>}
-          <Link
-            href="/"
-            className="inline-flex items-center px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-black font-mono font-bold transition-colors duration-150"
-          >
-            Back to Search
-          </Link>
-        </div>
-      </main>
+      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
+        <NavBar label="INSTRUMENT NOT FOUND" />
+        <main className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="w-full max-w-md panel p-6 fade-in">
+            <div className="text-[10px] text-[#f59e0b]/50 tracking-[0.4em] mb-4">LOOKUP FAILED</div>
+            <h1 className="text-sm text-[#c9d4e0] font-bold tracking-[0.2em] mb-2">TICKER NOT FOUND</h1>
+            <p className="text-xs text-[#2a3d52] leading-relaxed mb-1">
+              <span className="text-[#5a7a8a] font-bold tracking-wider">{ticker}</span> could not be found in the database.
+              Please verify the symbol and try again.
+            </p>
+            {chartError && (
+              <p className="text-[10px] text-red-500/50 mt-1 mb-4">// {chartError}</p>
+            )}
+            <Link
+              href="/"
+              className="inline-flex items-center px-4 py-2 bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-bold text-xs tracking-[0.2em] uppercase transition-colors mt-3"
+            >
+              ← BACK TO SEARCH
+            </Link>
+          </div>
+        </main>
+      </div>
     );
   }
 
+  // ── Idle: chart confirmation ──────────────────────────────
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start bg-zinc-950 px-4 py-12">
-      <ChartConfirmation
-        ticker={ticker}
-        chartData={chartData.points}
-        meta={{
-          companyName: chartData.companyName,
-          currentPrice: chartData.currentPrice,
-          percentChange: chartData.percentChange,
-          marketCap: chartData.marketCap,
-          exchange: chartData.exchange,
-          sector: chartData.sector,
-        }}
-      />
-    </main>
+    <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
+      <NavBar label={ticker} />
+      <main className="flex-1 flex flex-col items-center justify-start px-4 py-8">
+        <ChartConfirmation
+          ticker={ticker}
+          chartData={chartData.points}
+          meta={{
+            companyName:   chartData.companyName,
+            currentPrice:  chartData.currentPrice,
+            percentChange: chartData.percentChange,
+            marketCap:     chartData.marketCap,
+            exchange:      chartData.exchange,
+            sector:        chartData.sector,
+          }}
+        />
+      </main>
+    </div>
   );
 }

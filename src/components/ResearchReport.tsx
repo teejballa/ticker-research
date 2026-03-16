@@ -1,17 +1,7 @@
 'use client';
 
 // src/components/ResearchReport.tsx
-// Bloomberg terminal-styled research report component.
-// Renders the complete AnalysisResult as a formatted single-scroll page with:
-//   - Sticky top bar (ticker, company, download button)
-//   - Financial disclaimer
-//   - Stats header block (market_snapshot)
-//   - Market Sentiment
-//   - Bullish Factors
-//   - Bearish Factors
-//   - Buy/Hold/Sell Assessment (terminal bars)
-//   - Confidence Level (terminal bar)
-//   - Sources Used
+// Equinfo research report — premium terminal-intelligence aesthetic.
 
 import Link from 'next/link';
 import { formatTimestamp, formatMarketCap, formatPercent, formatPrice } from '@/lib/formatters';
@@ -22,89 +12,95 @@ interface ResearchReportProps {
   ticker: string;
 }
 
-// ---- Section header ----
+// ── Section header ────────────────────────────────────────
 
-function SectionHeader({ label }: { label: string }) {
+function SectionHeader({ label, badge }: { label: string; badge?: string }) {
   return (
-    <div className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-widest border-b border-zinc-700 pb-2 mb-4 mt-8">
-      {label}
+    <div className="flex items-center gap-3 mt-10 mb-5">
+      <span className="text-[#f59e0b]/30 text-xs select-none">▶</span>
+      <span className="text-[10px] text-[#3a5070] tracking-[0.4em] font-semibold">{label}</span>
+      {badge && (
+        <span className="text-[9px] text-[#1a2a3a] border border-[#0d1a27] px-2 py-0.5">{badge}</span>
+      )}
+      <div className="flex-1 h-px bg-[#0a1520]" />
     </div>
   );
 }
 
-// ---- Terminal bar (Buy/Hold/Sell) ----
+// ── Assessment bar ────────────────────────────────────────
 
-interface TerminalBarProps {
+interface AssessmentBarProps {
   label: string;
   pct: number;
-  colorClass: string;    // text-emerald-400 / text-amber-400 / text-red-400
+  fillColor: string;
+  glowColor: string;
+  textColor: string;
   rationale: string;
 }
 
-function TerminalBar({ label, pct, colorClass, rationale }: TerminalBarProps) {
-  const filled = Math.round(pct / 10);
-  const blocks = '█'.repeat(filled) + '░'.repeat(10 - filled);
-
+function AssessmentBar({ label, pct, fillColor, glowColor, textColor, rationale }: AssessmentBarProps) {
   return (
-    <div className="mb-4">
-      <div className={`font-mono text-sm ${colorClass}`}>
-        <span className="font-bold w-5 inline-block">{label}:</span>
-        <span className="text-zinc-400 mx-2">{blocks}</span>
-        <span className="text-amber-300">{pct}%</span>
+    <div className="mb-5">
+      <div className="flex items-center gap-3 mb-1.5">
+        <span className="text-[10px] tracking-[0.3em] font-bold w-9 shrink-0" style={{ color: textColor }}>
+          {label}
+        </span>
+        <div className="flex-1 h-1.5 bg-[#0a1520] overflow-hidden">
+          <div
+            className="h-full transition-all duration-1000 ease-out"
+            style={{
+              width: `${pct}%`,
+              backgroundColor: fillColor,
+              boxShadow: `0 0 10px ${glowColor}`,
+            }}
+          />
+        </div>
+        <span className="text-sm font-bold tabular-nums w-10 text-right" style={{ color: textColor }}>
+          {pct}%
+        </span>
       </div>
-      <div className="font-mono text-xs text-zinc-400 mt-1 pl-2">{rationale}</div>
+      <p className="text-[11px] text-[#3a5060] pl-12 leading-relaxed">{rationale}</p>
     </div>
   );
 }
 
-// ---- Stats header ----
+// ── Stats grid ────────────────────────────────────────────
 
 interface StatCellProps {
   label: string;
   value: string;
-  valueColorClass?: string;
+  color?: string;
 }
 
-function StatCell({ label, value, valueColorClass = 'text-amber-300' }: StatCellProps) {
+function StatCell({ label, value, color = '#5a7a8a' }: StatCellProps) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-zinc-400 text-xs font-mono uppercase tracking-widest">{label}</span>
-      <span className={`${valueColorClass} font-mono font-bold text-sm`}>{value}</span>
+    <div className="panel px-3 py-2.5">
+      <div className="text-[9px] text-[#1a2a3a] tracking-[0.28em] mb-1">{label}</div>
+      <div className="text-sm font-bold tabular-nums" style={{ color }}>{value}</div>
     </div>
   );
 }
 
-function StatsHeader({ snapshot }: { snapshot: MarketSnapshot | undefined }) {
+function StatsGrid({ snapshot }: { snapshot: MarketSnapshot | undefined }) {
   const s = snapshot;
-
-  const pctValue = s?.percent_change_today ?? null;
-  const pctFormatted = formatPercent(pctValue);
-  const pctColor =
-    pctValue == null ? 'text-amber-300' : pctValue >= 0 ? 'text-emerald-400' : 'text-red-400';
-
-  const epsValue = s?.eps != null ? `$${s.eps.toFixed(2)}` : '—';
-  const peValue = s?.pe_ratio != null ? s.pe_ratio.toFixed(1) : '—';
+  const pctRaw = s?.percent_change_today ?? null;
+  const pctColor = pctRaw == null ? '#5a7a8a' : pctRaw >= 0 ? '#10b981' : '#ef4444';
 
   return (
-    <div className="bg-zinc-900 border border-zinc-700 p-4 mb-6">
-      <div className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-widest border-b border-zinc-700 pb-2 mb-4">
-        TICKER OVERVIEW
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCell label="PRICE" value={formatPrice(s?.price ?? null)} />
-        <StatCell label="CHG%" value={pctFormatted} valueColorClass={pctColor} />
-        <StatCell label="MKT CAP" value={formatMarketCap(s?.market_cap ?? null)} />
-        <StatCell label="P/E" value={peValue} />
-        <StatCell label="52W HIGH" value={formatPrice(s?.fifty_two_week_high ?? null)} />
-        <StatCell label="52W LOW" value={formatPrice(s?.fifty_two_week_low ?? null)} />
-        <StatCell label="EPS" value={epsValue} />
-        <StatCell label="REVENUE" value={formatMarketCap(s?.revenue ?? null)} />
-      </div>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-0.5 mb-6">
+      <StatCell label="LAST PRICE" value={formatPrice(s?.price ?? null)}                       color="#f59e0b" />
+      <StatCell label="CHG %"      value={formatPercent(pctRaw)}                               color={pctColor} />
+      <StatCell label="MKT CAP"    value={formatMarketCap(s?.market_cap ?? null)} />
+      <StatCell label="P/E RATIO"  value={s?.pe_ratio != null ? s.pe_ratio.toFixed(1) : '—'} />
+      <StatCell label="52W HIGH"   value={formatPrice(s?.fifty_two_week_high ?? null)} />
+      <StatCell label="52W LOW"    value={formatPrice(s?.fifty_two_week_low ?? null)} />
+      <StatCell label="EPS"        value={s?.eps != null ? `$${s.eps.toFixed(2)}` : '—'} />
+      <StatCell label="REVENUE"    value={formatMarketCap(s?.revenue ?? null)} />
     </div>
   );
 }
 
-// ---- Main component ----
+// ── Main component ────────────────────────────────────────
 
 export default function ResearchReport({ analysisResult, ticker }: ResearchReportProps) {
   const {
@@ -122,155 +118,212 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     market_snapshot,
   } = analysisResult;
 
-  // PDF download — use onafterprint to restore title (avoids race condition with print dialog)
   function handleDownloadPDF() {
-    const date = new Date(analyzed_at).toISOString().slice(0, 10);
+    const date          = new Date(analyzed_at).toISOString().slice(0, 10);
     const originalTitle = document.title;
-    document.title = `${ticker}-${date}`;
+    document.title      = `${ticker}-equinfo-${date}`;
     window.onafterprint = () => {
-      document.title = originalTitle;
+      document.title      = originalTitle;
       window.onafterprint = null;
     };
     window.print();
   }
 
-  // Sentiment badge color
   const sentimentColor =
-    market_sentiment === 'bullish'
-      ? 'text-emerald-400'
-      : market_sentiment === 'bearish'
-        ? 'text-red-400'
-        : 'text-amber-400';
+    market_sentiment === 'bullish' ? '#10b981' :
+    market_sentiment === 'bearish' ? '#ef4444' :
+    '#f59e0b';
 
-  // Confidence blocks: Low=3, Medium=6, High=10
+  const sentimentBorderClass =
+    market_sentiment === 'bullish' ? 'border-emerald-500/25 bg-emerald-500/5' :
+    market_sentiment === 'bearish' ? 'border-red-500/25 bg-red-500/5' :
+    'border-amber-500/25 bg-amber-500/5';
+
   const confidenceBlocks =
-    confidence_level === 'High' ? 10 : confidence_level === 'Medium' ? 6 : 3;
-  const confidenceBar = '█'.repeat(confidenceBlocks) + '░'.repeat(10 - confidenceBlocks);
+    confidence_level === 'High' ? 10 :
+    confidence_level === 'Medium' ? 6 :
+    3;
 
   return (
     <div>
-      {/* STICKY TOP BAR */}
-      <div className="sticky top-0 z-10 bg-zinc-950 border-b border-zinc-700 px-6 py-3 flex items-center justify-between print:hidden">
-        <div className="flex items-center gap-3">
-          <span className="font-mono font-bold text-amber-400 text-lg">{ticker}</span>
-          <span className="text-zinc-400 text-sm">{company_name}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/"
-            className="font-mono text-xs border border-zinc-700 text-zinc-400 px-3 py-1 hover:border-amber-400 hover:text-amber-400 transition-colors"
-          >
-            NEW RESEARCH
-          </Link>
-          <button
-            onClick={handleDownloadPDF}
-            className="font-mono text-xs border border-amber-400 text-amber-400 px-3 py-1 hover:bg-amber-400 hover:text-black transition-colors"
-          >
-            DOWNLOAD PDF
-          </button>
+
+      {/* ── STICKY TOP BAR ── */}
+      <div className="sticky top-0 z-10 bg-[#080a0f]/96 backdrop-blur-sm border-b border-[#0a1520] print:hidden">
+        <div className="max-w-4xl mx-auto px-5 h-11 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-[#f59e0b] text-base tracking-[0.2em] glow-amber-text">
+              {ticker}
+            </span>
+            <span className="text-[#0d1a27] hidden sm:block">│</span>
+            <span className="text-[#2a3d50] text-xs hidden sm:block truncate">{company_name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="text-[10px] border border-[#131e2b] text-[#1e2d3d] px-3 py-1 hover:border-[#f59e0b]/25 hover:text-[#f59e0b]/60 transition-all tracking-wider"
+            >
+              ← NEW RESEARCH
+            </Link>
+            <button
+              onClick={handleDownloadPDF}
+              className="text-[10px] border border-[#f59e0b]/35 text-[#f59e0b]/60 px-3 py-1 hover:bg-[#f59e0b] hover:text-black hover:border-[#f59e0b] transition-all tracking-wider"
+            >
+              EXPORT PDF
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT */}
-      <div className="min-h-screen bg-zinc-950 text-zinc-200 px-6 py-8 max-w-4xl mx-auto">
+      {/* ── PAGE CONTENT ── */}
+      <div className="min-h-screen bg-[#080a0f] text-[#c9d4e0] px-5 py-8 max-w-4xl mx-auto fade-in">
 
-        {/* FINANCIAL DISCLAIMER */}
-        <div className="border border-zinc-700 bg-zinc-900 p-4 text-xs text-zinc-400 font-mono mb-6">
-          <div className="text-xs font-mono text-zinc-400 uppercase tracking-widest mb-2">
-            DISCLAIMER
-          </div>
-          This report is for informational purposes only and does not constitute financial advice.
-          Not financial advice. Past performance does not guarantee future results. Consult a
-          qualified financial advisor before making investment decisions.
+        {/* Disclaimer */}
+        <div className="border border-[#0a1520] bg-[#09101a] px-4 py-2.5 mb-5 flex gap-3 items-start">
+          <span className="text-[#1a2a3a] text-xs shrink-0 mt-0.5">⚠</span>
+          <p className="text-[10px] text-[#1a2a3a] leading-relaxed tracking-wide">
+            DISCLAIMER — This report is for informational purposes only and does not constitute financial advice or a
+            recommendation to buy, sell, or hold any security. Past performance does not guarantee future results.
+            Consult a qualified financial advisor before making investment decisions.
+          </p>
         </div>
 
-        {/* DATA TIMESTAMP */}
-        <div className="text-xs text-zinc-600 font-mono mb-8">
-          Data collected {formatTimestamp(analyzed_at)}
+        {/* Timestamp row */}
+        <div className="flex items-center gap-3 mb-6 text-[10px] text-[#0d1a27]">
+          <span className="tracking-widest">ANALYSIS TIMESTAMP</span>
+          <div className="flex-1 h-px bg-[#080e17]" />
+          <span className="tabular-nums text-[#1a2a3a]">{formatTimestamp(analyzed_at)}</span>
         </div>
 
-        {/* STATS HEADER BLOCK */}
-        <StatsHeader snapshot={market_snapshot} />
+        {/* Stats */}
+        <StatsGrid snapshot={market_snapshot} />
 
-        {/* MARKET SENTIMENT */}
+        {/* ── SENTIMENT ── */}
         <SectionHeader label="MARKET SENTIMENT" />
-        <div className="mb-2">
-          <span className={`font-mono font-bold ${sentimentColor}`}>
+        <div className="flex items-center gap-3 mb-3">
+          <span
+            className={`text-xs border px-3 py-1 font-bold tracking-[0.35em] ${sentimentBorderClass}`}
+            style={{ color: sentimentColor }}
+          >
             {market_sentiment.toUpperCase()}
           </span>
         </div>
-        <p className="text-zinc-300 text-sm leading-relaxed">{sentiment_reasoning}</p>
+        <p className="text-sm text-[#4a6a7a] leading-relaxed">{sentiment_reasoning}</p>
 
-        {/* BULLISH FACTORS */}
-        <SectionHeader label="BULLISH FACTORS" />
-        <div className="space-y-2">
+        {/* ── BULLISH FACTORS ── */}
+        <SectionHeader label="BULLISH FACTORS" badge={`${bullish_signals.length} signals`} />
+        <div className="space-y-2.5">
           {bullish_signals.map((s, i) => (
-            <div key={i} className="font-mono text-sm">
-              <span className="text-emerald-400">▲</span>{' '}
-              <span className="text-zinc-200">{s.signal}</span>{' '}
-              <span className="text-zinc-500 text-xs">[{s.source_citation}]</span>
+            <div key={i} className="flex gap-3">
+              <span className="text-emerald-500/50 text-xs mt-0.5 shrink-0 font-bold">▲</span>
+              <div>
+                <span className="text-sm text-[#7a9a8a] leading-snug">{s.signal}</span>
+                {s.source_citation && (
+                  <span className="text-[10px] text-[#1e2d3d] ml-2">[{s.source_citation}]</span>
+                )}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* BEARISH FACTORS */}
-        <SectionHeader label="BEARISH FACTORS" />
-        <div className="space-y-2">
+        {/* ── BEARISH FACTORS ── */}
+        <SectionHeader label="BEARISH FACTORS" badge={`${bearish_signals.length} signals`} />
+        <div className="space-y-2.5">
           {bearish_signals.map((s, i) => (
-            <div key={i} className="font-mono text-sm">
-              <span className="text-red-400">▼</span>{' '}
-              <span className="text-zinc-200">{s.signal}</span>{' '}
-              <span className="text-zinc-500 text-xs">[{s.source_citation}]</span>
+            <div key={i} className="flex gap-3">
+              <span className="text-red-500/50 text-xs mt-0.5 shrink-0 font-bold">▼</span>
+              <div>
+                <span className="text-sm text-[#7a6a6a] leading-snug">{s.signal}</span>
+                {s.source_citation && (
+                  <span className="text-[10px] text-[#1e2d3d] ml-2">[{s.source_citation}]</span>
+                )}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* BUY/HOLD/SELL ASSESSMENT */}
+        {/* ── ASSESSMENT ── */}
         <SectionHeader label="ASSESSMENT" />
-        <TerminalBar
-          label="BUY"
-          pct={assessment.buy_pct}
-          colorClass="text-emerald-400"
-          rationale={assessment.buy_rationale}
-        />
-        <TerminalBar
-          label="HOLD"
-          pct={assessment.hold_pct}
-          colorClass="text-amber-400"
-          rationale={assessment.hold_rationale}
-        />
-        <TerminalBar
-          label="SELL"
-          pct={assessment.sell_pct}
-          colorClass="text-red-400"
-          rationale={assessment.sell_rationale}
-        />
-
-        {/* CONFIDENCE */}
-        <SectionHeader label="CONFIDENCE" />
-        <div className="font-mono text-sm mb-2">
-          <span className="text-amber-400 font-bold">CONFIDENCE: {confidence_level.toUpperCase()}</span>
-          <span className="text-zinc-400 ml-3">[{confidenceBar}]</span>
+        <div className="panel p-5">
+          <AssessmentBar
+            label="BUY"
+            pct={assessment.buy_pct}
+            fillColor="#10b981"
+            glowColor="rgba(16,185,129,0.3)"
+            textColor="#10b981"
+            rationale={assessment.buy_rationale}
+          />
+          <AssessmentBar
+            label="HOLD"
+            pct={assessment.hold_pct}
+            fillColor="#f59e0b"
+            glowColor="rgba(245,158,11,0.3)"
+            textColor="#f59e0b"
+            rationale={assessment.hold_rationale}
+          />
+          <AssessmentBar
+            label="SELL"
+            pct={assessment.sell_pct}
+            fillColor="#ef4444"
+            glowColor="rgba(239,68,68,0.3)"
+            textColor="#ef4444"
+            rationale={assessment.sell_rationale}
+          />
         </div>
-        <div className="font-mono text-xs text-zinc-400">{confidence_explanation}</div>
 
-        {/* SOURCES USED */}
-        <SectionHeader label="SOURCES USED" />
-        <div className="space-y-2">
+        {/* ── CONFIDENCE ── */}
+        <SectionHeader label="CONFIDENCE LEVEL" />
+        <div className="panel p-4">
+          <div className="flex items-center gap-4 mb-3">
+            <span className="text-xs tracking-[0.3em] text-[#f59e0b] font-bold">
+              {confidence_level.toUpperCase()}
+            </span>
+            <div className="flex gap-0.5">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-2 w-5 transition-all duration-700"
+                  style={{
+                    backgroundColor: i < confidenceBlocks ? '#f59e0b' : '#0a1520',
+                    boxShadow: i < confidenceBlocks ? '0 0 5px rgba(245,158,11,0.3)' : 'none',
+                  }}
+                />
+              ))}
+            </div>
+            <span className="text-xs text-[#2a3d52] tabular-nums">{confidenceBlocks * 10}%</span>
+          </div>
+          <p className="text-xs text-[#3a5060] leading-relaxed">{confidence_explanation}</p>
+        </div>
+
+        {/* ── SOURCES ── */}
+        <SectionHeader label="SOURCES" badge={`${sources_used.length} indexed`} />
+        <div className="space-y-0.5">
           {sources_used.map((src, i) => (
-            <div key={i} className="font-mono text-sm text-zinc-300">
-              <span className="text-zinc-500 mr-2">{i + 1}.</span>
-              <span className="text-zinc-200">{src.name}</span>
-              <span className="text-zinc-500"> — </span>
-              <span className="text-zinc-400">{src.key_fact}</span>
+            <div key={i} className="panel px-3.5 py-2.5 flex gap-3 items-start">
+              <span className="text-[#1a2a3a] text-[10px] tabular-nums shrink-0 w-5 text-right mt-0.5">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <div>
+                <div className="text-xs text-[#3a5a6a] font-semibold">{src.name}</div>
+                {src.key_fact && (
+                  <p className="text-[10px] text-[#1e2d3d] mt-0.5 leading-snug">{src.key_fact}</p>
+                )}
+              </div>
             </div>
           ))}
         </div>
+
         {source_warnings.length > 0 && (
-          <div className="font-mono text-xs text-zinc-600 mt-3">
-            Note: {source_warnings.length} source(s) could not be loaded during analysis
-          </div>
+          <p className="text-[10px] text-[#0d1a27] mt-2 tracking-wider">
+            ⚠ {source_warnings.length} source(s) failed to load during analysis
+          </p>
         )}
+
+        {/* Footer */}
+        <div className="mt-14 pt-4 border-t border-[#080e17] flex flex-wrap items-center justify-between gap-2 text-[9px] text-[#0a1520] select-none">
+          <span>EQUINFO RESEARCH TERMINAL</span>
+          <span>ANALYSIS ENGINE: ANTHROPIC × GEMINI</span>
+          <span className="tabular-nums">{new Date(analyzed_at).toISOString().slice(0, 10)}</span>
+        </div>
 
       </div>
     </div>

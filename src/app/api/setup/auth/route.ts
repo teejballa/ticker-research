@@ -1,100 +1,79 @@
 // src/app/api/setup/auth/route.ts
-// POST /api/setup/auth — spawns `notebooklm login`, polls for storage_state.json.
+// POST /api/setup/auth — spawns notebooklm_auth.py, which opens a browser for
+// Google login, detects completion automatically, saves storage_state.json,
+// and closes the browser. No terminal interaction required.
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
-import { homedir } from 'os';
 import path from 'path';
 import { NextRequest } from 'next/server';
-
-const POLL_INTERVAL_MS = 2000;       // check every 2 seconds
-const WAITING_NOTIFY_INTERVAL_MS = 5000;  // notify user every 5 seconds
-const TIMEOUT_MS = 10 * 60 * 1000;  // 10 minutes
 
 function encodeSSE(data: object): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function getAuthFilePath(): string {
-  const notebooklmHome = process.env.NOTEBOOKLM_HOME ?? path.join(homedir(), '.notebooklm');
-  return path.join(notebooklmHome, 'storage_state.json');
-}
-
 export async function POST(_request: NextRequest): Promise<Response> {
   const stream = new ReadableStream({
     start(controller) {
-      const authFilePath = getAuthFilePath();
+      const scriptPath = path.join(process.cwd(), 'scripts', 'notebooklm_auth.py');
 
-      // Spawn the notebooklm login process (opens browser on user's screen)
-      const proc = spawn('notebooklm', ['login'], {
+      const proc = spawn('python3', [scriptPath], {
         detached: false,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
 
-      proc.stderr?.on('data', (chunk: Buffer) => {
-        console.error('[notebooklm login stderr]', chunk.toString());
-      });
-
       let closed = false;
+      let completed = false;
 
       function closeStream() {
         if (closed) return;
         closed = true;
-        try {
-          proc.kill();
-        } catch { /* ignore */ }
-        try {
-          controller.close();
-        } catch { /* already closed */ }
+        try { proc.kill(); } catch { /* ignore */ }
+        try { controller.close(); } catch { /* already closed */ }
       }
 
-      const startTime = Date.now();
-      let lastWaiting = Date.now();
+      // Read PROGRESS / COMPLETE / ERROR signals from stdout
+      let buf = '';
+      proc.stdout?.on('data', (chunk: Buffer) => {
+        buf += chunk.toString();
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
 
-      // Poll for the auth file
-      const pollInterval = setInterval(() => {
-        if (closed) {
-          clearInterval(pollInterval);
-          return;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          if (trimmed.startsWith('PROGRESS: ')) {
+            controller.enqueue(encodeSSE({ type: 'waiting', message: trimmed.slice('PROGRESS: '.length) }));
+          } else if (trimmed === 'COMPLETE') {
+            completed = true;
+            controller.enqueue(encodeSSE({ type: 'complete' }));
+            // Don't kill — let the script show the success screen and close naturally.
+            // The stream closes; the process finishes on its own in ~2 seconds.
+            closed = true;
+            try { controller.close(); } catch { /* already closed */ }
+          } else if (trimmed.startsWith('ERROR: ')) {
+            controller.enqueue(encodeSSE({ type: 'error', message: trimmed.slice('ERROR: '.length) }));
+            closeStream();
+          }
         }
+      });
 
-        // Check timeout
-        if (Date.now() - startTime > TIMEOUT_MS) {
-          clearInterval(pollInterval);
-          controller.enqueue(encodeSSE({ type: 'error', message: 'Login timed out after 10 minutes' }));
-          closeStream();
-          return;
-        }
+      proc.stderr?.on('data', (chunk: Buffer) => {
+        console.error('[notebooklm_auth.py stderr]', chunk.toString());
+      });
 
-        // Send waiting notification every 5 seconds
-        if (Date.now() - lastWaiting >= WAITING_NOTIFY_INTERVAL_MS) {
-          controller.enqueue(encodeSSE({ type: 'waiting' }));
-          lastWaiting = Date.now();
-        }
-
-        // Check if auth file appeared
-        if (existsSync(authFilePath)) {
-          clearInterval(pollInterval);
-          controller.enqueue(encodeSSE({ type: 'complete' }));
-          closeStream();
-        }
-      }, POLL_INTERVAL_MS);
-
-      // Handle process errors (e.g., notebooklm CLI not installed)
       proc.on('error', (err: Error) => {
-        clearInterval(pollInterval);
-        controller.enqueue(encodeSSE({ type: 'error', message: `Failed to start notebooklm login: ${err.message}` }));
+        if (closed) return;
+        controller.enqueue(encodeSSE({ type: 'error', message: `Failed to start auth script: ${err.message}` }));
         closeStream();
       });
 
-      // If the process exits before the auth file appears (unexpected)
       proc.on('close', (code: number | null) => {
         if (closed) return;
-        // Only treat as error if auth file still doesn't exist
-        if (!existsSync(authFilePath)) {
-          clearInterval(pollInterval);
-          controller.enqueue(encodeSSE({ type: 'error', message: `notebooklm login exited unexpectedly (code ${code})` }));
-          closeStream();
+        // Only show error if we never received COMPLETE
+        if (!completed) {
+          controller.enqueue(encodeSSE({ type: 'error', message: `Auth process exited unexpectedly (code ${code})` }));
         }
+        closeStream();
       });
     },
   });
