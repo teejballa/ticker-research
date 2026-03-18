@@ -111,13 +111,14 @@ Plans:
   2. Each completed research report is saved locally (ticker, timestamp, sentiment verdict, full AnalysisResult JSON)
   3. Home page shows a history of past reports grouped by ticker, each with date and sentiment verdict, openable without re-running analysis
   4. A "Regenerate" action on any past report kicks off a fresh data collection and analysis run for the same ticker, storing the result as a new timestamped report
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 05-01: Report persistence — local JSON store (or SQLite) for AnalysisResult + metadata; write on analysis complete; read on home page load
-- [ ] 05-02: Google identity display — extract connected email from notebooklm auth check; show "Connected as [email]" in app header/nav; reconnect flow when session expires
-- [ ] 05-03: Report history UI — home page past reports section (ticker, date, sentiment chip, open/regenerate actions); Bloomberg-terminal style to match report design
-- [ ] 05-04: Regenerate flow — "Run New Analysis" on a past report triggers full Phase 1+2 pipeline for that ticker; result stored as new entry; old reports preserved
+- [ ] 05-01-PLAN.md — Foundation: StoredReport type + reports.ts helpers (writeReport/readReport/listReports), scripts/get_email.py, Wave 0 test stubs (unit + e2e)
+- [ ] 05-02-PLAN.md — API layer: GET /api/history, GET /api/history/[filename], extend analysis route to persist on RESULT, extend setup/status to return userEmail
+- [ ] 05-03-PLAN.md — History UI: ReportHistory component (terminal-style table with OPEN/REGEN actions), NavIdentity wired into page.tsx nav
+- [ ] 05-04-PLAN.md — Saved report loading: research page ?report= branch loads StoredReport from API, mutually exclusive with analysis pipeline
+- [ ] 05-05-PLAN.md — Playwright e2e tests pass, screenshots confirm terminal aesthetic, user checkpoint approval
 
 ## Progress
 
@@ -130,4 +131,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Research Integration | 4/4 | Complete | 2026-03-14 |
 | 3. Report Output | 1/3 | In Progress|  |
 | 4. Deployment | 3/3 | Complete   | 2026-03-18 |
-| 5. User Identity & Report History | 0/4 | Not started | - |
+| 5. User Identity & Report History | 0/5 | Not started | - |
