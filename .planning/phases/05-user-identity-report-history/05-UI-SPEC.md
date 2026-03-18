@@ -56,7 +56,7 @@ All text uses IBM Plex Mono. No size may be introduced outside this table.
 |------|------|--------|-------------|-------|
 | Nav label | 10px | 400 | 1.0 | Email display in nav, market labels, exchange names |
 | Body / row | 11px | 400 | 1.5 | History row: company name, date column |
-| Label / header | 10px | 600 | 1.0 | `RESEARCH HISTORY` section header, column headers (`SYMBOL`, `DATE`, etc.) |
+| Label / header | 10px | 700 | 1.0 | `RESEARCH HISTORY` section header, column headers (`SYMBOL`, `DATE`, etc.) |
 | Ticker symbol | 11px | 700 | 1.0 | AAPL, TSLA etc. in history rows — amber color |
 
 **Tracking conventions (from existing codebase):**
