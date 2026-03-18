@@ -43,7 +43,7 @@
 
 ### Deployment
 
-- [ ] **DEPLOY-01**: System runs locally on a user's device (local execution mode)
+- [x] **DEPLOY-01**: System runs locally on a user's device (local execution mode)
 - [ ] **DEPLOY-02**: System is deployable as a web application (web mode)
 
 ### User Identity & Report History
@@ -117,7 +117,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPT-04 | Phase 3 | Complete |
 | REPT-05 | Phase 3 | Complete |
 | REPT-06 | Phase 3 | Complete |
-| DEPLOY-01 | Phase 4 | Pending |
+| DEPLOY-01 | Phase 4 | Complete |
 | DEPLOY-02 | Phase 4 | Pending |
 | AUTH-01 | Phase 5 | Pending |
 | HIST-01 | Phase 5 | Pending |
