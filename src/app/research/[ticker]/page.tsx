@@ -56,6 +56,13 @@ export default function ResearchPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [errorMessage,   setErrorMessage]   = useState<string | null>(null);
 
+  // When filePath appears via router.push (after data collection), trigger analysis
+  useEffect(() => {
+    if (filePath && pageState === 'idle') {
+      setPageState('analyzing');
+    }
+  }, [filePath, pageState]);
+
   // Warn before unload during analysis
   useEffect(() => {
     if (pageState !== 'analyzing') return;

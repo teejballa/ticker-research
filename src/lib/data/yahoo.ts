@@ -61,7 +61,11 @@ export async function fetchMarketData(ticker: string): Promise<MarketDataSection
       market_cap: quote.marketCap ?? null,
       fifty_two_week_high: quote.fiftyTwoWeekHigh ?? null,
       fifty_two_week_low: quote.fiftyTwoWeekLow ?? null,
-      percent_change_today: quote.regularMarketChangePercent ?? null,
+      // quote().regularMarketChangePercent is in percent form (e.g. -1.01 = -1.01%),
+      // but the rest of the codebase expects a decimal fraction (e.g. -0.0101 = -1.01%).
+      percent_change_today: quote.regularMarketChangePercent != null
+        ? quote.regularMarketChangePercent / 100
+        : null,
       exchange: quote.fullExchangeName ?? null,
     };
   } catch (err) {
