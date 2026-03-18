@@ -12,6 +12,27 @@ interface ResearchReportProps {
   ticker: string;
 }
 
+// ── Inline markdown renderer (bold + newlines only) ────────
+// Gemini returns **bold** text and bullet lists — strip asterisks cleanly.
+function Md({ text }: { text: string }) {
+  // Split on **...** to extract bold spans
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1
+          ? <strong key={i} className="text-[#c9d4e0] font-semibold">{part}</strong>
+          : part.split('\n').map((line, j) => (
+              <span key={`${i}-${j}`}>
+                {j > 0 && <br />}
+                {line}
+              </span>
+            ))
+      )}
+    </>
+  );
+}
+
 // ── Section header ────────────────────────────────────────
 
 function SectionHeader({ label, badge }: { label: string; badge?: string }) {
@@ -59,7 +80,7 @@ function AssessmentBar({ label, pct, fillColor, glowColor, textColor, rationale 
           {pct}%
         </span>
       </div>
-      <p className="text-[11px] text-[#3a5060] pl-12 leading-relaxed">{rationale}</p>
+      <p className="text-[11px] text-[#3a5060] pl-12 leading-relaxed"><Md text={rationale} /></p>
     </div>
   );
 }
@@ -207,7 +228,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             {market_sentiment.toUpperCase()}
           </span>
         </div>
-        <p className="text-sm text-[#4a6a7a] leading-relaxed">{sentiment_reasoning}</p>
+        <p className="text-sm text-[#4a6a7a] leading-relaxed"><Md text={sentiment_reasoning} /></p>
 
         {/* ── BULLISH FACTORS ── */}
         <SectionHeader label="BULLISH FACTORS" badge={`${bullish_signals.length} signals`} />
@@ -216,7 +237,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             <div key={i} className="flex gap-3">
               <span className="text-emerald-500/50 text-xs mt-0.5 shrink-0 font-bold">▲</span>
               <div>
-                <span className="text-sm text-[#7a9a8a] leading-snug">{s.signal}</span>
+                <span className="text-sm text-[#7a9a8a] leading-snug"><Md text={s.signal} /></span>
                 {s.source_citation && (
                   <span className="text-[10px] text-[#1e2d3d] ml-2">[{s.source_citation}]</span>
                 )}
@@ -232,7 +253,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             <div key={i} className="flex gap-3">
               <span className="text-red-500/50 text-xs mt-0.5 shrink-0 font-bold">▼</span>
               <div>
-                <span className="text-sm text-[#7a6a6a] leading-snug">{s.signal}</span>
+                <span className="text-sm text-[#7a6a6a] leading-snug"><Md text={s.signal} /></span>
                 {s.source_citation && (
                   <span className="text-[10px] text-[#1e2d3d] ml-2">[{s.source_citation}]</span>
                 )}
@@ -291,7 +312,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             </div>
             <span className="text-xs text-[#2a3d52] tabular-nums">{confidenceBlocks * 10}%</span>
           </div>
-          <p className="text-xs text-[#3a5060] leading-relaxed">{confidence_explanation}</p>
+          <p className="text-xs text-[#3a5060] leading-relaxed"><Md text={confidence_explanation} /></p>
         </div>
 
         {/* ── SOURCES ── */}

@@ -132,7 +132,7 @@ export default function Home() {
   const monScale      = 0.88 + anim.monPhase * 0.12;
 
   return (
-    <div className="bg-[#080a0f] overflow-x-hidden">
+    <div className="bg-[#080a0f]">
 
       {/* ── FIXED NAV ──────────────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#1a2d42] bg-[#080a0f]/95 backdrop-blur-md">
@@ -150,11 +150,12 @@ export default function Home() {
 
           <div className="flex items-center gap-4 text-[10px] shrink-0">
             <span suppressHydrationWarning className="text-[#3a5a78] hidden sm:block">{dateStr}</span>
-            <span suppressHydrationWarning className="text-[#4d6f8a] tabular-nums">{time}</span>
-            <div className="flex items-center gap-1.5">
+            <span suppressHydrationWarning className="text-[#4d6f8a] tabular-nums hidden sm:block">{time}</span>
+            <div className="hidden md:flex items-center gap-1.5">
               <span className={`w-1.5 h-1.5 rounded-full ${market.open ? 'bg-emerald-500 status-dot-live' : 'bg-[#2a3d52]'}`} />
               <span className={`tracking-wider ${market.open ? 'text-emerald-400' : 'text-[#3a5a78]'}`}>{market.label}</span>
             </div>
+            <button className="nav-cta-btn">Analyze a Ticker →</button>
           </div>
 
         </div>
@@ -189,9 +190,12 @@ export default function Home() {
               <span className="text-[#2a4560]">·</span>
               <span>INTELLIGENCE</span>
             </div>
+            <p className="mt-5 text-[18px] sm:text-[22px] font-semibold text-white/80 tracking-wide leading-snug hero-tagline">
+              Research before you trade.
+            </p>
           </div>
 
-          <div className="fade-in-d1">
+          <div className="fade-in-d1 relative z-50">
             <div className="mb-1.5 flex items-center gap-2 text-[10px] select-none">
               <span className="text-[#f59e0b]/60">$</span>
               <span className="text-[#3d5e7a] tracking-wider">equinfo search --mode=live --depth=full</span>
@@ -206,7 +210,25 @@ export default function Home() {
             {showSearch && <TickerSearch />}
           </div>
 
-          <div className="mt-8 fade-in-d2">
+          {/* Stats trust bar */}
+          <div className="mt-6 fade-in-d2">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              {[
+                { val: '6', label: 'AI QUERIES' },
+                { val: '2', label: 'MODELS' },
+                { val: '100%', label: 'SOURCE-GROUNDED' },
+                { val: 'PDF', label: 'EXPORT' },
+              ].map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  {i > 0 && <span className="text-[#1a2d42] hidden sm:block">·</span>}
+                  <span className="text-[#f59e0b] text-[11px] font-bold tabular-nums">{s.val}</span>
+                  <span className="text-[#3d5e7a] text-[9px] tracking-[0.25em]">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 fade-in-d3">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex-1 h-px bg-[#1a2d42]" />
               <span className="text-[9px] text-[#3d5e7a] tracking-[0.4em] select-none">RESEARCH PIPELINE</span>
@@ -227,7 +249,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-14 flex flex-col items-center gap-2 fade-in-d3">
+          <div className="mt-14 flex flex-col items-center gap-2 fade-in-d4">
             <span className="text-[9px] text-[#3a5a78] tracking-[0.5em]">SCROLL</span>
             <div className="scroll-cue">
               <div className="scroll-cue-chevron" />
@@ -308,6 +330,41 @@ export default function Home() {
         </div>
       </div>
 
+      {/* ── MARKET SNAPSHOT ──────────────────────────────────── */}
+      <section className="py-16 px-4 border-t border-[#1a2d42] relative overflow-hidden">
+        <div className="absolute inset-0 dot-grid opacity-30 pointer-events-none" />
+        <div className="max-w-screen-lg mx-auto relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-[9px] text-[#3d5e7a] tracking-[0.5em]">MARKET SNAPSHOT</span>
+              <span className="text-[9px] text-[#2a4560]">—</span>
+              <span className="text-[9px] text-[#2a4560] tracking-widest">SAMPLE COVERAGE</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${market.open ? 'bg-[#26a69a] status-dot-live' : 'bg-[#2a3d52]'}`} />
+              <span className={`text-[9px] tracking-wider ${market.open ? 'text-[#26a69a]' : 'text-[#3a5a78]'}`}>{market.label}</span>
+            </div>
+          </div>
+          <div className="market-grid">
+            <div className="market-grid-header">
+              <span>SYMBOL</span><span>NAME</span><span className="text-right">PRICE</span><span className="text-right">CHANGE</span>
+            </div>
+            {TAPE.map((t) => (
+              <div key={t.sym} className="market-grid-row">
+                <span className="market-sym">{t.sym}</span>
+                <span className="market-name">{
+                  ({ AAPL:'Apple','MSFT':'Microsoft','GOOGL':'Alphabet','AMZN':'Amazon','TSLA':'Tesla','NVDA':'NVIDIA','META':'Meta','JPM':'JPMorgan','V':'Visa','SPY':'S&P 500 ETF','QQQ':'Nasdaq ETF','LLY':'Eli Lilly','XOM':'ExxonMobil','BRK.B':'Berkshire B' } as Record<string,string>)[t.sym] ?? t.sym
+                }</span>
+                <span className="market-price">${t.price}</span>
+                <span className={`market-chg ${t.up ? 'market-chg-up' : 'market-chg-dn'}`}>
+                  {t.up ? '▲' : '▼'} {t.chg}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── HOW IT WORKS ─────────────────────────────────────── */}
       <section className="py-28 px-4 border-t border-[#1a2d42] relative overflow-hidden">
         <div className="absolute inset-0 dot-grid opacity-40 pointer-events-none" />
@@ -319,7 +376,7 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-px bg-[#1a2d42]">
             {[
               { n: '01', label: 'DATA COLLECTION', accent: '#f59e0b', desc: 'Yahoo Finance delivers real-time price, volume, fundamentals, and 52-week metrics. Anthropic web search retrieves financial news, SEC filing summaries, and analyst consensus.' },
-              { n: '02', label: 'AI SYNTHESIS',    accent: '#38bdf8', desc: 'NotebookLM creates a private notebook per run, ingests all sources, and fires 6 structured Gemini queries — buy signals, bear risks, valuation, sentiment, momentum, and conviction.' },
+              { n: '02', label: 'AI SYNTHESIS',    accent: '#8b5cf6', desc: 'NotebookLM creates a private notebook per run, ingests all sources, and fires 6 structured Gemini queries — buy signals, bear risks, valuation, sentiment, momentum, and conviction.' },
               { n: '03', label: 'REPORT OUTPUT',   accent: '#34d399', desc: 'A structured research report with Buy/Hold/Sell assessment, confidence level, bullish/bearish factor breakdown, and full source attribution. Downloadable as PDF.' },
             ].map((step) => (
               <div key={step.n} className="how-step" style={{ '--step-accent': step.accent } as React.CSSProperties}>
@@ -339,13 +396,13 @@ export default function Home() {
           <div className="text-[8px] text-[#2a4560] tracking-[0.6em] mb-8">INTELLIGENCE STACK</div>
           <div className="flex flex-wrap justify-center gap-x-14 gap-y-6">
             {[
-              { name: 'CLAUDE',        sub: 'ANTHROPIC' },
-              { name: 'GEMINI',        sub: 'GOOGLE DEEPMIND' },
-              { name: 'NOTEBOOKLM',   sub: 'RESEARCH AI' },
-              { name: 'YAHOO FINANCE', sub: 'MARKET DATA' },
+              { name: 'CLAUDE',        sub: 'ANTHROPIC',      accent: '#f59e0b' },
+              { name: 'GEMINI',        sub: 'GOOGLE DEEPMIND', accent: '#8b5cf6' },
+              { name: 'NOTEBOOKLM',   sub: 'RESEARCH AI',     accent: '#8b5cf6' },
+              { name: 'YAHOO FINANCE', sub: 'MARKET DATA',     accent: '#26a69a' },
             ].map((p) => (
               <div key={p.name} className="text-center">
-                <div className="text-[#4d6f8a] text-[11px] tracking-[0.25em] font-bold">{p.name}</div>
+                <div className="text-[11px] tracking-[0.25em] font-bold" style={{ color: p.accent }}>{p.name}</div>
                 <div className="text-[#2a4560] text-[8px] tracking-[0.35em] mt-1">{p.sub}</div>
               </div>
             ))}
@@ -360,7 +417,7 @@ export default function Home() {
             <span key={i} className="inline-flex items-center gap-2 px-5 text-[10px] shrink-0 select-none">
               <span className="text-[#4d6f8a] tracking-wider">{t.sym}</span>
               <span className="text-[#3d5e7a] tabular-nums">{t.price}</span>
-              <span className={`tabular-nums ${t.up ? 'text-emerald-600' : 'text-red-700'}`}>{t.chg}</span>
+              <span className={`tabular-nums ${t.up ? 'text-[#26a69a]' : 'text-[#ef5350]'}`}>{t.chg}</span>
               <span className="text-[#2a4560]">╱</span>
             </span>
           ))}
