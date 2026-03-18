@@ -1,6 +1,7 @@
 // src/app/api/analysis/[ticker]/route.ts
 // POST /api/analysis/[ticker]
-// Spawns the notebooklm_research.py Python script and streams SSE events to the browser.
+// In local mode: spawns the notebooklm_research.py Python script and streams SSE events to the browser.
+// In cloud mode (DEPLOYMENT_MODE=cloud): proxies the request to DAYTONA_CONTAINER_URL and pipes its SSE stream back.
 // SSE events: { type: 'progress', message: string }
 //             { type: 'result', data: AnalysisResult }
 //             { type: 'error', message: string }
@@ -8,16 +9,46 @@
 import { spawn } from 'child_process';
 import { NextRequest } from 'next/server';
 
-// 10-minute timeout for the Python script (Next.js route segment config)
-export const maxDuration = 600;
+// Force dynamic evaluation so Vercel reads DEPLOYMENT_MODE at request time, not build time.
+export const dynamic = 'force-dynamic';
+
+// 5-minute timeout for the Vercel function (proxy only — actual work happens in the Daytona container).
+// The local path may take longer, but Vercel Hobby cap is 300 s.
+export const maxDuration = 300;
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ ticker: string }> }
 ) {
-  await params; // consume params (ticker available if needed for logging)
+  const { ticker } = await params;
   const { filePath } = await request.json() as { filePath: string };
 
+  // Cloud deployment branch: proxy to the Daytona container
+  if (process.env.DEPLOYMENT_MODE === 'cloud') {
+    const containerUrl = process.env.DAYTONA_CONTAINER_URL;
+    if (!containerUrl) {
+      return new Response(
+        JSON.stringify({ type: 'error', message: 'DAYTONA_CONTAINER_URL is not configured.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const upstream = await fetch(`${containerUrl}/api/analysis/${ticker}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filePath }),
+    });
+
+    return new Response(upstream.body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+  }
+
+  // Local execution branch: spawn the Python script and stream its output as SSE
   const stream = new ReadableStream({
     start(controller) {
       let closed = false;

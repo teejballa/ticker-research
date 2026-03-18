@@ -2,7 +2,7 @@
 // Integration tests for POST /api/analysis/[ticker]
 // Mocks child_process.spawn to control stdout and test SSE event streaming.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'events';
 
 // Mock child_process before importing the route
@@ -45,10 +45,130 @@ async function collectSSE(stream: ReadableStream<Uint8Array>): Promise<string[]>
   return parts;
 }
 
+describe('POST /api/analysis/[ticker] — cloud mode', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    delete process.env.DEPLOYMENT_MODE;
+    delete process.env.DAYTONA_CONTAINER_URL;
+  });
+
+  afterEach(() => {
+    delete process.env.DEPLOYMENT_MODE;
+    delete process.env.DAYTONA_CONTAINER_URL;
+    vi.unstubAllGlobals();
+  });
+
+  it('proxies to container URL and pipes SSE stream when DEPLOYMENT_MODE=cloud and DAYTONA_CONTAINER_URL is set', async () => {
+    process.env.DEPLOYMENT_MODE = 'cloud';
+    process.env.DAYTONA_CONTAINER_URL = 'https://3000-test.daytona.app';
+
+    // Create a ReadableStream that emits one SSE chunk
+    const sseChunk = new TextEncoder().encode('data: {"type":"progress","message":"Creating notebook..."}\n\n');
+    const upstreamBody = new ReadableStream({
+      start(controller) {
+        controller.enqueue(sseChunk);
+        controller.close();
+      },
+    });
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(upstreamBody, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      })
+    ));
+
+    const { POST } = await import('@/app/api/analysis/[ticker]/route');
+
+    const request = new Request('http://localhost/api/analysis/AAPL', {
+      method: 'POST',
+      body: JSON.stringify({ filePath: '/tmp/test.json' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await POST(
+      request as unknown as import('next/server').NextRequest,
+      { params: Promise.resolve({ ticker: 'AAPL' }) }
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('text/event-stream');
+
+    // Verify fetch was called with the container URL
+    const fetchMock = vi.mocked(fetch as ReturnType<typeof vi.fn>);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [calledUrl, calledOpts] = fetchMock.mock.calls[0];
+    expect(calledUrl).toBe('https://3000-test.daytona.app/api/analysis/AAPL');
+    expect(calledOpts.method).toBe('POST');
+
+    // Verify the SSE body is piped through
+    const parts = await collectSSE(response.body!);
+    const combined = parts.join('');
+    expect(combined).toContain('"type":"progress"');
+    expect(combined).toContain('Creating notebook');
+  });
+
+  it('returns 500 with JSON error when DEPLOYMENT_MODE=cloud and DAYTONA_CONTAINER_URL is missing', async () => {
+    process.env.DEPLOYMENT_MODE = 'cloud';
+    // DAYTONA_CONTAINER_URL intentionally not set
+
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const { POST } = await import('@/app/api/analysis/[ticker]/route');
+
+    const request = new Request('http://localhost/api/analysis/AAPL', {
+      method: 'POST',
+      body: JSON.stringify({ filePath: '/tmp/test.json' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await POST(
+      request as unknown as import('next/server').NextRequest,
+      { params: Promise.resolve({ ticker: 'AAPL' }) }
+    );
+
+    expect(response.status).toBe(500);
+    const json = await response.json();
+    expect(json.message).toContain('DAYTONA_CONTAINER_URL');
+    // fetch must NOT be called — route returns before fetching
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not call spawn() when DEPLOYMENT_MODE=cloud', async () => {
+    process.env.DEPLOYMENT_MODE = 'cloud';
+    process.env.DAYTONA_CONTAINER_URL = 'https://3000-test.daytona.app';
+
+    const sseBody = new ReadableStream({ start(c) { c.close(); } });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(sseBody, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+    ));
+
+    const { spawn } = await import('child_process');
+    const { POST } = await import('@/app/api/analysis/[ticker]/route');
+
+    const request = new Request('http://localhost/api/analysis/AAPL', {
+      method: 'POST',
+      body: JSON.stringify({ filePath: '/tmp/test.json' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await POST(
+      request as unknown as import('next/server').NextRequest,
+      { params: Promise.resolve({ ticker: 'AAPL' }) }
+    );
+
+    expect(spawn as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+  });
+});
+
 describe('POST /api/analysis/[ticker]', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    delete process.env.DEPLOYMENT_MODE;
+    delete process.env.DAYTONA_CONTAINER_URL;
   });
 
   it('streams a progress SSE event when Python script emits PROGRESS: line', async () => {
