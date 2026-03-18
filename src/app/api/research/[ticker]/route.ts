@@ -9,6 +9,9 @@ import { collectAllData } from '@/lib/data/source-package';
 import { writeSourcePackage } from '@/lib/temp-file';
 import YahooFinance from 'yahoo-finance2';
 
+// Force dynamic evaluation so Vercel reads env vars at request time, not build time.
+export const dynamic = 'force-dynamic';
+
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 export async function POST(
