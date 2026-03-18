@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-18T15:11:17.046Z"
+stopped_at: "Completed 04-03-PLAN.md (checkpoint: awaiting human verify)"
+last_updated: "2026-03-18T15:16:01.402Z"
 last_activity: 2026-03-10 — Roadmap created; requirements mapped to 4 phases
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 0
 ---
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-report-output P03 | continuation | 3 tasks | 7 files |
 | Phase 04-deployment P01 | 225 | 2 tasks | 4 files |
 | Phase 04-deployment P02 | 3 | 2 tasks | 3 files |
+| Phase 04-deployment P03 | 2 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 04-deployment]: Use mcr.microsoft.com/devcontainers/python:3.12 (Ubuntu/glibc) not Alpine — Playwright requires glibc
 - [Phase 04-deployment]: playwright install --with-deps chromium required — installs OS-level libs (libnss3, libgbm) needed for headless Chromium on Linux
 - [Phase 04-deployment]: maxDuration=300 applied only to analysis and research routes — not globally — to preserve cold-start optimization on fast routes
+- [Phase 04-deployment]: export const dynamic = 'force-dynamic' added to analysis and research routes — required for Vercel to evaluate DEPLOYMENT_MODE at request time not build time
+- [Phase 04-deployment]: maxDuration reduced from 600 to 300 in analysis route — cloud path is a proxy only (Daytona container handles actual work), Vercel Hobby cap is 300s
 
 ### Pending Todos
 
@@ -121,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T15:11:17.044Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-18T15:16:01.400Z
+Stopped at: Completed 04-03-PLAN.md (checkpoint: awaiting human verify)
 Resume file: None
