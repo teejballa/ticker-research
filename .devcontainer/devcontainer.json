@@ -1,0 +1,12 @@
+{
+  "name": "ticker-research",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "18" }
+  },
+  "postCreateCommand": "pip install -r scripts/requirements.txt && playwright install --with-deps chromium && npm install",
+  "forwardPorts": [3000, 8080],
+  "remoteEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  }
+}
