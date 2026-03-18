@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-03-18T15:08:18.869Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-18T15:11:17.046Z"
 last_activity: 2026-03-10 — Roadmap created; requirements mapped to 4 phases
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
   percent: 0
 ---
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-report-output P02 | 2 | 2 tasks | 3 files |
 | Phase 03-report-output P03 | continuation | 3 tasks | 7 files |
 | Phase 04-deployment P01 | 225 | 2 tasks | 4 files |
+| Phase 04-deployment P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,9 @@ Recent decisions affecting current work:
 - [Phase 03-report-output]: All rounded-xl and shadow-sm removed globally — terminal aesthetic requires flat sharp-edged surfaces throughout
 - [Phase 04-deployment]: prestart npm hook runs setup.sh before every npm start — validates Node 18+, Python 3.10+, ANTHROPIC_API_KEY
 - [Phase 04-deployment]: start script changed to 'next build && next start' — prevents 'Could not find production build' error on fresh clone
+- [Phase 04-deployment]: Use mcr.microsoft.com/devcontainers/python:3.12 (Ubuntu/glibc) not Alpine — Playwright requires glibc
+- [Phase 04-deployment]: playwright install --with-deps chromium required — installs OS-level libs (libnss3, libgbm) needed for headless Chromium on Linux
+- [Phase 04-deployment]: maxDuration=300 applied only to analysis and research routes — not globally — to preserve cold-start optimization on fast routes
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T15:08:18.867Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-03-18T15:11:17.044Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
