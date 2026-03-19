@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import TickerSearch from '@/components/TickerSearch';
 import { SetupWizard } from '@/components/SetupWizard';
+import ReportHistory from '@/components/ReportHistory';
 
 const TAPE = [
   { sym: 'AAPL',  price: '189.84', chg: '+0.43%', up: true  },
@@ -26,6 +27,12 @@ interface SetupStatus {
   notebooklmOk: boolean;
   authOk: boolean;
   allOk: boolean;
+  userEmail: string | null;  // null = not connected or extraction failed
+}
+
+function truncateEmail(email: string, maxLen = 24): string {
+  if (email.length <= maxLen) return email;
+  return email.slice(0, 21) + '\u2026'; // Unicode ellipsis
 }
 
 function getMarketStatus(): { open: boolean; label: string } {
@@ -64,13 +71,13 @@ export default function Home() {
     try {
       const res = await fetch('/api/setup/status');
       if (!res.ok) {
-        setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true });
+        setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null });
         return;
       }
       const data: SetupStatus = await res.json();
       setSetupStatus(data);
     } catch {
-      setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true });
+      setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null });
     } finally {
       setLoading(false);
     }
@@ -155,6 +162,22 @@ export default function Home() {
               <span className={`w-1.5 h-1.5 rounded-full ${market.open ? 'bg-emerald-500 status-dot-live' : 'bg-[#2a3d52]'}`} />
               <span className={`tracking-wider ${market.open ? 'text-emerald-400' : 'text-[#3a5a78]'}`}>{market.label}</span>
             </div>
+            {/* NavIdentity — email or NOT CONNECTED */}
+            {setupStatus && (
+              <span
+                data-testid="nav-identity"
+                className={`hidden sm:block tracking-[0.2em] text-[10px] ${
+                  setupStatus.userEmail
+                    ? 'text-[#f59e0b]'
+                    : 'text-[#3a5a78] underline cursor-pointer hover:text-[#5a7a98]'
+                }`}
+              >
+                {setupStatus.userEmail
+                  ? truncateEmail(setupStatus.userEmail)
+                  : 'NOT CONNECTED'
+                }
+              </span>
+            )}
             <button className="nav-cta-btn">Analyze a Ticker →</button>
           </div>
 
@@ -209,6 +232,9 @@ export default function Home() {
             {showWizard && <SetupWizard onSetupComplete={fetchSetupStatus} />}
             {showSearch && <TickerSearch />}
           </div>
+
+          {/* Report history — shown when setup status has loaded */}
+          {!loading && <ReportHistory />}
 
           {/* Stats trust bar */}
           <div className="mt-6 fade-in-d2">
