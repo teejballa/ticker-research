@@ -13,7 +13,11 @@ interface SetupStatus {
   notebooklmOk: boolean;
   authOk: boolean;
   allOk: boolean;
+  userEmail: string | null;  // null = not connected or extraction failed
 }
+
+// Module-level cache — survives for the lifetime of the Next.js server process
+let cachedEmail: string | null | undefined = undefined; // undefined = not yet fetched
 
 function checkPython(): { ok: boolean; version?: string; path?: string } {
   const candidates = ['python3', 'python'];
@@ -81,10 +85,36 @@ function checkAuth(): boolean {
   }
 }
 
+function extractEmail(notebooklmHome: string): string | null {
+  const scriptPath = path.join(process.cwd(), 'scripts', 'get_email.py');
+  const pythonCandidates = ['python3', 'python'];
+  for (const cmd of pythonCandidates) {
+    try {
+      const result = execSync(`${cmd} "${scriptPath}"`, {
+        encoding: 'utf-8',
+        timeout: 10000,
+        env: { ...process.env, NOTEBOOKLM_HOME: notebooklmHome },
+      }).trim();
+      return result || null;
+    } catch {
+      // Try next candidate
+    }
+  }
+  return null;
+}
+
 export async function GET(_request: NextRequest): Promise<NextResponse> {
   const pythonResult = checkPython();
   const notebooklmOk = pythonResult.ok ? checkNotebooklm() : false;
   const authOk = checkAuth();
+
+  // Extract email once per process lifetime — Playwright startup takes 3-5s
+  if (authOk && cachedEmail === undefined) {
+    const notebooklmHome = process.env.NOTEBOOKLM_HOME ?? path.join(homedir(), '.notebooklm');
+    cachedEmail = extractEmail(notebooklmHome);
+  } else if (!authOk) {
+    cachedEmail = undefined; // Reset cache if auth changes
+  }
 
   const status: SetupStatus = {
     pythonOk: pythonResult.ok,
@@ -93,6 +123,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     notebooklmOk,
     authOk,
     allOk: pythonResult.ok && notebooklmOk && authOk,
+    userEmail: authOk ? (cachedEmail ?? null) : null,
   };
 
   return NextResponse.json(status);
