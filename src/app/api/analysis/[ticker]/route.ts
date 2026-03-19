@@ -8,6 +8,8 @@
 
 import { spawn } from 'child_process';
 import { NextRequest } from 'next/server';
+import { writeReport } from '@/lib/reports';
+import type { AnalysisResult } from '@/lib/types';
 
 // Force dynamic evaluation so Vercel reads DEPLOYMENT_MODE at request time, not build time.
 export const dynamic = 'force-dynamic';
@@ -92,14 +94,24 @@ export async function POST(
             enqueue(JSON.stringify({ type: 'progress', message: msg }));
           } else if (line.startsWith('RESULT: ')) {
             const json = line.slice('RESULT: '.length);
-            try {
-              const data = JSON.parse(json);
-              enqueue(JSON.stringify({ type: 'result', data }));
-            } catch {
-              enqueue(JSON.stringify({ type: 'error', message: 'Failed to parse analysis result.' }));
-            }
-            proc.kill();
-            close();
+            // Async persist + stream using IIFE to keep non-async context working
+            (async () => {
+              try {
+                const data = JSON.parse(json) as AnalysisResult;
+                // Persist report BEFORE streaming result — history is never missing a completed report
+                try {
+                  await writeReport(data);
+                } catch (writeErr) {
+                  console.error('[history] Failed to write report:', writeErr);
+                  // Non-fatal — continue streaming result
+                }
+                enqueue(JSON.stringify({ type: 'result', data }));
+              } catch {
+                enqueue(JSON.stringify({ type: 'error', message: 'Failed to parse analysis result.' }));
+              }
+              proc.kill();
+              close();
+            })();
           } else if (line.startsWith('ERROR: ')) {
             const msg = line.slice('ERROR: '.length);
             enqueue(JSON.stringify({ type: 'error', message: msg }));
