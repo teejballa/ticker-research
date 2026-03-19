@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-03-18T17:29:50.037Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-19T03:10:23.427Z"
 last_activity: 2026-03-10 — Roadmap created; requirements mapped to 4 phases
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 20
+  completed_plans: 16
   percent: 0
 ---
 
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-deployment P01 | 225 | 2 tasks | 4 files |
 | Phase 04-deployment P02 | 3 | 2 tasks | 3 files |
 | Phase 04-deployment P03 | 2 | 1 tasks | 3 files |
+| Phase 05-user-identity-report-history P01 | 151 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,9 @@ Recent decisions affecting current work:
 - [Phase 04-deployment]: maxDuration=300 applied only to analysis and research routes — not globally — to preserve cold-start optimization on fast routes
 - [Phase 04-deployment]: export const dynamic = 'force-dynamic' added to analysis and research routes — required for Vercel to evaluate DEPLOYMENT_MODE at request time not build time
 - [Phase 04-deployment]: maxDuration reduced from 600 to 300 in analysis route — cloud path is a proxy only (Daytona container handles actual work), Vercel Hobby cap is 300s
+- [Phase 05-user-identity-report-history]: StoredReport duplicates top-level metadata for fast list reads without loading full analysis
+- [Phase 05-user-identity-report-history]: Filename format TICKER-YYYY-MM-DDTHH-MM-SSZ.json — colons sanitized to dashes, milliseconds stripped
+- [Phase 05-user-identity-report-history]: get_email.py FILTER_WORDS includes google.com to exclude Google-internal addresses on myaccount.google.com
 
 ### Pending Todos
 
@@ -124,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T17:29:50.035Z
-Stopped at: Phase 5 UI-SPEC approved
-Resume file: .planning/phases/05-user-identity-report-history/05-UI-SPEC.md
+Last session: 2026-03-19T03:10:23.425Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

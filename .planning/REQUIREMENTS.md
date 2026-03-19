@@ -48,10 +48,10 @@
 
 ### User Identity & Report History
 
-- [ ] **AUTH-01**: The Google account connected for NotebookLM is the user's app identity — no separate signup or login required
-- [ ] **HIST-01**: Completed research reports are persisted locally (ticker, timestamp, full AnalysisResult, source summary)
-- [ ] **HIST-02**: Home page displays past reports by ticker with date and sentiment verdict; each is openable
-- [ ] **HIST-03**: User can regenerate any past report to refresh with current data — produces a new timestamped report for the same ticker
+- [x] **AUTH-01**: The Google account connected for NotebookLM is the user's app identity — no separate signup or login required
+- [x] **HIST-01**: Completed research reports are persisted locally (ticker, timestamp, full AnalysisResult, source summary)
+- [x] **HIST-02**: Home page displays past reports by ticker with date and sentiment verdict; each is openable
+- [x] **HIST-03**: User can regenerate any past report to refresh with current data — produces a new timestamped report for the same ticker
 
 ## v2 Requirements
 
@@ -119,10 +119,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPT-06 | Phase 3 | Complete |
 | DEPLOY-01 | Phase 4 | Complete |
 | DEPLOY-02 | Phase 4 | Complete |
-| AUTH-01 | Phase 5 | Pending |
-| HIST-01 | Phase 5 | Pending |
-| HIST-02 | Phase 5 | Pending |
-| HIST-03 | Phase 5 | Pending |
+| AUTH-01 | Phase 5 | Complete |
+| HIST-01 | Phase 5 | Complete |
+| HIST-02 | Phase 5 | Complete |
+| HIST-03 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
