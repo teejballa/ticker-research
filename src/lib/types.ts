@@ -140,3 +140,16 @@ export interface AnalysisResult {
   source_warnings: string[];
   market_snapshot?: MarketSnapshot;  // optional — populated by Python script (Phase 3)
 }
+
+// ---- StoredReport — persisted report file (Phase 5) ----
+// Wraps AnalysisResult with metadata duplicated at top level for fast list reads.
+// Written to ~/.equinfo/reports/{TICKER}-{analyzed_at_sanitized}.json
+
+export interface StoredReport {
+  ticker: string;
+  company_name: string;
+  analyzed_at: string;
+  market_sentiment: 'bullish' | 'neutral' | 'bearish';
+  confidence_level: 'Low' | 'Medium' | 'High';
+  analysis: AnalysisResult;
+}
