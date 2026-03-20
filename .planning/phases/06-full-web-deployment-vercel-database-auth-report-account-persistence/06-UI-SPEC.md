@@ -22,7 +22,7 @@ created: 2026-03-19
 | Preset | not applicable |
 | Component library | none (hand-rolled components, no Radix/Base UI) |
 | Icon library | none (inline SVG and Unicode symbols used in existing components) |
-| Font | IBM Plex Mono — 400, 500, 600, 700 weights loaded from Google Fonts via next/font |
+| Font | IBM Plex Mono — 400, 700 weights loaded from Google Fonts via next/font |
 
 **Source:** Detected from `src/app/layout.tsx` (IBM_Plex_Mono import), `package.json` (no icon package), `globals.css` (Tailwind v4 @import).
 
@@ -45,9 +45,12 @@ Declared values (multiples of 4):
 | 3xl | 64px | Vertical rhythm between hero and content |
 
 Exceptions:
-- Sign-in page card: 32px padding all sides (`p-8`) — matches existing established pattern from RESEARCH.md custom sign-in example
-- Touch targets (buttons): minimum 40px height on all interactive controls — accessibility floor
-- Nav bar height: 36px — preserved from existing `mockup-nav` pattern (already in globals.css)
+
+| Exception | Value | Justification |
+|-----------|-------|---------------|
+| Sign-in page card padding | 32px all sides (`p-8`) | Matches established pattern from RESEARCH.md custom sign-in example; aligns with xl token |
+| Touch target minimum height | 40px | Accessibility floor — all interactive controls meet this minimum regardless of content height |
+| Nav bar height | 36px | Preserved from existing `mockup-nav` pattern already in `globals.css`; not a multiple-of-4 content gap but a fixed chrome dimension |
 
 **Source:** Inferred from existing `globals.css` values (`padding: 32px 28px`, `padding: 18px 22px 20px`, etc.) and RESEARCH.md sign-in page code example.
 
@@ -58,9 +61,11 @@ Exceptions:
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 | 1.6 |
-| Label / Overline | 11px | 600 | 1.4 |
+| Label / Overline | 11px | 700 | 1.4 |
 | Heading | 20px | 700 | 1.2 |
 | Display / Wordmark | clamp(56px, 9vw, 100px) | 700 | 1.0 |
+
+**Active weights: 400 and 700 only. No other weights may be introduced in this phase.**
 
 **Letter spacing rules (terminal aesthetic):**
 - Overlines and status labels: `tracking-widest` (0.25–0.35em) — matches existing `.how-step-title`, `.mockup-brand`
@@ -69,9 +74,9 @@ Exceptions:
 - Monospace tabular numerics: `font-variant-numeric: tabular-nums` — required for all price and timestamp displays
 
 **New surface in this phase — sign-in page typography:**
-- Authentication header: 12px, weight 600, letter-spacing 0.25em — rendered as overline
-- Button label: 12px, weight 700, letter-spacing 0.12em, uppercase
-- Body copy below button (disclaimer): 11px, weight 400, muted zinc-600
+- Authentication header: 11px, weight 700, letter-spacing 0.25em — rendered as overline (maps to Label / Overline row)
+- Button label: 11px, weight 700, letter-spacing 0.12em, uppercase (maps to Label / Overline row)
+- Body copy below button (disclaimer): 11px, weight 400, muted zinc-600 (maps to Label / Overline size, body weight)
 
 **Source:** Detected from `globals.css` (.how-step-title, .how-step-desc, .mockup-brand, .nav-cta-btn), `layout.tsx` (IBM_Plex_Mono weight array), RESEARCH.md sign-in page example.
 
@@ -119,12 +124,14 @@ New surfaces introduced in Phase 6 and their visual contracts:
 
 **Layout:** Full-screen `min-h-screen`, flex-centered vertically and horizontally. Background: `#080a0f` (dominant). Scanlines overlay inherited from body.
 
+**Focal point:** Amber overline text is the primary visual anchor — eye enters at the amber header, descends to the button. No competing visual elements on this page.
+
 **Container:** `border border-zinc-800` (maps to `#1a2d42`), `p-8` (32px), width `w-96` (384px) — exactly as in RESEARCH.md verified code example. No border-radius — flat terminal edges.
 
 **Header block:**
 - Overline text: "TICKER RESEARCH // AUTHENTICATION REQUIRED"
 - Color: `#f59e0b` (amber accent)
-- Size: 12px, weight 600, tracking 0.25em
+- Size: 11px, weight 700, tracking 0.25em
 - Margin-bottom: 24px
 
 **Button:**
@@ -132,18 +139,18 @@ New surfaces introduced in Phase 6 and their visual contracts:
 - Default state: `border border-zinc-700` (`#1a2d42`), `text-zinc-300` (`#c9d4e0`), full-width, 40px height minimum
 - Hover state: `border-amber-400`, `text-amber-400`, transition 150ms
 - No background fill on default — ghost/outline style preserving terminal aesthetic
-- Font: IBM Plex Mono, 12px, weight 700, tracking 0.12em
+- Font: IBM Plex Mono, 11px, weight 700, tracking 0.12em
 
 **Error state (invalid/expired session):**
 - Small muted text below button: "Authentication failed. Try again."
-- Color: `#4a6a8a`, 11px
+- Color: `#4a6a8a`, 11px, weight 400
 
 ### 2. NavIdentity — Authenticated User Display (existing pattern extended)
 
 From Phase 5, `NavIdentity` renders `userEmail` from `/api/setup/status`. In web mode, this renders the NextAuth session email instead.
 
 **Visual contract:**
-- Connected state: "CONNECTED AS you@gmail.com" — 10px, muted `#4a6a8a`, truncated to 24 chars with ellipsis
+- Connected state: "CONNECTED AS you@gmail.com" — 11px, weight 700, muted `#4a6a8a`, truncated to 24 chars with ellipsis
 - Sign-out affordance: None required in this phase (local mode parity — no sign-out in scope per CONTEXT.md)
 - Background: no background — inline in nav bar, same row as brand
 
