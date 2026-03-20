@@ -226,6 +226,20 @@
   border: 1px solid #1a2d42;
 }
 
+/* ── Report ombré wrapper ─────────────────────────────── */
+
+.report-omre {
+  background:
+    radial-gradient(
+      ellipse 900px 1000px at 50% 200px,
+      #1c1612 0%,
+      #111009 30%,
+      #0a0c0f 60%,
+      #080a0f 100%
+    );
+  min-height: 100vh;
+}
+
 /* ── How-it-works step cards ─────────────────────────── */
 
 .how-step {
