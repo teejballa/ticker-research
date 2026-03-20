@@ -1,7 +1,6 @@
 // tests/e2e/phase5-history.spec.ts
-// Phase 5 — Wave 0 e2e test stubs.
-// All tests compile and run but FAIL at runtime until Plans 02+03 implement
-// the features (NavIdentity component, history API, ReportHistory component).
+// Phase 5 e2e tests — Nav Identity + Report History.
+// Covers AUTH-01, HIST-01, HIST-02, HIST-03.
 
 import { test, expect, Page } from '@playwright/test';
 
@@ -9,11 +8,35 @@ async function snap(page: Page, filename: string) {
   await page.screenshot({ path: `/tmp/${filename}`, fullPage: false });
 }
 
+/**
+ * Wait for the home page to finish loading setup status.
+ * The page shows "INITIALIZING SYSTEM..." while /api/setup/status is in-flight.
+ * We wait for the loading state to resolve before asserting on elements that depend
+ * on setupStatus (NavIdentity, ReportHistory).
+ *
+ * Strategy: wait for React to render the spinner, then wait for it to go away.
+ * This is more reliable than waitForLoadState('networkidle') alone because
+ * the /api/setup/status fetch happens inside a useEffect after hydration.
+ */
+async function waitForPageReady(page: Page) {
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  // First: wait for INITIALIZING to appear (confirms React hydration + useEffect running)
+  // If it appears, wait for it to disappear. If it never appears, loading already resolved.
+  try {
+    await page.waitForSelector('text=INITIALIZING SYSTEM...', { state: 'visible', timeout: 5000 });
+    // Spinner appeared — now wait for it to go away (API call in progress)
+    await page.waitForSelector('text=INITIALIZING SYSTEM...', { state: 'hidden', timeout: 20000 });
+  } catch {
+    // Spinner never appeared (loading already done) or took too long.
+    // Either way, proceed — the content should already be there.
+  }
+}
+
 // AUTH-01: Nav identity tests
 test.describe('Phase 5 — Nav Identity (AUTH-01)', () => {
   test('nav shows email when auth connected', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await waitForPageReady(page);
     await snap(page, 'p5-nav-email.png');
     // Will fail until NavIdentity component is added to page.tsx
     await expect(page.locator('[data-testid="nav-identity"]')).toBeVisible({ timeout: 5000 });
@@ -22,10 +45,10 @@ test.describe('Phase 5 — Nav Identity (AUTH-01)', () => {
   });
 
   test('nav shows NOT CONNECTED when no auth', async ({ page }) => {
-    // This test verifies the NOT CONNECTED state renders
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    // This test verifies the NOT CONNECTED state renders.
     // Passes if either email or NOT CONNECTED is shown in nav-identity slot
+    // (the system may have Google auth connected — both states are valid).
+    await waitForPageReady(page);
     const navId = page.locator('[data-testid="nav-identity"]');
     await expect(navId).toBeVisible({ timeout: 5000 });
   });
@@ -59,16 +82,13 @@ test.describe('Phase 5 — Report Persistence (HIST-01)', () => {
 // HIST-02: History UI tests
 test.describe('Phase 5 — History UI (HIST-02)', () => {
   test('history section visible on home page', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await waitForPageReady(page);
     await snap(page, 'p5-history-section.png');
-    // Will fail until ReportHistory component is added
     await expect(page.locator('text=RESEARCH HISTORY')).toBeVisible({ timeout: 5000 });
   });
 
   test('empty state shown when no reports', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await waitForPageReady(page);
     // If no reports, empty state message should be visible
     const emptyState = page.locator('text=No reports yet');
     const historyRows = page.locator('[data-testid="history-row"]');
@@ -79,8 +99,7 @@ test.describe('Phase 5 — History UI (HIST-02)', () => {
   });
 
   test('OPEN button loads saved report', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await waitForPageReady(page);
     const openBtn = page.locator('[data-testid="history-open-btn"]').first();
     const hasOpen = await openBtn.isVisible().catch(() => false);
     if (!hasOpen) {
@@ -96,8 +115,7 @@ test.describe('Phase 5 — History UI (HIST-02)', () => {
 // HIST-03: Regeneration tests
 test.describe('Phase 5 — Regeneration (HIST-03)', () => {
   test('REGENERATE navigates to research page without ?report= param', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await waitForPageReady(page);
     const regenBtn = page.locator('[data-testid="history-regen-btn"]').first();
     const hasRegen = await regenBtn.isVisible().catch(() => false);
     if (!hasRegen) {
