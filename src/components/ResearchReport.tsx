@@ -37,12 +37,16 @@ function Md({ text }: { text: string }) {
 function SectionHeader({ label, badge }: { label: string; badge?: string }) {
   return (
     <div className="flex items-center gap-3 mt-10 mb-5">
-      <span className="text-[#d97706]/60 text-xs select-none">▶</span>
-      <span className="text-[10px] text-[#6b7280] tracking-[0.4em] font-semibold">{label}</span>
+      <div
+        data-testid="section-header-bar"
+        className="w-4 h-0.5 shrink-0"
+        style={{ background: 'linear-gradient(90deg, #d97706 0%, #f59e0b 100%)', boxShadow: '0 0 6px rgba(245,158,11,0.35)' }}
+      />
+      <span className="text-[10px] text-[#6b7280] tracking-[0.45em] font-semibold">{label}</span>
       {badge && (
-        <span className="text-[9px] text-[#9ca3af] border border-[#e5e7eb] px-2 py-0.5">{badge}</span>
+        <span className="text-[9px] text-[#b0b8c4] border border-[#e5e7eb] px-2 py-0.5 tracking-wider">{badge}</span>
       )}
-      <div className="flex-1 h-px bg-[#e5e7eb]" />
+      <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, #e5e7eb 0%, transparent 100%)' }} />
     </div>
   );
 }
