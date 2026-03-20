@@ -1,10 +1,13 @@
 'use client';
 
 // src/components/ResearchProgress.tsx
-// Terminal-style streaming progress display for the NotebookLM analysis pipeline.
+// Stitch ambient loading screen for the NotebookLM analysis pipeline.
+// ALL streaming/parsing/callback logic is unchanged — only JSX was replaced.
 
 import { useEffect, useRef, useState } from 'react';
 import type { AnalysisResult } from '@/lib/types';
+import NavBar from '@/components/NavBar';
+import FooterTicker from '@/components/FooterTicker';
 
 interface ResearchProgressProps {
   ticker: string;
@@ -45,9 +48,24 @@ function matchStepIndex(message: string): number {
   return -1;
 }
 
-function fmtMs(ms: number): string {
-  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+// Maps the 6 internal pipeline steps to 4 visual steps
+// 0 → visual 0 (Collecting market data)
+// 1,2 → visual 1 (Gathering news & filings)
+// 3,4 → visual 2 (Synthesizing with NotebookLM)
+// 5 → visual 3 (Generating report)
+function toVisualStep(pipelineStepIndex: number): number {
+  if (pipelineStepIndex <= 0) return 0;
+  if (pipelineStepIndex <= 2) return 1;
+  if (pipelineStepIndex <= 4) return 2;
+  return 3;
 }
+
+const STEP_LABELS = [
+  'Collecting market data',
+  'Gathering news & filings',
+  'Synthesizing with NotebookLM',
+  'Generating report',
+];
 
 export default function ResearchProgress({
   ticker,
@@ -55,24 +73,16 @@ export default function ResearchProgress({
   onComplete,
   onError,
 }: ResearchProgressProps) {
-  const [steps, setSteps] = useState<Step[]>(INITIAL_STEPS);
-  const [totalMs, setTotalMs] = useState(0);
-  const startRef      = useRef(Date.now());
-  const onCompleteRef = useRef(onComplete);
-  const onErrorRef    = useRef(onError);
+  const [steps, setSteps]       = useState<Step[]>(INITIAL_STEPS);
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const startRef                = useRef(Date.now());
+  const onCompleteRef           = useRef(onComplete);
+  const onErrorRef              = useRef(onError);
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { onErrorRef.current    = onError;    }, [onError]);
 
-  // Elapsed ticker
   useEffect(() => {
-    const id = setInterval(() => setTotalMs(Date.now() - startRef.current), 100);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    // AbortController cancels the in-flight fetch on cleanup, preventing React 18
-    // StrictMode's double-invocation from spawning two server-side analyses.
     const controller = new AbortController();
 
     async function run() {
@@ -113,6 +123,7 @@ export default function ResearchProgress({
                 | { type: 'error';    message: string };
 
               if (event.type === 'progress') {
+                setLogLines((prev) => [...prev, event.message]);
                 const idx = matchStepIndex(event.message);
                 if (idx >= 0) {
                   const now = Date.now();
@@ -151,95 +162,107 @@ export default function ResearchProgress({
     return () => { controller.abort(); };
   }, [ticker, filePath]);
 
-  const doneCount  = steps.filter((s) => s.status === 'done').length;
-  const progressPct = Math.round((doneCount / steps.length) * 100);
+  // Derive current visual step index from pipeline steps state
+  const activePipelineIndex = steps.findIndex((s) => s.status === 'active');
+  const doneCount           = steps.filter((s) => s.status === 'done').length;
+  // If all done, visual step is 4 (past last); if nothing active yet, use doneCount
+  const currentStepIndex    = activePipelineIndex >= 0
+    ? toVisualStep(activePipelineIndex)
+    : doneCount >= steps.length
+      ? STEP_LABELS.length
+      : toVisualStep(doneCount);
 
   return (
-    <div className="w-full max-w-lg fade-in">
+    <div className="flex flex-col min-h-screen bg-surface text-on-surface">
+      <NavBar />
 
-      {/* ── STATUS HEADER ── */}
-      <div className="panel p-4 mb-1.5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2 h-2 rounded-full bg-[#f59e0b] status-dot-live shrink-0" />
-            <span className="text-xs tracking-[0.2em] text-[#f59e0b] font-semibold">
-              ANALYZING {ticker}
-            </span>
+      {/* Main Loading Canvas */}
+      <main className="relative flex-1 flex flex-col items-center justify-center bg-surface overflow-hidden pt-[44px] pb-[32px]">
+        {/* Background Ambient Glow */}
+        <div className="absolute inset-0 loading-pulse pointer-events-none" />
+
+        {/* Central Ticker Identity */}
+        <div className="relative z-10 flex flex-col items-center mb-16">
+          <div className="text-[64px] font-mono font-bold tracking-tighter text-primary ticker-glow ticker-scan relative">
+            {ticker}
           </div>
-          <span className="text-[10px] text-[#2a3d52] tabular-nums">{fmtMs(totalMs)}</span>
+          <div className="mt-4 text-sm font-medium text-on-surface-variant flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="tracking-wide uppercase text-[11px] font-bold">Researching {ticker}...</span>
+          </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="h-px bg-[#0a1520] overflow-hidden">
-          <div
-            className="h-full bg-[#f59e0b] transition-all duration-500"
-            style={{ width: `${progressPct}%`, boxShadow: '0 0 8px rgba(245,158,11,0.4)' }}
-          />
-        </div>
-        <div className="flex justify-between mt-1 text-[9px] text-[#0d1a27]">
-          <span>{doneCount}/{steps.length} steps complete</span>
-          <span className="tabular-nums">{progressPct}%</span>
-        </div>
-      </div>
-
-      {/* ── PIPELINE LOG ── */}
-      <div className="panel overflow-hidden">
-        <div className="px-4 py-2 border-b border-[#0a1015] flex items-center gap-2">
-          <span className="text-[9px] text-[#0d1a27] tracking-[0.35em] select-none">PIPELINE LOG</span>
-          <div className="flex-1 h-px bg-[#080e17]" />
-        </div>
-
-        <div className="p-4 space-y-3">
-          {steps.map((step, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-3 text-xs transition-opacity duration-400 ${
-                step.status === 'pending' ? 'opacity-20' : 'opacity-100'
-              }`}
-            >
-              {/* Indicator */}
-              <div className="w-4 shrink-0 flex justify-center">
-                {step.status === 'done' ? (
-                  <span className="text-emerald-500/80 text-sm">✓</span>
-                ) : step.status === 'active' ? (
-                  <span className="w-3 h-3 border border-[#f59e0b]/70 border-t-transparent rounded-full animate-spin inline-block" />
-                ) : (
-                  <span className="text-[#0d1a27]">○</span>
-                )}
-              </div>
-
-              {/* Label */}
-              <span
-                className={
-                  step.status === 'done'
-                    ? 'text-[#2a4a3a]'
-                    : step.status === 'active'
-                    ? 'text-[#f59e0b]'
-                    : 'text-[#131e2b]'
-                }
-              >
-                {step.label}
-              </span>
-
-              {/* Meta */}
-              <div className="ml-auto flex items-center gap-3 text-[9px]">
-                {step.elapsedMs != null && (
-                  <span className="text-[#1a2a3a] tabular-nums">{fmtMs(step.elapsedMs)}</span>
-                )}
-                <span className="text-[#0a1015] tabular-nums">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-              </div>
+        {/* Analysis Process Stepper */}
+        <div className="relative z-10 w-full max-w-md px-6">
+          <div className="relative flex flex-col gap-8">
+            {/* Vertical Progress Line */}
+            <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-surface-container-highest overflow-hidden data-flow-line">
+              <div
+                className="w-full bg-gradient-to-b from-secondary via-primary to-primary transition-all duration-500"
+                style={{ height: `${(currentStepIndex / (STEP_LABELS.length - 1)) * 100}%` }}
+              />
             </div>
-          ))}
+
+            {STEP_LABELS.map((label, i) => {
+              const isDone    = i < currentStepIndex;
+              const isActive  = i === currentStepIndex;
+              const isPending = i > currentStepIndex;
+
+              return (
+                <div
+                  key={i}
+                  className={`flex items-start gap-4 transition-all duration-500 ${isPending ? 'opacity-30' : ''} ${isActive ? 'step-pulse' : ''}`}
+                >
+                  {/* Step icon */}
+                  {isDone && (
+                    <div className="relative z-20 flex items-center justify-center w-6 h-6 rounded-full bg-secondary shadow-[0_0_15px_rgba(102,217,204,0.3)] text-on-secondary shrink-0">
+                      <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                    </div>
+                  )}
+                  {isActive && (
+                    <div className="relative z-20 flex items-center justify-center w-6 h-6 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_10px_rgba(41,98,255,0.4)] shrink-0">
+                      <span className="material-symbols-outlined text-[16px] animate-spin" style={{ animationDuration: '1s', animationTimingFunction: 'linear' }}>sync</span>
+                    </div>
+                  )}
+                  {isPending && (
+                    <div className="relative z-20 flex items-center justify-center w-6 h-6 rounded-full border-2 border-outline-variant bg-surface-container shrink-0">
+                      <span className="material-symbols-outlined text-[16px] text-outline-variant">circle</span>
+                    </div>
+                  )}
+
+                  {/* Step text */}
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-on-surface uppercase tracking-widest">{label}</span>
+                    {isDone    && <span className="text-[10px] font-mono text-secondary">COMPLETE</span>}
+                    {isActive  && <span className="text-[10px] font-mono text-primary animate-pulse">PROCESSING...</span>}
+                    {isPending && <span className="text-[10px] font-mono text-outline-variant">QUEUED</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* Footer warning */}
-      <div className="mt-2.5 text-center text-[9px] text-[#0a1520] tracking-widest select-none">
-        DO NOT CLOSE THIS TAB — ANALYSIS IN PROGRESS
-      </div>
+        {/* Terminal Output (desktop only) */}
+        <div className="absolute bottom-20 right-10 w-80 h-48 bg-surface-container-low/50 backdrop-blur-md rounded-lg border border-outline-variant/20 p-4 hidden lg:block overflow-hidden shadow-2xl">
+          <div className="flex items-center gap-2 mb-3 border-b border-outline-variant/20 pb-2">
+            <span className="text-[10px] font-mono text-primary font-bold">SYSTEM LOGS</span>
+            <div className="flex gap-1 ml-auto">
+              <div className="w-2 h-2 rounded-full bg-error/40" />
+              <div className="w-2 h-2 rounded-full bg-tertiary/40" />
+              <div className="w-2 h-2 rounded-full bg-secondary/40" />
+            </div>
+          </div>
+          <div className="font-mono text-[9px] text-on-surface-variant space-y-1 overflow-hidden">
+            {logLines.slice(-7).map((line, i) => (
+              <p key={i} className="truncate">&gt; {line}</p>
+            ))}
+            <p className="text-primary animate-pulse">&gt; RUNNING_INFERENCE...</p>
+          </div>
+        </div>
+      </main>
 
+      <FooterTicker />
     </div>
   );
 }
