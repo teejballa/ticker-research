@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const ibmPlexMono = IBM_Plex_Mono({
-  weight: ['400', '500', '600', '700'],
-  style: ['normal', 'italic'],
+const inter = Inter({
+  weight: ['400', '500', '700', '800', '900'],
   subsets: ["latin"],
   display: 'swap',
+  variable: '--font-inter',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  weight: ['400', '500', '700'],
+  subsets: ["latin"],
+  display: 'swap',
+  variable: '--font-jetbrains',
 });
 
 export const metadata: Metadata = {
@@ -14,16 +21,16 @@ export const metadata: Metadata = {
   description: "Source-grounded equity intelligence with transparent, traceable analysis powered by Anthropic and Gemini",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="bg-[#080a0f]">
-      <body
-        className={`${ibmPlexMono.className} antialiased bg-[#080a0f] text-[#c9d4e0] scanlines`}
-      >
+    <html lang="en" className="dark bg-surface">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        />
+      </head>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-[family-name:var(--font-inter)] antialiased bg-surface text-on-surface`}>
         {children}
       </body>
     </html>
