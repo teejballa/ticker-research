@@ -71,7 +71,9 @@ export default function ResearchProgress({
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    // AbortController cancels the in-flight fetch on cleanup, preventing React 18
+    // StrictMode's double-invocation from spawning two server-side analyses.
+    const controller = new AbortController();
 
     async function run() {
       try {
@@ -79,6 +81,7 @@ export default function ResearchProgress({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filePath }),
+          signal: controller.signal,
         });
 
         if (!response.ok || !response.body) {
@@ -90,7 +93,7 @@ export default function ResearchProgress({
         const decoder = new TextDecoder();
         let buffer    = '';
 
-        while (!cancelled) {
+        while (!controller.signal.aborted) {
           const { done, value } = await reader.read();
           if (done) break;
 
@@ -138,14 +141,14 @@ export default function ResearchProgress({
           }
         }
       } catch (err) {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           onErrorRef.current(err instanceof Error ? err.message : 'Analysis failed unexpectedly.');
         }
       }
     }
 
     run();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [ticker, filePath]);
 
   const doneCount  = steps.filter((s) => s.status === 'done').length;

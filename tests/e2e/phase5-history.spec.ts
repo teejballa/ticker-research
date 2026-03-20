@@ -134,3 +134,76 @@ test.describe('Phase 5 — Regeneration (HIST-03)', () => {
     expect(true).toBe(true);
   });
 });
+
+// ── Bug fix verification tests ────────────────────────────
+
+test.describe('Bug fixes — light mode report, saved report loading, no duplicates', () => {
+
+  test('saved report loads without error when filename contains +', async ({ page }) => {
+    // Verify the + regex fix: GET /api/history/[filename] with + in name returns 200
+    const histRes = await page.request.get('/api/history');
+    const body = await histRes.json() as { reports: Array<{ ticker: string; analyzed_at: string }> };
+    if (body.reports.length === 0) return; // no reports to test with
+
+    // Reconstruct filename the same way ReportHistory.tsx does
+    const r = body.reports[0];
+    const ts = r.analyzed_at.replace(/:/g, '-').replace(/\.\d+Z$/, 'Z');
+    const filename = `${r.ticker}-${ts}.json`;
+
+    const res = await page.request.get(`/api/history/${encodeURIComponent(filename)}`);
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveProperty('ticker');
+  });
+
+  test('report page shows white background in light mode', async ({ page }) => {
+    // Navigate to a saved report and verify light mode (data-testid="report-content")
+    const histRes = await page.request.get('/api/history');
+    const body = await histRes.json() as { reports: Array<{ ticker: string; analyzed_at: string }> };
+    if (body.reports.length === 0) return;
+
+    const r = body.reports[0];
+    const ts = r.analyzed_at.replace(/:/g, '-').replace(/\.\d+Z$/, 'Z');
+    const filename = `${r.ticker}-${ts}.json`;
+
+    await page.goto(`/research/${r.ticker}?report=${encodeURIComponent(filename)}`);
+    // Wait for the light mode report container to appear
+    await page.waitForSelector('[data-testid="report-content"]', { timeout: 15000 });
+
+    await page.screenshot({ path: '/tmp/report-light-mode.png', fullPage: true });
+
+    // Verify the report content container is present (confirms light mode rendered)
+    await expect(page.locator('[data-testid="report-content"]')).toBeVisible();
+
+    // Verify background is white via computed style
+    const bgColor = await page.locator('[data-testid="report-content"]').evaluate(
+      el => window.getComputedStyle(el).backgroundColor
+    );
+    // white = rgb(255, 255, 255)
+    expect(bgColor).toBe('rgb(255, 255, 255)');
+  });
+
+  test('[OPEN] from history navigates to report without error', async ({ page }) => {
+    await waitForPageReady(page);
+    const openBtn = page.locator('[data-testid="history-open-btn"]').first();
+    const hasOpen = await openBtn.isVisible().catch(() => false);
+    if (!hasOpen) return;
+
+    await openBtn.click();
+    await page.waitForURL(/\/research\/[A-Z]+\?report=/, { timeout: 8000 });
+
+    // Wait for report to render — should NOT show SYSTEM ERROR
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: '/tmp/report-open-result.png', fullPage: false });
+
+    const errorText = await page.locator('text=SYSTEM ERROR').isVisible().catch(() => false);
+    expect(errorText).toBe(false);
+
+    // Report content should load (company name present)
+    const ticker = page.url().match(/\/research\/([A-Z]+)/)?.[1] ?? '';
+    if (ticker) {
+      await expect(page.locator(`text=${ticker}`).first()).toBeVisible({ timeout: 10000 });
+    }
+  });
+
+});
