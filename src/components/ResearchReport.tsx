@@ -202,7 +202,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
       </div>
 
       {/* ── PAGE CONTENT — light mode ── */}
-      <div data-testid="report-content" className="min-h-screen bg-white text-[#374151] px-5 py-8 max-w-4xl mx-auto fade-in">
+      <div data-testid="report-content" className="min-h-screen bg-white text-[#2d3748] px-5 py-8 max-w-4xl mx-auto fade-in">
 
         {/* Disclaimer */}
         <div className="border border-[#fde68a] bg-[#fffbeb] px-4 py-2.5 mb-5 flex gap-3 items-start">
@@ -347,10 +347,13 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
         )}
 
         {/* Footer */}
-        <div className="mt-14 pt-4 border-t border-[#f3f4f6] flex flex-wrap items-center justify-between gap-2 text-[9px] text-[#d1d5db] select-none">
-          <span>EQUINFO RESEARCH TERMINAL</span>
-          <span>ANALYSIS ENGINE: ANTHROPIC × GEMINI</span>
-          <span className="tabular-nums">{new Date(analyzed_at).toISOString().slice(0, 10)}</span>
+        <div data-testid="report-footer" className="mt-14 select-none">
+          <div className="h-px mb-4" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(217,119,6,0.25) 30%, rgba(245,158,11,0.4) 50%, rgba(217,119,6,0.25) 70%, transparent 100%)' }} />
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] text-[#b0bec5] tracking-wider">
+            <span>EQUINFO RESEARCH TERMINAL</span>
+            <span>ANALYSIS ENGINE: ANTHROPIC × GEMINI</span>
+            <span className="tabular-nums">{new Date(analyzed_at).toISOString().slice(0, 10)}</span>
+          </div>
         </div>
 
       </div>
