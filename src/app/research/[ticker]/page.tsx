@@ -9,7 +9,7 @@ import Link from 'next/link';
 import ChartConfirmation from '@/components/ChartConfirmation';
 import ResearchProgress from '@/components/ResearchProgress';
 import ResearchReport from '@/components/ResearchReport';
-import type { ChartDataPoint, AnalysisResult } from '@/lib/types';
+import type { ChartDataPoint, AnalysisResult, StoredReport } from '@/lib/types';
 
 interface ChartRouteResponse {
   points: ChartDataPoint[];
@@ -49,6 +49,7 @@ export default function ResearchPage() {
   const searchParams = useSearchParams();
   const ticker       = params.ticker?.toUpperCase() ?? '';
   const filePath     = searchParams.get('file');
+  const reportFile   = searchParams.get('report');
 
   const [pageState,      setPageState]      = useState<PageState>(filePath ? 'analyzing' : 'loading');
   const [chartData,      setChartData]      = useState<ChartRouteResponse | null>(null);
@@ -56,12 +57,36 @@ export default function ResearchPage() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [errorMessage,   setErrorMessage]   = useState<string | null>(null);
 
+  // Load saved report when ?report= param is present.
+  // This branch is mutually exclusive with the analysis pipeline (?file= param).
+  // Check reportFile BEFORE any other state machine logic.
+  useEffect(() => {
+    if (!reportFile) return;
+    // If we have a reportFile, set state to loading while we fetch
+    setPageState('loading');
+    fetch(`/api/history/${encodeURIComponent(reportFile)}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Report not found: ${r.status}`);
+        return r.json() as Promise<StoredReport>;
+      })
+      .then((stored) => {
+        setAnalysisResult(stored.analysis);
+        setPageState('complete');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      })
+      .catch(() => {
+        setErrorMessage(`Report "${reportFile}" could not be loaded. The file may have been deleted.`);
+        setPageState('error');
+      });
+  }, [reportFile]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // When filePath appears via router.push (after data collection), trigger analysis
   useEffect(() => {
+    if (reportFile) return;  // saved report branch takes priority
     if (filePath && pageState === 'idle') {
       setPageState('analyzing');
     }
-  }, [filePath, pageState]);
+  }, [filePath, pageState, reportFile]);
 
   // Warn before unload during analysis
   useEffect(() => {
@@ -74,6 +99,7 @@ export default function ResearchPage() {
   // Fetch chart for idle state
   useEffect(() => {
     if (filePath) return;
+    if (reportFile) return;  // saved report branch handles everything
     async function fetchChart() {
       try {
         const res  = await fetch(`/api/ticker/chart?symbol=${encodeURIComponent(ticker)}`, { cache: 'no-store' });
@@ -90,7 +116,7 @@ export default function ResearchPage() {
       }
     }
     fetchChart();
-  }, [ticker, filePath]);
+  }, [ticker, filePath, reportFile]);
 
   const handleComplete = useCallback((result: AnalysisResult) => {
     setAnalysisResult(result);
