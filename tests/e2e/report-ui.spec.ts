@@ -2,13 +2,32 @@
 // Visual regression + interaction tests for the research report UI polish.
 
 import { test, expect, Page } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 async function snap(page: Page, name: string) {
   await page.screenshot({ path: `/tmp/${name}`, fullPage: true });
   console.log(`📸  /tmp/${name}`);
 }
 
-const MOCK_REPORT_URL = '/research/AAPL?report=AAPL-2026-03-20T00-49-52.399564%2B00-00.json'; // loads saved report → complete state
+const FIXTURE_FILENAME = 'mock-aapl-report.json';
+const MOCK_REPORT_URL = `/research/AAPL?report=${FIXTURE_FILENAME}`;
+
+test.beforeAll(async () => {
+  // Copy fixture to the reports directory so the API can serve it
+  const reportsDir = path.join(os.homedir(), '.equinfo', 'reports');
+  fs.mkdirSync(reportsDir, { recursive: true });
+  const fixture = fs.readFileSync(path.join(__dirname, '../fixtures/mock-aapl-report.json'), 'utf8');
+  fs.writeFileSync(path.join(reportsDir, FIXTURE_FILENAME), fixture);
+});
+
+test.afterAll(async () => {
+  // Clean up fixture file
+  const reportsDir = path.join(os.homedir(), '.equinfo', 'reports');
+  const fixturePath = path.join(reportsDir, FIXTURE_FILENAME);
+  if (fs.existsSync(fixturePath)) fs.unlinkSync(fixturePath);
+});
 
 test.describe('Report UI — Ombré + Modern Polish', () => {
 
