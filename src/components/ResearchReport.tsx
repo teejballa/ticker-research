@@ -167,15 +167,16 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
   return (
     <div>
 
-      {/* ── STICKY TOP BAR — stays dark ── */}
-      <div className="sticky top-0 z-10 bg-[#080a0f]/96 backdrop-blur-sm border-b border-[#0a1520] print:hidden">
+      {/* ── STICKY TOP BAR — frosted glass ── */}
+      <div className="sticky top-0 z-10 bg-[#080a0f]/90 backdrop-blur-md border-b border-[#0d1e2e] print:hidden relative" style={{ boxShadow: '0 1px 0 rgba(245,158,11,0.10)' }}>
+        <div data-testid="report-nav-accent" className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.18) 30%, rgba(245,158,11,0.28) 50%, rgba(245,158,11,0.18) 70%, transparent 100%)' }} />
         <div className="max-w-4xl mx-auto px-5 h-11 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="font-bold text-[#f59e0b] text-base tracking-[0.2em] glow-amber-text">
               {ticker}
             </span>
-            <span className="text-[#0d1a27] hidden sm:block">│</span>
-            <span className="text-[#2a3d50] text-xs hidden sm:block truncate">{company_name}</span>
+            <span className="text-[#1a2d40] hidden sm:block select-none">·</span>
+            <span className="text-[#3a5470] text-[11px] hidden sm:block truncate tracking-wide">{company_name}</span>
           </div>
           <div className="flex items-center gap-2">
             <Link
