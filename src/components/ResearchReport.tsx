@@ -62,21 +62,23 @@ interface AssessmentBarProps {
   rationale: string;
 }
 
-function AssessmentBar({ label, pct, fillColor, glowColor, textColor, rationale }: AssessmentBarProps) {
+function AssessmentBar({ label, pct, fillColor, glowColor, textColor, rationale, delay = 0 }: AssessmentBarProps & { delay?: number }) {
   return (
     <div className="mb-5">
       <div className="flex items-center gap-3 mb-1.5">
         <span className="text-[10px] tracking-[0.3em] font-bold w-9 shrink-0" style={{ color: textColor }}>
           {label}
         </span>
-        <div className="flex-1 h-1.5 bg-[#f3f4f6] overflow-hidden">
+        <div className="flex-1 h-2 bg-[#f3f4f6] overflow-hidden rounded-sm">
           <div
-            className="h-full transition-all duration-1000 ease-out"
+            data-testid={`assessment-bar-fill-${label.toLowerCase()}`}
+            className="bar-fill rounded-sm"
             style={{
-              width: `${pct}%`,
+              '--bar-target': `${pct}%`,
+              '--bar-delay': `${delay}ms`,
               backgroundColor: fillColor,
-              boxShadow: `0 0 8px ${glowColor}`,
-            }}
+              boxShadow: `0 0 12px ${glowColor}, 0 0 4px ${glowColor}`,
+            } as React.CSSProperties}
           />
         </div>
         <span className="text-sm font-bold tabular-nums w-10 text-right" style={{ color: textColor }}>
@@ -273,25 +275,28 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             label="BUY"
             pct={assessment.buy_pct}
             fillColor="#059669"
-            glowColor="rgba(5,150,105,0.2)"
+            glowColor="rgba(5,150,105,0.25)"
             textColor="#059669"
             rationale={assessment.buy_rationale}
+            delay={200}
           />
           <AssessmentBar
             label="HOLD"
             pct={assessment.hold_pct}
             fillColor="#d97706"
-            glowColor="rgba(217,119,6,0.2)"
+            glowColor="rgba(217,119,6,0.25)"
             textColor="#d97706"
             rationale={assessment.hold_rationale}
+            delay={400}
           />
           <AssessmentBar
             label="SELL"
             pct={assessment.sell_pct}
             fillColor="#dc2626"
-            glowColor="rgba(220,38,38,0.2)"
+            glowColor="rgba(220,38,38,0.25)"
             textColor="#dc2626"
             rationale={assessment.sell_rationale}
+            delay={600}
           />
         </div>
 

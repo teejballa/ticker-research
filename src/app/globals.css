@@ -305,6 +305,19 @@
   opacity: 1;
 }
 
+/* ── Assessment bar animations ────────────────────────── */
+
+@keyframes barFill {
+  from { width: 0%; }
+  to   { width: var(--bar-target); }
+}
+
+.bar-fill {
+  height: 100%;
+  animation: barFill 1s ease-out forwards;
+  animation-delay: var(--bar-delay, 0ms);
+}
+
 /* ── How-it-works step cards ─────────────────────────── */
 
 .how-step {
