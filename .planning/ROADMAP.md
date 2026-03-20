@@ -120,10 +120,23 @@ Plans:
 - [ ] 05-04-PLAN.md — Saved report loading: research page ?report= branch loads StoredReport from API, mutually exclusive with analysis pipeline
 - [ ] 05-05-PLAN.md — Playwright e2e tests pass, screenshots confirm terminal aesthetic, user checkpoint approval
 
+### Phase 6: Full Web Deployment — Vercel, Database, Auth, Report & Account Persistence
+
+**Goal**: Transform the local-first app into a deployed multi-user web product — Google OAuth authentication via NextAuth.js, Neon PostgreSQL for cloud report persistence, custom terminal-aesthetic sign-in page, and DEPLOYMENT_MODE-gated middleware that leaves local mode completely intact until web deployment is confirmed working.
+**Requirements**: WEB-AUTH, WEB-DB, WEB-MIDDLEWARE, WEB-SIGNIN-UI, WEB-NAV-IDENTITY, WEB-PERSISTENCE, WEB-HISTORY, WEB-DEPLOY, WEB-ENV
+**Depends on:** Phase 5
+**Plans:** 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Auth/DB foundation: install next-auth@4.24.13 + prisma@7.5.0 + neon adapter, Wave 0 test stubs, Prisma schema, NextAuth authOptions, Prisma singleton, session type augmentation, App Router handler, DEPLOYMENT_MODE-gated middleware
+- [ ] 06-02-PLAN.md — Custom sign-in page (/auth/signin, terminal aesthetic per UI-SPEC), NavIdentity web-mode email via updated /api/setup/status, visual checkpoint
+- [ ] 06-03-PLAN.md — Neon persistence: reports-db.ts (writeReportToDb/listReportsFromDb/readReportFromDb), history route DEPLOYMENT_MODE switch (dynamic import), analysis route web-mode persist
+- [ ] 06-04-PLAN.md — Vercel deployment config (prisma migrate deploy build command), .env.local.example with all Phase 6 env vars, full test suite green, final checkpoint
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -132,3 +145,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Report Output | 1/3 | In Progress|  |
 | 4. Deployment | 3/3 | Complete   | 2026-03-18 |
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
+| 6. Full Web Deployment | 0/4 | Planned    |  |
