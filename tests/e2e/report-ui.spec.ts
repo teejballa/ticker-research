@@ -8,7 +8,7 @@ async function snap(page: Page, name: string) {
   console.log(`📸  /tmp/${name}`);
 }
 
-const MOCK_REPORT_URL = '/research/AAPL'; // chart confirmation page — dark bg
+const MOCK_REPORT_URL = '/research/AAPL?report=AAPL-2026-03-20T00-49-52.399564%2B00-00.json'; // loads saved report → complete state
 
 test.describe('Report UI — Ombré + Modern Polish', () => {
 

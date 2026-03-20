@@ -98,7 +98,7 @@ interface StatCellProps {
 
 function StatCell({ label, value, color = '#374151' }: StatCellProps) {
   return (
-    <div className="border border-[#e5e7eb] bg-white px-3 py-2.5">
+    <div className="stat-cell">
       <div className="text-[9px] text-[#9ca3af] tracking-[0.28em] mb-1">{label}</div>
       <div className="text-sm font-bold tabular-nums" style={{ color }}>{value}</div>
     </div>
@@ -111,7 +111,7 @@ function StatsGrid({ snapshot }: { snapshot: MarketSnapshot | undefined }) {
   const pctColor = pctRaw == null ? '#374151' : pctRaw >= 0 ? '#059669' : '#dc2626';
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-0.5 mb-6">
+    <div data-testid="stats-grid" className="grid grid-cols-2 sm:grid-cols-4 gap-0.5 mb-6">
       <StatCell label="LAST PRICE" value={formatPrice(s?.price ?? null)}                       color="#d97706" />
       <StatCell label="CHG %"      value={formatPercent(pctRaw)}                               color={pctColor} />
       <StatCell label="MKT CAP"    value={formatMarketCap(s?.market_cap ?? null)} />

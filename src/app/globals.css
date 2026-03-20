@@ -240,6 +240,37 @@
   min-height: 100vh;
 }
 
+/* ── Stats grid cell ──────────────────────────────────── */
+
+.stat-cell {
+  border: 1px solid #e5e7eb;
+  background: white;
+  padding: 10px 12px;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+
+.stat-cell:hover {
+  border-color: #d97706;
+  background: #fffdf7;
+}
+
+.stat-cell::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f59e0b;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.stat-cell:hover::after {
+  opacity: 0.6;
+}
+
 /* ── How-it-works step cards ─────────────────────────── */
 
 .how-step {
