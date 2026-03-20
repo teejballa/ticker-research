@@ -181,7 +181,7 @@ export default function ResearchPage() {
   // ── Complete ─────────────────────────────────────────────
   if (pageState === 'complete' && analysisResult) {
     return (
-      <div className="min-h-screen bg-[#080a0f]">
+      <div className="report-omre" data-testid="report-page-wrapper">
         <ResearchReport analysisResult={analysisResult} ticker={ticker} />
       </div>
     );
