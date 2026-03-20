@@ -8,8 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ filename: string }> }
 ) {
   const { filename } = await params;
-  // Security: only allow alphanumeric, hyphens, underscores, dots — no path traversal
-  if (!/^[A-Z0-9.\-_]+\.json$/i.test(filename)) {
+  // Security: only allow alphanumeric, hyphens, underscores, dots, plus — no path traversal
+  // + appears in timezone-offset filenames (e.g. AAPL-2026-03-20T00-49-55...+00-00.json)
+  if (!/^[A-Z0-9.+\-_]+\.json$/i.test(filename)) {
     return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
   }
   try {
