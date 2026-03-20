@@ -225,126 +225,138 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
         <StatsGrid snapshot={market_snapshot} />
 
         {/* ── SENTIMENT ── */}
-        <SectionHeader label="MARKET SENTIMENT" />
-        <div className="flex items-center gap-3 mb-3">
-          <span
-            className={`text-xs border px-3 py-1 font-bold tracking-[0.35em] ${sentimentBorderClass}`}
-            style={{ color: sentimentColor }}
-          >
-            {market_sentiment.toUpperCase()}
-          </span>
+        <div className="fade-in-d1">
+          <SectionHeader label="MARKET SENTIMENT" />
+          <div className="flex items-center gap-3 mb-3">
+            <span
+              className={`text-xs border px-3 py-1 font-bold tracking-[0.35em] ${sentimentBorderClass}`}
+              style={{ color: sentimentColor }}
+            >
+              {market_sentiment.toUpperCase()}
+            </span>
+          </div>
+          <p className="text-sm text-[#374151] leading-relaxed"><Md text={sentiment_reasoning} /></p>
         </div>
-        <p className="text-sm text-[#374151] leading-relaxed"><Md text={sentiment_reasoning} /></p>
 
         {/* ── BULLISH FACTORS ── */}
-        <SectionHeader label="BULLISH FACTORS" badge={`${bullish_signals.length} signals`} />
-        <div className="space-y-1">
-          {bullish_signals.map((s, i) => (
-            <div key={i} className="signal-row signal-row-bull">
-              <span className="signal-icon text-emerald-500">▲</span>
-              <div>
-                <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
-                {s.source_citation && (
-                  <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
-                )}
+        <div className="fade-in-d2">
+          <SectionHeader label="BULLISH FACTORS" badge={`${bullish_signals.length} signals`} />
+          <div className="space-y-1">
+            {bullish_signals.map((s, i) => (
+              <div key={i} className="signal-row signal-row-bull">
+                <span className="signal-icon text-emerald-500">▲</span>
+                <div>
+                  <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
+                  {s.source_citation && (
+                    <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* ── BEARISH FACTORS ── */}
-        <SectionHeader label="BEARISH FACTORS" badge={`${bearish_signals.length} signals`} />
-        <div className="space-y-1">
-          {bearish_signals.map((s, i) => (
-            <div key={i} className="signal-row signal-row-bear">
-              <span className="signal-icon text-red-500">▼</span>
-              <div>
-                <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
-                {s.source_citation && (
-                  <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
-                )}
+        <div className="fade-in-d3">
+          <SectionHeader label="BEARISH FACTORS" badge={`${bearish_signals.length} signals`} />
+          <div className="space-y-1">
+            {bearish_signals.map((s, i) => (
+              <div key={i} className="signal-row signal-row-bear">
+                <span className="signal-icon text-red-500">▼</span>
+                <div>
+                  <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
+                  {s.source_citation && (
+                    <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* ── ASSESSMENT ── */}
-        <SectionHeader label="ASSESSMENT" />
-        <div className="border border-[#e5e7eb] bg-[#f9fafb] p-5">
-          <AssessmentBar
-            label="BUY"
-            pct={assessment.buy_pct}
-            fillColor="#059669"
-            glowColor="rgba(5,150,105,0.25)"
-            textColor="#059669"
-            rationale={assessment.buy_rationale}
-            delay={200}
-          />
-          <AssessmentBar
-            label="HOLD"
-            pct={assessment.hold_pct}
-            fillColor="#d97706"
-            glowColor="rgba(217,119,6,0.25)"
-            textColor="#d97706"
-            rationale={assessment.hold_rationale}
-            delay={400}
-          />
-          <AssessmentBar
-            label="SELL"
-            pct={assessment.sell_pct}
-            fillColor="#dc2626"
-            glowColor="rgba(220,38,38,0.25)"
-            textColor="#dc2626"
-            rationale={assessment.sell_rationale}
-            delay={600}
-          />
+        <div className="fade-in-d4">
+          <SectionHeader label="ASSESSMENT" />
+          <div className="border border-[#e5e7eb] bg-[#f9fafb] p-5">
+            <AssessmentBar
+              label="BUY"
+              pct={assessment.buy_pct}
+              fillColor="#059669"
+              glowColor="rgba(5,150,105,0.25)"
+              textColor="#059669"
+              rationale={assessment.buy_rationale}
+              delay={200}
+            />
+            <AssessmentBar
+              label="HOLD"
+              pct={assessment.hold_pct}
+              fillColor="#d97706"
+              glowColor="rgba(217,119,6,0.25)"
+              textColor="#d97706"
+              rationale={assessment.hold_rationale}
+              delay={400}
+            />
+            <AssessmentBar
+              label="SELL"
+              pct={assessment.sell_pct}
+              fillColor="#dc2626"
+              glowColor="rgba(220,38,38,0.25)"
+              textColor="#dc2626"
+              rationale={assessment.sell_rationale}
+              delay={600}
+            />
+          </div>
         </div>
 
         {/* ── CONFIDENCE ── */}
-        <SectionHeader label="CONFIDENCE LEVEL" />
-        <div className="border border-[#e5e7eb] bg-[#f9fafb] p-4">
-          <div className="flex items-center gap-4 mb-3">
-            <span className="text-xs tracking-[0.3em] text-[#d97706] font-bold">
-              {confidence_level.toUpperCase()}
-            </span>
-            <div className="flex gap-0.5">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`conf-block ${i < confidenceBlocks ? 'conf-block-active' : ''}`}
-                  style={{
-                    backgroundColor: i < confidenceBlocks ? '#d97706' : '#e5e7eb',
-                    '--block-delay': `${i * 60}ms`,
-                  } as React.CSSProperties}
-                />
-              ))}
+        <div className="fade-in-d5">
+          <SectionHeader label="CONFIDENCE LEVEL" />
+          <div className="border border-[#e5e7eb] bg-[#f9fafb] p-4">
+            <div className="flex items-center gap-4 mb-3">
+              <span className="text-xs tracking-[0.3em] text-[#d97706] font-bold">
+                {confidence_level.toUpperCase()}
+              </span>
+              <div className="flex gap-0.5">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`conf-block ${i < confidenceBlocks ? 'conf-block-active' : ''}`}
+                    style={{
+                      backgroundColor: i < confidenceBlocks ? '#d97706' : '#e5e7eb',
+                      '--block-delay': `${i * 60}ms`,
+                    } as React.CSSProperties}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-[#6b7280] tabular-nums">{confidenceBlocks * 10}%</span>
             </div>
-            <span className="text-xs text-[#6b7280] tabular-nums">{confidenceBlocks * 10}%</span>
+            <p className="text-xs text-[#4b5563] leading-relaxed"><Md text={confidence_explanation} /></p>
           </div>
-          <p className="text-xs text-[#4b5563] leading-relaxed"><Md text={confidence_explanation} /></p>
         </div>
 
         {/* ── SOURCES ── */}
-        <SectionHeader label="SOURCES" badge={`${sources_used.length} indexed`} />
-        <div className="space-y-0.5">
-          {sources_used.map((src, i) => (
-            <div key={i} data-testid={`source-item-${i}`} className="source-item">
-              <span className="source-num">{String(i + 1).padStart(2, '0')}</span>
-              <div>
-                <div className="text-xs text-[#2d3748] font-semibold">{src.name}</div>
-                {src.key_fact && (
-                  <p className="text-[10px] text-[#6b7280] mt-0.5 leading-snug">{src.key_fact}</p>
-                )}
+        <div className="fade-in-d6">
+          <SectionHeader label="SOURCES" badge={`${sources_used.length} indexed`} />
+          <div className="space-y-0.5">
+            {sources_used.map((src, i) => (
+              <div key={i} data-testid={`source-item-${i}`} className="source-item">
+                <span className="source-num">{String(i + 1).padStart(2, '0')}</span>
+                <div>
+                  <div className="text-xs text-[#2d3748] font-semibold">{src.name}</div>
+                  {src.key_fact && (
+                    <p className="text-[10px] text-[#6b7280] mt-0.5 leading-snug">{src.key_fact}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {source_warnings.length > 0 && (
-          <p className="text-[10px] text-[#9ca3af] mt-2 tracking-wider">
-            ⚠ {source_warnings.length} source(s) failed to load during analysis
-          </p>
-        )}
+          {source_warnings.length > 0 && (
+            <p className="text-[10px] text-[#9ca3af] mt-2 tracking-wider">
+              ⚠ {source_warnings.length} source(s) failed to load during analysis
+            </p>
+          )}
+        </div>
 
         {/* Footer */}
         <div data-testid="report-footer" className="mt-14 select-none">

@@ -84,6 +84,16 @@
   animation: fadeInUp 0.5s 0.48s ease-out forwards;
 }
 
+.fade-in-d5 {
+  opacity: 0;
+  animation: fadeInUp 0.5s 0.60s ease-out forwards;
+}
+
+.fade-in-d6 {
+  opacity: 0;
+  animation: fadeInUp 0.5s 0.72s ease-out forwards;
+}
+
 .status-dot-live {
   animation: statusPulse 2s ease-in-out infinite;
 }
