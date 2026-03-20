@@ -236,14 +236,14 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
 
         {/* ── BULLISH FACTORS ── */}
         <SectionHeader label="BULLISH FACTORS" badge={`${bullish_signals.length} signals`} />
-        <div className="space-y-2.5">
+        <div className="space-y-1">
           {bullish_signals.map((s, i) => (
-            <div key={i} className="flex gap-3">
-              <span className="text-emerald-500 text-xs mt-0.5 shrink-0 font-bold">▲</span>
+            <div key={i} className="signal-row signal-row-bull">
+              <span className="signal-icon text-emerald-500">▲</span>
               <div>
-                <span className="text-sm text-[#374151] leading-snug"><Md text={s.signal} /></span>
+                <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
                 {s.source_citation && (
-                  <span className="text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
+                  <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
                 )}
               </div>
             </div>
@@ -252,14 +252,14 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
 
         {/* ── BEARISH FACTORS ── */}
         <SectionHeader label="BEARISH FACTORS" badge={`${bearish_signals.length} signals`} />
-        <div className="space-y-2.5">
+        <div className="space-y-1">
           {bearish_signals.map((s, i) => (
-            <div key={i} className="flex gap-3">
-              <span className="text-red-500 text-xs mt-0.5 shrink-0 font-bold">▼</span>
+            <div key={i} className="signal-row signal-row-bear">
+              <span className="signal-icon text-red-500">▼</span>
               <div>
-                <span className="text-sm text-[#374151] leading-snug"><Md text={s.signal} /></span>
+                <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
                 {s.source_citation && (
-                  <span className="text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
+                  <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
                 )}
               </div>
             </div>
