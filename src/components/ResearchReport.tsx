@@ -311,10 +311,11 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               {Array.from({ length: 10 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-2 w-5 transition-all duration-700"
+                  className={`conf-block ${i < confidenceBlocks ? 'conf-block-active' : ''}`}
                   style={{
                     backgroundColor: i < confidenceBlocks ? '#d97706' : '#e5e7eb',
-                  }}
+                    '--block-delay': `${i * 60}ms`,
+                  } as React.CSSProperties}
                 />
               ))}
             </div>
