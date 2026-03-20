@@ -1,0 +1,77 @@
+{
+  "ticker": "AAPL",
+  "company_name": "Apple Inc.",
+  "analyzed_at": "2026-03-20T00:49:52.399564+00:00",
+  "market_sentiment": "bullish",
+  "confidence_level": "High",
+  "analysis": {
+    "ticker": "AAPL",
+    "company_name": "Apple Inc.",
+    "analyzed_at": "2026-03-20T00:49:52.399564+00:00",
+    "market_sentiment": "bullish",
+    "sentiment_reasoning": "Apple continues to demonstrate strong fundamentals with robust revenue generation, a dominant market position, and consistent profitability. Analyst consensus leans bullish, supported by continued services growth and a loyal consumer ecosystem.",
+    "bullish_signals": [
+      {
+        "signal": "Positive Earnings Per Share (EPS) of $7.90, indicating sustained profitability on a per-share basis.",
+        "source_citation": "AAPL Market Data"
+      },
+      {
+        "signal": "Massive revenue of $435.62B demonstrating the company's immense scale and global market reach.",
+        "source_citation": "AAPL Market Data"
+      },
+      {
+        "signal": "Market capitalization of $3.66T reflecting high institutional confidence and dominant global position.",
+        "source_citation": "AAPL Market Data"
+      }
+    ],
+    "bearish_signals": [
+      {
+        "signal": "Current price of $248.96 is approximately 13.7% below its 52-week high of $288.62, indicating recent downside pressure.",
+        "source_citation": "AAPL Market Data"
+      },
+      {
+        "signal": "Debt/Equity ratio of 102.63 signifies that total debt exceeds shareholder equity, indicating high financial leverage.",
+        "source_citation": "AAPL Market Data"
+      },
+      {
+        "signal": "Competitive pressure from Android ecosystem and slowing upgrade cycles in mature smartphone markets.",
+        "source_citation": "AAPL News"
+      }
+    ],
+    "assessment": {
+      "buy_pct": 60,
+      "hold_pct": 30,
+      "sell_pct": 10,
+      "buy_rationale": "Strong services growth trajectory and ecosystem lock-in support a buy thesis at current valuations.",
+      "hold_rationale": "Near-term uncertainty around China revenue and macro headwinds suggest holding existing positions.",
+      "sell_rationale": "Elevated valuation multiples relative to hardware growth rate may not justify current price for risk-averse investors."
+    },
+    "confidence_level": "High",
+    "confidence_explanation": "High confidence based on comprehensive data availability including market data, fundamentals, analyst consensus, and recent news coverage.",
+    "sources_used": [
+      {
+        "name": "TICKER RESEARCH BRIEF: AAPL (Market Data)",
+        "key_fact": "Apple's current stock price is $248.96, between a 52-week high of $288.62 and a low of $169.21."
+      },
+      {
+        "name": "TICKER RESEARCH BRIEF: AAPL (Fundamentals)",
+        "key_fact": "The company reported total revenue of $435.62B and EPS of $7.90."
+      },
+      {
+        "name": "TICKER RESEARCH BRIEF: AAPL (Analyst Sentiment)",
+        "key_fact": "Analyst consensus is Buy with an average price target of $275."
+      }
+    ],
+    "source_warnings": [],
+    "market_snapshot": {
+      "price": 248.96,
+      "percent_change_today": -0.00392092,
+      "market_cap": 3659195744256,
+      "fifty_two_week_high": 288.62,
+      "fifty_two_week_low": 169.21,
+      "pe_ratio": 28.5,
+      "eps": 7.9,
+      "revenue": 435617005568
+    }
+  }
+}
