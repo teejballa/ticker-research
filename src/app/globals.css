@@ -49,10 +49,10 @@
   --color-surface-tint:              #b6c4ff;
   --color-surface-variant:           #31353c;
 
-  --font-headline: "Inter", sans-serif;
-  --font-body:     "Inter", sans-serif;
-  --font-label:    "Inter", sans-serif;
-  --font-mono:     "JetBrains Mono", monospace;
+  --font-headline: var(--font-inter), sans-serif;
+  --font-body:     var(--font-inter), sans-serif;
+  --font-label:    var(--font-inter), sans-serif;
+  --font-mono:     var(--font-jetbrains), monospace;
 
   --radius:      0.125rem;
   --radius-lg:   0.25rem;
@@ -81,11 +81,6 @@
 @keyframes statusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.5; transform: scale(1.4); }
-}
-
-@keyframes tickerScroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
 }
 
 @keyframes barFill {
