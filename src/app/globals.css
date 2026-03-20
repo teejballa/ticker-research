@@ -349,6 +349,57 @@
   border-radius: 1px 1px 0 0;
 }
 
+/* ── Source list items ────────────────────────────────── */
+
+.source-item {
+  border: 1px solid #e5e7eb;
+  background: white;
+  padding: 10px 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.source-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #f59e0b, #d97706);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.source-item:hover {
+  transform: translateY(-1px);
+  border-color: #f3d481;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
+}
+
+.source-item:hover::before {
+  opacity: 1;
+}
+
+.source-num {
+  color: #d1d5db;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: right;
+  margin-top: 2px;
+  transition: color 0.15s;
+}
+
+.source-item:hover .source-num {
+  color: #d97706;
+}
+
 /* ── How-it-works step cards ─────────────────────────── */
 
 .how-step {

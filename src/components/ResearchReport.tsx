@@ -328,12 +328,10 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
         <SectionHeader label="SOURCES" badge={`${sources_used.length} indexed`} />
         <div className="space-y-0.5">
           {sources_used.map((src, i) => (
-            <div key={i} className="border border-[#e5e7eb] bg-white px-3.5 py-2.5 flex gap-3 items-start">
-              <span className="text-[#d1d5db] text-[10px] tabular-nums shrink-0 w-5 text-right mt-0.5">
-                {String(i + 1).padStart(2, '0')}
-              </span>
+            <div key={i} data-testid={`source-item-${i}`} className="source-item">
+              <span className="source-num">{String(i + 1).padStart(2, '0')}</span>
               <div>
-                <div className="text-xs text-[#374151] font-semibold">{src.name}</div>
+                <div className="text-xs text-[#2d3748] font-semibold">{src.name}</div>
                 {src.key_fact && (
                   <p className="text-[10px] text-[#6b7280] mt-0.5 leading-snug">{src.key_fact}</p>
                 )}
