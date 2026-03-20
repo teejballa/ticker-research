@@ -27,8 +27,22 @@ type PageState = 'loading' | 'idle' | 'analyzing' | 'complete' | 'error';
 // ── Shared nav bar ────────────────────────────────────────
 
 function NavBar({ label }: { label?: string }) {
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/setup/status')
+      .then(r => r.json())
+      .then((d: { userEmail?: string | null }) => setUserEmail(d.userEmail ?? null))
+      .catch(() => {/* silently ignore — nav identity is non-critical */});
+  }, []);
+
+  function truncateEmail(email: string, maxLen = 24): string {
+    if (email.length <= maxLen) return email;
+    return email.slice(0, 21) + '\u2026';
+  }
+
   return (
-    <header className="border-b border-[#0d1a27] bg-[#080a0f] h-11 flex items-center px-5 shrink-0">
+    <header className="border-b border-[#0d1a27] bg-[#080a0f] h-11 flex items-center justify-between px-5 shrink-0">
       <div className="flex items-center gap-3">
         <Link href="/" className="text-[#f59e0b] font-bold text-base tracking-[0.22em] glow-amber-text">
           EQUINFO
@@ -40,6 +54,17 @@ function NavBar({ label }: { label?: string }) {
           </>
         )}
       </div>
+      {/* NavIdentity — mirrors home page nav, visible on every page */}
+      <span
+        data-testid="nav-identity"
+        className={`hidden sm:block tracking-[0.2em] text-[10px] ${
+          userEmail
+            ? 'text-[#f59e0b]'
+            : 'text-[#3a5a78]'
+        }`}
+      >
+        {userEmail ? truncateEmail(userEmail) : 'NOT CONNECTED'}
+      </span>
     </header>
   );
 }
