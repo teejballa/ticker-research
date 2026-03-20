@@ -45,6 +45,7 @@ created: 2026-03-19
 | 06-02-02 | 02 | 2 | WEB-NAV-IDENTITY | unit | `grep -q "CONNECTED AS" src/app/components/NavIdentity.tsx` | n/a (grep) | ⬜ pending |
 | 06-03-01 | 03 | 2 | WEB-PERSISTENCE | unit | `npm run test -- reports-db` | `tests/unit/reports-db.test.ts` | ⬜ pending |
 | 06-03-02 | 03 | 2 | WEB-HISTORY | unit | `npm run test -- history-route` | `tests/unit/history-route.test.ts` | ⬜ pending |
+| 06-03-03 | 03 | 2 | WEB-HISTORY | unit | `test -f "src/app/api/history/[id]/route.ts" && grep -q "readReportFromDb" "src/app/api/history/[id]/route.ts"` | `src/app/api/history/[id]/route.ts` | ⬜ pending |
 | 06-04-01 | 04 | 3 | WEB-DEPLOY | e2e | `npx playwright test tests/e2e/auth.spec.ts` | `tests/e2e/auth.spec.ts` | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -69,6 +70,7 @@ Wave 0 test files are created by Plan 01 Task 1. The three files below are exact
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
+| WEB-02: Authenticated user can access home page | WEB-AUTH | Requires a real Google OAuth login (interactive browser consent screen) — cannot be automated without a live Google account credential and a running web-mode deployment | Sign in with a real Google account at `/auth/signin`, confirm redirect to home page and that all routes are accessible without further redirect |
 | Google OAuth consent screen | WEB-AUTH | Requires real Google account + browser | Click "Sign in with Google", verify consent screen, complete flow |
 | Vercel deploy preview | WEB-DEPLOY | Requires Vercel project connected | Push to branch, verify Vercel auto-deploys preview URL |
 | Neon DB connection from Vercel | WEB-DB | Requires production env vars | Check Vercel logs for successful DB connection on first request |
