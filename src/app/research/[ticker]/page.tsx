@@ -9,6 +9,8 @@ import Link from 'next/link';
 import ChartConfirmation from '@/components/ChartConfirmation';
 import ResearchProgress from '@/components/ResearchProgress';
 import ResearchReport from '@/components/ResearchReport';
+import NavBar from '@/components/NavBar';
+import FooterTicker from '@/components/FooterTicker';
 import type { ChartDataPoint, AnalysisResult, StoredReport } from '@/lib/types';
 
 interface ChartRouteResponse {
@@ -23,51 +25,6 @@ interface ChartRouteResponse {
 }
 
 type PageState = 'loading' | 'idle' | 'analyzing' | 'complete' | 'error';
-
-// ── Shared nav bar ────────────────────────────────────────
-
-function NavBar({ label }: { label?: string }) {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/setup/status')
-      .then(r => r.json())
-      .then((d: { userEmail?: string | null }) => setUserEmail(d.userEmail ?? null))
-      .catch(() => {/* silently ignore — nav identity is non-critical */});
-  }, []);
-
-  function truncateEmail(email: string, maxLen = 24): string {
-    if (email.length <= maxLen) return email;
-    return email.slice(0, 21) + '\u2026';
-  }
-
-  return (
-    <header className="border-b border-[#0d1a27] bg-[#080a0f] h-11 flex items-center justify-between px-5 shrink-0">
-      <div className="flex items-center gap-3">
-        <Link href="/" className="text-[#f59e0b] font-bold text-base tracking-[0.22em] glow-amber-text">
-          EQUINFO
-        </Link>
-        {label && (
-          <>
-            <span className="text-[#0d1a27]">│</span>
-            <span className="text-[#1a2a3a] text-[10px] tracking-widest">{label}</span>
-          </>
-        )}
-      </div>
-      {/* NavIdentity — mirrors home page nav, visible on every page */}
-      <span
-        data-testid="nav-identity"
-        className={`hidden sm:block tracking-[0.2em] text-[10px] ${
-          userEmail
-            ? 'text-[#f59e0b]'
-            : 'text-[#3a5a78]'
-        }`}
-      >
-        {userEmail ? truncateEmail(userEmail) : 'NOT CONNECTED'}
-      </span>
-    </header>
-  );
-}
 
 export default function ResearchPage() {
   const params       = useParams<{ ticker: string }>();
@@ -164,8 +121,8 @@ export default function ResearchPage() {
   // ── Analyzing ───────────────────────────────────────────
   if (filePath && pageState === 'analyzing') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
-        <NavBar label={`ANALYZING ${ticker}`} />
+      <div className="flex flex-col min-h-screen bg-surface">
+        <NavBar ticker={ticker} showSubBar />
         <main className="flex-1 flex flex-col items-center justify-center px-4 py-10">
           <ResearchProgress
             ticker={ticker}
@@ -174,6 +131,7 @@ export default function ResearchPage() {
             onError={handleError}
           />
         </main>
+        <FooterTicker />
       </div>
     );
   }
@@ -194,37 +152,38 @@ export default function ResearchPage() {
       errorMessage?.toLowerCase().includes('midnight pst');
 
     return (
-      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
-        <NavBar label="ANALYSIS ERROR" />
+      <div className="flex flex-col min-h-screen bg-surface">
+        <NavBar />
         <main className="flex-1 flex flex-col items-center justify-center px-4">
-          <div className="w-full max-w-md panel p-6 fade-in">
-            <div className="text-[10px] text-[#f59e0b]/50 tracking-[0.4em] mb-4">SYSTEM ERROR</div>
-            <h1 className="text-sm text-[#c9d4e0] font-bold tracking-[0.2em] mb-2">ANALYSIS FAILED</h1>
+          <div className="w-full max-w-md bg-surface-container border border-outline-variant/20 p-6 fade-in">
+            <div className="text-[10px] text-error/60 tracking-[0.4em] mb-4">SYSTEM ERROR</div>
+            <h1 className="text-sm text-on-surface font-bold tracking-[0.2em] mb-2">ANALYSIS FAILED</h1>
             {isRateLimit ? (
-              <p className="text-xs text-[#2a3d52] leading-relaxed mb-5">
+              <p className="text-xs text-on-surface-variant leading-relaxed mb-5">
                 NotebookLM daily limit reached. Resets at midnight PST — try again tomorrow.
               </p>
             ) : (
-              <p className="text-xs text-[#2a3d52] leading-relaxed mb-5">
+              <p className="text-xs text-on-surface-variant leading-relaxed mb-5">
                 {errorMessage ?? 'An unexpected error occurred during analysis.'}
               </p>
             )}
             <div className="flex gap-2">
               <button
                 onClick={handleTryAgain}
-                className="flex-1 py-2 bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-bold text-xs tracking-[0.2em] uppercase transition-colors"
+                className="flex-1 py-2 bg-primary-container text-on-primary-container font-bold text-xs tracking-[0.2em] uppercase transition-colors hover:opacity-90"
               >
                 TRY AGAIN
               </button>
               <Link
                 href="/"
-                className="flex-1 py-2 text-center border border-[#131e2b] hover:border-[#f59e0b]/25 text-[#1e2d3d] hover:text-[#f59e0b]/50 text-xs tracking-[0.2em] uppercase transition-all"
+                className="flex-1 py-2 text-center border border-outline-variant/30 hover:border-outline text-on-surface-variant hover:text-on-surface text-xs tracking-[0.2em] uppercase transition-all"
               >
                 ← HOME
               </Link>
             </div>
           </div>
         </main>
+        <FooterTicker />
       </div>
     );
   }
@@ -232,17 +191,18 @@ export default function ResearchPage() {
   // ── Loading ──────────────────────────────────────────────
   if (pageState === 'loading') {
     return (
-      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
+      <div className="flex flex-col min-h-screen bg-surface">
         <NavBar />
         <main className="flex-1 flex flex-col items-center justify-center px-4">
           <div className="flex flex-col items-center gap-4 fade-in">
-            <span className="text-[#f59e0b] text-sm tracking-[0.3em] glow-amber-text">EQUINFO</span>
-            <span className="w-4 h-4 border border-[#f59e0b]/40 border-t-transparent rounded-full animate-spin" />
-            <span className="text-[10px] text-[#1a2a3a] tracking-widest">
+            <span className="text-primary text-sm tracking-[0.3em]">EQUINFO</span>
+            <span className="w-4 h-4 border border-primary/40 border-t-transparent rounded-full animate-spin" />
+            <span className="text-[10px] text-outline tracking-widest">
               LOADING {ticker}...
             </span>
           </div>
         </main>
+        <FooterTicker />
       </div>
     );
   }
@@ -250,35 +210,36 @@ export default function ResearchPage() {
   // ── Ticker not found ─────────────────────────────────────
   if (chartError || !chartData) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
-        <NavBar label="INSTRUMENT NOT FOUND" />
+      <div className="flex flex-col min-h-screen bg-surface">
+        <NavBar />
         <main className="flex-1 flex flex-col items-center justify-center px-4">
-          <div className="w-full max-w-md panel p-6 fade-in">
-            <div className="text-[10px] text-[#f59e0b]/50 tracking-[0.4em] mb-4">LOOKUP FAILED</div>
-            <h1 className="text-sm text-[#c9d4e0] font-bold tracking-[0.2em] mb-2">TICKER NOT FOUND</h1>
-            <p className="text-xs text-[#2a3d52] leading-relaxed mb-1">
-              <span className="text-[#5a7a8a] font-bold tracking-wider">{ticker}</span> could not be found in the database.
+          <div className="w-full max-w-md bg-surface-container border border-outline-variant/20 p-6 fade-in">
+            <div className="text-[10px] text-tertiary/60 tracking-[0.4em] mb-4">LOOKUP FAILED</div>
+            <h1 className="text-sm text-on-surface font-bold tracking-[0.2em] mb-2">TICKER NOT FOUND</h1>
+            <p className="text-xs text-on-surface-variant leading-relaxed mb-1">
+              <span className="text-outline font-bold tracking-wider">{ticker}</span> could not be found in the database.
               Please verify the symbol and try again.
             </p>
             {chartError && (
-              <p className="text-[10px] text-red-500/50 mt-1 mb-4">// {chartError}</p>
+              <p className="text-[10px] text-error/50 mt-1 mb-4">// {chartError}</p>
             )}
             <Link
               href="/"
-              className="inline-flex items-center px-4 py-2 bg-[#f59e0b] hover:bg-[#fbbf24] text-black font-bold text-xs tracking-[0.2em] uppercase transition-colors mt-3"
+              className="inline-flex items-center px-4 py-2 bg-primary-container text-on-primary-container font-bold text-xs tracking-[0.2em] uppercase transition-colors hover:opacity-90 mt-3"
             >
               ← BACK TO SEARCH
             </Link>
           </div>
         </main>
+        <FooterTicker />
       </div>
     );
   }
 
   // ── Idle: chart confirmation ──────────────────────────────
   return (
-    <div className="flex flex-col min-h-screen bg-[#080a0f] dot-grid">
-      <NavBar label={ticker} />
+    <div className="flex flex-col min-h-screen bg-surface">
+      <NavBar ticker={ticker} showSubBar />
       <main className="flex-1 flex flex-col items-center justify-start px-4 py-8">
         <ChartConfirmation
           ticker={ticker}
@@ -293,6 +254,7 @@ export default function ResearchPage() {
           }}
         />
       </main>
+      <FooterTicker />
     </div>
   );
 }
