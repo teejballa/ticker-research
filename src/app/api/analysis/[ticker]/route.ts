@@ -98,12 +98,28 @@ export async function POST(
             (async () => {
               try {
                 const data = JSON.parse(json) as AnalysisResult;
-                // Persist report BEFORE streaming result — history is never missing a completed report
-                try {
-                  await writeReport(data);
-                } catch (writeErr) {
-                  console.error('[history] Failed to write report:', writeErr);
-                  // Non-fatal — continue streaming result
+                // Persist report BEFORE streaming result — non-fatal if it fails
+                if (process.env.DEPLOYMENT_MODE === 'web') {
+                  // Web mode: persist to Neon for the authenticated user
+                  try {
+                    const { writeReportToDb } = await import('@/lib/reports-db');
+                    const session = await import('next-auth/next').then(m => m.getServerSession);
+                    const { authOptions } = await import('@/lib/auth');
+                    const sess = await session(authOptions);
+                    if (sess?.user?.email) {
+                      await writeReportToDb(data, sess.user.email);
+                    }
+                  } catch (writeErr) {
+                    console.error('[history] Web mode: Failed to write report to DB:', writeErr);
+                    // Non-fatal — continue streaming result
+                  }
+                } else {
+                  // Local mode: persist to filesystem (existing behavior, unchanged)
+                  try {
+                    await writeReport(data);
+                  } catch (writeErr) {
+                    console.error('[history] Failed to write report:', writeErr);
+                  }
                 }
                 enqueue(JSON.stringify({ type: 'result', data }));
               } catch {
