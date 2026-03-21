@@ -33,6 +33,14 @@ export default function NavBar({
 }: NavBarProps) {
   const market = getMarketStatus();
 
+  // Format email as "CONNECTED AS {truncated email}" per UI-SPEC NavIdentity contract
+  const displayEmail = userEmail
+    ? userEmail.length > 24
+      ? userEmail.slice(0, 21) + '...'
+      : userEmail
+    : null;
+  const navIdentityText = displayEmail ? `CONNECTED AS ${displayEmail}` : 'user@equinfo.io';
+
   return (
     <>
       {/* Main nav */}
@@ -52,7 +60,7 @@ export default function NavBar({
             data-testid="nav-identity"
             className="text-[11px] tracking-widest uppercase text-on-surface/50 font-bold font-mono hidden sm:block"
           >
-            {userEmail ?? 'user@equinfo.io'}
+            {navIdentityText}
           </span>
           <Link
             href="/"
