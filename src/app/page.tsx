@@ -112,9 +112,16 @@ export default function Home() {
   const showWizard = !loading && setupStatus !== null && !setupStatus.allOk;
   const market     = getMarketStatus();
 
-  // Derived transform values
-  const monTranslateY = `${(1 - anim.monPhase) * 100}vh`;
-  const monScale      = 0.88 + anim.monPhase * 0.12;
+  // Derived transform values — 3D twist reveal
+  // rotateX: starts tilted away (30deg) → flattens to 0
+  // scale: starts at 0.82 → grows to 1.0
+  // grayscale: starts at 100% → fades to 0% (full color)
+  const ease = (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  const ep   = ease(anim.monPhase);
+  const monRotateX   = (1 - ep) * 30;            // 30deg → 0deg
+  const monScale     = 0.82 + ep * 0.18;          // 0.82 → 1.0
+  const monGrayscale = (1 - ep) * 100;            // 100% → 0%
+  const monBrightness = 0.5 + ep * 0.5;           // dim → full brightness
 
   return (
     <div className="bg-surface text-on-surface min-h-screen pb-8">
@@ -148,13 +155,24 @@ export default function Home() {
             </p>
           </div>
 
-          {/* App screenshot — rises from below */}
+          {/* App screenshot — 3D twist reveal */}
           <div
             className="absolute inset-0 flex items-center justify-center z-10"
-            style={{ opacity: anim.monPhase, transform: `translateY(${monTranslateY}) scale(${monScale})` }}
+            style={{ perspective: '1200px', opacity: anim.monPhase > 0 ? 1 : 0 }}
           >
             <div className="monitor-glow" />
-            <img src="/unnamed.jpg" alt="Equinfo research terminal" className="preview-screenshot" draggable={false} />
+            <img
+              src="/unnamed.jpg"
+              alt="Equinfo research terminal"
+              className="preview-screenshot"
+              draggable={false}
+              style={{
+                transform: `rotateX(${monRotateX}deg) scale(${monScale})`,
+                filter: `grayscale(${monGrayscale}%) brightness(${monBrightness})`,
+                transformOrigin: 'center bottom',
+                willChange: 'transform, filter',
+              }}
+            />
           </div>
 
           {/* Search bar — appears once monPhase > 0.8 */}
