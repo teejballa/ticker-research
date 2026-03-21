@@ -10,4 +10,11 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
+  // Auto-start dev server when no BASE_URL override is provided
+  webServer: process.env.BASE_URL ? undefined : {
+    command: 'npm run dev -- --port 3000',
+    url: 'http://localhost:3000',
+    reuseExistingServer: true,
+    timeout: 60 * 1000,
+  },
 });
