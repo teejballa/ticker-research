@@ -14,11 +14,14 @@ Transform the local-first app into a deployed multi-user web product. This phase
 ## Implementation Decisions
 
 ### Authentication
-- **Provider:** NextAuth.js with Google OAuth — standard Next.js pattern, fits naturally since users already have Google accounts and NotebookLM auth is also Google
-- **Identity model:** The Google account used for web app login IS the user's NotebookLM identity — one Google sign-in covers both
+- **Provider:** NextAuth.js with Google OAuth — standard Next.js pattern, fits naturally since users already have Google accounts
+- **Identity model (Option C — Dual Login):** Users log in TWICE — first with Google OAuth via NextAuth (for app authentication and report ownership), then a separate NotebookLM login via the setup wizard (browser-based cookie capture via `notebooklm-py`) for their own NotebookLM account. The app clearly warns users about the two-step requirement in the UI.
+  - **Rationale:** `notebooklm-py 0.3.4` authenticates via browser-extracted session cookies (`storage_state.json`), NOT Google OAuth tokens. The NextAuth `access_token` cannot authenticate `notebooklm-py` — they are entirely different credential systems. True per-user NotebookLM identity requires each user to complete a separate `notebooklm login` flow.
+  - **Previous locked decision superseded:** The original decision ("one Google sign-in covers both") was invalidated by RESEARCH.md findings and replaced with Option C on 2026-03-21.
 - **Unauthenticated access:** Redirect all unauthenticated visitors to the Google sign-in page — no public browsing; app is for authenticated users only
 - **Open self-serve:** Anyone with a Google account can sign up and start immediately — no invite/waitlist
-- **Token storage:** Google OAuth access token is stored in the NextAuth JWT session for server-side use (passing to Daytona container for NotebookLM operations)
+- **Token storage:** Google OAuth access token is stored in the NextAuth JWT session for server-side use; NotebookLM credentials stored separately per-user via the setup wizard flow
+- **UX requirement:** Onboarding UI must clearly explain both login steps and why two logins are needed
 
 ### Database & Report Storage
 - **Provider:** Neon PostgreSQL (Vercel-native serverless Postgres, free tier for early stage)
@@ -39,10 +42,11 @@ Transform the local-first app into a deployed multi-user web product. This phase
 - **Ownership:** Reports are private per-user — every query filters by `user_id`; no public sharing in this phase
 
 ### NotebookLM Multi-User Cloud Execution
-- **Account model:** Each user's analysis runs under THEIR OWN Google account — their OAuth token from NextAuth is passed to the Daytona container at request time
-- **Container topology:** One shared Daytona container controlled by the product owner — users authenticate via their Google token passed at runtime, not via pre-configured container auth
-- **Hard research dependency:** This entire path depends on whether `notebooklm-py` can accept a Google OAuth token programmatically (vs. the current browser-based `notebooklm login` flow). The researcher MUST verify this before any planning proceeds. If token passthrough is not feasible, the phase design changes significantly — do not plan the NotebookLM web path until confirmed.
-- **Fallback if infeasible:** Do not build on unverified assumptions. Researcher defines the fallback path based on findings.
+- **Account model (Option C):** Each user's analysis runs under THEIR OWN Google account — each user completes a one-time `notebooklm login` (browser-based cookie capture) via the setup wizard in the web app. Their `storage_state.json` cookies are stored per-user in Neon (encrypted) and sent to the Daytona container at request time.
+- **Container topology:** One shared Daytona container controlled by the product owner — users authenticate via their own stored NotebookLM cookies passed at runtime, not via a single pre-configured container auth.
+- **Credential storage:** Per-user NotebookLM `storage_state.json` content stored encrypted in Neon, tied to `user_id`. Sent to Daytona container on each analysis request.
+- **UX:** Setup wizard shows both login steps with explanations: Step 1 (Google OAuth for app access) and Step 2 (NotebookLM browser login for analysis capability). Warning displayed that two logins are required.
+- **Research finding:** RESEARCH.md (2026-03-21) confirmed `notebooklm-py 0.3.4` uses browser session cookies, not OAuth tokens. Per-user identity requires per-user cookie capture — implemented via Option C dual-login flow.
 
 ### Local Mode Coexistence (Safety Net)
 - **Local mode stays intact:** All existing local-execution code (SetupWizard, filesystem `~/.equinfo/reports/`, Python/notebooklm-py checks) is preserved throughout Phase 6 development — not removed or broken
