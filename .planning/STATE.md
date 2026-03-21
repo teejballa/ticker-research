@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-03-20T06:44:25.684Z"
+stopped_at: Completed 06-01-PLAN.md — auth/db foundation
+last_updated: "2026-03-21T18:20:51.976Z"
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 24
+  completed_plans: 21
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — no hallucinated conclusions, only what the data supports.
-**Current focus:** Phase 05 — user-identity-report-history
+**Current focus:** Phase 06 — full-web-deployment-vercel-database-auth-report-account-persistence
 
 ## Current Position
 
-Phase: 05 (user-identity-report-history) — EXECUTING
-Plan: 1 of 5
+Phase: 06 (full-web-deployment-vercel-database-auth-report-account-persistence) — EXECUTING
+Plan: 1 of 4
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Plan: 1 of 5
 | Phase 05-user-identity-report-history P04 | 5 | 1 tasks | 1 files |
 | Phase 05-user-identity-report-history P03 | 54 | 3 tasks | 3 files |
 | Phase 05-user-identity-report-history P05 | 525892 | 1 tasks | 1 files |
+| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence PP01 | 279 | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,9 @@ Recent decisions affecting current work:
 - [Phase 05-user-identity-report-history]: Mutual exclusivity enforced with if (reportFile) return guards in all other useEffects on research page
 - [Phase 05-user-identity-report-history]: NavBar on research page fetches /api/setup/status independently — no shared context needed at this scale
 - [Phase 05]: waitForPageReady() uses waitForSelector(visible) + waitForSelector(hidden) pattern for INITIALIZING SYSTEM... — correctly sequences around async useEffect /api/setup/status fetch
+- [Phase 06]: Option C dual-login: NextAuth Google OAuth for app auth + separate notebooklm login per user — notebooklm-py uses cookies not OAuth tokens
+- [Phase 06]: Prisma 7 breaking change: url/directUrl moved from schema datasource block to prisma.config.ts
+- [Phase 06]: PrismaNeon@7 constructor takes PoolConfig not Pool instance
 
 ### Roadmap Evolution
 
@@ -139,6 +143,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T06:44:25.682Z
-Stopped at: Phase 6 UI-SPEC approved
-Resume file: .planning/phases/06-full-web-deployment-vercel-database-auth-report-account-persistence/06-UI-SPEC.md
+Last session: 2026-03-21T18:20:51.973Z
+Stopped at: Completed 06-01-PLAN.md — auth/db foundation
+Resume file: None
