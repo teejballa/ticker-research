@@ -1,10 +1,16 @@
 // src/app/api/setup/status/route.ts
 // GET /api/setup/status — checks Python 3.10+, notebooklm-py, and storage_state.json.
+// In web mode (DEPLOYMENT_MODE=web), returns NextAuth session email instead of running local checks.
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+
+// Required so the session is evaluated at request time, not during build
+export const dynamic = 'force-dynamic';
 
 interface SetupStatus {
   pythonOk: boolean;
@@ -104,6 +110,18 @@ function extractEmail(notebooklmHome: string): string | null {
 }
 
 export async function GET(_request: NextRequest): Promise<NextResponse> {
+  // Web mode: return session email, skip all local setup checks (irrelevant in web mode)
+  if (process.env.DEPLOYMENT_MODE === 'web') {
+    const session = await getServerSession(authOptions);
+    return NextResponse.json({
+      userEmail: session?.user?.email ?? null,
+      pythonOk: true,
+      notebooklmOk: true,
+      authOk: !!session?.user?.email,
+      allOk: !!session?.user?.email,
+    });
+  }
+
   const pythonResult = checkPython();
   const notebooklmOk = pythonResult.ok ? checkNotebooklm() : false;
   const authOk = checkAuth();
