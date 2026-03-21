@@ -38,17 +38,17 @@ interface StatCellProps {
 
 function StatCell({ label, value, accent, positive, negative }: StatCellProps) {
   const valueColor = accent
-    ? 'text-[#f59e0b]'
+    ? 'text-primary'
     : positive
-    ? 'text-emerald-400'
+    ? 'text-secondary'
     : negative
-    ? 'text-red-400'
-    : 'text-[#5a7a8a]';
+    ? 'text-error'
+    : 'text-on-surface-variant';
 
   return (
-    <div className="panel px-3 py-2.5">
-      <div className="text-[9px] text-[#1a2a3a] tracking-[0.28em] mb-1">{label}</div>
-      <div className={`text-sm font-bold tabular-nums ${valueColor}`}>{value}</div>
+    <div className="bg-surface-container-high px-3 py-2.5">
+      <div className="text-[9px] text-outline/60 tracking-[0.28em] mb-1">{label}</div>
+      <div className={`text-sm font-bold tabular-nums font-mono ${valueColor}`}>{value}</div>
     </div>
   );
 }
@@ -90,28 +90,28 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
     <div className="w-full max-w-2xl mx-auto fade-in">
 
       {/* ── INSTRUMENT HEADER ── */}
-      <div className="panel p-4 mb-1.5">
+      <div className="bg-surface-container border border-outline-variant/20 p-4 mb-1.5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2.5 mb-1.5">
-              <span className="font-bold text-xl tracking-[0.18em] text-[#f59e0b] glow-amber-text">
+              <span className="font-bold text-xl tracking-[0.18em] text-primary font-mono">
                 {ticker}
               </span>
-              <span className="text-[#0d1a27] text-sm select-none">│</span>
-              <span className="text-[#3a5060] text-sm">{companyName}</span>
+              <span className="text-outline-variant text-sm select-none">│</span>
+              <span className="text-on-surface-variant text-sm">{companyName}</span>
             </div>
             <div className="flex items-baseline gap-3">
-              <span className="text-2xl font-bold tabular-nums text-[#c9d4e0]">
+              <span className="text-2xl font-bold tabular-nums text-on-surface font-mono">
                 {currentPrice != null ? `$${currentPrice.toFixed(2)}` : '—'}
               </span>
-              <span className={`text-sm font-semibold tabular-nums ${priceUp ? 'text-emerald-400' : 'text-red-400'}`}>
+              <span className={`text-sm font-semibold tabular-nums font-mono ${priceUp ? 'text-secondary' : 'text-error'}`}>
                 {priceUp ? '▲' : '▼'} {pctFormatted}
               </span>
             </div>
           </div>
           <div className="text-right text-[10px] space-y-0.5">
-            <div className="text-[#0d1a27] tracking-[0.28em]">1M CHART</div>
-            <div className="text-[#1a2a3a] tabular-nums">DAILY CLOSE</div>
+            <div className="text-outline/60 tracking-[0.28em]">1M CHART</div>
+            <div className="text-outline/40 tabular-nums">DAILY CLOSE</div>
           </div>
         </div>
       </div>
@@ -124,27 +124,27 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
       </div>
 
       {/* ── CHART ── */}
-      <div className="panel mb-1.5 overflow-hidden">
-        <div className="px-3.5 pt-2.5 pb-1 border-b border-[#0a1520] flex items-center justify-between">
+      <div className="bg-surface-container border border-outline-variant/20 mb-1.5 overflow-hidden">
+        <div className="px-3.5 pt-2.5 pb-1 border-b border-outline-variant/20 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-[#f59e0b] rounded-full opacity-70" />
-            <span className="text-[9px] text-[#1a2a3a] tracking-[0.3em]">PRICE / 1 MONTH</span>
+            <span className="w-1.5 h-1.5 bg-primary rounded-full opacity-70" />
+            <span className="text-[9px] text-outline/60 tracking-[0.3em]">PRICE / 1 MONTH</span>
           </div>
-          <span className="text-[9px] text-[#0d1a27]">EQUINFO CHART</span>
+          <span className="text-[9px] text-outline/40">EQUINFO CHART</span>
         </div>
         <PriceLineChart data={chartData} />
       </div>
 
       {/* ── PIPELINE ERROR ── */}
       {pipelineError && (
-        <div className="mb-1.5 px-3.5 py-2 bg-[#0d1117] border border-red-500/25">
-          <span className="text-[10px] text-red-400/70">// ERR: {pipelineError}</span>
+        <div className="mb-1.5 px-3.5 py-2 bg-surface-container border border-error/25">
+          <span className="text-[10px] text-error/70">// ERR: {pipelineError}</span>
         </div>
       )}
 
       {/* ── ACTION PANEL ── */}
-      <div className="panel p-3.5">
-        <p className="text-[9px] text-[#0d1a27] tracking-[0.3em] text-center mb-3 select-none">
+      <div className="bg-surface-container border border-outline-variant/20 p-3.5">
+        <p className="text-[9px] text-outline/50 tracking-[0.3em] text-center mb-3 select-none">
           CONFIRM INSTRUMENT TO BEGIN RESEARCH PIPELINE
         </p>
         <div className="flex gap-2">
@@ -152,11 +152,11 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
             type="button"
             onClick={handleConfirm}
             disabled={isRunning}
-            className="flex-1 py-2.5 bg-[#f59e0b] hover:bg-[#fbbf24] active:bg-[#d97706] disabled:bg-[#131e2b] disabled:text-[#1a2a3a] disabled:cursor-not-allowed text-black font-bold text-xs tracking-[0.2em] uppercase transition-colors duration-150"
+            className="flex-1 py-2.5 bg-primary-container hover:opacity-90 active:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed text-on-primary-container font-bold text-xs tracking-[0.2em] uppercase transition-opacity duration-150"
           >
             {isRunning ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-3 h-3 border border-black/40 border-t-transparent rounded-full animate-spin" />
+                <span className="w-3 h-3 border border-on-primary-container/40 border-t-transparent rounded-full animate-spin" />
                 COLLECTING DATA...
               </span>
             ) : (
@@ -166,7 +166,7 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
           <button
             type="button"
             onClick={() => router.push('/')}
-            className="px-5 py-2.5 border border-[#131e2b] hover:border-[#f59e0b]/25 text-[#2a3a4a] hover:text-[#f59e0b]/50 text-xs tracking-[0.2em] uppercase transition-all duration-150"
+            className="px-5 py-2.5 border border-outline-variant/30 hover:border-outline text-on-surface-variant hover:text-on-surface text-xs tracking-[0.2em] uppercase transition-all duration-150"
           >
             ← BACK
           </button>
