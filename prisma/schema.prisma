@@ -1,0 +1,24 @@
+// prisma/schema.prisma
+// Prisma 7: connection URLs moved to prisma.config.ts (no url/directUrl in datasource).
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Report {
+  id               String   @id @default(uuid())
+  user_id          String
+  ticker           String
+  company_name     String
+  analyzed_at      DateTime @db.Timestamptz
+  market_sentiment String
+  confidence_level String
+  analysis         Json
+
+  @@index([user_id, analyzed_at(sort: Desc)])
+  @@map("reports")
+}
