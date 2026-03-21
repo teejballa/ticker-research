@@ -1,11 +1,12 @@
 'use client';
 
 // src/components/ResearchReport.tsx
-// Equinfo research report — light mode for readability and PDF export.
+// Equinfo research report — Stitch 12-column layout.
 
-import Link from 'next/link';
-import { formatTimestamp, formatMarketCap, formatPercent, formatPrice } from '@/lib/formatters';
+import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, formatPrice } from '@/lib/formatters';
 import type { AnalysisResult, MarketSnapshot } from '@/lib/types';
+import NavBar from '@/components/NavBar';
+import FooterTicker from '@/components/FooterTicker';
 
 interface ResearchReportProps {
   analysisResult: AnalysisResult;
@@ -13,14 +14,13 @@ interface ResearchReportProps {
 }
 
 // ── Inline markdown renderer (bold + newlines only) ────────
-// Gemini returns **bold** text and bullet lists — strip asterisks cleanly.
 function Md({ text }: { text: string }) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
   return (
     <>
       {parts.map((part, i) =>
         i % 2 === 1
-          ? <strong key={i} className="text-[#111827] font-semibold">{part}</strong>
+          ? <strong key={i} className="text-on-surface font-semibold">{part}</strong>
           : part.split('\n').map((line, j) => (
               <span key={`${i}-${j}`}>
                 {j > 0 && <br />}
@@ -32,98 +32,35 @@ function Md({ text }: { text: string }) {
   );
 }
 
-// ── Section header ────────────────────────────────────────
+// ── Helper formatters ──────────────────────────────────────
 
-function SectionHeader({ label, badge }: { label: string; badge?: string }) {
-  return (
-    <div className="flex items-center gap-3 mt-10 mb-5">
-      <div
-        data-testid="section-header-bar"
-        className="w-4 h-0.5 shrink-0"
-        style={{ background: 'linear-gradient(90deg, #d97706 0%, #f59e0b 100%)', boxShadow: '0 0 6px rgba(245,158,11,0.35)' }}
-      />
-      <span className="text-[10px] text-[#6b7280] tracking-[0.45em] font-semibold">{label}</span>
-      {badge && (
-        <span className="text-[9px] text-[#b0b8c4] border border-[#e5e7eb] px-2 py-0.5 tracking-wider">{badge}</span>
-      )}
-      <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, #e5e7eb 0%, transparent 100%)' }} />
-    </div>
-  );
+function formatVolume(vol: number): string {
+  if (vol >= 1e9)  return `${(vol / 1e9).toFixed(1)}B`;
+  if (vol >= 1e6)  return `${(vol / 1e6).toFixed(1)}M`;
+  if (vol >= 1e3)  return `${(vol / 1e3).toFixed(1)}K`;
+  return vol.toLocaleString();
 }
 
-// ── Assessment bar ────────────────────────────────────────
-
-interface AssessmentBarProps {
-  label: string;
-  pct: number;
-  fillColor: string;
-  glowColor: string;
-  textColor: string;
-  rationale: string;
+function getSentimentLabel(sentiment: string | undefined): string {
+  if (!sentiment) return 'NEUTRAL';
+  const lower = sentiment.toLowerCase();
+  if (lower.includes('bullish')) return 'BULLISH';
+  if (lower.includes('bearish')) return 'BEARISH';
+  return 'NEUTRAL';
 }
 
-function AssessmentBar({ label, pct, fillColor, glowColor, textColor, rationale, delay = 0 }: AssessmentBarProps & { delay?: number }) {
-  return (
-    <div className="mb-5">
-      <div className="flex items-center gap-3 mb-1.5">
-        <span className="text-[10px] tracking-[0.3em] font-bold w-9 shrink-0" style={{ color: textColor }}>
-          {label}
-        </span>
-        <div className="flex-1 h-2 bg-[#f3f4f6] overflow-hidden rounded-sm">
-          <div
-            data-testid={`assessment-bar-fill-${label.toLowerCase()}`}
-            className="bar-fill rounded-sm"
-            style={{
-              '--bar-target': `${pct}%`,
-              '--bar-delay': `${delay}ms`,
-              backgroundColor: fillColor,
-              boxShadow: `0 0 12px ${glowColor}, 0 0 4px ${glowColor}`,
-            } as React.CSSProperties}
-          />
-        </div>
-        <span className="text-sm font-bold tabular-nums w-10 text-right" style={{ color: textColor }}>
-          {pct}%
-        </span>
-      </div>
-      <p className="text-[11px] text-[#4b5563] pl-12 leading-relaxed"><Md text={rationale} /></p>
-    </div>
-  );
+function getSentimentBadgeClass(sentiment: string | undefined): string {
+  const label = getSentimentLabel(sentiment);
+  if (label === 'BULLISH') return 'bg-secondary/20 text-secondary border-secondary/30';
+  if (label === 'BEARISH') return 'bg-error/20 text-error border-error/30';
+  return 'bg-outline/20 text-outline border-outline/30';
 }
 
-// ── Stats grid ────────────────────────────────────────────
-
-interface StatCellProps {
-  label: string;
-  value: string;
-  color?: string;
-}
-
-function StatCell({ label, value, color = '#374151' }: StatCellProps) {
-  return (
-    <div className="stat-cell">
-      <div className="text-[9px] text-[#9ca3af] tracking-[0.28em] mb-1">{label}</div>
-      <div className="text-sm font-bold tabular-nums" style={{ color }}>{value}</div>
-    </div>
-  );
-}
-
-function StatsGrid({ snapshot }: { snapshot: MarketSnapshot | undefined }) {
-  const s = snapshot;
-  const pctRaw = s?.percent_change_today ?? null;
-  const pctColor = pctRaw == null ? '#374151' : pctRaw >= 0 ? '#059669' : '#dc2626';
-
-  return (
-    <div data-testid="stats-grid" className="grid grid-cols-2 sm:grid-cols-4 gap-0.5 mb-6">
-      <StatCell label="LAST PRICE" value={formatPrice(s?.price ?? null)}                       color="#d97706" />
-      <StatCell label="CHG %"      value={formatPercent(pctRaw)}                               color={pctColor} />
-      <StatCell label="MKT CAP"    value={formatMarketCap(s?.market_cap ?? null)} />
-      <StatCell label="P/E RATIO"  value={s?.pe_ratio != null ? s.pe_ratio.toFixed(1) : '—'} />
-      <StatCell label="52W HIGH"   value={formatPrice(s?.fifty_two_week_high ?? null)} />
-      <StatCell label="52W LOW"    value={formatPrice(s?.fifty_two_week_low ?? null)} />
-      <StatCell label="EPS"        value={s?.eps != null ? `$${s.eps.toFixed(2)}` : '—'} />
-      <StatCell label="REVENUE"    value={formatMarketCap(s?.revenue ?? null)} />
-    </div>
-  );
+// confidence_level is 'Low' | 'Medium' | 'High' — map to 0-100
+function confidenceToPercent(level: 'Low' | 'Medium' | 'High'): number {
+  if (level === 'High')   return 90;
+  if (level === 'Medium') return 60;
+  return 30;
 }
 
 // ── Main component ────────────────────────────────────────
@@ -144,7 +81,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     market_snapshot,
   } = analysisResult;
 
-  function handleDownloadPDF() {
+  function handleExportPdf() {
     const date          = new Date(analyzed_at).toISOString().slice(0, 10);
     const originalTitle = document.title;
     document.title      = `${ticker}-equinfo-${date}`;
@@ -155,220 +92,270 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     window.print();
   }
 
-  const sentimentColor =
-    market_sentiment === 'bullish' ? '#059669' :
-    market_sentiment === 'bearish' ? '#dc2626' :
-    '#d97706';
+  const s = market_snapshot;
+  const confidencePct = confidenceToPercent(confidence_level);
+  const confidenceBlocks = Math.round(confidencePct / 10);
 
-  const sentimentBorderClass =
-    market_sentiment === 'bullish' ? 'border-emerald-200 bg-emerald-50' :
-    market_sentiment === 'bearish' ? 'border-red-200 bg-red-50' :
-    'border-amber-200 bg-amber-50';
-
-  const confidenceBlocks =
-    confidence_level === 'High' ? 10 :
-    confidence_level === 'Medium' ? 6 :
-    3;
+  // Stats grid data — adapted to actual MarketSnapshot field names
+  const stats = [
+    {
+      label: 'Last Price',
+      value: formatPrice(s?.price ?? null),
+      extra: 'USD',
+      colorClass: 'text-on-surface',
+    },
+    {
+      label: '24H Change',
+      value: s?.percent_change_today != null
+        ? formatPercent(s.percent_change_today)
+        : '—',
+      colorClass: s?.percent_change_today != null
+        ? s.percent_change_today >= 0 ? 'text-secondary' : 'text-error'
+        : 'text-on-surface',
+    },
+    {
+      label: 'MKT Cap',
+      value: formatMarketCapLib(s?.market_cap ?? null),
+      colorClass: 'text-on-surface',
+    },
+    {
+      label: 'P/E Ratio',
+      value: s?.pe_ratio != null ? s.pe_ratio.toFixed(2) : '—',
+      colorClass: 'text-on-surface',
+    },
+    {
+      label: '52W High',
+      value: formatPrice(s?.fifty_two_week_high ?? null),
+      colorClass: 'text-secondary',
+    },
+    {
+      label: '52W Low',
+      value: formatPrice(s?.fifty_two_week_low ?? null),
+      colorClass: 'text-error',
+    },
+    {
+      label: 'EPS',
+      value: s?.eps != null ? `$${s.eps.toFixed(2)}` : '—',
+      colorClass: 'text-on-surface',
+    },
+    {
+      label: 'Revenue',
+      value: formatMarketCapLib(s?.revenue ?? null),
+      colorClass: 'text-on-surface',
+    },
+  ];
 
   return (
-    <div>
+    <div className="bg-surface text-on-surface font-body selection:bg-primary/30 min-h-screen pb-12">
+      <NavBar
+        ticker={ticker}
+        companyName={company_name}
+        showSubBar
+        onNewResearch={() => { window.location.href = '/'; }}
+        onExportPdf={handleExportPdf}
+      />
 
-      {/* ── STICKY TOP BAR — frosted glass ── */}
-      <div className="sticky top-0 z-10 bg-[#080a0f]/90 backdrop-blur-md border-b border-[#0d1e2e] print:hidden relative" style={{ boxShadow: '0 1px 0 rgba(245,158,11,0.10)' }}>
-        <div data-testid="report-nav-accent" className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.18) 30%, rgba(245,158,11,0.28) 50%, rgba(245,158,11,0.18) 70%, transparent 100%)' }} />
-        <div className="max-w-4xl mx-auto px-5 h-11 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-[#f59e0b] text-base tracking-[0.2em] glow-amber-text">
-              {ticker}
-            </span>
-            <span className="text-[#1a2d40] hidden sm:block select-none">·</span>
-            <span className="text-[#3a5470] text-[11px] hidden sm:block truncate tracking-wide">{company_name}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="text-[10px] border border-[#131e2b] text-[#1e2d3d] px-3 py-1 hover:border-[#f59e0b]/25 hover:text-[#f59e0b]/60 transition-all tracking-wider"
-            >
-              ← NEW RESEARCH
-            </Link>
-            <button
-              onClick={handleDownloadPDF}
-              className="text-[10px] border border-[#f59e0b]/35 text-[#f59e0b]/60 px-3 py-1 hover:bg-[#f59e0b] hover:text-black hover:border-[#f59e0b] transition-all tracking-wider"
-            >
-              EXPORT PDF
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── PAGE CONTENT — light mode ── */}
-      <div data-testid="report-content" className="min-h-screen bg-white text-[#2d3748] px-5 py-8 max-w-4xl mx-auto fade-in">
-
-        {/* Disclaimer */}
-        <div className="border border-[#fde68a] bg-[#fffbeb] px-4 py-2.5 mb-5 flex gap-3 items-start">
-          <span className="text-[#d97706] text-xs shrink-0 mt-0.5">⚠</span>
-          <p className="text-[10px] text-[#92400e] leading-relaxed tracking-wide">
-            DISCLAIMER — This report is for informational purposes only and does not constitute financial advice or a
-            recommendation to buy, sell, or hold any security. Past performance does not guarantee future results.
-            Consult a qualified financial advisor before making investment decisions.
-          </p>
-        </div>
+      <main className="mt-[100px] max-w-6xl mx-auto px-6 space-y-8 pb-20">
 
         {/* Timestamp row */}
-        <div className="flex items-center gap-3 mb-6 text-[10px] text-[#9ca3af]">
-          <span className="tracking-widest">ANALYSIS TIMESTAMP</span>
-          <div className="flex-1 h-px bg-[#f3f4f6]" />
-          <span className="tabular-nums text-[#6b7280]">{formatTimestamp(analyzed_at)}</span>
+        <div className="flex items-center gap-3 text-[10px] text-on-surface-variant">
+          <span className="tracking-widest uppercase">Analysis Timestamp</span>
+          <div className="flex-1 h-px bg-surface-container" />
+          <span className="tabular-nums font-mono">{formatTimestamp(analyzed_at)}</span>
         </div>
 
-        {/* Stats */}
-        <StatsGrid snapshot={market_snapshot} />
-
-        {/* ── SENTIMENT ── */}
-        <div className="fade-in-d1">
-          <SectionHeader label="MARKET SENTIMENT" />
-          <div className="flex items-center gap-3 mb-3">
-            <span
-              className={`text-xs border px-3 py-1 font-bold tracking-[0.35em] ${sentimentBorderClass}`}
-              style={{ color: sentimentColor }}
-            >
-              {market_sentiment.toUpperCase()}
-            </span>
+        {/* Financial Disclaimer */}
+        <section className="border-l-4 border-tertiary bg-surface-container-low p-4 flex gap-4 items-start">
+          <span className="material-symbols-outlined text-tertiary text-lg shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+          <div>
+            <h4 className="text-[11px] font-bold tracking-widest uppercase text-tertiary mb-1">Financial Disclaimer</h4>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              This AI-generated research report is for informational purposes only. Information is sourced from real-time market data and historical filings. Equinfo does not provide financial advice. Consult with a certified professional before making investment decisions.
+            </p>
           </div>
-          <p className="text-sm text-[#374151] leading-relaxed"><Md text={sentiment_reasoning} /></p>
-        </div>
+        </section>
 
-        {/* ── BULLISH FACTORS ── */}
-        <div className="fade-in-d2">
-          <SectionHeader label="BULLISH FACTORS" badge={`${bullish_signals.length} signals`} />
-          <div className="space-y-1">
-            {bullish_signals.map((s, i) => (
-              <div key={i} className="signal-row signal-row-bull">
-                <span className="signal-icon text-emerald-500">▲</span>
-                <div>
-                  <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
-                  {s.source_citation && (
-                    <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
-                  )}
+        {/* Main Dashboard Grid (Asymmetric) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          {/* Left Column: Metrics & Sentiment (col-span-8) */}
+          <div className="lg:col-span-8 space-y-6">
+
+            {/* Stats Grid: 2x4 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {stats.map((stat, i) => (
+                <div key={i} className="bg-surface-container-high p-4 rounded-lg">
+                  <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant block mb-2">{stat.label}</span>
+                  <div className={`font-mono text-xl font-bold ${stat.colorClass}`}>
+                    {stat.value}
+                    {stat.extra && (
+                      <span className="text-xs font-medium text-on-surface-variant ml-1">{stat.extra}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Market Sentiment Card */}
+            <div className="bg-surface-container p-6 rounded-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 blur-[80px]" />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-headline font-bold text-lg">Market Sentiment</h3>
+                <div className={`px-4 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border ${getSentimentBadgeClass(market_sentiment)}`}>
+                  {getSentimentLabel(market_sentiment)}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+              <p className="text-sm text-on-surface-variant leading-relaxed max-w-2xl">
+                <Md text={sentiment_reasoning} />
+              </p>
+            </div>
 
-        {/* ── BEARISH FACTORS ── */}
-        <div className="fade-in-d3">
-          <SectionHeader label="BEARISH FACTORS" badge={`${bearish_signals.length} signals`} />
-          <div className="space-y-1">
-            {bearish_signals.map((s, i) => (
-              <div key={i} className="signal-row signal-row-bear">
-                <span className="signal-icon text-red-500">▼</span>
-                <div>
-                  <span className="text-sm text-[#2d3748] leading-snug"><Md text={s.signal} /></span>
-                  {s.source_citation && (
-                    <span className="signal-citation text-[10px] text-[#9ca3af] ml-2">[{s.source_citation}]</span>
-                  )}
+            {/* Bullish/Bearish Factors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Bullish */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">trending_up</span> Growth Catalysts
+                </h4>
+                <div className="space-y-2">
+                  {bullish_signals.map((s, i) => (
+                    <div key={i} className="flex items-start p-3 bg-surface-container-low hover:bg-surface-container-high transition-colors rounded gap-3">
+                      <span className="material-symbols-outlined text-secondary text-sm mt-0.5 shrink-0">change_history</span>
+                      <div>
+                        <span className="text-xs"><Md text={s.signal} /></span>
+                        {s.source_citation && (
+                          <span className="block text-[10px] text-on-surface-variant mt-0.5">[{s.source_citation}]</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+              {/* Bearish */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-bold tracking-widest uppercase text-error flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">trending_down</span> Risk Vectors
+                </h4>
+                <div className="space-y-2">
+                  {bearish_signals.map((s, i) => (
+                    <div key={i} className="flex items-start p-3 bg-surface-container-low hover:bg-surface-container-high transition-colors rounded gap-3">
+                      <span className="material-symbols-outlined text-error text-sm mt-0.5 shrink-0" style={{ transform: 'rotate(180deg)' }}>change_history</span>
+                      <div>
+                        <span className="text-xs"><Md text={s.signal} /></span>
+                        {s.source_citation && (
+                          <span className="block text-[10px] text-on-surface-variant mt-0.5">[{s.source_citation}]</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* ── ASSESSMENT ── */}
-        <div className="fade-in-d4">
-          <SectionHeader label="ASSESSMENT" />
-          <div className="border border-[#e5e7eb] bg-[#f9fafb] p-5">
-            <AssessmentBar
-              label="BUY"
-              pct={assessment.buy_pct}
-              fillColor="#059669"
-              glowColor="rgba(5,150,105,0.25)"
-              textColor="#059669"
-              rationale={assessment.buy_rationale}
-              delay={200}
-            />
-            <AssessmentBar
-              label="HOLD"
-              pct={assessment.hold_pct}
-              fillColor="#d97706"
-              glowColor="rgba(217,119,6,0.25)"
-              textColor="#d97706"
-              rationale={assessment.hold_rationale}
-              delay={400}
-            />
-            <AssessmentBar
-              label="SELL"
-              pct={assessment.sell_pct}
-              fillColor="#dc2626"
-              glowColor="rgba(220,38,38,0.25)"
-              textColor="#dc2626"
-              rationale={assessment.sell_rationale}
-              delay={600}
-            />
-          </div>
-        </div>
+          {/* Right Column: Assessment & Confidence (col-span-4) */}
+          <div className="lg:col-span-4 space-y-6">
 
-        {/* ── CONFIDENCE ── */}
-        <div className="fade-in-d5">
-          <SectionHeader label="CONFIDENCE LEVEL" />
-          <div className="border border-[#e5e7eb] bg-[#f9fafb] p-4">
-            <div className="flex items-center gap-4 mb-3">
-              <span className="text-xs tracking-[0.3em] text-[#d97706] font-bold">
-                {confidence_level.toUpperCase()}
-              </span>
-              <div className="flex gap-0.5">
-                {Array.from({ length: 10 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`conf-block ${i < confidenceBlocks ? 'conf-block-active' : ''}`}
-                    style={{
-                      backgroundColor: i < confidenceBlocks ? '#d97706' : '#e5e7eb',
-                      '--block-delay': `${i * 60}ms`,
-                    } as React.CSSProperties}
-                  />
+            {/* Strategic Assessment: Fill Bars */}
+            <div className="bg-surface-container p-6 rounded-lg space-y-6">
+              <h3 className="text-[11px] font-bold tracking-widest uppercase text-on-surface-variant">Strategic Assessment</h3>
+              <div className="space-y-5">
+                {[
+                  { label: 'BUY',  value: assessment.buy_pct,  barClass: 'bg-secondary' },
+                  { label: 'HOLD', value: assessment.hold_pct, barClass: 'bg-outline-variant' },
+                  { label: 'SELL', value: assessment.sell_pct, barClass: 'bg-error' },
+                ].map((item) => (
+                  <div key={item.label} className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-bold tracking-wide">
+                      <span>{item.label}</span>
+                      <span className="font-mono">{Math.round(item.value)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                      <div
+                        data-testid={`assessment-bar-fill-${item.label.toLowerCase()}`}
+                        className={`h-full ${item.barClass} bar-fill`}
+                        style={{ '--bar-target': `${item.value}%` } as React.CSSProperties}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
-              <span className="text-xs text-[#6b7280] tabular-nums">{confidenceBlocks * 10}%</span>
+              {/* Rationales */}
+              <div className="space-y-3 pt-2 border-t border-surface-container-highest">
+                <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                  <span className="font-bold text-secondary">Buy: </span><Md text={assessment.buy_rationale} />
+                </p>
+                <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                  <span className="font-bold text-on-surface-variant">Hold: </span><Md text={assessment.hold_rationale} />
+                </p>
+                <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                  <span className="font-bold text-error">Sell: </span><Md text={assessment.sell_rationale} />
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-[#4b5563] leading-relaxed"><Md text={confidence_explanation} /></p>
+
+            {/* Confidence Level: Segmented 10-block */}
+            <div className="bg-surface-container-high p-6 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-[11px] font-bold tracking-widest uppercase text-on-surface-variant">Confidence Level</h3>
+                <span className="font-mono text-lg font-bold text-secondary">{confidence_level}</span>
+              </div>
+              <div className="flex gap-1 mb-4">
+                {Array.from({ length: 10 }).map((_, i) => {
+                  const isLit = i < confidenceBlocks;
+                  return (
+                    <div
+                      key={i}
+                      data-testid={`conf-block-${i}`}
+                      className={`h-4 flex-1 rounded-sm conf-block ${isLit ? 'conf-block-active bg-secondary' : 'bg-surface-container-highest'}`}
+                      style={{ '--block-delay': `${i * 50}ms` } as React.CSSProperties}
+                    />
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-on-surface-variant leading-tight">
+                <Md text={confidence_explanation} />
+              </p>
+            </div>
+
+            {/* Source Warnings */}
+            {source_warnings.length > 0 && (
+              <div className="bg-surface-container-low border-l-2 border-error p-4 rounded-r">
+                <p className="text-[10px] text-on-surface-variant tracking-wider">
+                  <span className="material-symbols-outlined text-error text-sm align-middle mr-1">warning</span>
+                  {source_warnings.length} source(s) failed to load during analysis
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ── SOURCES ── */}
-        <div className="fade-in-d6">
-          <SectionHeader label="SOURCES" badge={`${sources_used.length} indexed`} />
-          <div className="space-y-0.5">
+        {/* Sources Section */}
+        <section className="space-y-4">
+          <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+            Verified Intelligence Sources
+            <span className="ml-2 font-mono text-tertiary">[{sources_used.length} indexed]</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {sources_used.map((src, i) => (
-              <div key={i} data-testid={`source-item-${i}`} className="source-item">
-                <span className="source-num">{String(i + 1).padStart(2, '0')}</span>
-                <div>
-                  <div className="text-xs text-[#2d3748] font-semibold">{src.name}</div>
-                  {src.key_fact && (
-                    <p className="text-[10px] text-[#6b7280] mt-0.5 leading-snug">{src.key_fact}</p>
-                  )}
-                </div>
+              <div
+                key={i}
+                data-testid={`source-item-${i}`}
+                className="bg-surface-container-low border-l-2 border-tertiary p-4 hover:-translate-y-0.5 transition-all duration-300"
+              >
+                <span className="font-mono text-tertiary text-xs block mb-1">{String(i + 1).padStart(2, '0')}</span>
+                <h5 className="text-xs font-bold mb-1">{src.name}</h5>
+                {src.key_fact && (
+                  <p className="text-[10px] text-on-surface-variant leading-snug">{src.key_fact}</p>
+                )}
               </div>
             ))}
           </div>
+        </section>
 
-          {source_warnings.length > 0 && (
-            <p className="text-[10px] text-[#9ca3af] mt-2 tracking-wider">
-              ⚠ {source_warnings.length} source(s) failed to load during analysis
-            </p>
-          )}
-        </div>
+      </main>
 
-        {/* Footer */}
-        <div data-testid="report-footer" className="mt-14 select-none">
-          <div className="h-px mb-4" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(217,119,6,0.25) 30%, rgba(245,158,11,0.4) 50%, rgba(217,119,6,0.25) 70%, transparent 100%)' }} />
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] text-[#b0bec5] tracking-wider">
-            <span>EQUINFO RESEARCH TERMINAL</span>
-            <span>ANALYSIS ENGINE: ANTHROPIC × GEMINI</span>
-            <span className="tabular-nums">{new Date(analyzed_at).toISOString().slice(0, 10)}</span>
-          </div>
-        </div>
-
-      </div>
+      <FooterTicker />
     </div>
   );
 }
