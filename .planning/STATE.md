@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 06-01-PLAN.md — auth/db foundation
-last_updated: "2026-03-21T18:20:51.976Z"
+stopped_at: Completed 06-03-PLAN.md — Neon report persistence layer
+last_updated: "2026-03-21T18:28:22.652Z"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -68,6 +68,7 @@ Plan: 1 of 4
 | Phase 05-user-identity-report-history P03 | 54 | 3 tasks | 3 files |
 | Phase 05-user-identity-report-history P05 | 525892 | 1 tasks | 1 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence PP01 | 279 | 3 tasks | 10 files |
+| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P03 | 3 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Option C dual-login: NextAuth Google OAuth for app auth + separate notebooklm login per user — notebooklm-py uses cookies not OAuth tokens
 - [Phase 06]: Prisma 7 breaking change: url/directUrl moved from schema datasource block to prisma.config.ts
 - [Phase 06]: PrismaNeon@7 constructor takes PoolConfig not Pool instance
+- [Phase 06]: Dynamic import for @/lib/reports-db in history route ensures Prisma never loads in local mode — static import would crash local users with no DATABASE_URL
+- [Phase 06]: readReportFromDb throws on null (not found or user_id mismatch) — caller returns 404, preventing report enumeration attacks
 
 ### Roadmap Evolution
 
@@ -143,6 +146,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:20:51.973Z
-Stopped at: Completed 06-01-PLAN.md — auth/db foundation
+Last session: 2026-03-21T18:28:22.648Z
+Stopped at: Completed 06-03-PLAN.md — Neon report persistence layer
 Resume file: None
