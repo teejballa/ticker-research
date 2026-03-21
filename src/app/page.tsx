@@ -106,8 +106,10 @@ export default function Home() {
     };
   }, []);
 
+  // SetupWizard hidden in web mode — CONTEXT.md locked decision
+  const isWebMode = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web';
   const showSearch = !loading && (setupStatus?.allOk ?? true);
-  const showWizard = !loading && setupStatus !== null && !setupStatus.allOk;
+  const showWizard = !isWebMode && !loading && setupStatus !== null && !setupStatus.allOk;
   const market     = getMarketStatus();
 
   // ── Stitch cinematic animation — matches Stitch HTML exactly ──
@@ -380,7 +382,7 @@ export default function Home() {
               Source-grounded equity intelligence with transparent, traceable analysis.
             </p>
             <Link
-              href="/"
+              href="/terminal"
               className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
             >
               Launch Research Terminal
