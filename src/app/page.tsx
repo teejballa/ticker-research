@@ -83,14 +83,12 @@ export default function Home() {
 
       const p = Math.max(0, Math.min(1, -rect.top / scrollable));
 
-      // Hero fades + spreads across first ~36% of scroll
-      const heroAlpha     = Math.max(0, 1 - p * 2.8);
-      const letterSpacing = 0.18 + p * 2.6;
-      const subAlpha      = Math.max(0, 1 - p * 4.0);
-
-      // Image rises starting at 5% scroll, fully visible by 50%
-      // This gives user clear feedback very early in the scroll scene
-      const monPhase = Math.max(0, Math.min(1, (p - 0.05) / 0.45));
+      // Wordmark: fades + expands across first 30% of scroll (matches Stitch)
+      const wordmarkProgress = Math.min(1, p / 0.3);
+      const heroAlpha        = 1 - wordmarkProgress;
+      const letterSpacing    = 0.18 + wordmarkProgress * 2.62;
+      const subAlpha         = Math.max(0, 1 - p * 4.0);
+      const monPhase         = p; // pass raw progress; terminal range computed in render
 
       setAnim({ heroAlpha, letterSpacing, subAlpha, monPhase, progress: p });
     }
@@ -112,16 +110,23 @@ export default function Home() {
   const showWizard = !loading && setupStatus !== null && !setupStatus.allOk;
   const market     = getMarketStatus();
 
-  // Derived transform values — 3D twist reveal
-  // rotateX: starts tilted away (30deg) → flattens to 0
-  // scale: starts at 0.82 → grows to 1.0
-  // grayscale: starts at 100% → fades to 0% (full color)
-  const ease = (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-  const ep   = ease(anim.monPhase);
-  const monRotateX   = (1 - ep) * 30;            // 30deg → 0deg
-  const monScale     = 0.82 + ep * 0.18;          // 0.82 → 1.0
-  const monGrayscale = (1 - ep) * 100;            // 100% → 0%
-  const monBrightness = 0.5 + ep * 0.5;           // dim → full brightness
+  // ── Stitch cinematic animation — matches Stitch HTML exactly ──
+  // Terminal animation lives in 20%–90% of total scroll progress
+  const animStart = 0.2;
+  const animEnd   = 0.9;
+  const rawTerminal = anim.progress > animStart
+    ? Math.min(1, Math.max(0, (anim.progress - animStart) / (animEnd - animStart)))
+    : 0;
+  // Smoothstep easing: t²(3-2t)
+  const ep = rawTerminal * rawTerminal * (3 - 2 * rawTerminal);
+
+  const monRotateX  = 20 * (1 - ep);       // 20deg → 0
+  const monRotateY  = -20 * (1 - ep);      // -20deg → 0
+  const monScale    = 0.6 + ep * 0.75;     // 0.6 → 1.35
+  const monOpacity  = Math.min(1, rawTerminal * 4);  // fades in early
+  const colorOpacity = ep;                 // grayscale layer → color layer crossfade
+  const showLabels  = rawTerminal > 0.3 && rawTerminal < 0.85;
+  const showSearch2 = rawTerminal > 0.8;
 
   return (
     <div className="bg-surface text-on-surface min-h-screen pb-8">
@@ -155,30 +160,58 @@ export default function Home() {
             </p>
           </div>
 
-          {/* App screenshot — 3D twist reveal */}
-          <div
-            className="absolute inset-0 flex items-center justify-center z-10"
-            style={{ perspective: '1200px', opacity: anim.monPhase > 0 ? 1 : 0 }}
-          >
+          {/* Terminal scene — Stitch cinematic 3D reveal */}
+          <div className="absolute inset-0 flex items-center justify-center z-10"
+               style={{ perspective: '1500px' }}>
             <div className="monitor-glow" />
-            <img
-              src="/unnamed.jpg"
-              alt="Equinfo research terminal"
-              className="preview-screenshot"
-              draggable={false}
+
+            {/* Frame: rotates + scales into view */}
+            <div
               style={{
-                transform: `rotateX(${monRotateX}deg) scale(${monScale})`,
-                filter: `grayscale(${monGrayscale}%) brightness(${monBrightness})`,
-                transformOrigin: 'center bottom',
-                willChange: 'transform, filter',
+                position: 'relative',
+                opacity: monOpacity,
+                transform: `rotateX(${monRotateX}deg) rotateY(${monRotateY}deg) scale(${monScale})`,
+                transformStyle: 'preserve-3d',
+                willChange: 'transform',
               }}
-            />
+            >
+              {/* Grayscale base layer */}
+              <img
+                src="/equinfo-start.jpg"
+                alt="Equinfo terminal"
+                className="preview-screenshot grayscale"
+                draggable={false}
+                style={{ opacity: 1 - colorOpacity, backfaceVisibility: 'hidden' }}
+              />
+              {/* Full-color overlay layer */}
+              <img
+                src="/equinfo-end.jpg"
+                alt="Equinfo terminal color"
+                className="preview-screenshot absolute inset-0"
+                draggable={false}
+                style={{ opacity: colorOpacity, backfaceVisibility: 'hidden' }}
+              />
+            </div>
+
+            {/* Floating status labels — appear mid-animation */}
+            {showLabels && (
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-[20%] left-[3%] bg-primary/10 border border-primary/20 backdrop-blur-sm p-4 rounded-lg font-mono text-[10px]">
+                  <div className="text-primary font-bold">LENS_STABILIZED</div>
+                  <div className="text-outline">SYNTHESIZING DATA...</div>
+                </div>
+                <div className="absolute bottom-[20%] right-[3%] bg-secondary/10 border border-secondary/20 backdrop-blur-sm p-4 rounded-lg font-mono text-[10px]">
+                  <div className="text-secondary font-bold">COLOR_RESTORED</div>
+                  <div className="text-outline">CALIBRATING INTERFACE...</div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Search bar — appears once monPhase > 0.8 */}
+          {/* Search bar — appears once terminal animation is ~80% done */}
           <div
             className="absolute bottom-20 left-1/2 -translate-x-1/2 w-full max-w-xl px-6 z-30 transition-opacity duration-300"
-            style={{ opacity: anim.monPhase > 0.8 ? 1 : 0, pointerEvents: anim.monPhase > 0.8 ? 'auto' : 'none' }}
+            style={{ opacity: showSearch2 ? 1 : 0, pointerEvents: showSearch2 ? 'auto' : 'none' }}
           >
             {showWizard && <SetupWizard onSetupComplete={fetchSetupStatus} />}
             {showSearch && <TickerSearch />}
