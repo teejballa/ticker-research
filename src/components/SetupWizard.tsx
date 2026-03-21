@@ -24,12 +24,12 @@ function detectOS(): 'mac' | 'windows' | 'linux' | 'unknown' {
 
 function StepIndicator({ state }: { state: StepState }) {
   if (state === 'complete')
-    return <span className="text-emerald-500/80 text-xs">✓</span>;
+    return <span className="text-secondary text-xs">✓</span>;
   if (state === 'active')
-    return <span className="w-3 h-3 border border-[#f59e0b]/60 border-t-transparent rounded-full animate-spin inline-block" />;
+    return <span className="w-3 h-3 border border-primary/60 border-t-transparent rounded-full animate-spin inline-block" />;
   if (state === 'error')
-    return <span className="text-red-500/60 text-xs">✗</span>;
-  return <span className="text-[#0d1a27] text-xs">○</span>;
+    return <span className="text-error/60 text-xs">✗</span>;
+  return <span className="text-outline/40 text-xs">○</span>;
 }
 
 function PythonInstallInstructions() {
@@ -37,17 +37,17 @@ function PythonInstallInstructions() {
   return (
     <div className="mt-2 space-y-1">
       {(os === 'mac'     || os === 'unknown') && (
-        <code className="block bg-[#080a0f] border border-[#0d1a27] px-2.5 py-1.5 text-[10px] text-[#f59e0b]/60">
+        <code className="block bg-surface border border-outline-variant/30 px-2.5 py-1.5 text-[10px] text-primary/60 font-mono">
           $ brew install python@3.11
         </code>
       )}
       {(os === 'windows' || os === 'unknown') && (
-        <code className="block bg-[#080a0f] border border-[#0d1a27] px-2.5 py-1.5 text-[10px] text-[#f59e0b]/60">
+        <code className="block bg-surface border border-outline-variant/30 px-2.5 py-1.5 text-[10px] text-primary/60 font-mono">
           $ winget install Python.Python.3.11
         </code>
       )}
       {(os === 'linux'   || os === 'unknown') && (
-        <code className="block bg-[#080a0f] border border-[#0d1a27] px-2.5 py-1.5 text-[10px] text-[#f59e0b]/60">
+        <code className="block bg-surface border border-outline-variant/30 px-2.5 py-1.5 text-[10px] text-primary/60 font-mono">
           $ sudo apt install python3.11
         </code>
       )}
@@ -199,7 +199,7 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
           <button
             type="button"
             onClick={() => fetchStatus()}
-            className="mt-2 text-[10px] text-[#f59e0b]/50 hover:text-[#f59e0b] tracking-wider transition-colors"
+            className="mt-2 text-[10px] text-primary/50 hover:text-primary tracking-wider transition-colors"
           >
             RE-CHECK →
           </button>
@@ -212,11 +212,11 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
       body: installState === 'active' && installProgress.length > 0 ? (
         <div className="mt-1.5 space-y-0.5">
           {installProgress.slice(-3).map((msg, i) => (
-            <p key={i} className="text-[9px] text-[#1a2a3a] truncate">{msg}</p>
+            <p key={i} className="text-[9px] text-outline/60 truncate font-mono">{msg}</p>
           ))}
         </div>
       ) : installState === 'error' ? (
-        <p className="mt-1 text-[10px] text-red-400/60">
+        <p className="mt-1 text-[10px] text-error/60">
           Install failed — check pip3 is available
         </p>
       ) : null,
@@ -229,25 +229,25 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
           <button
             type="button"
             onClick={startAuth}
-            className="text-[10px] bg-[#f59e0b] hover:bg-[#fbbf24] text-black px-3 py-1 font-bold tracking-wider transition-colors"
+            className="text-[10px] bg-primary-container text-on-primary-container px-3 py-1 font-bold tracking-wider transition-opacity hover:opacity-90"
           >
             CONNECT ACCOUNT →
           </button>
-          <p className="mt-1 text-[9px] text-[#0d1a27]">
+          <p className="mt-1 text-[9px] text-outline/50">
             Opens your browser for a one-time Google login
           </p>
         </div>
       ) : authState === 'active' ? (
-        <p className="mt-1 text-[10px] text-[#2a3d52]">{authMessage}{dots}</p>
+        <p className="mt-1 text-[10px] text-on-surface-variant">{authMessage}{dots}</p>
       ) : authState === 'error' ? (
         <div className="mt-1">
-          <p className="text-[10px] text-red-400/60 mb-1">
+          <p className="text-[10px] text-error/60 mb-1">
             {authMessage || 'Login failed. Please try again.'}
           </p>
           <button
             type="button"
             onClick={startAuth}
-            className="text-[10px] bg-[#f59e0b] hover:bg-[#fbbf24] text-black px-3 py-1 font-bold tracking-wider transition-colors"
+            className="text-[10px] bg-primary-container text-on-primary-container px-3 py-1 font-bold tracking-wider transition-opacity hover:opacity-90"
           >
             TRY AGAIN →
           </button>
@@ -257,11 +257,11 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
   ];
 
   return (
-    <div className="panel">
+    <div className="bg-surface-container border border-outline-variant/20">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#0a1520]">
-        <div className="text-[9px] text-[#f59e0b]/50 tracking-[0.4em] mb-0.5">SYSTEM INITIALIZATION</div>
-        <div className="text-xs text-[#1e2d3d]">
+      <div className="px-4 py-3 border-b border-outline-variant/20">
+        <div className="text-[9px] text-primary/50 tracking-[0.4em] mb-0.5">SYSTEM INITIALIZATION</div>
+        <div className="text-xs text-on-surface-variant">
           One-time setup required to enable NotebookLM research pipeline
         </div>
       </div>
@@ -269,10 +269,10 @@ export function SetupWizard({ onSetupComplete }: SetupWizardProps) {
       <div className="p-4 space-y-4">
         {steps.map((step, idx) => {
           const labelColor =
-            step.state === 'complete' ? 'text-[#2a4a3a]' :
-            step.state === 'active'   ? 'text-[#c9d4e0]' :
-            step.state === 'error'    ? 'text-red-400/70' :
-            'text-[#131e2b]';
+            step.state === 'complete' ? 'text-secondary' :
+            step.state === 'active'   ? 'text-on-surface' :
+            step.state === 'error'    ? 'text-error/70' :
+            'text-outline/40';
 
           return (
             <div key={idx} className="flex items-start gap-3">
