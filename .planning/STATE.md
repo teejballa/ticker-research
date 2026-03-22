@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 06-03-PLAN.md — Neon report persistence layer
-last_updated: "2026-03-21T18:28:22.652Z"
+stopped_at: Completed 06-02-PLAN.md — custom sign-in UI, NavIdentity, SetupWizard guard
+last_updated: "2026-03-22T06:54:00.120Z"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -69,6 +69,7 @@ Plan: 1 of 4
 | Phase 05-user-identity-report-history P05 | 525892 | 1 tasks | 1 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence PP01 | 279 | 3 tasks | 10 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P03 | 3 | 3 tasks | 6 files |
+| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P02 | 10 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,9 @@ Recent decisions affecting current work:
 - [Phase 06]: PrismaNeon@7 constructor takes PoolConfig not Pool instance
 - [Phase 06]: Dynamic import for @/lib/reports-db in history route ensures Prisma never loads in local mode — static import would crash local users with no DATABASE_URL
 - [Phase 06]: readReportFromDb throws on null (not found or user_id mismatch) — caller returns 404, preventing report enumeration attacks
+- [Phase 06]: Suspense wrapper required around useSearchParams in Next.js 15 App Router client components to avoid static prerendering error
+- [Phase 06]: NEXT_PUBLIC_DEPLOYMENT_MODE used for client-side SetupWizard guard — DEPLOYMENT_MODE is server-only, both env vars must be set in Vercel config
+- [Phase 06]: export const dynamic = 'force-dynamic' added to setup/status route so NextAuth session is evaluated at request time not build time
 
 ### Roadmap Evolution
 
@@ -146,6 +150,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:28:22.648Z
-Stopped at: Completed 06-03-PLAN.md — Neon report persistence layer
+Last session: 2026-03-22T06:54:00.117Z
+Stopped at: Completed 06-02-PLAN.md — custom sign-in UI, NavIdentity, SetupWizard guard
 Resume file: None
