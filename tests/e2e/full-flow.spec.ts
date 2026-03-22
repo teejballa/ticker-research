@@ -35,8 +35,8 @@ test.describe('1. Homepage', () => {
     await page.waitForLoadState('networkidle');
     await snap(page, 'e2e-01-homepage.png');
 
-    // Brand — use heading to be specific (not the scroll scene wordmark)
-    await expect(page.locator('h1').filter({ hasText: 'EQUINFO' })).toBeVisible();
+    // Brand — EQUINFO appears in NavBar header
+    await expect(page.locator('header').getByText('EQUINFO').first()).toBeVisible();
     await expect(page.locator('text=RESEARCH TERMINAL').first()).toBeVisible();
 
     // Ticker tape with at least one symbol in footer
@@ -54,10 +54,14 @@ test.describe('1. Homepage', () => {
     expect(json.authOk).toBe(true);
   });
 
-  test('ticker search input is visible (no setup wizard blocking)', async ({ page }) => {
+  test('ticker search input is visible after scrolling to hero end', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1500); // let setup status fetch resolve
+
+    // Scroll down to where the TickerSearch appears (~85% of 400vh hero)
+    await page.evaluate(() => window.scrollTo(0, window.innerHeight * 2.55));
+    await page.waitForTimeout(800);
 
     // SetupWizard should NOT be shown (all deps are installed)
     await expect(page.locator('text=SetupWizard')).not.toBeVisible().catch(() => {});
@@ -73,32 +77,75 @@ test.describe('1. Homepage', () => {
     await page.waitForLoadState('networkidle');
 
     // Nav
-    await expect(page.locator('header').filter({ hasText: 'EQUINFO' }).first()).toBeVisible();
+    await expect(page.locator('header').getByText('EQUINFO').first()).toBeVisible();
 
-    // Hero
-    await expect(page.locator('h1').filter({ hasText: 'EQUINFO' })).toBeVisible();
+    // Hero wordmark (in scroll scene)
+    await expect(page.locator('text=EQUINFO').first()).toBeVisible();
     await expect(page.locator('text=Research before you trade').first()).toBeVisible();
 
-    // Pipeline steps
-    await expect(page.locator('text=RESEARCH PIPELINE').first()).toBeVisible();
+    // Pipeline steps (below fold — scroll to reveal)
+    await page.evaluate(() => window.scrollTo(0, 5000));
+    await page.waitForTimeout(500);
     await expect(page.locator('text=COLLECT').first()).toBeVisible();
     await expect(page.locator('text=SYNTHESIZE').first()).toBeVisible();
+    await expect(page.locator('text=REPORT').first()).toBeVisible();
 
     // Market snapshot section
-    await expect(page.locator('text=MARKET SNAPSHOT').first()).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 8000));
+    await page.waitForTimeout(500);
+    await expect(page.locator('text=Market Snapshot').first()).toBeVisible();
 
-    // How it works section
-    await expect(page.locator('text=HOW IT WORKS').first()).toBeVisible();
-    await expect(page.locator('text=DATA COLLECTION').first()).toBeVisible();
-    await expect(page.locator('text=AI SYNTHESIS').first()).toBeVisible();
-    await expect(page.locator('text=REPORT OUTPUT').first()).toBeVisible();
-
-    // Intelligence stack
-    await expect(page.locator('text=INTELLIGENCE STACK').first()).toBeVisible();
+    // CTA section
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
+    await expect(page.locator('text=Ready to see deeper').first()).toBeVisible();
+    await expect(page.locator('a', { hasText: 'Launch Research Terminal' }).first()).toBeVisible();
 
     // Take full-page screenshot to visually confirm
     await page.screenshot({ path: '/tmp/e2e-01c-full-landing.png', fullPage: true });
     console.log('📸  /tmp/e2e-01c-full-landing.png');
+  });
+
+  test('CTA "Launch Research Terminal" navigates to /terminal page', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
+
+    // Scroll to CTA section
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
+
+    // Click the CTA link
+    const ctaLink = page.locator('a', { hasText: 'Launch Research Terminal' });
+    await expect(ctaLink).toBeVisible();
+    await ctaLink.click();
+
+    // Should navigate to /terminal
+    await page.waitForURL(/\/terminal/, { timeout: 8000 });
+    expect(page.url()).toContain('/terminal');
+
+    await snap(page, 'e2e-01d-terminal-page.png');
+    console.log('✓ CTA navigates to /terminal');
+  });
+
+  test('/terminal page has search input and Research Now heading', async ({ page }) => {
+    await page.goto('/terminal');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1200);
+
+    // Page heading
+    await expect(page.locator('h1', { hasText: 'Research Now' })).toBeVisible();
+
+    // Ticker search input
+    const input = page.locator('input[placeholder*="TICKER"], input[placeholder*="ticker"]').first();
+    await expect(input).toBeVisible({ timeout: 8000 });
+
+    // NavBar and footer still present
+    await expect(page.locator('header').getByText('EQUINFO').first()).toBeVisible();
+    await expect(page.locator('footer').getByText('AAPL').first()).toBeVisible();
+
+    await snap(page, 'e2e-01e-terminal-full.png');
+    console.log('✓ /terminal page renders correctly');
   });
 });
 
