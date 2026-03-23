@@ -6,7 +6,10 @@ const SETUP_SH = path.resolve(process.cwd(), 'scripts/setup.sh');
 
 // Build a minimal env that has a working Node (since we are Node), a real Python,
 // and a real ANTHROPIC_API_KEY so the "happy path" test passes.
-const BASE_ENV: Record<string, string> = {
+// Use process.env as base so NODE_ENV and other required ProcessEnv keys are present.
+// Override PATH and ANTHROPIC_API_KEY for test isolation.
+const BASE_ENV: NodeJS.ProcessEnv = {
+  ...process.env,
   PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin',
   ANTHROPIC_API_KEY: 'test-key-value',
 };
