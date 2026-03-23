@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 06-02-PLAN.md — custom sign-in UI, NavIdentity, SetupWizard guard
-last_updated: "2026-03-22T06:54:00.120Z"
+stopped_at: Completed 06-04-PLAN.md — Prisma migration, vercel.json, full test suite green
+last_updated: "2026-03-23T04:07:28.180Z"
 progress:
-  total_phases: 6
-  completed_phases: 5
+  total_phases: 7
+  completed_phases: 6
   total_plans: 24
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # Project State
@@ -70,6 +70,7 @@ Plan: 1 of 4
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence PP01 | 279 | 3 tasks | 10 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P03 | 3 | 3 tasks | 6 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P02 | 10 | 3 tasks | 5 files |
+| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P04 | 21 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -134,10 +135,14 @@ Recent decisions affecting current work:
 - [Phase 06]: Suspense wrapper required around useSearchParams in Next.js 15 App Router client components to avoid static prerendering error
 - [Phase 06]: NEXT_PUBLIC_DEPLOYMENT_MODE used for client-side SetupWizard guard — DEPLOYMENT_MODE is server-only, both env vars must be set in Vercel config
 - [Phase 06]: export const dynamic = 'force-dynamic' added to setup/status route so NextAuth session is evaluated at request time not build time
+- [Phase 06]: Prisma 7 migrate dev requires explicit env export — env() reads process.env directly, not .env.local auto-loading
+- [Phase 06]: Merged [filename]/[id] history routes into single [filename]/route.ts — Next.js 15 rejects two dynamic segments at same path level with different names
+- [Phase 06]: vitest exclude: ['tests/e2e/**'] required to prevent Playwright spec files from being collected as unit tests
 
 ### Roadmap Evolution
 
 - Phase 6 added: Full Web Deployment — Vercel, Database, Auth, Report & Account Persistence
+- Phase 7 added: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
 
 ### Pending Todos
 
@@ -150,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T06:54:00.117Z
-Stopped at: Completed 06-02-PLAN.md — custom sign-in UI, NavIdentity, SetupWizard guard
+Last session: 2026-03-23T04:07:28.176Z
+Stopped at: Completed 06-04-PLAN.md — Prisma migration, vercel.json, full test suite green
 Resume file: None
