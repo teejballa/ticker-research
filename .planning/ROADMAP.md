@@ -125,13 +125,13 @@ Plans:
 **Goal**: Transform the local-first app into a deployed multi-user web product — Google OAuth authentication via NextAuth.js, Neon PostgreSQL for cloud report persistence, custom terminal-aesthetic sign-in page, and DEPLOYMENT_MODE-gated middleware that leaves local mode completely intact until web deployment is confirmed working.
 **Requirements**: WEB-AUTH, WEB-DB, WEB-MIDDLEWARE, WEB-SIGNIN-UI, WEB-NAV-IDENTITY, WEB-PERSISTENCE, WEB-HISTORY, WEB-DEPLOY, WEB-ENV
 **Depends on:** Phase 5
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 06-01-PLAN.md — Auth/DB foundation: install next-auth@4.24.13 + prisma@7.5.0 + neon adapter, Wave 0 test stubs, Prisma schema, NextAuth authOptions, Prisma singleton, session type augmentation, App Router handler, DEPLOYMENT_MODE-gated middleware
 - [ ] 06-02-PLAN.md — Custom sign-in page (/auth/signin, terminal aesthetic per UI-SPEC), NavIdentity web-mode email via updated /api/setup/status, visual checkpoint
 - [ ] 06-03-PLAN.md — Neon persistence: reports-db.ts (writeReportToDb/listReportsFromDb/readReportFromDb), history route DEPLOYMENT_MODE switch (dynamic import), analysis route web-mode persist
-- [ ] 06-04-PLAN.md — Vercel deployment config (prisma migrate deploy build command), .env.local.example with all Phase 6 env vars, full test suite green, final checkpoint
+- [x] 06-04-PLAN.md — Vercel deployment config (prisma migrate deploy build command), .env.local.example with all Phase 6 env vars, full test suite green, final checkpoint (completed 2026-03-23)
 
 ## Progress
 
@@ -145,4 +145,14 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Report Output | 1/3 | In Progress|  |
 | 4. Deployment | 3/3 | Complete   | 2026-03-18 |
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
-| 6. Full Web Deployment | 3/4 | In Progress|  |
+| 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
+
+### Phase 7: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
