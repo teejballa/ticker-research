@@ -1,6 +1,6 @@
 // src/lib/reports.ts
 // Report persistence helpers for Phase 5.
-// Reports are written to ~/.equinfo/reports/ — never inside the project directory.
+// Reports are written to ~/.cipher/reports/ — never inside the project directory.
 
 import fs from 'fs/promises';
 import os from 'os';
@@ -8,7 +8,7 @@ import path from 'path';
 import type { AnalysisResult } from '@/lib/types';
 export type { StoredReport } from '@/lib/types';
 
-const REPORTS_DIR = path.join(os.homedir(), '.equinfo', 'reports');
+const REPORTS_DIR = path.join(os.homedir(), '.cipher', 'reports');
 
 function sanitizeTimestamp(iso: string): string {
   return iso.replace(/:/g, '-').replace(/\.\d+Z$/, 'Z');

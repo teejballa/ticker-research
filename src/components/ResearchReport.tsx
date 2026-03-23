@@ -1,7 +1,7 @@
 'use client';
 
 // src/components/ResearchReport.tsx
-// Equinfo research report — Stitch 12-column layout.
+// Cipher research report — Stitch 12-column layout.
 
 import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, formatPrice } from '@/lib/formatters';
 import type { AnalysisResult, MarketSnapshot } from '@/lib/types';
@@ -84,7 +84,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
   function handleExportPdf() {
     const date          = new Date(analyzed_at).toISOString().slice(0, 10);
     const originalTitle = document.title;
-    document.title      = `${ticker}-equinfo-${date}`;
+    document.title      = `${ticker}-cipher-${date}`;
     window.onafterprint = () => {
       document.title      = originalTitle;
       window.onafterprint = null;
@@ -170,7 +170,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           <div>
             <h4 className="text-[11px] font-bold tracking-widest uppercase text-tertiary mb-1">Financial Disclaimer</h4>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              This AI-generated research report is for informational purposes only. Information is sourced from real-time market data and historical filings. Equinfo does not provide financial advice. Consult with a certified professional before making investment decisions.
+              This AI-generated research report is for informational purposes only. Information is sourced from real-time market data and historical filings. Cipher does not provide financial advice. Consult with a certified professional before making investment decisions.
             </p>
           </div>
         </section>

@@ -1,5 +1,5 @@
 // tests/e2e/stitch-ui.spec.ts
-// Visual smoke tests for the Equinfo Stitch design system.
+// Visual smoke tests for the Cipher Stitch design system.
 
 import { test, expect, Page } from '@playwright/test';
 
@@ -14,11 +14,11 @@ async function snapFull(page: Page, name: string) {
 }
 
 test.describe('Stitch UI — Landing Page', () => {
-  test('loads with EQUINFO header', async ({ page }) => {
+  test('loads with CIPHER header', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.locator('text=EQUINFO').first()).toBeVisible();
+    await expect(page.locator('text=CIPHER').first()).toBeVisible();
     await snap(page, 'stitch-landing-hero.png');
   });
 
@@ -97,7 +97,7 @@ test.describe('Stitch UI — NavBar', () => {
 
     const nav = page.locator('nav, header').first();
     await expect(nav).toBeVisible();
-    await expect(page.locator('text=EQUINFO').first()).toBeVisible();
+    await expect(page.locator('text=CIPHER').first()).toBeVisible();
     await snap(page, 'stitch-navbar.png');
   });
 });

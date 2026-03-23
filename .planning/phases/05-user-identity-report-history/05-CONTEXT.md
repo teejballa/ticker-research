@@ -15,11 +15,11 @@ Surface the connected Google account as the user's identity in the app UI (no se
 
 ### Report Storage
 - **Format:** Filesystem JSON files — one file per report
-- **Location:** `~/.equinfo/reports/` (user's home directory, survives git ops and project moves)
+- **Location:** `~/.cipher/reports/` (user's home directory, survives git ops and project moves)
 - **Contents per file:** Full `AnalysisResult` JSON plus metadata: ticker, company_name, analyzed_at, market_sentiment, confidence_level
 - **Filename convention:** `{TICKER}-{analyzed_at_iso}.json` (e.g., `AAPL-2026-03-18T14-32-00Z.json`) — sortable, unique
 - **Write trigger:** After `POST /api/analysis/[ticker]` returns a successful `AnalysisResult`, the API route writes the file before streaming the final RESULT line to the frontend
-- **Read:** `GET /api/history` reads all files in `~/.equinfo/reports/`, parses each, and returns sorted list (newest first)
+- **Read:** `GET /api/history` reads all files in `~/.cipher/reports/`, parses each, and returns sorted list (newest first)
 
 ### History UI (Home Page)
 - **Placement:** Below the ticker search input on the home page, above or replacing the "How it works" section
@@ -46,7 +46,7 @@ Surface the connected Google account as the user's identity in the app UI (no se
 ### Claude's Discretion
 - Exact truncation behavior for long email addresses in the nav
 - Precise column widths and spacing in the history table rows
-- Error handling if `~/.equinfo/reports/` can't be created (permissions issue)
+- Error handling if `~/.cipher/reports/` can't be created (permissions issue)
 - Loading state while history is being fetched from the server
 
 </decisions>
@@ -82,7 +82,7 @@ Surface the connected Google account as the user's identity in the app UI (no se
 
 ### Reusable Assets
 - `src/app/api/setup/status/route.ts`: Already reads `~/.notebooklm/` state. Natural place to add email extraction.
-- `src/app/api/analysis/[ticker]/route.ts`: Already has the completed `AnalysisResult` in memory — just needs to write to `~/.equinfo/reports/` before returning.
+- `src/app/api/analysis/[ticker]/route.ts`: Already has the completed `AnalysisResult` in memory — just needs to write to `~/.cipher/reports/` before returning.
 - `src/lib/types.ts` `AnalysisResult`: Exactly what gets stored. No new type needed for storage — just add a `StoredReport` wrapper type with the file metadata.
 - `src/app/page.tsx`: Home page is a `'use client'` component. History list can be fetched via `useEffect` from a new `GET /api/history` endpoint.
 
@@ -93,8 +93,8 @@ Surface the connected Google account as the user's identity in the app UI (no se
 - SSE streaming is already established for analysis — history is a simple JSON fetch (no SSE needed)
 
 ### Integration Points
-- **New `GET /api/history` route** — reads `~/.equinfo/reports/`, parses JSON files, returns sorted array
-- **Extend `POST /api/analysis/[ticker]`** — write report JSON to `~/.equinfo/reports/` after successful AnalysisResult parse
+- **New `GET /api/history` route** — reads `~/.cipher/reports/`, parses JSON files, returns sorted array
+- **Extend `POST /api/analysis/[ticker]`** — write report JSON to `~/.cipher/reports/` after successful AnalysisResult parse
 - **Extend `GET /api/setup/status`** — add `userEmail` field to response
 - **`src/app/page.tsx`** — add `<ReportHistory />` component below `<TickerSearch />` (or `<SetupWizard />` when setup incomplete)
 - **Layout nav bar in `src/app/layout.tsx`** — not currently a shared component; the nav is embedded in `page.tsx`. Will need to either update page.tsx nav or extract a shared nav with email display.

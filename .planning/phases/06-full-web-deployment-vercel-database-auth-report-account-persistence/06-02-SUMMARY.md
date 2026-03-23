@@ -57,7 +57,7 @@ completed: 2026-03-21
 ## Accomplishments
 
 - `/auth/signin` renders at `#080a0f` background with amber "TICKER RESEARCH // AUTHENTICATION REQUIRED" header, `[ CONNECT GOOGLE ACCOUNT ]` ghost button with amber hover, no border-radius — fully matches UI-SPEC terminal aesthetic
-- NavBar `data-testid="nav-identity"` span now renders "CONNECTED AS {email}" (truncated at 24 chars with ellipsis) when email is present; falls back to `user@equinfo.io`
+- NavBar `data-testid="nav-identity"` span now renders "CONNECTED AS {email}" (truncated at 24 chars with ellipsis) when email is present; falls back to `user@cipher.io`
 - `setup/status` route has web-mode early return: `getServerSession(authOptions)` returns session email; local Python/notebooklm checks fully skipped in web mode
 - SetupWizard preserved in codebase per CONTEXT.md locked decision; `NEXT_PUBLIC_DEPLOYMENT_MODE === 'web'` guard suppresses rendering in web mode
 
@@ -72,7 +72,7 @@ Each task was committed atomically:
 ## Files Created/Modified
 
 - `src/app/auth/signin/page.tsx` — Custom NextAuth sign-in page; Suspense + useSearchParams; terminal dark background; amber header; ghost outline button; error state for ?error= param
-- `src/app/auth/signin/layout.tsx` — Segment layout exporting metadata with `title: 'Equinfo — Sign In'`
+- `src/app/auth/signin/layout.tsx` — Segment layout exporting metadata with `title: 'Cipher — Sign In'`
 - `src/components/NavBar.tsx` — `navIdentityText` derived from `userEmail`; renders "CONNECTED AS {truncated}" or fallback
 - `src/app/api/setup/status/route.ts` — Web-mode early return added at top of GET(); `getServerSession(authOptions)`; `export const dynamic = 'force-dynamic'`
 - `src/app/page.tsx` — `isWebMode` guard; `showWizard` additionally gates on `!isWebMode`

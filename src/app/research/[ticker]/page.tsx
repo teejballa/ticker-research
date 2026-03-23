@@ -195,7 +195,7 @@ export default function ResearchPage() {
         <NavBar />
         <main className="flex-1 flex flex-col items-center justify-center px-4">
           <div className="flex flex-col items-center gap-4 fade-in">
-            <span className="text-primary text-sm tracking-[0.3em]">EQUINFO</span>
+            <span className="text-primary text-sm tracking-[0.3em]">CIPHER</span>
             <span className="w-4 h-4 border border-primary/40 border-t-transparent rounded-full animate-spin" />
             <span className="text-[10px] text-outline tracking-widest">
               LOADING {ticker}...

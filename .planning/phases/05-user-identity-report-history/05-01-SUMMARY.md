@@ -33,14 +33,14 @@ metrics:
 
 # Phase 5 Plan 01: Foundation Artifacts Summary
 
-**One-liner:** StoredReport type + fs helpers writing to ~/.equinfo/reports/, email extraction via Playwright, and Wave 0 e2e stubs covering AUTH-01/HIST-01/HIST-02/HIST-03.
+**One-liner:** StoredReport type + fs helpers writing to ~/.cipher/reports/, email extraction via Playwright, and Wave 0 e2e stubs covering AUTH-01/HIST-01/HIST-02/HIST-03.
 
 ## What Was Built
 
 ### Task 1: src/lib/reports.ts — StoredReport type and filesystem helpers
 - Added `StoredReport` interface to `src/lib/types.ts` — wraps `AnalysisResult` with top-level metadata for fast list reads
 - Created `src/lib/reports.ts` with three exports: `writeReport`, `readReport`, `listReports`
-- `writeReport` creates `~/.equinfo/reports/` with `{ recursive: true }` before writing, uses colon-sanitized filename
+- `writeReport` creates `~/.cipher/reports/` with `{ recursive: true }` before writing, uses colon-sanitized filename
 - `listReports` returns `[]` gracefully when directory missing; skips corrupt files per-entry
 - Created `src/lib/reports.test.ts` — 3 unit tests, all passing
 

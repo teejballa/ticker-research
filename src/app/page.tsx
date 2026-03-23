@@ -152,7 +152,7 @@ export default function Home() {
               className="scene-hero-wordmark font-black text-primary-fixed leading-none mb-12"
               style={{ letterSpacing: `${anim.letterSpacing}em` }}
             >
-              EQUINFO
+              CIPHER
             </div>
             <p
               className="text-on-surface-variant font-bold text-lg md:text-xl max-w-2xl mx-auto text-center px-4"
@@ -179,16 +179,16 @@ export default function Home() {
             >
               {/* Grayscale base layer */}
               <img
-                src="/equinfo-start.jpg"
-                alt="Equinfo terminal"
+                src="/cipher-start.jpg"
+                alt="Cipher terminal"
                 className="preview-screenshot grayscale"
                 draggable={false}
                 style={{ opacity: 1 - colorOpacity, backfaceVisibility: 'hidden' }}
               />
               {/* Full-color overlay layer */}
               <img
-                src="/equinfo-end.jpg"
-                alt="Equinfo terminal color"
+                src="/cipher-end.jpg"
+                alt="Cipher terminal color"
                 className="preview-screenshot absolute inset-0"
                 draggable={false}
                 style={{ opacity: colorOpacity, backfaceVisibility: 'hidden' }}
@@ -344,7 +344,7 @@ export default function Home() {
         <section className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <h2 className="text-4xl font-black tracking-tight mb-4">A Professional Terminal for Everyone</h2>
-            <p className="text-on-surface-variant max-w-xl mx-auto">Equinfo bridges the gap between retail accessibility and institutional depth.</p>
+            <p className="text-on-surface-variant max-w-xl mx-auto">Cipher bridges the gap between retail accessibility and institutional depth.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-outline-variant/10">
             <div className="bg-surface p-12 group">

@@ -196,7 +196,7 @@ No visual changes to `ReportHistory` component. DEPLOYMENT_MODE=web switches the
 | Empty history state (loading) | `LOADING HISTORY...` (existing pattern — terminal all-caps label) |
 | NavIdentity connected | `CONNECTED AS {email}` (truncated at 24 chars) |
 | NavIdentity not connected (web mode should not occur — auth is required) | n/a |
-| Page title (`<title>`) | `Equinfo — AI Financial Research Terminal` (unchanged from layout.tsx) |
+| Page title (`<title>`) | `Cipher — AI Financial Research Terminal` (unchanged from layout.tsx) |
 
 **Tone rules (must carry through all new copy):**
 - All-caps for status labels, overlines, and system messages — consistent with existing terminal aesthetic
@@ -235,7 +235,7 @@ Phase 6 introduces one new page (sign-in). Motion contract:
 ## Accessibility
 
 - Sign-in button: `type="button"`, `aria-label="Sign in with Google"` — keyboard accessible
-- Sign-in page: page title must be set via `<title>` or Next.js metadata — "Equinfo — Sign In"
+- Sign-in page: page title must be set via `<title>` or Next.js metadata — "Cipher — Sign In"
 - Color contrast on sign-in: amber-400 (`#f59e0b`) on `#080a0f` background — contrast ratio ~7.5:1, WCAG AA large text passes. Muted `#4a6a8a` text on `#080a0f` — ~3.2:1, acceptable for supplementary caption text (not primary content).
 - Redirect behavior: middleware redirects preserve the original URL as `callbackUrl` so users land where they intended after sign-in.
 

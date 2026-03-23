@@ -35,8 +35,8 @@ test.describe('1. Homepage', () => {
     await page.waitForLoadState('networkidle');
     await snap(page, 'e2e-01-homepage.png');
 
-    // Brand — EQUINFO appears in NavBar header
-    await expect(page.locator('header').getByText('EQUINFO').first()).toBeVisible();
+    // Brand — CIPHER appears in NavBar header
+    await expect(page.locator('header').getByText('CIPHER').first()).toBeVisible();
     await expect(page.locator('text=RESEARCH TERMINAL').first()).toBeVisible();
 
     // Ticker tape with at least one symbol in footer
@@ -77,10 +77,10 @@ test.describe('1. Homepage', () => {
     await page.waitForLoadState('networkidle');
 
     // Nav
-    await expect(page.locator('header').getByText('EQUINFO').first()).toBeVisible();
+    await expect(page.locator('header').getByText('CIPHER').first()).toBeVisible();
 
     // Hero wordmark (in scroll scene)
-    await expect(page.locator('text=EQUINFO').first()).toBeVisible();
+    await expect(page.locator('text=CIPHER').first()).toBeVisible();
     await expect(page.locator('text=Research before you trade').first()).toBeVisible();
 
     // Pipeline steps (below fold — scroll to reveal)
@@ -141,7 +141,7 @@ test.describe('1. Homepage', () => {
     await expect(input).toBeVisible({ timeout: 8000 });
 
     // NavBar and footer still present
-    await expect(page.locator('header').getByText('EQUINFO').first()).toBeVisible();
+    await expect(page.locator('header').getByText('CIPHER').first()).toBeVisible();
     await expect(page.locator('footer').getByText('AAPL').first()).toBeVisible();
 
     await snap(page, 'e2e-01e-terminal-full.png');

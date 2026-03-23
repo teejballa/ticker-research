@@ -130,7 +130,7 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
             <span className="w-1.5 h-1.5 bg-primary rounded-full opacity-70" />
             <span className="text-[9px] text-outline/60 tracking-[0.3em]">PRICE / 1 MONTH</span>
           </div>
-          <span className="text-[9px] text-outline/40">EQUINFO CHART</span>
+          <span className="text-[9px] text-outline/40">CIPHER CHART</span>
         </div>
         <PriceLineChart data={chartData} />
       </div>

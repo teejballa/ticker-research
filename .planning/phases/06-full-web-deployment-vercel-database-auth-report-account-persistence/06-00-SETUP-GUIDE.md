@@ -60,7 +60,7 @@ This creates the Google OAuth app that users sign in through.
 
 1. Go to **https://console.cloud.google.com**
 2. In the top bar, click the project selector → **New Project**
-3. Name: `Equinfo` (or `ticker-research`) → click **Create**
+3. Name: `Cipher` (or `ticker-research`) → click **Create**
 4. Make sure your new project is selected in the top bar
 
 ### 2b. Configure the OAuth consent screen
@@ -68,7 +68,7 @@ This creates the Google OAuth app that users sign in through.
 1. In the left sidebar, go to **APIs & Services → OAuth consent screen**
 2. User Type: **External** → click **Create**
 3. Fill in:
-   - **App name:** `Equinfo`
+   - **App name:** `Cipher`
    - **User support email:** your Gmail
    - **Developer contact information:** your Gmail
 4. Click **Save and Continue** through all three remaining screens (Scopes, Test users, Summary) — leave defaults
@@ -81,7 +81,7 @@ This creates the Google OAuth app that users sign in through.
 1. Go to **APIs & Services → Credentials**
 2. Click **+ Create Credentials → OAuth 2.0 Client ID**
 3. Application type: **Web application**
-4. Name: `Equinfo Web`
+4. Name: `Cipher Web`
 5. Under **Authorized redirect URIs**, click **+ Add URI** and add:
    ```
    http://localhost:3000/api/auth/callback/google

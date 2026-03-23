@@ -11,11 +11,11 @@
 
 **Report Storage**
 - Format: Filesystem JSON files — one file per report
-- Location: `~/.equinfo/reports/` (user's home directory, survives git ops and project moves)
+- Location: `~/.cipher/reports/` (user's home directory, survives git ops and project moves)
 - Contents per file: Full `AnalysisResult` JSON plus metadata: ticker, company_name, analyzed_at, market_sentiment, confidence_level
 - Filename convention: `{TICKER}-{analyzed_at_iso}.json` (e.g., `AAPL-2026-03-18T14-32-00Z.json`) — sortable, unique
 - Write trigger: After `POST /api/analysis/[ticker]` returns a successful `AnalysisResult`, the API route writes the file before streaming the final RESULT line to the frontend
-- Read: `GET /api/history` reads all files in `~/.equinfo/reports/`, parses each, and returns sorted list (newest first)
+- Read: `GET /api/history` reads all files in `~/.cipher/reports/`, parses each, and returns sorted list (newest first)
 
 **History UI (Home Page)**
 - Placement: Below the ticker search input on the home page, above or replacing the "How it works" section
@@ -41,7 +41,7 @@
 ### Claude's Discretion
 - Exact truncation behavior for long email addresses in the nav
 - Precise column widths and spacing in the history table rows
-- Error handling if `~/.equinfo/reports/` can't be created (permissions issue)
+- Error handling if `~/.cipher/reports/` can't be created (permissions issue)
 - Loading state while history is being fetched from the server
 
 ### Deferred Ideas (OUT OF SCOPE)
@@ -54,9 +54,9 @@ None — discussion stayed within phase scope.
 | ID | Description | Research Support |
 |----|-------------|-----------------|
 | AUTH-01 | The Google account connected for NotebookLM is the user's app identity — no separate signup or login required | Email extraction via Playwright + stored `storage_state.json`; extend `GET /api/setup/status` to return `userEmail` field |
-| HIST-01 | Completed research reports are persisted locally (ticker, timestamp, full AnalysisResult, source summary) | Node.js `fs/promises` write in `POST /api/analysis/[ticker]` after successful `AnalysisResult` parse; `StoredReport` wrapper type; `~/.equinfo/reports/` directory |
+| HIST-01 | Completed research reports are persisted locally (ticker, timestamp, full AnalysisResult, source summary) | Node.js `fs/promises` write in `POST /api/analysis/[ticker]` after successful `AnalysisResult` parse; `StoredReport` wrapper type; `~/.cipher/reports/` directory |
 | HIST-02 | Home page displays past reports by ticker with date and sentiment verdict; each is openable | `GET /api/history` route + `<ReportHistory />` component in `page.tsx`; `[OPEN]` navigates to `/research/[ticker]?report=[filename]`; research page loads saved JSON without re-running pipeline |
-| HIST-03 | User can regenerate any past report to refresh with current data — produces a new timestamped report for the same ticker | `[REGENERATE]` button navigates to `/research/[ticker]` (no `?report` param) — existing pipeline runs fresh; new file written to `~/.equinfo/reports/` with new timestamp |
+| HIST-03 | User can regenerate any past report to refresh with current data — produces a new timestamped report for the same ticker | `[REGENERATE]` button navigates to `/research/[ticker]` (no `?report` param) — existing pipeline runs fresh; new file written to `~/.cipher/reports/` with new timestamp |
 </phase_requirements>
 
 ---
@@ -67,7 +67,7 @@ Phase 5 adds two capabilities to the existing Next.js app: surfacing the connect
 
 The most technically nuanced piece is email extraction. The `storage_state.json` file in `~/.notebooklm/` contains Playwright session cookies but **does not store the email address** in any decoded field. The only reliable extraction method is to use Playwright (which `notebooklm-py` already installs) with the stored auth context to make an authenticated navigation to `https://myaccount.google.com/` and parse the email from the page. This was confirmed working in a live test: the approach returned the correct email (`tj.walsh_28@sfuhs.org`) using the existing stored session. However, this adds Playwright startup overhead (~1-2s) to the `/api/setup/status` route. A practical alternative is to spawn `python3` with a short inline script — consistent with how the analysis route already spawns Python.
 
-Report persistence is straightforward: Node.js `fs/promises` to `~/.equinfo/reports/` using the established pattern from `src/lib/temp-file.ts`. The `GET /api/history` route reads all `.json` files from that directory, sorts by `analyzed_at` descending, and returns a typed array. The research page needs a new `?report=[filename]` query parameter branch to load and display saved reports without triggering the analysis pipeline.
+Report persistence is straightforward: Node.js `fs/promises` to `~/.cipher/reports/` using the established pattern from `src/lib/temp-file.ts`. The `GET /api/history` route reads all `.json` files from that directory, sorts by `analyzed_at` descending, and returns a typed array. The research page needs a new `?report=[filename]` query parameter branch to load and display saved reports without triggering the analysis pipeline.
 
 **Primary recommendation:** Extract email via a short Python/Playwright script spawned from `GET /api/setup/status` with a 5-second timeout and a graceful fallback to `null` (shows `NOT CONNECTED`). Cache the result in-process for the lifetime of the Next.js server process to avoid repeated overhead.
 
@@ -78,8 +78,8 @@ Report persistence is straightforward: Node.js `fs/promises` to `~/.equinfo/repo
 ### Core
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| Node.js `fs/promises` | built-in | Read/write report JSON files; create `~/.equinfo/reports/` | Already used via `src/lib/temp-file.ts` pattern; no additional dependency |
-| Node.js `os` | built-in | `homedir()` to resolve `~/.equinfo/reports/` cross-platform | Already imported in `setup/status/route.ts` |
+| Node.js `fs/promises` | built-in | Read/write report JSON files; create `~/.cipher/reports/` | Already used via `src/lib/temp-file.ts` pattern; no additional dependency |
+| Node.js `os` | built-in | `homedir()` to resolve `~/.cipher/reports/` cross-platform | Already imported in `setup/status/route.ts` |
 | Node.js `path` | built-in | Safe path joins | Already used throughout |
 | `child_process.execSync` | built-in | Spawn Python for email extraction (consistent with existing setup/status approach) | Already used in `setup/status/route.ts` |
 | React `useEffect` + `fetch` | built-in | Client-side history fetch on home page | Already the established pattern in `page.tsx` |
@@ -132,7 +132,7 @@ src/
 
 ### Pattern 1: Report File Write (in analysis route)
 
-**What:** After the Python script emits `RESULT: {...}`, parse the JSON, write a timestamped file to `~/.equinfo/reports/`, then stream the result event to the client. Write happens before the SSE event so history is never missing a completed report.
+**What:** After the Python script emits `RESULT: {...}`, parse the JSON, write a timestamped file to `~/.cipher/reports/`, then stream the result event to the client. Write happens before the SSE event so history is never missing a completed report.
 
 **When to use:** On every successful analysis completion.
 
@@ -155,7 +155,7 @@ export interface StoredReport {
 }
 
 export async function writeReport(result: AnalysisResult): Promise<string> {
-  const dir = path.join(os.homedir(), '.equinfo', 'reports');
+  const dir = path.join(os.homedir(), '.cipher', 'reports');
   await fs.mkdir(dir, { recursive: true });
   // ISO timestamp → safe filename: replace colons with hyphens
   const ts = result.analyzed_at.replace(/:/g, '-').replace(/\.\d+Z$/, 'Z');
@@ -176,7 +176,7 @@ export async function writeReport(result: AnalysisResult): Promise<string> {
 
 ### Pattern 2: History List Read (GET /api/history)
 
-**What:** Read all `.json` files from `~/.equinfo/reports/`, parse each, sort newest first by `analyzed_at`, return typed array. Graceful error handling — missing directory returns empty array, not 500.
+**What:** Read all `.json` files from `~/.cipher/reports/`, parse each, sort newest first by `analyzed_at`, return typed array. Graceful error handling — missing directory returns empty array, not 500.
 
 **When to use:** On home page load, after setup status resolves.
 
@@ -189,7 +189,7 @@ import { NextResponse } from 'next/server';
 import type { StoredReport } from '@/lib/reports';
 
 export async function GET() {
-  const dir = path.join(os.homedir(), '.equinfo', 'reports');
+  const dir = path.join(os.homedir(), '.cipher', 'reports');
   try {
     const files = await fs.readdir(dir);
     const reports: StoredReport[] = [];
@@ -281,7 +281,7 @@ useEffect(() => {
 
 ### Anti-Patterns to Avoid
 
-- **Writing reports to `/tmp`:** The project already uses `/tmp` for source packages (ephemeral). Reports must go to `~/.equinfo/reports/` so they survive server restarts.
+- **Writing reports to `/tmp`:** The project already uses `/tmp` for source packages (ephemeral). Reports must go to `~/.cipher/reports/` so they survive server restarts.
 - **Blocking the SSE stream on report write:** `writeReport()` must complete before the `result` SSE event is enqueued — but must not block on I/O failure (wrap in try/catch, log, continue).
 - **Storing email in a Next.js cookie or localStorage:** The source of truth is `storage_state.json`. No additional auth state should be introduced.
 - **Parsing cookies manually for email:** Verified that Google auth cookies (`SAPISID`, `ACCOUNT_CHOOSER`, `__Host-GAPS`) do not contain a decodable email. Only the Playwright-authenticated page access works.
@@ -310,11 +310,11 @@ useEffect(() => {
 **How to avoid:** Replace colons with hyphens and strip milliseconds before building the filename: `analyzed_at.replace(/:/g, '-').replace(/\.\d+Z$/, 'Z')` → `AAPL-2026-03-18T14-32-00Z.json`.
 **Warning signs:** File write fails silently or with ENOENT on non-macOS systems.
 
-### Pitfall 2: `~/.equinfo/reports/` Directory Doesn't Exist on First Write
+### Pitfall 2: `~/.cipher/reports/` Directory Doesn't Exist on First Write
 **What goes wrong:** `fs.writeFile()` throws `ENOENT` because the directory doesn't exist yet.
 **Why it happens:** First report write attempt — directory has never been created.
 **How to avoid:** Always call `fs.mkdir(dir, { recursive: true })` before writing. This is idempotent — no error if directory already exists.
-**Warning signs:** Analysis succeeds but no file appears in `~/.equinfo/reports/`.
+**Warning signs:** Analysis succeeds but no file appears in `~/.cipher/reports/`.
 
 ### Pitfall 3: Email Extraction Timing — Playwright Startup Adds Latency
 **What goes wrong:** `GET /api/setup/status` takes 3-5 seconds instead of ~200ms, making the home page feel slow.
@@ -347,7 +347,7 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
-const dir = path.join(os.homedir(), '.equinfo', 'reports');
+const dir = path.join(os.homedir(), '.cipher', 'reports');
 await fs.mkdir(dir, { recursive: true });
 await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
 ```
@@ -470,7 +470,7 @@ function formatReportDate(isoString: string): string {
 |--------|----------|-----------|-------------------|-------------|
 | AUTH-01 | Nav shows email when auth connected | e2e Playwright | `npx playwright test tests/e2e/phase5-history.spec.ts -g "nav shows email"` | ❌ Wave 0 |
 | AUTH-01 | Nav shows NOT CONNECTED when no auth | e2e Playwright | `npx playwright test tests/e2e/phase5-history.spec.ts -g "nav shows NOT CONNECTED"` | ❌ Wave 0 |
-| HIST-01 | Completed analysis writes file to ~/.equinfo/reports/ | e2e Playwright | `npx playwright test tests/e2e/phase5-history.spec.ts -g "report file written"` | ❌ Wave 0 |
+| HIST-01 | Completed analysis writes file to ~/.cipher/reports/ | e2e Playwright | `npx playwright test tests/e2e/phase5-history.spec.ts -g "report file written"` | ❌ Wave 0 |
 | HIST-01 | Written file contains valid StoredReport JSON | unit Vitest | `npx vitest run src/lib/reports.test.ts` | ❌ Wave 0 |
 | HIST-02 | Home page shows RESEARCH HISTORY section | e2e Playwright | `npx playwright test tests/e2e/phase5-history.spec.ts -g "history section visible"` | ❌ Wave 0 |
 | HIST-02 | OPEN button navigates to research page with ?report= param | e2e Playwright | `npx playwright test tests/e2e/phase5-history.spec.ts -g "OPEN loads saved report"` | ❌ Wave 0 |
