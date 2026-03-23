@@ -32,7 +32,7 @@ requirements_met: [AUTH-01, HIST-01, HIST-02, HIST-03]
 
 # Phase 05 Plan 02: Backend API Routes for History and User Identity Summary
 
-History and setup API routes implemented: GET /api/history list + GET /api/history/[filename] single report retrieval, POST /api/analysis persists to ~/.equinfo/reports/ before streaming result, GET /api/setup/status returns userEmail via module-level-cached get_email.py extraction.
+History and setup API routes implemented: GET /api/history list + GET /api/history/[filename] single report retrieval, POST /api/analysis persists to ~/.cipher/reports/ before streaming result, GET /api/setup/status returns userEmail via module-level-cached get_email.py extraction.
 
 ## Tasks Completed
 
@@ -50,7 +50,7 @@ Returns `{ reports: StoredReport[] }` sorted newest first. Delegates to `listRep
 Returns a single `StoredReport` by filename. Security guard: regex `/^[A-Z0-9.\-_]+\.json$/i` rejects path-traversal attempts with HTTP 400. Returns 404 if file not found.
 
 ### Analysis Route Persistence (src/app/api/analysis/[ticker]/route.ts)
-Added `writeReport` import and replaced the bare RESULT handling block with an async IIFE. Report is written to `~/.equinfo/reports/` **before** the `result` SSE event is enqueued — guarantees no gap between analysis completion and history availability. Write failures are non-fatal: logged to server stderr, streaming continues.
+Added `writeReport` import and replaced the bare RESULT handling block with an async IIFE. Report is written to `~/.cipher/reports/` **before** the `result` SSE event is enqueued — guarantees no gap between analysis completion and history availability. Write failures are non-fatal: logged to server stderr, streaming continues.
 
 ### Setup Status userEmail (src/app/api/setup/status/route.ts)
 - Added `userEmail: string | null` to `SetupStatus` interface

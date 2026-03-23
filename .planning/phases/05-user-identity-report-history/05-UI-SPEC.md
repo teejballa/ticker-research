@@ -90,7 +90,7 @@ All values derived from established terminal palette in `globals.css` and `Resea
 | Active row hover | `#0d1420` | History row hover background |
 
 **Accent `#f59e0b` reserved for:**
-1. EQUINFO wordmark in nav
+1. CIPHER wordmark in nav
 2. Ticker symbols in history rows (AAPL, MSFT etc.)
 3. `[OPEN]` action button text (primary action per row)
 4. History section header `▶` chevron glyph (matching SectionHeader pattern)
@@ -169,7 +169,7 @@ SYMBOL    | COMPANY              | DATE        | SENTIMENT | CONFIDENCE | OPEN |
 | Not connected label | `NOT CONNECTED` |
 | Auth error in nav | `NOT CONNECTED` (same copy — no verbose message) |
 | History fetch error | `HISTORY UNAVAILABLE` — inline in the section where list would appear |
-| Permissions error (dir creation fails) | Surface in history section: `Storage unavailable. Check ~/.equinfo/ permissions.` |
+| Permissions error (dir creation fails) | Surface in history section: `Storage unavailable. Check ~/.cipher/ permissions.` |
 
 **Tone:** All copy follows terminal command/status conventions — uppercase labels, no punctuation on standalone status strings, lowercase only for inline body descriptions.
 

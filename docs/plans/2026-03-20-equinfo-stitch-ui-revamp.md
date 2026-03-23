@@ -1,8 +1,8 @@
-# Equinfo Stitch UI Revamp Implementation Plan
+# Cipher Stitch UI Revamp Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Replace every frontend visual with the Google Stitch design system (EQUINFO blue/teal/amber Material Design 3 palette, Inter + JetBrains Mono, Material Symbols icons) while keeping all API routes, types, and backend logic 100% unchanged.
+**Goal:** Replace every frontend visual with the Google Stitch design system (CIPHER blue/teal/amber Material Design 3 palette, Inter + JetBrains Mono, Material Symbols icons) while keeping all API routes, types, and backend logic 100% unchanged.
 
 **Architecture:** Three screens map to existing routes — landing page (`/`), loading state (`/research/[ticker]` while `pageState === 'analyzing'`), and report state (`/research/[ticker]` after analysis completes). All state logic in `research/[ticker]/page.tsx` is preserved; only JSX and CSS change. Shared `NavBar` and `FooterTicker` are extracted as components.
 
@@ -46,7 +46,7 @@ tertiary-fixed-dim:       #ffb95f
 
 **Step 1: Replace globals.css with Stitch design system CSS**
 
-Replace the entire file content. Keep the `@import "tailwindcss"` line first. Add Tailwind `@theme` block for custom color tokens. Keep existing animations that are still needed (shake, fadeInUp, tickerScroll, barFill, blockIn). Add new Stitch animations. Remove old amber-themed classes; add new Equinfo classes.
+Replace the entire file content. Keep the `@import "tailwindcss"` line first. Add Tailwind `@theme` block for custom color tokens. Keep existing animations that are still needed (shake, fadeInUp, tickerScroll, barFill, blockIn). Add new Stitch animations. Remove old amber-themed classes; add new Cipher classes.
 
 ```css
 @import "tailwindcss";
@@ -417,7 +417,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Equinfo — AI Financial Research Terminal",
+  title: "Cipher — AI Financial Research Terminal",
   description: "Source-grounded equity intelligence with transparent, traceable analysis powered by Anthropic and Gemini",
 };
 
@@ -450,7 +450,7 @@ Expected: Build succeeds (possibly with type warnings, no errors).
 
 ```bash
 git add src/app/globals.css src/app/layout.tsx
-git commit -m "feat(ui): replace amber theme with Equinfo Stitch design system — Inter/JetBrains Mono, blue-teal color tokens, Material Symbols"
+git commit -m "feat(ui): replace amber theme with Cipher Stitch design system — Inter/JetBrains Mono, blue-teal color tokens, Material Symbols"
 ```
 
 ---
@@ -523,7 +523,7 @@ export default function NavBar({
       <header className="flex justify-between items-center w-full px-4 fixed top-0 z-50 bg-surface h-[44px] border-b border-surface-container">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-black text-primary-container flex items-center gap-2">
-            EQUINFO
+            CIPHER
           </Link>
           <nav className="hidden md:flex items-center gap-4">
             <span className="text-sm font-bold text-primary-container tracking-tight">RESEARCH TERMINAL</span>
@@ -533,7 +533,7 @@ export default function NavBar({
         </div>
         <div className="flex items-center gap-4">
           <span className="text-[11px] tracking-widest uppercase text-on-surface/50 font-bold font-mono hidden sm:block">
-            {userEmail ?? 'user@equinfo.io'}
+            {userEmail ?? 'user@cipher.io'}
           </span>
           <Link
             href="/"
@@ -677,7 +677,7 @@ git commit -m "feat(ui): add shared NavBar and FooterTicker components in Stitch
 
 Preserve all existing logic (setupStatus fetch, scroll animation, market status, clock). Replace all JSX with Stitch design. Key visual changes:
 - Nav: now uses `<NavBar>` component
-- Hero: `EQUINFO` in `text-primary` (`#b6c4ff`) with `glow-radial` bg; eyebrow text; tagline
+- Hero: `CIPHER` in `text-primary` (`#b6c4ff`) with `glow-radial` bg; eyebrow text; tagline
 - Scroll scene: same React state-driven animation; wordmark color `text-primary-fixed` → white
 - Search visible below hero wordmark (where it was)
 - Pipeline phases: COLLECT/SYNTHESIZE/REPORT in `border-l-2 border-primary-container/secondary/tertiary` cards
@@ -812,7 +812,7 @@ export default function Home() {
               className="scene-hero-wordmark font-black text-primary-fixed leading-none mb-12"
               style={{ letterSpacing: `${anim.letterSpacing}em` }}
             >
-              EQUINFO
+              CIPHER
             </div>
             <p
               className="text-on-surface-variant font-bold text-lg md:text-xl max-w-2xl mx-auto text-center px-4"
@@ -828,7 +828,7 @@ export default function Home() {
             style={{ opacity: anim.monPhase, transform: `translateY(${monTranslateY}) scale(${monScale})` }}
           >
             <div className="monitor-glow" />
-            <img src="/unnamed.jpg" alt="Equinfo research terminal" className="preview-screenshot" draggable={false} />
+            <img src="/unnamed.jpg" alt="Cipher research terminal" className="preview-screenshot" draggable={false} />
           </div>
 
           {/* Search bar — appears once monPhase > 0.8 */}
@@ -965,7 +965,7 @@ export default function Home() {
         <section className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <h2 className="text-4xl font-black tracking-tight mb-4">A Professional Terminal for Everyone</h2>
-            <p className="text-on-surface-variant max-w-xl mx-auto">Equinfo bridges the gap between retail accessibility and institutional depth.</p>
+            <p className="text-on-surface-variant max-w-xl mx-auto">Cipher bridges the gap between retail accessibility and institutional depth.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-outline-variant/10">
             <div className="bg-surface p-12 group">
@@ -1206,12 +1206,12 @@ import { test, expect } from '@playwright/test';
 import path from 'path';
 
 test.describe('Stitch UI — Landing Page', () => {
-  test('loads with EQUINFO header and blue primary color', async ({ page }) => {
+  test('loads with CIPHER header and blue primary color', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Nav has EQUINFO text
-    await expect(page.locator('text=EQUINFO').first()).toBeVisible();
+    // Nav has CIPHER text
+    await expect(page.locator('text=CIPHER').first()).toBeVisible();
 
     // Hero has primary text (blue)
     const heroText = page.locator('.scene-hero-wordmark');
@@ -1363,7 +1363,7 @@ Read all screenshots with the Read tool. Iterate on any failures.
 
 ```bash
 git add -A
-git commit -m "feat(ui): complete Equinfo Stitch UI revamp — all screens implemented, Playwright verified"
+git commit -m "feat(ui): complete Cipher Stitch UI revamp — all screens implemented, Playwright verified"
 ```
 
 ---

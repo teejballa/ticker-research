@@ -143,7 +143,7 @@ export interface AnalysisResult {
 
 // ---- StoredReport — persisted report file (Phase 5) ----
 // Wraps AnalysisResult with metadata duplicated at top level for fast list reads.
-// Written to ~/.equinfo/reports/{TICKER}-{analyzed_at_sanitized}.json
+// Written to ~/.cipher/reports/{TICKER}-{analyzed_at_sanitized}.json
 
 export interface StoredReport {
   ticker: string;

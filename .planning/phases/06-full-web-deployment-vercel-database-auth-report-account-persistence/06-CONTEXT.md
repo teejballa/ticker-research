@@ -49,7 +49,7 @@ Transform the local-first app into a deployed multi-user web product. This phase
 - **Research finding:** RESEARCH.md (2026-03-21) confirmed `notebooklm-py 0.3.4` uses browser session cookies, not OAuth tokens. Per-user identity requires per-user cookie capture — implemented via Option C dual-login flow.
 
 ### Local Mode Coexistence (Safety Net)
-- **Local mode stays intact:** All existing local-execution code (SetupWizard, filesystem `~/.equinfo/reports/`, Python/notebooklm-py checks) is preserved throughout Phase 6 development — not removed or broken
+- **Local mode stays intact:** All existing local-execution code (SetupWizard, filesystem `~/.cipher/reports/`, Python/notebooklm-py checks) is preserved throughout Phase 6 development — not removed or broken
 - **Web mode is additive:** Phase 6 adds new code; it does not delete or replace existing local-mode code
 - **Gating:** `DEPLOYMENT_MODE` env var continues to control routing (existing pattern from Phase 4); web mode enabled via `DEPLOYMENT_MODE=web`
 - **Cleanup deferred:** Remove local-mode code only AFTER Phase 6 is confirmed working end-to-end in production — not before
@@ -82,7 +82,7 @@ Transform the local-first app into a deployed multi-user web product. This phase
 - `.planning/phases/04-deployment/` — Daytona container design, DEPLOYMENT_MODE pattern, vercel.json maxDuration decisions. Phase 6 builds on this.
 
 ### Phase 5 report history
-- `.planning/phases/05-user-identity-report-history/05-CONTEXT.md` — Local report storage decisions (`~/.equinfo/reports/`, `StoredReport` schema, `userEmail` from notebooklm auth). Phase 6 replaces the storage mechanism for web mode; local mode storage unchanged.
+- `.planning/phases/05-user-identity-report-history/05-CONTEXT.md` — Local report storage decisions (`~/.cipher/reports/`, `StoredReport` schema, `userEmail` from notebooklm auth). Phase 6 replaces the storage mechanism for web mode; local mode storage unchanged.
 
 ### NextAuth.js
 - Research the `jwt` callback for storing Google `access_token` in the session token, and the `session` callback for exposing it to the server

@@ -39,7 +39,7 @@ export default function NavBar({
       ? userEmail.slice(0, 21) + '...'
       : userEmail
     : null;
-  const navIdentityText = displayEmail ? `CONNECTED AS ${displayEmail}` : 'user@equinfo.io';
+  const navIdentityText = displayEmail ? `CONNECTED AS ${displayEmail}` : 'user@cipher.io';
 
   return (
     <>
@@ -47,7 +47,7 @@ export default function NavBar({
       <header className="flex justify-between items-center w-full px-4 fixed top-0 z-50 bg-surface h-[44px] border-b border-surface-container">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-black text-primary-container flex items-center gap-2">
-            EQUINFO
+            CIPHER
           </Link>
           <nav className="hidden md:flex items-center gap-4">
             <span className="text-sm font-bold text-primary-container tracking-tight">RESEARCH TERMINAL</span>

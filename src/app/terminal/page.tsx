@@ -97,7 +97,7 @@ export default function Terminal() {
               transition: 'opacity 0.5s ease 0.1s',
             }}
           >
-            EQUINFO
+            CIPHER
           </div>
 
           {/* Headline */}

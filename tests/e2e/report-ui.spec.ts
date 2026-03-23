@@ -39,7 +39,7 @@ const MOCK_REPORT_URL = `/research/AAPL?report=${FIXTURE_FILENAME}`;
 
 test.beforeAll(async () => {
   // Copy fixture to the reports directory so the API can serve it
-  const reportsDir = path.join(os.homedir(), '.equinfo', 'reports');
+  const reportsDir = path.join(os.homedir(), '.cipher', 'reports');
   fs.mkdirSync(reportsDir, { recursive: true });
   const fixture = fs.readFileSync(path.join(__dirname, '../fixtures/mock-aapl-report.json'), 'utf8');
   fs.writeFileSync(path.join(reportsDir, FIXTURE_FILENAME), fixture);
@@ -47,7 +47,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   // Clean up fixture file
-  const reportsDir = path.join(os.homedir(), '.equinfo', 'reports');
+  const reportsDir = path.join(os.homedir(), '.cipher', 'reports');
   const fixturePath = path.join(reportsDir, FIXTURE_FILENAME);
   if (fs.existsSync(fixturePath)) fs.unlinkSync(fixturePath);
 });
@@ -67,7 +67,7 @@ test.describe('Report UI — Stitch Design', () => {
     await loadReport(page, MOCK_REPORT_URL);
 
     // NavBar is the shared Stitch component
-    await expect(page.locator('text=EQUINFO').first()).toBeVisible();
+    await expect(page.locator('text=CIPHER').first()).toBeVisible();
     await snap(page, 'report-ui-03-nav.png');
   });
 

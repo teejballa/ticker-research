@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Equinfo — AI Financial Research Terminal",
+  title: "Cipher — AI Financial Research Terminal",
   description: "Source-grounded equity intelligence with transparent, traceable analysis powered by Anthropic and Gemini",
 };
 

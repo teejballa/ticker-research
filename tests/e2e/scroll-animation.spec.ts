@@ -16,7 +16,7 @@ test.describe('Homepage scroll animation', () => {
 
   // ── Test 1: Image file loads correctly ────────────────────────
   test('screenshot image loads without error', async ({ page }) => {
-    const img = page.locator('img[alt="Equinfo research terminal"]');
+    const img = page.locator('img[alt="Cipher research terminal"]');
     await expect(img).toHaveCount(1);
 
     const { naturalWidth, naturalHeight } = await img.evaluate((el: HTMLImageElement) => ({
@@ -31,14 +31,14 @@ test.describe('Homepage scroll animation', () => {
 
   // ── Test 2: Initial state — hero visible, image hidden ────────
   test('hero is visible and image is hidden on initial load', async ({ page }) => {
-    // Hero EQUINFO text in the scroll scene should be visible (opacity ~1)
-    const heroContainer = page.locator('div[style*="opacity"]').filter({ hasText: 'EQUINFO' }).first();
+    // Hero CIPHER text in the scroll scene should be visible (opacity ~1)
+    const heroContainer = page.locator('div[style*="opacity"]').filter({ hasText: 'CIPHER' }).first();
     const heroOpacity = await getStyle(heroContainer, 'opacity');
     console.log('Initial hero opacity:', heroOpacity);
     expect(parseFloat(heroOpacity || '1')).toBeCloseTo(1, 1);
 
     // Image wrapper opacity should be 0
-    const imgWrapper = page.locator('img[alt="Equinfo research terminal"]').locator('..');
+    const imgWrapper = page.locator('img[alt="Cipher research terminal"]').locator('..');
     const imgOpacity = await getStyle(imgWrapper, 'opacity');
     console.log('Initial image opacity:', imgOpacity);
     expect(parseFloat(imgOpacity || '0')).toBe(0);
@@ -51,7 +51,7 @@ test.describe('Homepage scroll animation', () => {
 
   // ── Test 3: Image becomes visible after scrolling ─────────────
   test('image opacity increases monotonically as user scrolls through scene', async ({ page }) => {
-    const imgWrapper = page.locator('img[alt="Equinfo research terminal"]').locator('..');
+    const imgWrapper = page.locator('img[alt="Cipher research terminal"]').locator('..');
 
     const viewportH = await page.evaluate(() => window.innerHeight);
     console.log('Viewport height:', viewportH);
@@ -88,7 +88,7 @@ test.describe('Homepage scroll animation', () => {
 
   // ── Test 4: Hero fades as image rises ─────────────────────────
   test('hero fades while image rises — cross-fade works correctly', async ({ page }) => {
-    const imgWrapper = page.locator('img[alt="Equinfo research terminal"]').locator('..');
+    const imgWrapper = page.locator('img[alt="Cipher research terminal"]').locator('..');
     const heroContainer = page.locator('div.absolute.inset-0.flex.flex-col.items-center.justify-center.pointer-events-none');
 
     const viewportH = await page.evaluate(() => window.innerHeight);
@@ -162,7 +162,7 @@ test.describe('Homepage scroll animation', () => {
     console.log('  /tmp/scroll-full.png  (image fully visible)');
 
     // Verify the "full" screenshot has the image visible
-    const imgWrapper = page.locator('img[alt="Equinfo research terminal"]').locator('..');
+    const imgWrapper = page.locator('img[alt="Cipher research terminal"]').locator('..');
     const finalOpacity = await imgWrapper.evaluate(el => parseFloat((el as HTMLElement).style.opacity || '0'));
     expect(finalOpacity).toBeGreaterThan(0.8);
   });
