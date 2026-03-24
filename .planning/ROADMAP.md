@@ -146,6 +146,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Deployment | 3/3 | Complete   | 2026-03-18 |
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
+| 7. Full Public Deployment | 0/? | Planned | |
+| 8. Reliable Market Data | 0/? | Planned | |
+| 9. Public Sentiment Layer | 0/? | Planned | |
 
 ### Phase 7: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
 
@@ -156,3 +159,65 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 7 to break down)
+
+### Phase 8: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
+
+**Goal**: Any ticker a user enters returns complete, populated market data. Yahoo-finance2 is the primary source but automatically falls back to secondary sources (Alpha Vantage free tier, Financial Modeling Prep free tier, Anthropic web search extraction) when fields are missing or the primary call fails — so major stocks like AAPL never produce empty report sections.
+
+**Problem being solved**: yahoo-finance2 is an unofficial API that silently returns partial or empty data for many tickers (including large-caps like AAPL). Currently, missing fundamentals fields (P/E, EPS, revenue, market cap) leave report sections blank. Users have no indication that data is missing vs. unavailable.
+
+**Architecture**:
+- `src/lib/market-data.ts`: unified `fetchMarketData(ticker)` function with cascading fallback chain
+  - Primary: yahoo-finance2 (price, volume, fundamentals, 52-week range)
+  - Secondary: Alpha Vantage free tier (OVERVIEW endpoint — P/E, EPS, market cap, revenue)
+  - Tertiary: Financial Modeling Prep free tier (company profile + key metrics)
+  - Final fallback: Anthropic web search extraction for any still-missing fields
+- Each source is tried independently per field — partial data from primary is supplemented by secondary (not replaced wholesale)
+- `DataField` envelope tracks `{ value, source, fetchedAt }` per field so report can show "P/E ratio: 28.4 (via Alpha Vantage)"
+- Missing fields after all fallbacks are explicitly marked `{ value: null, unavailable: true }` — sections show "Data unavailable" instead of rendering empty
+- No API keys required for free tiers in local mode; optional env vars `ALPHA_VANTAGE_API_KEY` and `FMP_API_KEY` unlock higher rate limits
+
+**Depends on**: Phase 3 (report rendering)
+**Requirements**: DATA-RELIABLE-01, DATA-RELIABLE-02, DATA-RELIABLE-03
+**Success Criteria** (what must be TRUE):
+  1. AAPL, TSLA, NVDA, and 10 other major tickers all produce fully-populated report sections with no blank fields
+  2. When primary source (yahoo-finance2) fails or returns partial data, fallback sources fill missing fields transparently
+  3. Report shows source attribution per data field when a fallback was used (e.g., "via Alpha Vantage")
+  4. Tickers with genuinely unavailable data (small-cap, OTC) display "Data unavailable" explicitly rather than blank sections
+  5. Fallback chain completes within 10 seconds total — no single source blocks the pipeline
+**Plans:** 0 plans (run /gsd:plan-phase 8 to break down)
+
+Plans:
+- [ ] TBD
+
+### Phase 9: Public Sentiment Layer — X, YouTube, Reddit & Social Signal Ingestion
+
+**Goal**: The research report gains a dedicated Public Sentiment section sourced from what real people — not analysts — are saying about the ticker on X (Twitter), YouTube, Reddit, and StockTwits. These sources are gathered automatically and fed into NotebookLM alongside the existing analyst/news data so Gemini can synthesize crowd sentiment as a distinct signal.
+
+**Problem being solved**: Current sentiment is analyst-only (SEC filings, institutional commentary). Retail investor sentiment on social platforms often diverges from analyst consensus and is a meaningful signal — especially for high-attention stocks. The report should reflect both.
+
+**Architecture**:
+- `src/lib/social-sentiment.ts`: `fetchSocialSentiment(ticker, companyName)` returns `SocialSentimentPackage`
+  - **X/Twitter**: Anthropic web search queries for recent `$TICKER` mentions, extracts top posts with engagement signals (likes/retweets as rough weight)
+  - **YouTube**: Anthropic web search queries for `[ticker] stock analysis [year]` — extracts video titles, channel names, view counts from search results (no YouTube API needed)
+  - **Reddit**: Anthropic web search queries `site:reddit.com [ticker] stock` — extracts post titles, subreddit, and upvote context from r/wallstreetbets, r/stocks, r/investing
+  - **StockTwits**: Anthropic web search queries `site:stocktwits.com $[ticker]` — extracts bullish/bearish signal counts if available
+- Each platform result is formatted as a `SocialSource` with `{ platform, content, url, fetchedAt, engagementSignal }`
+- Social sources are added to NotebookLM notebook as additional `add_url` entries (same pipeline as news URLs)
+- NotebookLM query set extended with a 7th question: "What is the general public and retail investor sentiment from social platforms? Separate from analyst views."
+- `AnalysisResult` schema gains `publicSentiment: { summary, platforms: string[], bullishSignals: string[], bearishSignals: string[] }`
+- Report gains a new **Public Sentiment** section between Market Sentiment and Bullish Factors, showing platform breakdown and crowd tone
+
+**Depends on**: Phase 8 (reliable data foundation)
+**Requirements**: SOCIAL-01, SOCIAL-02, SOCIAL-03, SOCIAL-04
+**Success Criteria** (what must be TRUE):
+  1. Report includes a Public Sentiment section with content from at least 2 of: X, YouTube, Reddit, StockTwits
+  2. Public sentiment is clearly labeled as distinct from analyst/institutional sentiment
+  3. Each social signal links back to its source platform with attribution
+  4. Social sources are added to the NotebookLM notebook so Gemini synthesizes them grounded in actual posts/videos — not hallucinated
+  5. For a high-attention ticker (AAPL, TSLA, GME), at least 5 social sources are surfaced per run
+  6. Pipeline still completes within 60 seconds with social sources added
+**Plans:** 0 plans (run /gsd:plan-phase 9 to break down)
+
+Plans:
+- [ ] TBD

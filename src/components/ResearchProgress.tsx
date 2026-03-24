@@ -243,23 +243,6 @@ export default function ResearchProgress({
           </div>
         </div>
 
-        {/* Terminal Output (desktop only) */}
-        <div className="absolute bottom-20 right-10 w-80 h-48 bg-surface-container-low/50 backdrop-blur-md rounded-lg border border-outline-variant/20 p-4 hidden lg:block overflow-hidden shadow-2xl">
-          <div className="flex items-center gap-2 mb-3 border-b border-outline-variant/20 pb-2">
-            <span className="text-[10px] font-mono text-primary font-bold">SYSTEM LOGS</span>
-            <div className="flex gap-1 ml-auto">
-              <div className="w-2 h-2 rounded-full bg-error/40" />
-              <div className="w-2 h-2 rounded-full bg-tertiary/40" />
-              <div className="w-2 h-2 rounded-full bg-secondary/40" />
-            </div>
-          </div>
-          <div className="font-mono text-[9px] text-on-surface-variant space-y-1 overflow-hidden">
-            {logLines.slice(-7).map((line, i) => (
-              <p key={i} className="truncate">&gt; {line}</p>
-            ))}
-            <p className="text-primary animate-pulse">&gt; RUNNING_INFERENCE...</p>
-          </div>
-        </div>
       </main>
 
       <FooterTicker />
