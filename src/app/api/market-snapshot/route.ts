@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
-const SNAPSHOT_TICKERS = ['AAPL', 'MSFT', 'TSLA', 'NVDA', 'GOOGL', 'AMZN'];
+const SNAPSHOT_TICKERS = ['AAPL', 'MSFT', 'TSLA', 'NVDA', 'GOOGL', 'AMZN', 'META', 'JPM'];
 
 const STATIC_NAMES: Record<string, string> = {
   AAPL:  'Apple Inc.',
@@ -18,6 +18,8 @@ const STATIC_NAMES: Record<string, string> = {
   NVDA:  'NVIDIA Corp.',
   GOOGL: 'Alphabet Inc.',
   AMZN:  'Amazon.com',
+  META:  'Meta Platforms',
+  JPM:   'JPMorgan Chase',
 };
 
 export async function GET() {

@@ -1,5 +1,14 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
+interface TapeItem {
+  sym: string;
+  price: string | null;
+  chg: string | null;
+  up: boolean;
+}
+
 function getMarketStatus(): { open: boolean; label: string } {
   const ny   = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const day  = ny.getDay();
@@ -12,19 +21,37 @@ function getMarketStatus(): { open: boolean; label: string } {
   return { open: false, label: 'CLOSED' };
 }
 
-const TAPE = [
-  { sym: 'AAPL',  price: '189.84', chg: '+0.43%', up: true  },
-  { sym: 'TSLA',  price: '177.20', chg: '-2.14%', up: false },
-  { sym: 'MSFT',  price: '415.22', chg: '+1.12%', up: true  },
-  { sym: 'NVDA',  price: '882.12', chg: '-0.55%', up: false },
-  { sym: 'GOOGL', price: '151.46', chg: '+0.81%', up: true  },
-  { sym: 'AMZN',  price: '178.22', chg: '+0.25%', up: true  },
-  { sym: 'META',  price: '527.93', chg: '+0.65%', up: true  },
-  { sym: 'JPM',   price: '224.89', chg: '-0.45%', up: false },
+const FALLBACK_TAPE: TapeItem[] = [
+  { sym: 'AAPL',  price: null, chg: null, up: true  },
+  { sym: 'TSLA',  price: null, chg: null, up: true  },
+  { sym: 'MSFT',  price: null, chg: null, up: true  },
+  { sym: 'NVDA',  price: null, chg: null, up: true  },
+  { sym: 'GOOGL', price: null, chg: null, up: true  },
+  { sym: 'AMZN',  price: null, chg: null, up: true  },
+  { sym: 'META',  price: null, chg: null, up: true  },
+  { sym: 'JPM',   price: null, chg: null, up: true  },
 ];
 
 export default function FooterTicker() {
+  const [tape, setTape] = useState<TapeItem[]>(FALLBACK_TAPE);
   const market = getMarketStatus();
+
+  useEffect(() => {
+    async function fetchTape() {
+      try {
+        const res = await fetch('/api/market-snapshot');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.items) setTape(data.items);
+      } catch {
+        // keep fallback
+      }
+    }
+
+    fetchTape();
+    const interval = setInterval(fetchTape, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <footer className="fixed bottom-0 left-0 w-full z-50 bg-surface-container-low h-[32px] border-t border-surface-container flex items-center overflow-hidden whitespace-nowrap">
@@ -33,11 +60,11 @@ export default function FooterTicker() {
 
       {/* Scrolling tape */}
       <div className="flex items-center gap-8 px-4 font-mono text-[12px] animate-ticker whitespace-nowrap">
-        {[...TAPE, ...TAPE].map((t, i) => (
+        {[...tape, ...tape].map((t, i) => (
           <span key={i} className="text-on-surface/80 flex gap-2 shrink-0">
             <span className="text-on-surface-variant">{t.sym}</span>
             <span className={t.up ? 'text-secondary' : 'text-error'}>
-              {t.price} {t.chg}
+              {t.price != null ? `${t.price} ${t.chg}` : '—'}
             </span>
           </span>
         ))}
