@@ -3,6 +3,10 @@
 // All data collection functions return types defined here.
 // DATA-07: every section includes collected_at (ISO 8601 timestamp).
 
+// Security type classification for adaptive prompt branching (Phase 7).
+// Populated by detectSecurityType() before collectAllData runs.
+export type SecurityType = 'equity' | 'spac' | 'etf' | 'adr' | 'preferred' | 'crypto' | 'unknown';
+
 export interface SourceSection {
   collected_at: string; // ISO 8601 — DATA-07
   error?: string;       // Set if this section's collection failed gracefully
@@ -81,6 +85,7 @@ export interface SourcePackage {
   ticker: string;
   company_name: string;
   exchange: string | null;
+  security_type: SecurityType;   // populated by detectSecurityType() before collectAllData runs
   assembled_at: string;  // ISO 8601 — when the package was assembled
   market_data: MarketDataSection;
   fundamentals: FundamentalsSection;
@@ -139,6 +144,7 @@ export interface AnalysisResult {
   sources_used: AnalysisSource[];
   source_warnings: string[];
   market_snapshot?: MarketSnapshot;  // optional — populated by Python script (Phase 3)
+  security_type?: SecurityType;  // optional — old persisted reports may not have this field
 }
 
 // ---- StoredReport — persisted report file (Phase 5) ----

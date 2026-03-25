@@ -74,6 +74,7 @@ export async function collectAllData(
     ticker,
     company_name: companyName,
     exchange,
+    security_type: 'equity',  // default; caller should set via detectSecurityType() (Phase 7)
     assembled_at: new Date().toISOString(),
     market_data: settle(marketDataResult, emptyMarketData('market data collection failed'), 'market_data'),
     fundamentals: settle(fundamentalsResult, emptyFundamentals('fundamentals collection failed'), 'fundamentals'),
