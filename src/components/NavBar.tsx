@@ -21,6 +21,7 @@ interface NavBarProps {
   onExportPdf?: () => void;
   showSubBar?: boolean;
   userEmail?: string | null;
+  securityType?: string | null;
 }
 
 export default function NavBar({
@@ -30,6 +31,7 @@ export default function NavBar({
   onExportPdf,
   showSubBar = false,
   userEmail,
+  securityType,
 }: NavBarProps) {
   const market = getMarketStatus();
 
@@ -91,6 +93,14 @@ export default function NavBar({
             )}
             {companyName && (
               <h1 className="font-bold text-sm tracking-tight text-on-surface">{companyName.toUpperCase()}</h1>
+            )}
+            {securityType && securityType !== 'unknown' && securityType !== 'equity' && (
+              <span
+                data-testid="security-type-badge"
+                className="text-[10px] font-bold tracking-widest uppercase text-amber-400 border border-amber-400/40 px-1.5 py-0.5 font-mono"
+              >
+                {securityType.toUpperCase()}
+              </span>
             )}
           </div>
           <div className="flex items-center gap-3">
