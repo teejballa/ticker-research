@@ -8,14 +8,13 @@ import ReportHistory from '@/components/ReportHistory';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 
-const TAPE = [
-  { sym: 'AAPL',  price: '189.84', chg: '+0.43%', up: true,  name: 'Apple Inc.',      rating: 'BUY'        },
-  { sym: 'MSFT',  price: '415.22', chg: '+1.12%', up: true,  name: 'Microsoft Corp.', rating: 'STRONG BUY' },
-  { sym: 'TSLA',  price: '177.20', chg: '-2.14%', up: false, name: 'Tesla, Inc.',      rating: 'HOLD'       },
-  { sym: 'NVDA',  price: '882.12', chg: '-0.55%', up: false, name: 'NVIDIA Corp.',     rating: 'BUY'        },
-  { sym: 'GOOGL', price: '151.46', chg: '+0.81%', up: true,  name: 'Alphabet Inc.',   rating: 'BUY'        },
-  { sym: 'AMZN',  price: '178.22', chg: '+0.25%', up: true,  name: 'Amazon.com',      rating: 'STRONG BUY' },
-];
+interface SnapshotItem {
+  sym: string;
+  name: string;
+  price: string | null;
+  chg: string | null;
+  up: boolean;
+}
 
 interface SetupStatus {
   pythonOk: boolean;
@@ -40,6 +39,8 @@ function getMarketStatus(): { open: boolean; label: string } {
 export default function Home() {
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [loading, setLoading]         = useState(true);
+  const [snapshot, setSnapshot]       = useState<SnapshotItem[]>([]);
+  const [snapshotAt, setSnapshotAt]   = useState<string | null>(null);
 
   // ── Scroll animation state ─────────────────────────────────────
   // React fully owns these style values — no CSS-vs-inline conflicts.
@@ -70,6 +71,18 @@ export default function Home() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    fetch('/api/market-snapshot')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.items) {
+          setSnapshot(data.items);
+          setSnapshotAt(data.fetched_at ?? null);
+        }
+      })
+      .catch(() => {/* non-fatal */});
+  }, []);
 
   useEffect(() => {
     fetchSetupStatus();
@@ -292,9 +305,16 @@ export default function Home() {
                 <span className="text-[11px] tracking-widest text-primary uppercase font-bold">Live Feed</span>
                 <h2 className="text-3xl font-black tracking-tight mt-2">Market Snapshot</h2>
               </div>
-              <div className="font-mono text-xs text-outline bg-surface px-3 py-1 rounded flex items-center gap-2">
-                <span className={`w-1.5 h-1.5 rounded-full ${market.open ? 'bg-secondary status-dot-live' : 'bg-outline-variant'}`} />
-                {market.label}
+              <div className="flex flex-col items-end gap-1">
+                <div className="font-mono text-xs text-outline bg-surface px-3 py-1 rounded flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${market.open ? 'bg-secondary status-dot-live' : 'bg-outline-variant'}`} />
+                  {market.label}
+                </div>
+                {snapshotAt && (
+                  <span className="font-mono text-[9px] text-outline-variant">
+                    updated {new Date(snapshotAt).toLocaleTimeString()}
+                  </span>
+                )}
               </div>
             </div>
             <div className="market-grid rounded-lg overflow-hidden">
@@ -303,24 +323,18 @@ export default function Home() {
                 <span>NAME</span>
                 <span className="text-right">LAST PRICE</span>
                 <span className="text-right">CHANGE</span>
-                <span className="text-center">RATING</span>
               </div>
-              {TAPE.map((t) => (
+              {snapshot.length === 0 ? (
+                <div className="market-grid-row col-span-4">
+                  <span className="text-outline-variant text-xs font-mono col-span-4">Loading market data...</span>
+                </div>
+              ) : snapshot.map((t) => (
                 <div key={t.sym} className="market-grid-row">
                   <span className="font-bold text-on-surface font-mono">{t.sym}</span>
                   <span className="text-on-surface-variant text-xs">{t.name}</span>
-                  <span className="text-right font-mono text-on-surface">{t.price}</span>
+                  <span className="text-right font-mono text-on-surface">{t.price ?? '—'}</span>
                   <span className={`text-right font-mono text-sm ${t.up ? 'text-secondary' : 'text-error'}`}>
-                    {t.chg}
-                  </span>
-                  <span className="text-center">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      t.rating === 'STRONG BUY'
-                        ? 'bg-secondary/20 text-secondary'
-                        : t.rating === 'BUY'
-                        ? 'bg-secondary/10 text-secondary'
-                        : 'bg-surface-container-highest text-outline'
-                    }`}>{t.rating}</span>
+                    {t.chg ?? '—'}
                   </span>
                 </div>
               ))}

@@ -41,7 +41,7 @@ export async function fetchNews(ticker: string): Promise<NewsSection> {
   const collected_at = new Date().toISOString();
   try {
     const response = await client.messages.create({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
       messages: [{
@@ -76,7 +76,7 @@ export async function fetchAnalystSentiment(ticker: string): Promise<AnalystSent
   const collected_at = new Date().toISOString();
   try {
     const response = await client.messages.create({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
       messages: [{
@@ -125,7 +125,7 @@ export async function fetchSecFilingSummary(ticker: string): Promise<SecFilingSu
   const collected_at = new Date().toISOString();
   try {
     const response = await client.messages.create({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 3000,
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
       messages: [{
@@ -171,7 +171,7 @@ export async function fetchSocialSentiment(ticker: string): Promise<SocialSentim
   const collected_at = new Date().toISOString();
   try {
     const response = await client.messages.create({
-      model: 'claude-3-5-haiku-latest',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
       messages: [{
