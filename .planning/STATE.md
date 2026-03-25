@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 7 context gathered
-last_updated: "2026-03-25T15:24:35.426Z"
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-03-25T20:44:27.227Z"
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 24
-  completed_plans: 24
+  total_plans: 28
+  completed_plans: 25
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — no hallucinated conclusions, only what the data supports.
-**Current focus:** Phase 06 — full-web-deployment-vercel-database-auth-report-account-persistence
+**Current focus:** Phase 07 — Research Quality & Special Situation Coverage
 
 ## Current Position
 
-Phase: 06 (full-web-deployment-vercel-database-auth-report-account-persistence) — EXECUTING
+Phase: 07 (Research Quality & Special Situation Coverage) — EXECUTING
 Plan: 1 of 4
 
 ## Performance Metrics
@@ -71,6 +71,7 @@ Plan: 1 of 4
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P03 | 3 | 3 tasks | 6 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P02 | 10 | 3 tasks | 5 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P04 | 21 | 2 tasks | 7 files |
+| Phase 07 P01 | 8 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Prisma 7 migrate dev requires explicit env export — env() reads process.env directly, not .env.local auto-loading
 - [Phase 06]: Merged [filename]/[id] history routes into single [filename]/route.ts — Next.js 15 rejects two dynamic segments at same path level with different names
 - [Phase 06]: vitest exclude: ['tests/e2e/**'] required to prevent Playwright spec files from being collected as unit tests
+- [Phase 07]: SecurityType union has 7 values (equity/spac/etf/adr/preferred/crypto/unknown) — covers all Yahoo Finance quoteTypes plus name-derived subtypes
+- [Phase 07]: detectSecurityType() 3-tier: quoteType (free) → name heuristics (free) → Anthropic web search max_uses:1 for EQUITY with no name match
+- [Phase 07]: SourcePackage.security_type is required; AnalysisResult.security_type is optional for backward compat with persisted reports
 
 ### Roadmap Evolution
 
@@ -155,6 +159,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T15:24:35.422Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-full-public-deployment-vercel-frontend-daytona-container-for-notebooklm-py-fully-live-and-accessible-to-anyone-on-the-web/07-CONTEXT.md
+Last session: 2026-03-25T20:44:27.224Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
