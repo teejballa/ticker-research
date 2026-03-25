@@ -11,6 +11,7 @@ import {
   fetchSocialSentiment,
 } from '@/lib/data/anthropic-search';
 import type { SourcePackage, MarketDataSection, FundamentalsSection } from '@/lib/types';
+import type { SecurityType } from '@/lib/types';
 
 // Empty fallback sections for when a data source fails completely
 function emptyMarketData(error: string): MarketDataSection {
@@ -43,6 +44,7 @@ export async function collectAllData(
   ticker: string,
   companyName: string = ticker,
   exchange: string | null = null,
+  securityType: SecurityType = 'equity',
 ): Promise<SourcePackage> {
   // Run all 6 data sources in parallel — Promise.allSettled never throws
   const [
@@ -55,10 +57,10 @@ export async function collectAllData(
   ] = await Promise.allSettled([
     fetchMarketData(ticker),
     fetchFundamentals(ticker),
-    fetchNews(ticker),
-    fetchAnalystSentiment(ticker),
-    fetchSecFilingSummary(ticker),
-    fetchSocialSentiment(ticker),
+    fetchNews(ticker, securityType),
+    fetchAnalystSentiment(ticker, securityType),
+    fetchSecFilingSummary(ticker, securityType),
+    fetchSocialSentiment(ticker, securityType),
   ]);
 
   const collection_errors: string[] = [];
@@ -74,7 +76,7 @@ export async function collectAllData(
     ticker,
     company_name: companyName,
     exchange,
-    security_type: 'equity',  // default; caller should set via detectSecurityType() (Phase 7)
+    security_type: securityType,
     assembled_at: new Date().toISOString(),
     market_data: settle(marketDataResult, emptyMarketData('market data collection failed'), 'market_data'),
     fundamentals: settle(fundamentalsResult, emptyFundamentals('fundamentals collection failed'), 'fundamentals'),

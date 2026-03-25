@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collectAllData } from '@/lib/data/source-package';
 import { writeSourcePackage } from '@/lib/temp-file';
+import { detectSecurityType } from '@/lib/data/security-type';
+import type { SecurityType } from '@/lib/types';
 import YahooFinance from 'yahoo-finance2';
 
 // Force dynamic evaluation so Vercel reads env vars at request time, not build time.
@@ -39,16 +41,26 @@ export async function POST(
     // Resolve company name and exchange for the source package metadata
     let companyName = upperTicker;
     let exchange: string | null = null;
+    let _quoteType: string | undefined;
+    let _longName: string | undefined;
     try {
       const quote = await yf.quote(upperTicker);
       companyName = quote.longName ?? quote.shortName ?? upperTicker;
       exchange = quote.fullExchangeName ?? null;
+      // quoteType from yahoo-finance2 v3 is uppercase ('ETF', 'EQUITY', etc.)
+      // typeDisp is different (lowercase) — do not confuse them
+      _quoteType = (quote as Record<string, unknown>).quoteType as string | undefined;
+      _longName = quote.longName ?? undefined;
     } catch {
       // Non-fatal — use ticker as company name if quote lookup fails
     }
 
+    // Detect security type (may fire one Anthropic web search for SPAC detection)
+    // Falls back to 'equity' on any failure — non-fatal
+    const securityType: SecurityType = await detectSecurityType(upperTicker, _quoteType, _longName).catch(() => 'equity');
+
     // Run parallel data collection — DATA-08
-    const sourcePackage = await collectAllData(upperTicker, companyName, exchange);
+    const sourcePackage = await collectAllData(upperTicker, companyName, exchange, securityType);
 
     // Write to temp file — never in project directory
     const filePath = await writeSourcePackage(sourcePackage);
