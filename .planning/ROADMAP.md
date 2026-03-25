@@ -146,7 +146,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Deployment | 3/3 | Complete   | 2026-03-18 |
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
-| 7. Research Quality & Special Situation Coverage | 0/? | Planned | |
+| 7. Research Quality & Special Situation Coverage | 0/4 | Planned | |
 | 8. Full Public Deployment | 0/? | Planned | |
 | 9. Reliable Market Data | 0/? | Planned | |
 | 10. Public Sentiment Layer | 0/? | Planned | |
@@ -173,10 +173,13 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
   2. An ETF ticker (e.g., QQQ) research output mentions holdings, expense ratio, and tracking index — not "SEC 10-K filings" that don't exist for ETFs
   3. A standard equity (AAPL, NVDA) research output is at least as good as today — no regression
   4. Security type is logged in the SourcePackage and visible in the research report (e.g., "Security Type: SPAC")
-**Plans:** 0 plans (run /gsd:plan-phase 7 to break down)
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD
+- [ ] 07-01-PLAN.md — SecurityType type contracts, detectSecurityType() module, types.ts extensions (SourcePackage + AnalysisResult), Wave 0 test stubs
+- [ ] 07-02-PLAN.md — Prompt branching in all 4 anthropic-search.ts functions + source-package.ts securityType threading + route.ts integration
+- [ ] 07-03-PLAN.md — Python preamble injection in notebooklm_research.py, security_type propagation to AnalysisResult, ETF analyst brief improvement
+- [ ] 07-04-PLAN.md — NavBar security type badge (SPAC/ETF amber chip), ResearchReport wiring, Playwright badge tests, visual checkpoint
 
 ### Phase 8: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
 
