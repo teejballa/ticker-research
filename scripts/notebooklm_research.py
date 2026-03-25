@@ -93,6 +93,28 @@ Q6 = (
 
 
 # ---------------------------------------------------------------------------
+# Preambles — prepended to all 6 questions per security type
+# Equity type: empty string (no preamble — questions are already equity-focused)
+# ---------------------------------------------------------------------------
+
+PREAMBLES = {
+    'spac': (
+        "Note: this is a pre-merger SPAC (Special Purpose Acquisition Company). "
+        "Evaluate this instrument in terms of merger probability, trust value per share, "
+        "vote timeline, redemption risk, and deal structure — not operating financials, "
+        "revenue growth, or earnings metrics, which are not applicable pre-merger. "
+    ),
+    'etf': (
+        "Note: this is an ETF or fund, not an individual equity. "
+        "Focus your analysis on expense ratio, AUM and fund flows, tracking accuracy "
+        "vs. its benchmark index, top holdings and sector weights, and creation/redemption "
+        "activity — not company-level earnings, revenue, or analyst stock ratings, "
+        "which do not apply to ETFs. "
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
 # Research brief formatter — pure Python equivalent of TypeScript formatResearchBrief
 # ---------------------------------------------------------------------------
 
@@ -191,18 +213,25 @@ def format_research_brief(pkg: dict) -> str:
     # Analyst Sentiment
     analyst = pkg.get('analyst_sentiment', {})
     lines.append('--- ANALYST SENTIMENT ---')
-    lines.append(f"Consensus: {_fmt(analyst.get('consensus'))}")
-    lines.append(f"Avg Price Target: {_fmt_dollar(analyst.get('avg_price_target'))}")
-    lines.append(f"Analyst Count: {_fmt_num(analyst.get('analyst_count'))}")
-    recent_changes = analyst.get('recent_changes', [])
-    if recent_changes:
-        lines.append('Recent Changes:')
-        for change in recent_changes:
-            analyst_name = change.get('analyst', '')
-            firm = change.get('firm', '')
-            action = change.get('action', '')
-            date = change.get('date', '')
-            lines.append(f"  - {analyst_name} at {firm} ({action}, {date})")
+
+    # Check if this is an ETF (sentinel error present from fetchAnalystSentiment)
+    analyst_error = analyst.get('error', '')
+    if analyst_error and 'not applicable' in analyst_error.lower():
+        lines.append('Consensus: Not applicable (ETF — no stock analyst ratings exist for this fund)')
+        lines.append('Note: For ETFs, evaluate expense ratio, fund flows, and index tracking instead.')
+    else:
+        lines.append(f"Consensus: {_fmt(analyst.get('consensus'))}")
+        lines.append(f"Avg Price Target: {_fmt_dollar(analyst.get('avg_price_target'))}")
+        lines.append(f"Analyst Count: {_fmt_num(analyst.get('analyst_count'))}")
+        recent_changes = analyst.get('recent_changes', [])
+        if recent_changes:
+            lines.append('Recent Changes:')
+            for change in recent_changes:
+                analyst_name = change.get('analyst', '')
+                firm = change.get('firm', '')
+                action = change.get('action', '')
+                date = change.get('date', '')
+                lines.append(f"  - {analyst_name} at {firm} ({action}, {date})")
     lines.append('')
 
     # SEC Filings
@@ -329,6 +358,7 @@ def parse_answers(answers: list, pkg: dict, source_warnings: list) -> dict:
         'confidence_explanation': confidence_explanation,
         'sources_used': sources_used,
         'source_warnings': source_warnings,
+        'security_type': pkg.get('security_type', 'equity'),   # propagated to AnalysisResult
         'market_snapshot': market_snapshot,
     }
 
@@ -530,7 +560,10 @@ async def main() -> None:
                 await asyncio.sleep(20)
 
             # 4. Run 6 structured queries with conversation threading
-            QUESTIONS = [Q1, Q2, Q3, Q4, Q5, Q6]
+            # Select preamble based on security type — empty string for equity/unknown/adr/preferred/crypto
+            security_type = pkg.get('security_type', 'equity')
+            preamble = PREAMBLES.get(security_type, '')
+            QUESTIONS = [preamble + q for q in [Q1, Q2, Q3, Q4, Q5, Q6]]
             labels = [
                 "sentiment (1/6)",
                 "bullish signals (2/6)",
