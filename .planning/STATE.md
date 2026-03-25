@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-03-25T20:44:27.227Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-03-25T20:52:19.650Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 28
-  completed_plans: 25
+  completed_plans: 26
 ---
 
 # Project State
@@ -72,6 +72,7 @@ Plan: 1 of 4
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P02 | 10 | 3 tasks | 5 files |
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P04 | 21 | 2 tasks | 7 files |
 | Phase 07 P01 | 8 | 3 tasks | 7 files |
+| Phase 07 P02 | 307 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,9 @@ Recent decisions affecting current work:
 - [Phase 07]: SecurityType union has 7 values (equity/spac/etf/adr/preferred/crypto/unknown) — covers all Yahoo Finance quoteTypes plus name-derived subtypes
 - [Phase 07]: detectSecurityType() 3-tier: quoteType (free) → name heuristics (free) → Anthropic web search max_uses:1 for EQUITY with no name match
 - [Phase 07]: SourcePackage.security_type is required; AnalysisResult.security_type is optional for backward compat with persisted reports
+- [Phase 07]: fetchAnalystSentiment returns ETF sentinel without API call — ETFs have no Wall Street buy/sell ratings
+- [Phase 07]: Equity news and analyst searches use max_uses 5 (up from 3) for broader coverage on the most common instrument type
+- [Phase 07]: SPAC SEC filing prompt targets S-4 and DEF 14A — pre-merger SPACs do not file 10-K or 10-Q
 
 ### Roadmap Evolution
 
@@ -159,6 +163,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T20:44:27.224Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-25T20:52:19.648Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
