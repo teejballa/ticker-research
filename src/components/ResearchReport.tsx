@@ -153,6 +153,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
         showSubBar
         onNewResearch={() => { window.location.href = '/'; }}
         onExportPdf={handleExportPdf}
+        securityType={analysisResult.security_type ?? null}
       />
 
       <main className="mt-[100px] max-w-6xl mx-auto px-6 space-y-8 pb-20">
