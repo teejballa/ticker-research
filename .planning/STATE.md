@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-03-25T20:52:19.650Z"
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-03-25T20:59:31.291Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # Project State
@@ -73,6 +73,7 @@ Plan: 1 of 4
 | Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P04 | 21 | 2 tasks | 7 files |
 | Phase 07 P01 | 8 | 3 tasks | 7 files |
 | Phase 07 P02 | 307 | 2 tasks | 3 files |
+| Phase 07 P03 | 69 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -146,6 +147,9 @@ Recent decisions affecting current work:
 - [Phase 07]: fetchAnalystSentiment returns ETF sentinel without API call — ETFs have no Wall Street buy/sell ratings
 - [Phase 07]: Equity news and analyst searches use max_uses 5 (up from 3) for broader coverage on the most common instrument type
 - [Phase 07]: SPAC SEC filing prompt targets S-4 and DEF 14A — pre-merger SPACs do not file 10-K or 10-Q
+- [Phase 07]: PREAMBLES dict at module level after Q6 — reusable, extensible, zero runtime cost for equity type
+- [Phase 07]: preamble + q list comprehension replaces static QUESTIONS list — backward compat via empty string default for equity/unknown types
+- [Phase 07]: ETF analyst sentinel check uses 'not applicable' substring match — loosely coupled to TypeScript fetchAnalystSentiment sentinel wording
 
 ### Roadmap Evolution
 
@@ -163,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T20:52:19.648Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-03-25T20:59:31.289Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
