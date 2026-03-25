@@ -12,6 +12,7 @@ const basePackage: SourcePackage = {
   ticker: 'AAPL',
   company_name: 'Apple Inc.',
   exchange: 'NASDAQ',
+  security_type: 'equity',
   assembled_at: '2026-03-12T14:23:00Z',
   market_data: {
     collected_at: '2026-03-12T14:22:00Z',
