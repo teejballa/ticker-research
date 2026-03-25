@@ -146,21 +146,49 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Deployment | 3/3 | Complete   | 2026-03-18 |
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
-| 7. Full Public Deployment | 0/? | Planned | |
-| 8. Reliable Market Data | 0/? | Planned | |
-| 9. Public Sentiment Layer | 0/? | Planned | |
+| 7. Research Quality & Special Situation Coverage | 0/? | Planned | |
+| 8. Full Public Deployment | 0/? | Planned | |
+| 9. Reliable Market Data | 0/? | Planned | |
+| 10. Public Sentiment Layer | 0/? | Planned | |
 
-### Phase 7: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
+### Phase 7: Research Quality & Special Situation Coverage
+
+**Goal**: The research pipeline detects what type of security it's analyzing and adapts its search queries accordingly — so SPACs surface merger details and vote dates, ETFs surface holdings and expense ratios, and even standard equities get more aggressive web search coverage. The deprecated model and stale landing page data are already fixed; this phase improves research depth and output quality before public deployment.
+
+**Problem being solved**: Search queries in `anthropic-search.ts` are generic stock prompts — they ask for "news, SEC 10-K/10-Q, analyst ratings, social sentiment" regardless of what the ticker actually is. For a pre-merger SPAC like ETHM, the merger target, S-4 proxy filing, trust NAV, and shareholder vote date are the most important facts — but none of the current prompts surface them. The `max_uses: 3` web search cap also limits coverage for fast-moving or niche situations.
+
+**Architecture**:
+- `src/lib/data/security-type.ts`: `detectSecurityType(ticker, quote): SecurityType` — classify as `equity | spac | etf | adr | preferred | crypto | unknown` using Yahoo Finance quote fields (`quoteType`, `longName`, company name keywords)
+- `src/lib/data/anthropic-search.ts`: each fetch function receives `securityType` and branches prompt logic:
+  - **SPAC**: news query targets merger agreement, PIPE investors, vote date, redemption deadline; SEC query targets S-4/DEF 14A proxy filings (not 10-K/10-Q); analyst query skips if pre-merger (no coverage); social query targets merger speculation
+  - **ETF**: fundamentals query targets AUM, expense ratio, top holdings, tracking index; SEC query targets N-CEN/N-PORT filings; analyst query targets ETF-specific commentary
+  - **Equity (default)**: current queries with `max_uses` bumped from 3 to 5 for news and analyst searches
+- `src/lib/data/source-package.ts`: calls `detectSecurityType` before parallel data collection; passes type to each fetch function; adds `security_type` field to `SourcePackage`
+- `scripts/notebooklm_research.py`: reads `security_type` from source package; adds type-specific preamble to structured questions so Gemini understands the instrument context
+
+**Depends on**: Phase 6
+**Requirements**: RQ-01, RQ-02, RQ-03, RQ-04
+**Success Criteria** (what must be TRUE):
+  1. ETHM research output mentions the merger target, expected vote/close date, and trust NAV — information that currently goes missing
+  2. An ETF ticker (e.g., QQQ) research output mentions holdings, expense ratio, and tracking index — not "SEC 10-K filings" that don't exist for ETFs
+  3. A standard equity (AAPL, NVDA) research output is at least as good as today — no regression
+  4. Security type is logged in the SourcePackage and visible in the research report (e.g., "Security Type: SPAC")
+**Plans:** 0 plans (run /gsd:plan-phase 7 to break down)
+
+Plans:
+- [ ] TBD
+
+### Phase 8: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
 
 **Goal:** [To be planned]
 **Requirements**: TBD
-**Depends on:** Phase 6
+**Depends on:** Phase 7
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [ ] TBD (run /gsd:plan-phase 8 to break down)
 
-### Phase 8: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
+### Phase 9: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
 
 **Goal**: Any ticker a user enters returns complete, populated market data. Yahoo-finance2 is the primary source but automatically falls back to secondary sources (Alpha Vantage free tier, Financial Modeling Prep free tier, Anthropic web search extraction) when fields are missing or the primary call fails — so major stocks like AAPL never produce empty report sections.
 
@@ -177,7 +205,7 @@ Plans:
 - Missing fields after all fallbacks are explicitly marked `{ value: null, unavailable: true }` — sections show "Data unavailable" instead of rendering empty
 - No API keys required for free tiers in local mode; optional env vars `ALPHA_VANTAGE_API_KEY` and `FMP_API_KEY` unlock higher rate limits
 
-**Depends on**: Phase 3 (report rendering)
+**Depends on**: Phase 8 (public deployment)
 **Requirements**: DATA-RELIABLE-01, DATA-RELIABLE-02, DATA-RELIABLE-03
 **Success Criteria** (what must be TRUE):
   1. AAPL, TSLA, NVDA, and 10 other major tickers all produce fully-populated report sections with no blank fields
@@ -185,12 +213,12 @@ Plans:
   3. Report shows source attribution per data field when a fallback was used (e.g., "via Alpha Vantage")
   4. Tickers with genuinely unavailable data (small-cap, OTC) display "Data unavailable" explicitly rather than blank sections
   5. Fallback chain completes within 10 seconds total — no single source blocks the pipeline
-**Plans:** 0 plans (run /gsd:plan-phase 8 to break down)
+**Plans:** 0 plans (run /gsd:plan-phase 9 to break down)
 
 Plans:
 - [ ] TBD
 
-### Phase 9: Public Sentiment Layer — X, YouTube, Reddit & Social Signal Ingestion
+### Phase 10: Public Sentiment Layer — X, YouTube, Reddit & Social Signal Ingestion
 
 **Goal**: The research report gains a dedicated Public Sentiment section sourced from what real people — not analysts — are saying about the ticker on X (Twitter), YouTube, Reddit, and StockTwits. These sources are gathered automatically and fed into NotebookLM alongside the existing analyst/news data so Gemini can synthesize crowd sentiment as a distinct signal.
 
@@ -208,7 +236,7 @@ Plans:
 - `AnalysisResult` schema gains `publicSentiment: { summary, platforms: string[], bullishSignals: string[], bearishSignals: string[] }`
 - Report gains a new **Public Sentiment** section between Market Sentiment and Bullish Factors, showing platform breakdown and crowd tone
 
-**Depends on**: Phase 8 (reliable data foundation)
+**Depends on**: Phase 9 (reliable data foundation)
 **Requirements**: SOCIAL-01, SOCIAL-02, SOCIAL-03, SOCIAL-04
 **Success Criteria** (what must be TRUE):
   1. Report includes a Public Sentiment section with content from at least 2 of: X, YouTube, Reddit, StockTwits
@@ -217,7 +245,7 @@ Plans:
   4. Social sources are added to the NotebookLM notebook so Gemini synthesizes them grounded in actual posts/videos — not hallucinated
   5. For a high-attention ticker (AAPL, TSLA, GME), at least 5 social sources are surfaced per run
   6. Pipeline still completes within 60 seconds with social sources added
-**Plans:** 0 plans (run /gsd:plan-phase 9 to break down)
+**Plans:** 0 plans (run /gsd:plan-phase 10 to break down)
 
 Plans:
 - [ ] TBD
