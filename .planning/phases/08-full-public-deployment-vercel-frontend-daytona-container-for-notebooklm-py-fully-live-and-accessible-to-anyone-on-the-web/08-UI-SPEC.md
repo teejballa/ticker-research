@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-03-25
+revised: 2026-03-25
 ---
 
 # Phase 8 — UI Design Contract
@@ -21,8 +22,8 @@ created: 2026-03-25
 | Preset | not applicable |
 | Component library | none (hand-rolled components using Tailwind v4 utilities) |
 | Icon library | Material Symbols Outlined (Google Fonts CDN, loaded in `src/app/layout.tsx`) |
-| Body font | Inter (Google Fonts, weights 400/500/700/800/900) |
-| Mono font | JetBrains Mono (Google Fonts, weights 400/500/700) |
+| Body font | Inter (Google Fonts, weights 400/700) |
+| Mono font | JetBrains Mono (Google Fonts, weights 400/700) |
 
 Source: `src/app/layout.tsx`, `src/app/globals.css`
 
@@ -58,16 +59,23 @@ Source: `src/components/NavBar.tsx` (h-[44px]), `src/app/auth/signin/page.tsx` (
 
 ## Typography
 
+Two weights only: 400 (regular) and 700 (bold).
+
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
 | Body | 12px (text-xs) | 400 (regular) | 1.5 | Inter | Step descriptions, helper text, secondary info |
-| Label | 11px, tracking-widest, uppercase | 700 (bold) | 1.0 | Inter or JetBrains Mono | Section headers, status overlines, badge text |
-| Heading | 14px (text-sm) | 500–700 | 1.2 | Inter | Step titles, card headings, nav items |
-| Display | 18px (text-lg) | 900 | 1.0 | Inter | CIPHER wordmark, hero labels |
+| Label | 11px, tracking-widest, uppercase | 700 (bold) | 1.0 | Inter or JetBrains Mono | Section headers, status overlines, badge text, CTAs |
+| Heading | 14px (text-sm) | 700 (bold) | 1.2 | Inter | Step titles, card headings, nav items |
+| Display | 18px (text-lg) | 700 (bold) | 1.0 | Inter | CIPHER wordmark, hero labels |
+
+Weight consolidation notes (from checker revision):
+- Weight 500 removed: elements previously at 500 (heading, some nav items) shift to 700 bold.
+- Weight 900 removed: CIPHER wordmark (Display role) shifts from 900 to 700 — the terminal aesthetic is preserved; optical difference at 18px is negligible against the dark background.
+- Font loading in `src/app/layout.tsx` must declare only weights 400 and 700 for both Inter and JetBrains Mono.
 
 Notes:
 - Monospace (JetBrains Mono) is used for all terminal-style values: code blocks, ticker symbols, progress output lines, cookie/auth status text, identity email display.
-- Monospace label size is 10px–11px at font-bold, tracking-widest — consistent with the existing NavBar identity pattern (`text-[11px] tracking-widest`).
+- Monospace label size is 10px–11px at font-bold (700), tracking-widest — consistent with the existing NavBar identity pattern (`text-[11px] tracking-widest`).
 - No display sizes beyond 18px on the two new pages (onboarding, account) — these are functional flows, not marketing.
 
 Source: `src/app/globals.css` (--font-mono, --font-body), `src/components/NavBar.tsx` (text-[11px]), `src/app/auth/signin/page.tsx` (text-xs labels).
@@ -112,6 +120,8 @@ Phase 8 introduces three net-new UI surfaces. All must match the established ter
 
 **When shown:** User is authenticated via Google OAuth (NextAuth) but has no NotebookLM session stored in Neon DB. Redirected here before they can run analysis.
 
+**Focal point:** The active step container is the primary visual anchor. At any moment exactly one step is in the `active` state — its StepIndicator spinner and step-body copy draw the user's eye. The VNC iframe (when visible) is the secondary focal anchor; it occupies the full card width at 480px height and dominates the viewport below the step list.
+
 **Layout:** Full-page, centered card. Same shell as the existing `/auth/signin` page — `min-h-screen flex items-center justify-center` on `bg-surface`. Card is `w-96 max-sm:w-full max-sm:mx-4`.
 
 **Step sequence:**
@@ -133,6 +143,8 @@ Phase 8 introduces three net-new UI surfaces. All must match the established ter
 
 **When shown:** Accessible at all times via a new "Account" or "Settings" nav link (small, text-only, placed in the NavBar right cluster, same style as existing nav labels).
 
+**Focal point:** The NotebookLM Session status row is the primary visual anchor. When the session is expired, the amber `SESSION EXPIRED` label and the `RECONNECT NOTEBOOKLM →` accent button together form an attention unit that reads first. When the session is active, the teal `SESSION ACTIVE` label is the positive confirmation anchor and the eye rests there before scanning to the Identity section above it.
+
 **Layout:** Standard app layout (with NavBar). Content is a single centered card, `max-w-lg mx-auto mt-24 p-6 bg-surface-container border border-outline-variant/20`.
 
 **Sections:**
@@ -143,7 +155,7 @@ Section header style: `text-[9px] text-primary/50 tracking-[0.4em] mb-1` (matche
 2. **NotebookLM Connection** — overline: `NOTEBOOKLM SESSION`. Shows connection status:
    - Active: `SESSION ACTIVE` in secondary/teal, 11px mono
    - Expired/missing: `SESSION EXPIRED` in amber-400, 11px mono + "Reconnect NotebookLM" CTA button (same style as SetupWizard CONNECT ACCOUNT button: `bg-primary-container text-on-primary-container px-3 py-1 text-[10px] font-bold tracking-wider`)
-3. **Sign Out** (if applicable) — ghost button, destructive hover only (border-error/40, text-error/60 on hover), label: `SIGN OUT`
+3. **Sign Out** — ghost button, destructive hover only (border-error/40, text-error/60 on hover), label: `END SESSION`
 
 **No additional settings in Phase 8.** Account page is minimal — two status sections plus sign-out.
 
@@ -180,7 +192,7 @@ Error copy style: `text-xs text-error/70` for the message, `text-[10px] font-bol
 | Account page — connection overline | `NOTEBOOKLM SESSION` |
 | Account page — active status | `SESSION ACTIVE` |
 | Account page — expired status | `SESSION EXPIRED` |
-| Account page — sign-out button | `SIGN OUT` |
+| Account page — sign-out button | `END SESSION` |
 | NavBar link to account page | `ACCOUNT` (text-only, same style as existing NYSE/NASDAQ nav labels) |
 | Error: session expired | `NotebookLM session expired — reconnect your account to continue.` |
 | Error: container unreachable | `Analysis server unreachable. This is temporary — please try again.` |
@@ -191,7 +203,7 @@ Error copy style: `text-xs text-error/70` for the message, `text-[10px] font-bol
 | Sign-out confirmation | No confirmation modal — destructive action is sign-out, which is recoverable (user can sign back in). Ghost button with visual destructive hover is sufficient. |
 
 Destructive actions in Phase 8:
-- **Sign Out**: Ghost button, visual destructive hover (error/40 border, error/60 text). No confirmation modal — low severity, fully recoverable.
+- **End Session**: Ghost button labeled `END SESSION`, visual destructive hover (error/40 border, error/60 text). No confirmation modal — low severity, fully recoverable.
 - No other destructive actions.
 
 ---
@@ -215,7 +227,7 @@ Destructive actions in Phase 8:
 - If `nbmSessionActive: true`: show `SESSION ACTIVE` in teal, no CTA
 - If `nbmSessionActive: false`: show `SESSION EXPIRED` in amber, show `RECONNECT NOTEBOOKLM →` button
 - "Reconnect NotebookLM" click: navigates to `/setup` (reuses onboarding flow)
-- Sign out: calls `signOut()` from `next-auth/react`, redirects to `/auth/signin`
+- `END SESSION` click: calls `signOut()` from `next-auth/react`, redirects to `/auth/signin`
 - No optimistic updates — always fetch fresh state on mount
 
 ### Cloud Error States (in ResearchProgress)
@@ -256,6 +268,9 @@ No third-party UI registries are used in this project. All components are hand-r
 | Cloud error types (session expired, container unreachable, timeout) | `08-CONTEXT.md` implementation decisions |
 | "Reconnect NotebookLM" consistency requirement | `08-CONTEXT.md` — "Consistent UX — user never needs to navigate differently" |
 | No custom domain — Vercel default | `08-CONTEXT.md` go-live configuration |
+| Weight collapse to 400/700 | Checker revision 2026-03-25 — BLOCK on Dimension 4 |
+| Focal points for /setup and /account | Checker revision 2026-03-25 — Dimension 2 recommendation |
+| Sign-out label changed to END SESSION | Checker revision 2026-03-25 — Dimension 1 recommendation |
 
 ---
 
