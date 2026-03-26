@@ -183,13 +183,18 @@ Plans:
 
 ### Phase 8: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
 
-**Goal:** [To be planned]
+**Goal:** Wire the built app (Vercel frontend + Daytona container) into a fully publicly accessible product: provision infrastructure, solve web-context per-user NotebookLM auth via VNC browser stream, and ship a live multi-user deployment at ticker-research.vercel.app.
 **Requirements**: TBD
 **Depends on:** Phase 7
-**Plans:** 0 plans
+**Plans:** 6 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 8 to break down)
+- [ ] 08-01-PLAN.md — UserCredential Prisma model, AES-256-GCM credentials crypto lib, Wave 0 test stubs, devcontainer VNC deps
+- [ ] 08-02-PLAN.md — FastAPI container server (scripts/container_server.py) wrapping notebooklm_research.py with per-request temp file isolation
+- [ ] 08-03-PLAN.md — Vercel analysis route web-mode branch: reads source package + decrypts per-user NbLM credentials from Neon, forwards to Daytona container
+- [ ] 08-04-PLAN.md — /setup onboarding page (react-vnc VNC stream), /api/setup/nbm-auth POST/GET endpoints
+- [ ] 08-05-PLAN.md — /account settings page, NavBar ACCOUNT link, cloud error states in ResearchProgress, .env.local.example Phase 8 vars
+- [ ] 08-06-PLAN.md — Daytona workspace provisioning, Vercel deploy, production smoke test checkpoint
 
 ### Phase 9: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
 
