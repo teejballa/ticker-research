@@ -149,7 +149,7 @@ Phase 8 introduces three net-new UI surfaces. All must match the established ter
 
 **Sections:**
 
-Section header style: `text-[9px] text-primary/50 tracking-[0.4em] mb-1` (matches SetupWizard "SYSTEM INITIALIZATION" overline — consistent language register).
+Section header style: `text-[11px] text-primary/50 tracking-widest uppercase mb-1` (Label tier — matches SetupWizard "SYSTEM INITIALIZATION" overline language register; reduced opacity preserved).
 
 1. **Identity** — overline: `CONNECTED ACCOUNT`. Shows userEmail (from NextAuth session) in mono, 12px, on-surface.
 2. **NotebookLM Connection** — overline: `NOTEBOOKLM SESSION`. Shows connection status:
@@ -168,8 +168,8 @@ Section header style: `text-[9px] text-primary/50 tracking-[0.4em] mb-1` (matche
 | Error Type | Copy | Action |
 |------------|------|--------|
 | NbLM session expired | "NotebookLM session expired — reconnect your account to continue." | Button: `RECONNECT ACCOUNT →` (links to `/account`) |
-| Container unreachable | "Analysis server unreachable. This is temporary — please try again." | Button: `TRY AGAIN →` (retries the analysis call) |
-| Analysis timeout | "Analysis is taking longer than expected. Your research will resume — or try again." | Button: `TRY AGAIN →` |
+| Container unreachable | "Analysis server unreachable. This is temporary — please try again." | Button: `RETRY ANALYSIS →` (retries the analysis call) |
+| Analysis timeout | "Analysis is taking longer than expected. Your research will resume — or try again." | Button: `RETRY ANALYSIS →` |
 | Unknown error | "Analysis failed. If this continues, reconnect your account." | Button: `RECONNECT ACCOUNT →` |
 
 Error copy style: `text-xs text-error/70` for the message, `text-[10px] font-bold tracking-widest` for the action button (ghost style with error/40 border on hover). Matches the existing SetupWizard error pattern.
@@ -201,6 +201,7 @@ Error copy style: `text-xs text-error/70` for the message, `text-[10px] font-bol
 | Empty state (account — no session) | `No NotebookLM session found. Connect your account to enable research.` |
 | Onboarding success redirect | (No copy — auto-redirect to `/` after 2s with ✓ step state) |
 | Sign-out confirmation | No confirmation modal — destructive action is sign-out, which is recoverable (user can sign back in). Ghost button with visual destructive hover is sufficient. |
+| Error action — retry | `RETRY ANALYSIS →` |
 
 Destructive actions in Phase 8:
 - **End Session**: Ghost button labeled `END SESSION`, visual destructive hover (error/40 border, error/60 text). No confirmation modal — low severity, fully recoverable.
@@ -234,7 +235,7 @@ Destructive actions in Phase 8:
 
 - Errors surface inline in the existing `<ResearchProgress />` step list area — no full-page takeover
 - Error message replaces the failed step body (same DOM location as existing error states in SetupWizard)
-- "TRY AGAIN →" retries the `POST /api/analysis/[ticker]` call from the beginning
+- "RETRY ANALYSIS →" retries the `POST /api/analysis/[ticker]` call from the beginning
 - "RECONNECT ACCOUNT →" navigates to `/account` — preserves the ticker in the URL so the user can return and resume
 
 ---
@@ -271,6 +272,8 @@ No third-party UI registries are used in this project. All components are hand-r
 | Weight collapse to 400/700 | Checker revision 2026-03-25 — BLOCK on Dimension 4 |
 | Focal points for /setup and /account | Checker revision 2026-03-25 — Dimension 2 recommendation |
 | Sign-out label changed to END SESSION | Checker revision 2026-03-25 — Dimension 1 recommendation |
+| 9px overline raised to 11px Label tier | Checker revision 2026-03-25 — BLOCK on Dimension 4 (5 sizes → 4 sizes) |
+| TRY AGAIN → renamed to RETRY ANALYSIS → | Checker revision 2026-03-25 — Dimension 1 recommendation (terminal label register) |
 
 ---
 
