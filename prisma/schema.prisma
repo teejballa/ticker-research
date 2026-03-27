@@ -22,3 +22,12 @@ model Report {
   @@index([user_id, analyzed_at(sort: Desc)])
   @@map("reports")
 }
+
+model UserCredential {
+  id               String   @id @default(uuid())
+  user_id          String   @unique
+  encrypted_state  String   @db.Text
+  updated_at       DateTime @updatedAt @db.Timestamptz
+
+  @@map("user_credentials")
+}
