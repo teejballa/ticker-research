@@ -147,7 +147,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
 | 7. Research Quality & Special Situation Coverage | 4/4 | Complete    | 2026-03-25 |
-| 8. Full Public Deployment | 1/6 | In Progress|  |
+| 8. Full Public Deployment | 2/6 | In Progress|  |
 | 9. Reliable Market Data | 0/? | Planned | |
 | 10. Public Sentiment Layer | 0/? | Planned | |
 
@@ -186,7 +186,7 @@ Plans:
 **Goal:** Wire the built app (Vercel frontend + Daytona container) into a fully publicly accessible product: provision infrastructure, solve web-context per-user NotebookLM auth via VNC browser stream, and ship a live multi-user deployment at ticker-research.vercel.app.
 **Requirements**: TBD
 **Depends on:** Phase 7
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 - [ ] 08-01-PLAN.md — UserCredential Prisma model, AES-256-GCM credentials crypto lib, Wave 0 test stubs, devcontainer VNC deps
