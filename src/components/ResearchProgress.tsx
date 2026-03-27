@@ -14,7 +14,39 @@ interface ResearchProgressProps {
   filePath: string;
   onComplete: (result: AnalysisResult) => void;
   onError: (message: string) => void;
+  onRetry?: () => void;
 }
+
+function classifyError(message: string): 'session-expired' | 'container-unreachable' | 'timeout' | 'unknown' {
+  const m = message.toLowerCase();
+  if (m.includes('notebooklm') && (m.includes('session') || m.includes('auth') || m.includes('expired') || m.includes('not connected'))) return 'session-expired';
+  if (m.includes('unreachable') || m.includes('connection') || m.includes('econnrefused') || m.includes('failed to fetch')) return 'container-unreachable';
+  if (m.includes('timeout') || m.includes('taking longer')) return 'timeout';
+  return 'unknown';
+}
+
+const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string }> = {
+  'session-expired': {
+    message: 'NotebookLM session expired — reconnect your account to continue.',
+    cta: 'RECONNECT ACCOUNT →',
+    ctaHref: '/account',
+  },
+  'container-unreachable': {
+    message: 'Analysis server unreachable. This is temporary — please try again.',
+    cta: 'RETRY ANALYSIS →',
+    ctaHref: '',
+  },
+  'timeout': {
+    message: 'Analysis is taking longer than expected. Your research will resume — or try again.',
+    cta: 'RETRY ANALYSIS →',
+    ctaHref: '',
+  },
+  'unknown': {
+    message: 'Analysis failed. If this continues, reconnect your account.',
+    cta: 'RECONNECT ACCOUNT →',
+    ctaHref: '/account',
+  },
+};
 
 interface Step {
   label: string;
@@ -72,12 +104,14 @@ export default function ResearchProgress({
   filePath,
   onComplete,
   onError,
+  onRetry,
 }: ResearchProgressProps) {
-  const [steps, setSteps]       = useState<Step[]>(INITIAL_STEPS);
-  const [logLines, setLogLines] = useState<string[]>([]);
-  const startRef                = useRef(Date.now());
-  const onCompleteRef           = useRef(onComplete);
-  const onErrorRef              = useRef(onError);
+  const [steps, setSteps]           = useState<Step[]>(INITIAL_STEPS);
+  const [logLines, setLogLines]     = useState<string[]>([]);
+  const [errorMessage, setErrorMsg] = useState<string | null>(null);
+  const startRef                    = useRef(Date.now());
+  const onCompleteRef               = useRef(onComplete);
+  const onErrorRef                  = useRef(onError);
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { onErrorRef.current    = onError;    }, [onError]);
@@ -95,7 +129,9 @@ export default function ResearchProgress({
         });
 
         if (!response.ok || !response.body) {
-          onErrorRef.current('Failed to connect to analysis service.');
+          const msg = 'Failed to connect to analysis service.';
+          setErrorMsg(msg);
+          onErrorRef.current(msg);
           return;
         }
 
@@ -143,6 +179,7 @@ export default function ResearchProgress({
                 onCompleteRef.current(event.data);
                 return;
               } else if (event.type === 'error') {
+                setErrorMsg(event.message);
                 onErrorRef.current(event.message);
                 return;
               }
@@ -153,7 +190,9 @@ export default function ResearchProgress({
         }
       } catch (err) {
         if (!controller.signal.aborted) {
-          onErrorRef.current(err instanceof Error ? err.message : 'Analysis failed unexpectedly.');
+          const msg = err instanceof Error ? err.message : 'Analysis failed unexpectedly.';
+          setErrorMsg(msg);
+          onErrorRef.current(msg);
         }
       }
     }
@@ -242,6 +281,35 @@ export default function ResearchProgress({
             })}
           </div>
         </div>
+
+        {/* Inline cloud error state */}
+        {errorMessage && (() => {
+          const kind = classifyError(errorMessage);
+          const { message, cta, ctaHref } = ERROR_COPY[kind];
+          return (
+            <div className="relative z-10 w-full max-w-md px-6 mt-3">
+              <p className="text-xs text-error/70">{message}</p>
+              <div className="mt-2">
+                {ctaHref ? (
+                  <a
+                    href={ctaHref}
+                    className="text-[10px] font-bold tracking-widest uppercase text-error/60 border border-error/40 px-2 py-1 hover:text-error transition-colors"
+                  >
+                    {cta}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="text-[10px] font-bold tracking-widest uppercase text-error/60 border border-error/40 px-2 py-1 hover:text-error transition-colors"
+                  >
+                    {cta}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
       </main>
 
