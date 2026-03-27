@@ -15,7 +15,7 @@ interface StatusResponse {
 
 export default function AccountPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session } = useSession() ?? {};
   const [status, setStatus] = useState<StatusResponse | null>(null);
 
   useEffect(() => {
