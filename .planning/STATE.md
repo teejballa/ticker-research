@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-03-27T02:43:49.282Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-03-27T02:48:58.594Z"
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 34
-  completed_plans: 30
+  completed_plans: 31
 ---
 
 # Project State
@@ -77,6 +77,7 @@ Plan: 1 of 6
 | Phase 07 P04 | 15 | 4 tasks | 3 files |
 | Phase 08 P01 | 5 | 2 tasks | 7 files |
 | Phase 08 P02 | 15 | 2 tasks | 2 files |
+| Phase 08 P03 | 172 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,8 @@ Recent decisions affecting current work:
 - [Phase 08]: CREDENTIAL_ENCRYPTION_KEY validated at call time not module load — allows test env var setup before import
 - [Phase 08]: NOTEBOOKLM_AUTH_JSON env var used for per-user storage_state isolation — avoids modifying notebooklm_research.py argv interface
 - [Phase 08]: Container server under 115 lines — no business logic, only HTTP adapter over existing Python script
+- [Phase 08]: Replace DEPLOYMENT_MODE=cloud stub with DEPLOYMENT_MODE=web — cloud branch sent filePath cross-network; web branch reads content from disk and sends JSON to Daytona
+- [Phase 08]: All web-mode imports inside dynamic await import() — prevents Prisma/NextAuth from loading for local users without DATABASE_URL
 
 ### Roadmap Evolution
 
@@ -176,6 +179,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T02:43:41.010Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-03-27T02:48:58.591Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
