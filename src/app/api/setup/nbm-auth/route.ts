@@ -40,10 +40,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: text }, { status: res.status });
   }
 
-  const data = await res.json() as { streamUrl?: string };
-  // streamUrl is the wss:// websockify endpoint for the VNC stream
-  // e.g. wss://6080-{sandboxId}.proxy.daytona.works
-  return NextResponse.json(data);
+  await res.json(); // consume body (container returns {"started": true})
+  // The VNC WebSocket URL is pre-configured as an env var (set at sandbox creation time)
+  const streamUrl = process.env.DAYTONA_VNC_URL;
+  if (!streamUrl) {
+    return NextResponse.json({ error: 'VNC stream URL not configured' }, { status: 500 });
+  }
+  return NextResponse.json({ streamUrl });
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

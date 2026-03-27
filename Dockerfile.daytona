@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+# Install Node.js 18, system deps for Playwright/Chromium, VNC
+RUN apt-get update && apt-get install -y \
+    curl gnupg ca-certificates \
+    x11vnc xvfb \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python deps (notebooklm-py, FastAPI, etc.)
+COPY scripts/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && playwright install --with-deps chromium
+
+# Copy the scripts
+COPY scripts/ ./scripts/
+
+EXPOSE 8080 6080
+
+CMD ["python3", "scripts/container_server.py"]

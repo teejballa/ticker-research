@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.planning
+tests
+prisma/migrations
+src
+public
+coverage
+.env*
+*.log
+.DS_Store

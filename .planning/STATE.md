@@ -174,6 +174,7 @@ Recent decisions affecting current work:
 
 - Phase 6 added: Full Web Deployment — Vercel, Database, Auth, Report & Account Persistence
 - Phase 7 added: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
+- Phase 11 (GCR migration) promoted to Phase 9 (next after 8): Daytona/AWS IPs blocked by Google; GCR runs on Google infrastructure and can reach notebooklm.google.com — must happen before deployment works. Previous phases 9/10 shifted to 10/11.
 
 ### Pending Todos
 

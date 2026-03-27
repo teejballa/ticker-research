@@ -148,8 +148,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
 | 7. Research Quality & Special Situation Coverage | 4/4 | Complete    | 2026-03-25 |
 | 8. Full Public Deployment | 5/6 | In Progress|  |
-| 9. Reliable Market Data | 0/? | Planned | |
-| 10. Public Sentiment Layer | 0/? | Planned | |
+| 9. Migrate Container to Google Cloud Run | 0/? | Planned | |
+| 10. Reliable Market Data | 0/? | Planned | |
+| 11. Public Sentiment Layer | 0/? | Planned | |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
@@ -196,7 +197,17 @@ Plans:
 - [ ] 08-05-PLAN.md — /account settings page, NavBar ACCOUNT link, cloud error states in ResearchProgress, .env.local.example Phase 8 vars
 - [ ] 08-06-PLAN.md — Daytona workspace provisioning, Vercel deploy, production smoke test checkpoint
 
-### Phase 9: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
+### Phase 9: Migrate Container from Daytona to Google Cloud Run
+
+**Goal:** Migrate the `notebooklm-py` research container from Daytona to Google Cloud Run so the container runs on Google infrastructure and can reach `notebooklm.google.com` — Daytona containers run on AWS IPs which are blocked by Google's NotebookLM service.
+**Requirements**: TBD
+**Depends on:** Phase 8
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 9 to break down)
+
+### Phase 10: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
 
 **Goal**: Any ticker a user enters returns complete, populated market data. Yahoo-finance2 is the primary source but automatically falls back to secondary sources (Alpha Vantage free tier, Financial Modeling Prep free tier, Anthropic web search extraction) when fields are missing or the primary call fails — so major stocks like AAPL never produce empty report sections.
 
@@ -213,7 +224,7 @@ Plans:
 - Missing fields after all fallbacks are explicitly marked `{ value: null, unavailable: true }` — sections show "Data unavailable" instead of rendering empty
 - No API keys required for free tiers in local mode; optional env vars `ALPHA_VANTAGE_API_KEY` and `FMP_API_KEY` unlock higher rate limits
 
-**Depends on**: Phase 8 (public deployment)
+**Depends on**: Phase 9
 **Requirements**: DATA-RELIABLE-01, DATA-RELIABLE-02, DATA-RELIABLE-03
 **Success Criteria** (what must be TRUE):
   1. AAPL, TSLA, NVDA, and 10 other major tickers all produce fully-populated report sections with no blank fields
@@ -221,12 +232,12 @@ Plans:
   3. Report shows source attribution per data field when a fallback was used (e.g., "via Alpha Vantage")
   4. Tickers with genuinely unavailable data (small-cap, OTC) display "Data unavailable" explicitly rather than blank sections
   5. Fallback chain completes within 10 seconds total — no single source blocks the pipeline
-**Plans:** 0 plans (run /gsd:plan-phase 9 to break down)
+**Plans:** 0 plans (run /gsd:plan-phase 10 to break down)
 
 Plans:
 - [ ] TBD
 
-### Phase 10: Public Sentiment Layer — X, YouTube, Reddit & Social Signal Ingestion
+### Phase 11: Public Sentiment Layer — X, YouTube, Reddit & Social Signal Ingestion
 
 **Goal**: The research report gains a dedicated Public Sentiment section sourced from what real people — not analysts — are saying about the ticker on X (Twitter), YouTube, Reddit, and StockTwits. These sources are gathered automatically and fed into NotebookLM alongside the existing analyst/news data so Gemini can synthesize crowd sentiment as a distinct signal.
 
@@ -244,7 +255,7 @@ Plans:
 - `AnalysisResult` schema gains `publicSentiment: { summary, platforms: string[], bullishSignals: string[], bearishSignals: string[] }`
 - Report gains a new **Public Sentiment** section between Market Sentiment and Bullish Factors, showing platform breakdown and crowd tone
 
-**Depends on**: Phase 9 (reliable data foundation)
+**Depends on**: Phase 10
 **Requirements**: SOCIAL-01, SOCIAL-02, SOCIAL-03, SOCIAL-04
 **Success Criteria** (what must be TRUE):
   1. Report includes a Public Sentiment section with content from at least 2 of: X, YouTube, Reddit, StockTwits
@@ -253,7 +264,7 @@ Plans:
   4. Social sources are added to the NotebookLM notebook so Gemini synthesizes them grounded in actual posts/videos — not hallucinated
   5. For a high-attention ticker (AAPL, TSLA, GME), at least 5 social sources are surfaced per run
   6. Pipeline still completes within 60 seconds with social sources added
-**Plans:** 0 plans (run /gsd:plan-phase 10 to break down)
+**Plans:** 0 plans (run /gsd:plan-phase 11 to break down)
 
 Plans:
 - [ ] TBD
