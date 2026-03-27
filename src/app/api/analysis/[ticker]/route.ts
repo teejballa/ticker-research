@@ -25,8 +25,22 @@ export async function POST(
   const { ticker } = await params;
   const { filePath } = await request.json() as { filePath: string };
 
-  // Cloud deployment branch: proxy to the Daytona container
-  if (process.env.DEPLOYMENT_MODE === 'cloud') {
+  // Web deployment branch: authenticate user, retrieve per-user NbLM credentials from Neon,
+  // decrypt them, and forward source package content + decrypted storage state to Daytona container.
+  // Supersedes the old DEPLOYMENT_MODE=cloud branch (which incorrectly forwarded a filePath
+  // that is only accessible on Vercel's ephemeral filesystem, not cross-network).
+  if (process.env.DEPLOYMENT_MODE === 'web') {
+    // All imports are dynamic — prevents Prisma/NextAuth from loading in local mode
+    const { getServerSession } = await import('next-auth/next');
+    const { authOptions } = await import('@/lib/auth');
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return new Response(
+        JSON.stringify({ type: 'error', message: 'Not authenticated' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const containerUrl = process.env.DAYTONA_CONTAINER_URL;
     if (!containerUrl) {
       return new Response(
@@ -35,10 +49,30 @@ export async function POST(
       );
     }
 
-    const upstream = await fetch(`${containerUrl}/api/analysis/${ticker}`, {
+    // Read source package content from Vercel's ephemeral filesystem
+    const { readFile } = await import('fs/promises');
+    const sourcePackage = JSON.parse(await readFile(filePath, 'utf-8'));
+
+    // Load and decrypt per-user NbLM credentials from Neon
+    const { getCredential } = await import('@/lib/user-credential-db');
+    const cred = await getCredential(session.user.email);
+    if (!cred) {
+      return new Response(
+        JSON.stringify({ type: 'error', message: 'NotebookLM account not connected.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    const { decrypt } = await import('@/lib/credentials');
+    const storageState = JSON.parse(decrypt(cred.encrypted_state));
+
+    // Forward to Daytona container — container streams PROGRESS/RESULT lines as SSE
+    const upstream = await fetch(`${containerUrl}/analyze/${ticker}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filePath }),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-daytona-secret': process.env.DAYTONA_SECRET!,
+      },
+      body: JSON.stringify({ sourcePackage, storageState }),
     });
 
     return new Response(upstream.body, {
