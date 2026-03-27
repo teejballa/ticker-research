@@ -3,13 +3,17 @@
 Daytona container server — FastAPI SSE wrapper for notebooklm_research.py.
 Receives POST /analyze/{ticker} with sourcePackage + storageState JSON.
 Writes per-request temp files, spawns notebooklm_research.py, streams stdout as SSE.
-DELETE /vnc-start and GET /vnc-status handled in a later plan (Plan 04).
+POST /vnc-start — starts Xvfb + x11vnc + websockify + Playwright Chromium on virtual display.
+GET /vnc-status — polls for NotebookLM login completion and returns captured storage_state.
+DELETE /vnc-stop — tears down active VNC session.
 """
 import asyncio
 import json
 import os
+import subprocess
 import tempfile
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -17,6 +21,72 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 SECRET = os.environ.get("DAYTONA_SECRET", "")
+
+
+# ---------------------------------------------------------------------------
+# VNC session state
+# ---------------------------------------------------------------------------
+
+@dataclass
+class VncSession:
+    display: Any = None
+    x11vnc_proc: Any = None
+    wsockify_proc: Any = None
+    playwright: Any = None
+    browser: Any = None
+    context: Any = None
+    page: Any = None
+    captured_state: str | None = None
+    active: bool = False
+
+
+_vnc_session = VncSession()
+
+
+async def _stop_vnc() -> None:
+    """Tear down any active VNC session.  Errors in individual steps are swallowed
+    so that one failure does not prevent the others from cleaning up."""
+    global _vnc_session
+    # Kill websockify
+    try:
+        if _vnc_session.wsockify_proc and _vnc_session.wsockify_proc.poll() is None:
+            _vnc_session.wsockify_proc.kill()
+    except Exception:
+        pass
+    # Kill x11vnc
+    try:
+        if _vnc_session.x11vnc_proc and _vnc_session.x11vnc_proc.poll() is None:
+            _vnc_session.x11vnc_proc.kill()
+    except Exception:
+        pass
+    # Close Playwright browser + context
+    try:
+        if _vnc_session.page:
+            await _vnc_session.page.close()
+    except Exception:
+        pass
+    try:
+        if _vnc_session.context:
+            await _vnc_session.context.close()
+    except Exception:
+        pass
+    try:
+        if _vnc_session.browser:
+            await _vnc_session.browser.close()
+    except Exception:
+        pass
+    try:
+        if _vnc_session.playwright:
+            await _vnc_session.playwright.stop()
+    except Exception:
+        pass
+    # Stop virtual display
+    try:
+        if _vnc_session.display:
+            _vnc_session.display.stop()
+    except Exception:
+        pass
+    _vnc_session = VncSession()
 
 app = FastAPI(title="Ticker Research Container Server")
 
@@ -27,7 +97,7 @@ ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[ALLOWED_ORIGIN],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -117,8 +187,84 @@ async def vnc_start(
     x_daytona_secret: str | None = Header(None),
 ) -> dict[str, Any]:
     _check_secret(x_daytona_secret)
-    # TODO: Start Xvfb + x11vnc + websockify; open Chromium to notebooklm.google.com
-    # Returns streamUrl for noVNC WebSocket connection
+
+    global _vnc_session
+
+    # Clean up any existing session before starting a new one.
+    await _stop_vnc()
+
+    try:
+        from pyvirtualdisplay import Display  # type: ignore[import]
+        from playwright.async_api import async_playwright
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=f"Missing dependency: {exc}") from exc
+
+    # 1. Start virtual display
+    display = Display(visible=False, size=(1280, 960), backend="xvfb")
+    display.start()
+    display_id = f":{display.display}"
+    os.environ["DISPLAY"] = display_id
+
+    # 2. Launch Playwright Chromium non-headless on that virtual display
+    pw = await async_playwright().start()
+    try:
+        browser = await pw.chromium.launch(
+            headless=False,
+            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+            env={**os.environ, "DISPLAY": display_id},
+        )
+    except Exception as exc:
+        await pw.stop()
+        display.stop()
+        raise HTTPException(status_code=503, detail=f"Chromium launch failed: {exc}") from exc
+
+    context = await browser.new_context(viewport={"width": 1280, "height": 960})
+    page = await context.new_page()
+    await page.goto("https://notebooklm.google.com")
+
+    # 3. Start x11vnc (attach to virtual display, expose on port 5900)
+    try:
+        x11vnc_proc = subprocess.Popen(
+            ["x11vnc", "-display", display_id, "-rfbport", "5900",
+             "-nopw", "-forever", "-quiet", "-bg"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError as exc:
+        await context.close()
+        await browser.close()
+        await pw.stop()
+        display.stop()
+        raise HTTPException(status_code=503, detail="x11vnc not found") from exc
+
+    # 4. Start websockify (bridge VNC port 5900 → WebSocket port 6080)
+    try:
+        wsockify_proc = subprocess.Popen(
+            ["websockify", "0.0.0.0:6080", "localhost:5900"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError as exc:
+        x11vnc_proc.kill()
+        await context.close()
+        await browser.close()
+        await pw.stop()
+        display.stop()
+        raise HTTPException(status_code=503, detail="websockify not found") from exc
+
+    # Store session globally
+    _vnc_session = VncSession(
+        display=display,
+        x11vnc_proc=x11vnc_proc,
+        wsockify_proc=wsockify_proc,
+        playwright=pw,
+        browser=browser,
+        context=context,
+        page=page,
+        captured_state=None,
+        active=True,
+    )
+
     sandbox_id = os.environ.get("DAYTONA_SANDBOX_ID", "local")
     stream_url = f"wss://6080-{sandbox_id}.proxy.daytona.works"
     return {"streamUrl": stream_url}
@@ -129,15 +275,59 @@ async def vnc_status(
     x_daytona_secret: str | None = Header(None),
 ) -> dict[str, Any]:
     _check_secret(x_daytona_secret)
-    # TODO: Check if notebooklm login completed (storage_state.json populated)
-    # Returns {captured: bool, encryptedState?: str}
-    storage_path = os.environ.get("NOTEBOOKLM_AUTH_JSON",
-                                   os.path.expanduser("~/.notebooklm/storage_state.json"))
-    captured = os.path.exists(storage_path) and os.path.getsize(storage_path) > 100
-    if captured:
-        with open(storage_path) as f:
-            return {"captured": True, "encryptedState": f.read()}
+
+    if not _vnc_session.active:
+        return {"captured": False}
+
+    # If login was already captured in a previous poll, return immediately.
+    if _vnc_session.captured_state is not None:
+        return {"captured": True, "encryptedState": _vnc_session.captured_state}
+
+    # Inspect current browser state
+    try:
+        state = await _vnc_session.context.storage_state()
+    except Exception:
+        return {"captured": False}
+
+    google_cookies = [
+        c for c in state.get("cookies", [])
+        if ".google.com" in c.get("domain", "")
+    ]
+    nbm_cookies = [
+        c for c in state.get("cookies", [])
+        if "notebooklm" in c.get("domain", "") or "notebooklm" in c.get("name", "")
+    ]
+
+    try:
+        url = _vnc_session.page.url
+    except Exception:
+        url = ""
+
+    logged_in = (
+        len(google_cookies) >= 3
+        or len(nbm_cookies) > 0
+        or (
+            "notebooklm.google.com" in url
+            and "ServiceLogin" not in url
+            and "accounts.google.com" not in url
+        )
+    )
+
+    if logged_in:
+        captured_state = json.dumps(state)
+        _vnc_session.captured_state = captured_state
+        return {"captured": True, "encryptedState": captured_state}
+
     return {"captured": False}
+
+
+@app.delete("/vnc-stop")
+async def vnc_stop(
+    x_daytona_secret: str | None = Header(None),
+) -> dict[str, str]:
+    _check_secret(x_daytona_secret)
+    await _stop_vnc()
+    return {"status": "stopped"}
 
 
 if __name__ == "__main__":
