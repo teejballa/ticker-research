@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 08-04-PLAN.md
-last_updated: "2026-03-27T02:54:16.209Z"
+stopped_at: Completed 08-05-PLAN.md
+last_updated: "2026-03-27T02:59:34.840Z"
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 34
-  completed_plans: 32
+  completed_plans: 33
 ---
 
 # Project State
@@ -79,6 +79,7 @@ Plan: 1 of 6
 | Phase 08 P02 | 15 | 2 tasks | 2 files |
 | Phase 08 P03 | 172 | 2 tasks | 4 files |
 | Phase 08 P04 | 156 | 2 tasks | 5 files |
+| Phase 08 P05 | 6 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,9 @@ Recent decisions affecting current work:
 - [Phase 08]: All web-mode imports inside dynamic await import() — prevents Prisma/NextAuth from loading for local users without DATABASE_URL
 - [Phase 08]: react-vnc VncScreen used directly with scaleViewport; card width expands to max-w-xl when VNC active
 - [Phase 08]: OAuth passthrough attempt uses 5s AbortController timeout before falling through to VNC stream flow
+- [Phase 08]: Account page fetches /api/setup/status on mount for nbmSessionActive — no separate endpoint needed
+- [Phase 08]: ResearchProgress tracks errorMessage state internally, classifies via classifyError(), renders inline
+- [Phase 08]: ALLOWED_ORIGIN documented only in Daytona container section — not in Vercel checklist to prevent operator error
 
 ### Roadmap Evolution
 
@@ -182,6 +186,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T02:54:16.206Z
-Stopped at: Completed 08-04-PLAN.md
+Last session: 2026-03-27T02:59:34.838Z
+Stopped at: Completed 08-05-PLAN.md
 Resume file: None
