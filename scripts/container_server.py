@@ -10,6 +10,7 @@ import json
 import os
 import tempfile
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -108,6 +109,35 @@ async def analyze(
             "Connection": "keep-alive",
         },
     )
+
+
+@app.post("/vnc-start")
+async def vnc_start(
+    request: Request,
+    x_daytona_secret: str | None = Header(None),
+) -> dict[str, Any]:
+    _check_secret(x_daytona_secret)
+    # TODO: Start Xvfb + x11vnc + websockify; open Chromium to notebooklm.google.com
+    # Returns streamUrl for noVNC WebSocket connection
+    sandbox_id = os.environ.get("DAYTONA_SANDBOX_ID", "local")
+    stream_url = f"wss://6080-{sandbox_id}.proxy.daytona.works"
+    return {"streamUrl": stream_url}
+
+
+@app.get("/vnc-status")
+async def vnc_status(
+    x_daytona_secret: str | None = Header(None),
+) -> dict[str, Any]:
+    _check_secret(x_daytona_secret)
+    # TODO: Check if notebooklm login completed (storage_state.json populated)
+    # Returns {captured: bool, encryptedState?: str}
+    storage_path = os.environ.get("NOTEBOOKLM_AUTH_JSON",
+                                   os.path.expanduser("~/.notebooklm/storage_state.json"))
+    captured = os.path.exists(storage_path) and os.path.getsize(storage_path) > 100
+    if captured:
+        with open(storage_path) as f:
+            return {"captured": True, "encryptedState": f.read()}
+    return {"captured": False}
 
 
 if __name__ == "__main__":
