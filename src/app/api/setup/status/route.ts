@@ -113,12 +113,23 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
   // Web mode: return session email, skip all local setup checks (irrelevant in web mode)
   if (process.env.DEPLOYMENT_MODE === 'web') {
     const session = await getServerSession(authOptions);
+    let nbmSessionActive = false;
+    if (session?.user?.email) {
+      try {
+        const { getCredential } = await import('@/lib/user-credential-db');
+        const cred = await getCredential(session.user.email);
+        nbmSessionActive = cred !== null;
+      } catch {
+        nbmSessionActive = false;
+      }
+    }
     return NextResponse.json({
       userEmail: session?.user?.email ?? null,
       pythonOk: true,
       notebooklmOk: true,
       authOk: !!session?.user?.email,
       allOk: !!session?.user?.email,
+      nbmSessionActive,
     });
   }
 

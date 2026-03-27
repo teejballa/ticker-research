@@ -65,6 +65,12 @@ export default function NavBar({
             {navIdentityText}
           </span>
           <Link
+            href="/account"
+            className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
+          >
+            ACCOUNT
+          </Link>
+          <Link
             href="/"
             className="bg-primary-container text-on-primary-container px-3 py-1 text-xs font-bold rounded hover:bg-primary transition-colors active:scale-95 duration-100"
           >
