@@ -4,8 +4,8 @@
   "features": {
     "ghcr.io/devcontainers/features/node:1": { "version": "18" }
   },
-  "postCreateCommand": "pip install -r scripts/requirements.txt && playwright install --with-deps chromium && npm install",
-  "forwardPorts": [3000, 8080],
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y x11vnc xvfb && pip install -r scripts/requirements.txt && playwright install --with-deps chromium && npm install",
+  "forwardPorts": [3000, 8080, 6080],
   "remoteEnv": {
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
   }
