@@ -1,1 +1,6 @@
 notebooklm-py[browser]==0.3.4
+fastapi>=0.115.0,<0.116
+uvicorn[standard]>=0.34.0,<0.35
+websockify>=0.12.0,<0.13
+pyvirtualdisplay>=3.0,<4.0
+python-multipart>=0.0.20,<0.1
