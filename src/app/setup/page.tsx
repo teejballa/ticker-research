@@ -1,11 +1,15 @@
 'use client';
+
+export const dynamic = 'force-dynamic';
+
 // src/app/setup/page.tsx
 // Web-mode NbLM onboarding page.
 // Shown to authenticated users who have no NbLM session stored.
 // Flow: check status → attempt OAuth passthrough (will fail) → show VNC stream → poll until captured → redirect.
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { VncScreen } from 'react-vnc';
+import nextDynamic from 'next/dynamic';
+const VncScreen = nextDynamic(() => import('react-vnc').then(m => m.VncScreen), { ssr: false });
 
 type SetupStep = 'oauth-checking' | 'oauth-attempting' | 'vnc-active' | 'complete' | 'error';
 type StepState = 'pending' | 'active' | 'complete' | 'error';
