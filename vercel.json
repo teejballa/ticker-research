@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "prisma migrate deploy && next build",
+  "buildCommand": "next build",
   "functions": {
     "src/app/api/analysis/**/*": {
       "maxDuration": 300

@@ -265,9 +265,7 @@ async def vnc_start(
         active=True,
     )
 
-    sandbox_id = os.environ.get("DAYTONA_SANDBOX_ID", "local")
-    stream_url = f"wss://6080-{sandbox_id}.proxy.daytona.works"
-    return {"streamUrl": stream_url}
+    return {"started": True}
 
 
 @app.get("/vnc-status")
