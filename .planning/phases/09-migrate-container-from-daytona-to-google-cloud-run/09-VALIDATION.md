@@ -1,9 +1,9 @@
 ---
 phase: 9
 slug: migrate-container-from-daytona-to-google-cloud-run
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: ready
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-28
 ---
 
@@ -17,45 +17,41 @@ created: 2026-03-28
 
 | Property | Value |
 |----------|-------|
-| **Framework** | pytest 7.x (Python) + Jest/manual (integration) |
-| **Config file** | `tests/conftest.py` (Wave 0 creates) |
-| **Quick run command** | `pytest tests/test_gcr_container.py -q` |
-| **Full suite command** | `pytest tests/ -q` |
-| **Estimated runtime** | ~30 seconds (unit); manual integration ~5-15 min |
+| **Framework** | grep (file inspection) + npm test (Jest) + manual smoke test |
+| **Config file** | N/A — no new test files; existing Jest suite covers route changes |
+| **Quick run command** | `npm test -- src/app/api/analysis/__tests__/route.test.ts` |
+| **Full suite command** | `npm test` |
+| **Estimated runtime** | ~30 seconds (automated); manual integration ~5-15 min |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `pytest tests/test_gcr_container.py -q`
-- **After every plan wave:** Run `pytest tests/ -q`
-- **Before `/gsd:verify-work`:** Full suite must be green
+- **After every task commit:** Run the task's `<automated>` verify command
+- **After every plan wave:** Run `npm test` (full suite)
+- **Before `/gsd:verify-work`:** Full suite must be green + manual smoke test passed
 - **Max feedback latency:** 60 seconds
 
 ---
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 9-01-01 | 01 | 1 | Dockerfile | build | `docker build -t gcr-test .` | ❌ W0 | ⬜ pending |
-| 9-01-02 | 01 | 1 | entrypoint | unit | `pytest tests/test_gcr_container.py::test_entrypoint -q` | ❌ W0 | ⬜ pending |
-| 9-02-01 | 02 | 1 | VNC WS proxy | integration | manual + curl | ❌ W0 | ⬜ pending |
-| 9-02-02 | 02 | 1 | /health endpoint | unit | `pytest tests/test_gcr_container.py::test_health -q` | ❌ W0 | ⬜ pending |
-| 9-03-01 | 03 | 2 | env var rename | unit | `grep -r "CONTAINER_" src/` | N/A | ⬜ pending |
-| 9-03-02 | 03 | 2 | header rename | unit | `grep -r "x-container-secret" src/` | N/A | ⬜ pending |
+| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
+|---------|------|------|-------------|-----------|-------------------|--------|
+| 9-01-T1 | 01 | 1 | Dockerfile multi-stage | grep | `grep -q "AS builder" Dockerfile && grep -q "AS runtime" Dockerfile && grep -q "Xvfb :99" entrypoint.sh && echo PASS` | pending |
+| 9-01-T2 | 01 | 1 | CONTAINER_SECRET rename in container_server.py | grep | `grep -c "DAYTONA_SECRET\|x_daytona_secret\|x-daytona-secret" scripts/container_server.py && echo FAIL \|\| echo PASS` | pending |
+| 9-02-T1 | 02 | 1 | DAYTONA_ rename in Vercel routes | grep | `grep -rn "DAYTONA_" src/app/api/ && echo FAIL \|\| echo PASS` | pending |
+| 9-02-T2 | 02 | 1 | Tests pass with CONTAINER_URL | npm test | `npm test -- src/app/api/analysis/__tests__/route.test.ts 2>&1 \| tail -20` | pending |
+| 9-03-T1 | 03 | 2 | Runbook + .env.local.example | grep + file check | `test -f docs/DEPLOY-GCR.md && grep -q "gcloud run deploy" docs/DEPLOY-GCR.md && grep -q "CONTAINER_URL" .env.local.example && echo PASS` | pending |
+| 9-03-T2 | 03 | 2 | End-to-end smoke test | manual | checkpoint:human-verify — manual smoke test per task instructions | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending · green · red · flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_gcr_container.py` — stubs for Dockerfile, health endpoint, entrypoint
-- [ ] `tests/conftest.py` — shared fixtures if needed
-- [ ] pytest installed — `pip install pytest` if not present
-
-*Note: Docker build test requires Docker daemon. VNC/WebSocket tests are manual-only due to display server requirement.*
+None. All automated verify commands in Plans 01 and 02 use grep-based file inspection or npm test against an already-existing test file (`src/app/api/analysis/__tests__/route.test.ts`). No new test files need to be created before execution can begin.
 
 ---
 
@@ -72,11 +68,11 @@ created: 2026-03-28
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or explicit N/A marker (checkpoint:human-verify tasks are exempt)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (none exist — no MISSING markers in any plan)
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** ready for execution
