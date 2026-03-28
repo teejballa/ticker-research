@@ -200,12 +200,14 @@ Plans:
 ### Phase 9: Migrate Container from Daytona to Google Cloud Run
 
 **Goal:** Migrate the `notebooklm-py` research container from Daytona to Google Cloud Run so the container runs on Google infrastructure and can reach `notebooklm.google.com` — Daytona containers run on AWS IPs which are blocked by Google's NotebookLM service.
-**Requirements**: TBD
+**Requirements**: GCR-01, GCR-02, GCR-03
 **Depends on:** Phase 8
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 9 to break down)
+- [ ] 09-01-PLAN.md — Multi-stage Dockerfile, entrypoint.sh, container_server.py CONTAINER_SECRET rename + /vnc-ws WebSocket proxy
+- [ ] 09-02-PLAN.md — Vercel route DAYTONA_* → CONTAINER_* renames across 3 route files + test file
+- [ ] 09-03-PLAN.md — Cloud Run deployment runbook (docs/DEPLOY-GCR.md), .env.local.example update, production smoke test
 
 ### Phase 10: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
 
