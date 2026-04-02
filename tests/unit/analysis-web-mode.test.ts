@@ -49,8 +49,8 @@ describe('analysis route — web mode (DEPLOYMENT_MODE=web)', () => {
     process.env = {
       ...originalEnv,
       DEPLOYMENT_MODE: 'web',
-      DAYTONA_CONTAINER_URL: 'https://container.example.com',
-      DAYTONA_SECRET: 'test-secret',
+      CONTAINER_URL: 'https://container.example.com',
+      CONTAINER_SECRET: 'test-secret',
     };
   });
 
@@ -84,7 +84,7 @@ describe('analysis route — web mode (DEPLOYMENT_MODE=web)', () => {
     expect(body.message).toBe('NotebookLM account not connected.');
   });
 
-  it('calls fetch to DAYTONA_CONTAINER_URL/analyze/{ticker} with correct body and headers and returns streaming response', async () => {
+  it('calls fetch to CONTAINER_URL/analyze/{ticker} with correct body and headers and returns streaming response', async () => {
     mockGetServerSession.mockResolvedValueOnce({ user: { email: 'user@example.com' } });
     mockReadFile.mockResolvedValueOnce(JSON.stringify({ ticker: 'AAPL' }));
     mockGetCredential.mockResolvedValueOnce({ encrypted_state: 'enc-blob' });
@@ -109,7 +109,7 @@ describe('analysis route — web mode (DEPLOYMENT_MODE=web)', () => {
       expect(url).toBe('https://container.example.com/analyze/AAPL');
       expect(opts.method).toBe('POST');
       expect(opts.headers['Content-Type']).toBe('application/json');
-      expect(opts.headers['x-daytona-secret']).toBe('test-secret');
+      expect(opts.headers['x-container-secret']).toBe('test-secret');
 
       // Verify body contains sourcePackage and storageState
       const parsedBody = JSON.parse(opts.body);
