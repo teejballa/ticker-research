@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Daytona container server — FastAPI SSE wrapper for notebooklm_research.py.
+Google Cloud Run container server — FastAPI SSE wrapper for notebooklm_research.py.
 Receives POST /analyze/{ticker} with sourcePackage + storageState JSON.
 Writes per-request temp files, spawns notebooklm_research.py, streams stdout as SSE.
 POST /vnc-start — starts Xvfb + x11vnc + websockify + Playwright Chromium on virtual display.
 GET /vnc-status — polls for NotebookLM login completion and returns captured storage_state.
 DELETE /vnc-stop — tears down active VNC session.
+GET /vnc-ws (WebSocket) — proxies VNC WebSocket frames through Cloud Run's single port (x-container-secret auth).
 """
 import asyncio
 import json
@@ -16,11 +17,11 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-SECRET = os.environ.get("DAYTONA_SECRET", "")
+SECRET = os.environ.get("CONTAINER_SECRET", "")
 
 
 # ---------------------------------------------------------------------------
@@ -102,11 +103,11 @@ app.add_middleware(
 )
 
 
-def _check_secret(x_daytona_secret: str | None) -> None:
+def _check_secret(x_container_secret: str | None) -> None:
     """Validate shared secret. Raises 401 if missing or wrong."""
     if not SECRET:
-        raise HTTPException(status_code=500, detail="DAYTONA_SECRET not configured on container")
-    if x_daytona_secret != SECRET:
+        raise HTTPException(status_code=500, detail="CONTAINER_SECRET not configured on container")
+    if x_container_secret != SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -144,9 +145,9 @@ async def health() -> dict[str, str]:
 async def analyze(
     ticker: str,
     request: Request,
-    x_daytona_secret: str | None = Header(None),
+    x_container_secret: str | None = Header(None),
 ) -> StreamingResponse:
-    _check_secret(x_daytona_secret)
+    _check_secret(x_container_secret)
 
     body: dict = await request.json()
     source_package = body.get("sourcePackage")
@@ -184,9 +185,9 @@ async def analyze(
 @app.post("/vnc-start")
 async def vnc_start(
     request: Request,
-    x_daytona_secret: str | None = Header(None),
+    x_container_secret: str | None = Header(None),
 ) -> dict[str, Any]:
-    _check_secret(x_daytona_secret)
+    _check_secret(x_container_secret)
 
     global _vnc_session
 
@@ -270,9 +271,9 @@ async def vnc_start(
 
 @app.get("/vnc-status")
 async def vnc_status(
-    x_daytona_secret: str | None = Header(None),
+    x_container_secret: str | None = Header(None),
 ) -> dict[str, Any]:
-    _check_secret(x_daytona_secret)
+    _check_secret(x_container_secret)
 
     if not _vnc_session.active:
         return {"captured": False}
@@ -321,13 +322,72 @@ async def vnc_status(
 
 @app.delete("/vnc-stop")
 async def vnc_stop(
-    x_daytona_secret: str | None = Header(None),
+    x_container_secret: str | None = Header(None),
 ) -> dict[str, str]:
-    _check_secret(x_daytona_secret)
+    _check_secret(x_container_secret)
     await _stop_vnc()
     return {"status": "stopped"}
 
 
+@app.websocket("/vnc-ws")
+async def vnc_ws_proxy(websocket: WebSocket) -> None:
+    """Proxy WebSocket frames between react-vnc browser client and websockify on localhost:6080.
+
+    Cloud Run exposes only one port (8080/443). The browser cannot reach port 6080 directly.
+    This endpoint proxies the VNC WebSocket through the FastAPI server on the single exposed port.
+    websockify runs internally on localhost:6080 and handles VNC protocol negotiation for react-vnc.
+    """
+    # Validate shared secret from header (WebSocket upgrade headers are accessible via websocket.headers)
+    # Also accept via query param as fallback for clients that cannot set custom headers on WS upgrade
+    secret = websocket.headers.get("x-container-secret") or websocket.query_params.get("secret")
+    _check_secret(secret)
+
+    if not _vnc_session.active:
+        await websocket.close(code=1008, reason="No active VNC session")
+        return
+
+    # Pass through the WebSocket subprotocol that react-vnc/noVNC sends (typically "binary")
+    # websockify on localhost:6080 will handle VNC protocol negotiation
+    subprotocols = websocket.headers.get("sec-websocket-protocol", "")
+    subprotocol = subprotocols.split(",")[0].strip() if subprotocols else None
+    await websocket.accept(subprotocol=subprotocol)
+
+    try:
+        # Connect to websockify on internal port 6080 (bridges VNC TCP to WebSocket protocol)
+        reader, writer = await asyncio.open_connection("localhost", 6080)
+
+        async def browser_to_websockify() -> None:
+            try:
+                while True:
+                    data = await websocket.receive_bytes()
+                    writer.write(data)
+                    await writer.drain()
+            except (WebSocketDisconnect, Exception):
+                pass
+
+        async def websockify_to_browser() -> None:
+            try:
+                while True:
+                    data = await reader.read(4096)
+                    if not data:
+                        break
+                    await websocket.send_bytes(data)
+            except Exception:
+                pass
+
+        await asyncio.gather(browser_to_websockify(), websockify_to_browser())
+    finally:
+        try:
+            writer.close()
+        except Exception:
+            pass
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", "8080"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
