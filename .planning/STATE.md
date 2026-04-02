@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 08-05-PLAN.md
-last_updated: "2026-03-27T02:59:34.840Z"
+status: Ready to execute
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-04-02T02:59:14.908Z"
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 7
   total_plans: 34
   completed_plans: 33
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 08 (full-public-deployment-vercel-frontend-daytona-container-for-notebooklm-py-fully-live-and-accessible-to-anyone-on-the-web) — EXECUTING
-Plan: 1 of 6
+Plan: 2 of 6
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Plan: 1 of 6
 | Phase 08 P03 | 172 | 2 tasks | 4 files |
 | Phase 08 P04 | 156 | 2 tasks | 5 files |
 | Phase 08 P05 | 6 | 2 tasks | 5 files |
+| Phase 09-migrate-container-from-daytona-to-google-cloud-run P02 | 526003 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,8 @@ Recent decisions affecting current work:
 - [Phase 08]: Account page fetches /api/setup/status on mount for nbmSessionActive — no separate endpoint needed
 - [Phase 08]: ResearchProgress tracks errorMessage state internally, classifies via classifyError(), renders inline
 - [Phase 08]: ALLOWED_ORIGIN documented only in Daytona container section — not in Vercel checklist to prevent operator error
+- [Phase 09]: CONTAINER_URL / CONTAINER_SECRET / CONTAINER_VNC_URL replace DAYTONA_* vars across all Vercel route files
+- [Phase 09]: x-container-secret header replaces x-daytona-secret for container auth
 
 ### Roadmap Evolution
 
@@ -187,6 +190,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T02:59:34.838Z
-Stopped at: Completed 08-05-PLAN.md
+Last session: 2026-04-02T02:59:14.905Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
