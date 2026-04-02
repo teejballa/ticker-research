@@ -102,12 +102,16 @@ describe('POST /api/analysis/[ticker] — web mode', () => {
       },
     });
 
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(upstreamBody, {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      // Health check gets a plain 200; analyze gets the SSE stream
+      if (typeof url === 'string' && url.includes('/health')) {
+        return Promise.resolve(new Response('{"status":"ok"}', { status: 200 }));
+      }
+      return Promise.resolve(new Response(upstreamBody, {
         status: 200,
         headers: { 'Content-Type': 'text/event-stream' },
-      })
-    ));
+      }));
+    }));
 
     const { POST } = await import('@/app/api/analysis/[ticker]/route');
 
@@ -125,10 +129,15 @@ describe('POST /api/analysis/[ticker] — web mode', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/event-stream');
 
-    // Verify fetch was called with the container URL
+    // Verify the analyze fetch was called. A cold-start health check may also fire first
+    // depending on AbortSignal.timeout availability in the test environment.
     const fetchMock = vi.mocked(fetch as ReturnType<typeof vi.fn>);
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const [calledUrl, calledOpts] = fetchMock.mock.calls[0];
+    expect(fetchMock).toHaveBeenCalled();
+    const analyzeCalls = fetchMock.mock.calls.filter(([url]) =>
+      typeof url === 'string' && url.includes('/analyze/')
+    );
+    expect(analyzeCalls).toHaveLength(1);
+    const [calledUrl, calledOpts] = analyzeCalls[0];
     expect(calledUrl).toBe('https://container-test.run.app/analyze/AAPL');
     expect(calledOpts.method).toBe('POST');
 

@@ -264,8 +264,9 @@ async def vnc_ws_proxy(websocket: WebSocket):
 **What:** Step-by-step commands for building, pushing, and deploying the container to Cloud Run.
 
 ```bash
-# 0. Prerequisites: gcloud auth, correct project set
-gcloud config set project PROJECT_ID
+# 0. Prerequisites (verified 2026-03-28: gcloud authenticated, project already set)
+# Account: walshtj46@gmail.com | Project: cipher-491101 | No auth login needed
+gcloud config set project cipher-491101
 gcloud config set run/region us-central1
 
 # 1. Enable APIs (one-time)
@@ -282,7 +283,7 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 # 4. Build and push (repeat for each deploy)
 GIT_SHA=$(git rev-parse --short HEAD)
-IMAGE="us-central1-docker.pkg.dev/PROJECT_ID/ticker-research/container:${GIT_SHA}"
+IMAGE="us-central1-docker.pkg.dev/cipher-491101/ticker-research/container:${GIT_SHA}"
 docker build -t "${IMAGE}" .
 docker push "${IMAGE}"
 
@@ -301,7 +302,7 @@ gcloud run deploy ticker-research-container \
 # 6. Rollback (re-deploy with prior SHA)
 PRIOR_SHA=abc1234
 gcloud run deploy ticker-research-container \
-  --image="us-central1-docker.pkg.dev/PROJECT_ID/ticker-research/container:${PRIOR_SHA}" \
+  --image="us-central1-docker.pkg.dev/cipher-491101/ticker-research/container:${PRIOR_SHA}" \
   --region=us-central1
 ```
 
@@ -420,7 +421,7 @@ const containerUrl = process.env.CONTAINER_URL;
 ```bash
 # Source: Cloud Run docs — verified flags
 gcloud run deploy ticker-research-container \
-  --image="us-central1-docker.pkg.dev/PROJECT_ID/ticker-research/container:${GIT_SHA}" \
+  --image="us-central1-docker.pkg.dev/cipher-491101/ticker-research/container:${GIT_SHA}" \
   --region=us-central1 \
   --min-instances=1 \
   --memory=2Gi \

@@ -65,17 +65,62 @@ export async function POST(
     const { decrypt } = await import('@/lib/credentials');
     const storageState = JSON.parse(decrypt(cred.encrypted_state));
 
-    // Forward to Daytona container — container streams PROGRESS/RESULT lines as SSE
-    const upstream = await fetch(`${containerUrl}/analyze/${ticker}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-container-secret': process.env.CONTAINER_SECRET!,
+    // Wrap in a ReadableStream so we can emit a cold-start message before the container responds.
+    // With min-instances=0, Cloud Run takes ~20-40s to start from zero — without this the
+    // frontend would hang silently with no SSE events during that window.
+    const enc = (data: string) => new TextEncoder().encode(`data: ${data}\n\n`);
+    const coldStartStream = new ReadableStream({
+      async start(controller) {
+        // Quick health ping — fails fast when container is cold.
+        // Wrapped in try/catch because AbortSignal.timeout may not exist in all environments.
+        const isCold = await (async () => {
+          try {
+            await fetch(`${containerUrl}/health`, {
+              signal: AbortSignal.timeout(3000),
+            });
+            return false;
+          } catch {
+            return true;
+          }
+        })();
+
+        if (isCold) {
+          controller.enqueue(enc(JSON.stringify({
+            type: 'progress',
+            message: 'Waking up research environment (cold start ~30s)...',
+          })));
+        }
+
+        // Forward to container — Cloud Run queues the request until the instance is ready
+        const upstream = await fetch(`${containerUrl}/analyze/${ticker}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-container-secret': process.env.CONTAINER_SECRET!,
+          },
+          body: JSON.stringify({ sourcePackage, storageState }),
+        });
+
+        if (!upstream.ok || !upstream.body) {
+          controller.enqueue(enc(JSON.stringify({ type: 'error', message: 'Container request failed.' })));
+          controller.close();
+          return;
+        }
+
+        const reader = upstream.body.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+        } finally {
+          controller.close();
+        }
       },
-      body: JSON.stringify({ sourcePackage, storageState }),
     });
 
-    return new Response(upstream.body, {
+    return new Response(coldStartStream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',

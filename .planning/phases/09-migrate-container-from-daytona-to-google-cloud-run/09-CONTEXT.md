@@ -125,5 +125,30 @@ None — discussion stayed within phase scope.
 
 ---
 
+---
+
+<pre_execution_state>
+## GCP State (verified 2026-03-28)
+
+**gcloud CLI:** v562.0.0 at `/opt/homebrew/bin/gcloud` — already installed and authenticated
+**Account:** walshtj46@gmail.com (already logged in — no `gcloud auth login` needed)
+**Project:** `cipher-491101` (name: "Cipher") — already set as default project
+**Default region:** set `gcloud config set run/region us-central1` before first deploy
+
+**NOT yet done (must do before Plan 03 deploy):**
+- [ ] `gcloud services enable run.googleapis.com artifactregistry.googleapis.com` — APIs not enabled
+- [ ] `gcloud artifacts repositories create ticker-research ...` — repo does not exist yet
+- [ ] `gcloud auth configure-docker us-central1-docker.pkg.dev` — Docker auth not configured
+
+**Exact image path to use:**
+```
+us-central1-docker.pkg.dev/cipher-491101/ticker-research/container:GIT_SHA
+```
+
+**No `YOUR_PROJECT_ID` placeholder needed — use `cipher-491101` throughout.**
+</pre_execution_state>
+
+---
+
 *Phase: 09-migrate-container-from-daytona-to-google-cloud-run*
 *Context gathered: 2026-03-28*
