@@ -1,5 +1,5 @@
 // src/app/api/setup/nbm-auth/status/route.ts
-// GET /api/setup/nbm-auth/status — polls the Daytona container for NbLM cookie capture status.
+// GET /api/setup/nbm-auth/status — polls the container for NbLM cookie capture status.
 // This is a dedicated sub-route so the frontend can poll /api/setup/nbm-auth/status
 // without conflicting with POST /api/setup/nbm-auth.
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
-  const containerUrl = process.env.DAYTONA_CONTAINER_URL ?? null;
+  const containerUrl = process.env.CONTAINER_URL ?? null;
   if (!containerUrl) {
     return NextResponse.json({ captured: false, error: 'Container not configured' });
   }
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const res = await fetch(`${containerUrl}/vnc-status`, {
       method: 'GET',
       headers: {
-        'x-daytona-secret': process.env.DAYTONA_SECRET!,
+        'x-container-secret': process.env.CONTAINER_SECRET!,
       },
     });
     if (!res.ok) return NextResponse.json({ captured: false });

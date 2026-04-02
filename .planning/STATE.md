@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-04-02T02:58:01.792Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-04-02T02:59:14.908Z"
 progress:
   total_phases: 11
   completed_phases: 7
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 09 (migrate-container-from-daytona-to-google-cloud-run) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Plan: 2 of 3
 | Phase 08 P04 | 156 | 2 tasks | 5 files |
 | Phase 08 P05 | 6 | 2 tasks | 5 files |
 | Phase 09 P01 | 110 | 2 tasks | 3 files |
+| Phase 09 P02 | 526003 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,8 @@ Recent decisions affecting current work:
 - [Phase 09]: Multi-stage Dockerfile: builder installs Playwright/Chromium binary, runtime copies them — keeps final image lean
 - [Phase 09]: /vnc-ws WebSocket proxy routes VNC through Cloud Run's single port 8080; websockify stays on internal 6080
 - [Phase 09]: CONTAINER_SECRET replaces DAYTONA_SECRET throughout container_server.py — zero Daytona references remain
+- [Phase 09]: CONTAINER_URL / CONTAINER_SECRET / CONTAINER_VNC_URL replace DAYTONA_* vars across all Vercel route files
+- [Phase 09]: x-container-secret header replaces x-daytona-secret for container auth
 
 ### Roadmap Evolution
 
@@ -191,6 +194,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-02T02:58:01.789Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-04-02T02:59:14.905Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None

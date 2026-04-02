@@ -12,6 +12,36 @@ vi.mock('child_process', () => {
   };
 });
 
+// Mock next-auth to return a valid session for web-mode tests
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn().mockResolvedValue({
+    user: { email: 'test@example.com', name: 'Test User' },
+  }),
+}));
+
+// Mock @/lib/auth to avoid NextAuth config initialization
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
+}));
+
+// Mock @/lib/user-credential-db to avoid Prisma initialization
+vi.mock('@/lib/user-credential-db', () => ({
+  getCredential: vi.fn().mockResolvedValue({
+    encrypted_state: 'mock-encrypted-state',
+  }),
+}));
+
+// Mock @/lib/credentials to avoid encryption key requirement
+vi.mock('@/lib/credentials', () => ({
+  decrypt: vi.fn().mockReturnValue('{"cookies":[],"origins":[]}'),
+  encrypt: vi.fn().mockReturnValue('mock-encrypted-state'),
+}));
+
+// Mock fs/promises to avoid filesystem reads
+vi.mock('fs/promises', () => ({
+  readFile: vi.fn().mockResolvedValue('{"ticker":"AAPL","assembled_at":"2026-03-28T00:00:00Z"}'),
+}));
+
 /**
  * Helper: create a fake child process emitter that mimics spawn() return value.
  * Emits stdout data and close events on demand.
@@ -45,23 +75,23 @@ async function collectSSE(stream: ReadableStream<Uint8Array>): Promise<string[]>
   return parts;
 }
 
-describe('POST /api/analysis/[ticker] — cloud mode', () => {
+describe('POST /api/analysis/[ticker] — web mode', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     delete process.env.DEPLOYMENT_MODE;
-    delete process.env.DAYTONA_CONTAINER_URL;
+    delete process.env.CONTAINER_URL;
   });
 
   afterEach(() => {
     delete process.env.DEPLOYMENT_MODE;
-    delete process.env.DAYTONA_CONTAINER_URL;
+    delete process.env.CONTAINER_URL;
     vi.unstubAllGlobals();
   });
 
-  it('proxies to container URL and pipes SSE stream when DEPLOYMENT_MODE=cloud and DAYTONA_CONTAINER_URL is set', async () => {
-    process.env.DEPLOYMENT_MODE = 'cloud';
-    process.env.DAYTONA_CONTAINER_URL = 'https://3000-test.daytona.app';
+  it('proxies to container URL and pipes SSE stream when DEPLOYMENT_MODE=web and CONTAINER_URL is set', async () => {
+    process.env.DEPLOYMENT_MODE = 'web';
+    process.env.CONTAINER_URL = 'https://container-test.run.app';
 
     // Create a ReadableStream that emits one SSE chunk
     const sseChunk = new TextEncoder().encode('data: {"type":"progress","message":"Creating notebook..."}\n\n');
@@ -99,7 +129,7 @@ describe('POST /api/analysis/[ticker] — cloud mode', () => {
     const fetchMock = vi.mocked(fetch as ReturnType<typeof vi.fn>);
     expect(fetchMock).toHaveBeenCalledOnce();
     const [calledUrl, calledOpts] = fetchMock.mock.calls[0];
-    expect(calledUrl).toBe('https://3000-test.daytona.app/api/analysis/AAPL');
+    expect(calledUrl).toBe('https://container-test.run.app/analyze/AAPL');
     expect(calledOpts.method).toBe('POST');
 
     // Verify the SSE body is piped through
@@ -109,9 +139,9 @@ describe('POST /api/analysis/[ticker] — cloud mode', () => {
     expect(combined).toContain('Creating notebook');
   });
 
-  it('returns 500 with JSON error when DEPLOYMENT_MODE=cloud and DAYTONA_CONTAINER_URL is missing', async () => {
-    process.env.DEPLOYMENT_MODE = 'cloud';
-    // DAYTONA_CONTAINER_URL intentionally not set
+  it('returns 500 with JSON error when DEPLOYMENT_MODE=web and CONTAINER_URL is missing', async () => {
+    process.env.DEPLOYMENT_MODE = 'web';
+    // CONTAINER_URL intentionally not set
 
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
@@ -131,14 +161,14 @@ describe('POST /api/analysis/[ticker] — cloud mode', () => {
 
     expect(response.status).toBe(500);
     const json = await response.json();
-    expect(json.message).toContain('DAYTONA_CONTAINER_URL');
+    expect(json.message).toContain('CONTAINER_URL');
     // fetch must NOT be called — route returns before fetching
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('does not call spawn() when DEPLOYMENT_MODE=cloud', async () => {
-    process.env.DEPLOYMENT_MODE = 'cloud';
-    process.env.DAYTONA_CONTAINER_URL = 'https://3000-test.daytona.app';
+  it('does not call spawn() when DEPLOYMENT_MODE=web', async () => {
+    process.env.DEPLOYMENT_MODE = 'web';
+    process.env.CONTAINER_URL = 'https://container-test.run.app';
 
     const sseBody = new ReadableStream({ start(c) { c.close(); } });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
@@ -168,7 +198,7 @@ describe('POST /api/analysis/[ticker]', () => {
     vi.resetModules();
     vi.clearAllMocks();
     delete process.env.DEPLOYMENT_MODE;
-    delete process.env.DAYTONA_CONTAINER_URL;
+    delete process.env.CONTAINER_URL;
   });
 
   it('streams a progress SSE event when Python script emits PROGRESS: line', async () => {

@@ -1,7 +1,7 @@
 // src/app/api/analysis/[ticker]/route.ts
 // POST /api/analysis/[ticker]
 // In local mode: spawns the notebooklm_research.py Python script and streams SSE events to the browser.
-// In cloud mode (DEPLOYMENT_MODE=cloud): proxies the request to DAYTONA_CONTAINER_URL and pipes its SSE stream back.
+// In web mode (DEPLOYMENT_MODE=web): proxies the request to CONTAINER_URL and pipes its SSE stream back.
 // SSE events: { type: 'progress', message: string }
 //             { type: 'result', data: AnalysisResult }
 //             { type: 'error', message: string }
@@ -41,10 +41,10 @@ export async function POST(
       );
     }
 
-    const containerUrl = process.env.DAYTONA_CONTAINER_URL;
+    const containerUrl = process.env.CONTAINER_URL;
     if (!containerUrl) {
       return new Response(
-        JSON.stringify({ type: 'error', message: 'DAYTONA_CONTAINER_URL is not configured.' }),
+        JSON.stringify({ type: 'error', message: 'CONTAINER_URL is not configured.' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -70,7 +70,7 @@ export async function POST(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-daytona-secret': process.env.DAYTONA_SECRET!,
+        'x-container-secret': process.env.CONTAINER_SECRET!,
       },
       body: JSON.stringify({ sourcePackage, storageState }),
     });
