@@ -73,7 +73,8 @@ docker push "${IMAGE}"
 gcloud run deploy ticker-research-container \
   --image="${IMAGE}" \
   --region=us-central1 \
-  --min-instances=1 \
+  --min-instances=0 \
+  --cpu-boost \
   --memory=2Gi \
   --cpu=1 \
   --timeout=3600 \
@@ -88,7 +89,8 @@ gcloud run deploy ticker-research-container \
 gcloud run deploy ticker-research-container \
   --image="${IMAGE}" \
   --region=us-central1 \
-  --min-instances=1 \
+  --min-instances=0 \
+  --cpu-boost \
   --memory=2Gi \
   --cpu=1 \
   --timeout=3600 \
@@ -170,8 +172,12 @@ Then run the full manual smoke test:
 
 ## Cost Estimate
 
-- 1 CPU / 2GB RAM always-on (`min-instances=1`): ~$50–75/month depending on usage
-- Billing starts immediately when `min-instances=1` — no idle/free period
+- `min-instances=0` (scale to zero): **~$0/month** for personal use — within Cloud Run free tier
+  - Free tier: 180,000 vCPU-seconds + 360,000 GiB-seconds/month
+  - One research run (~5 min, 1 CPU, 2GiB) uses ~300 vCPU-sec + ~600 GiB-sec → **~600 free runs/month**
+  - After free tier: ~$0.01/run
+- Cold start after idle: ~20–40s (mitigated by `--cpu-boost`)
+- Auth state is stored in Neon DB per-user — container is fully stateless, cold starts lose no data
 - Review Cloud Run pricing at https://cloud.google.com/run/pricing
 
 ---
@@ -186,4 +192,4 @@ Then run the full manual smoke test:
 | 401 on all requests | `CONTAINER_SECRET` mismatch | Verify Vercel `CONTAINER_SECRET` matches the value set on the Cloud Run service |
 | CORS errors in browser console | `ALLOWED_ORIGIN` not set on container | Run: `gcloud run services update ticker-research-container --update-env-vars ALLOWED_ORIGIN=https://ticker-research.vercel.app --region=us-central1` |
 | SSE stream stops mid-analysis | Vercel `maxDuration=300s` proxy timeout | Pre-existing constraint — Cloud Run timeout is 3600s but the Vercel proxy caps at 300s. Long runs (>5 min) may be cut off. |
-| Cold start after idle period | Cloud Run recycled instance despite `min-instances=1` | VNC session state is lost — user must restart from setup page. Document in UX. |
+| Cold start delay (~30s) | `min-instances=0` — container was idle and scaled to zero | Expected behavior. Frontend shows "Waking up research environment..." during startup. No auth state is lost (stored in DB). |
