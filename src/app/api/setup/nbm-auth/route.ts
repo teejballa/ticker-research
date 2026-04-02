@@ -1,6 +1,6 @@
 // src/app/api/setup/nbm-auth/route.ts
-// POST /api/setup/nbm-auth — triggers VNC session or OAuth passthrough attempt on Daytona container
-// GET /api/setup/nbm-auth/status — polls Daytona container for NbLM cookie capture status
+// POST /api/setup/nbm-auth — triggers VNC session or OAuth passthrough attempt on the container
+// GET /api/setup/nbm-auth/status — polls container for NbLM cookie capture status
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 async function getContainerUrl(): Promise<string | null> {
-  return process.env.DAYTONA_CONTAINER_URL ?? null;
+  return process.env.CONTAINER_URL ?? null;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-daytona-secret': process.env.DAYTONA_SECRET!,
+      'x-container-secret': process.env.CONTAINER_SECRET!,
     },
     body: JSON.stringify({ mode, userId: session.user.email }),
   });
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   await res.json(); // consume body (container returns {"started": true})
   // The VNC WebSocket URL is pre-configured as an env var (set at sandbox creation time)
-  const streamUrl = process.env.DAYTONA_VNC_URL;
+  const streamUrl = process.env.CONTAINER_VNC_URL;
   if (!streamUrl) {
     return NextResponse.json({ error: 'VNC stream URL not configured' }, { status: 500 });
   }
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const res = await fetch(`${containerUrl}/vnc-status`, {
       method: 'GET',
       headers: {
-        'x-daytona-secret': process.env.DAYTONA_SECRET!,
+        'x-container-secret': process.env.CONTAINER_SECRET!,
       },
     });
     if (!res.ok) return NextResponse.json({ captured: false });
