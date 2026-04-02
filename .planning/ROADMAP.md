@@ -148,7 +148,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
 | 7. Research Quality & Special Situation Coverage | 4/4 | Complete    | 2026-03-25 |
 | 8. Full Public Deployment | 5/6 | In Progress|  |
-| 9. Migrate Container to Google Cloud Run | 0/? | Planned | |
+| 9. Migrate Container to Google Cloud Run | 1/3 | In Progress|  |
 | 10. Reliable Market Data | 0/? | Planned | |
 | 11. Public Sentiment Layer | 0/? | Planned | |
 
@@ -202,10 +202,10 @@ Plans:
 **Goal:** Migrate the `notebooklm-py` research container from Daytona to Google Cloud Run so the container runs on Google infrastructure and can reach `notebooklm.google.com` — Daytona containers run on AWS IPs which are blocked by Google's NotebookLM service.
 **Requirements**: GCR-01, GCR-02, GCR-03
 **Depends on:** Phase 8
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 09-01-PLAN.md — Multi-stage Dockerfile, entrypoint.sh, container_server.py CONTAINER_SECRET rename + /vnc-ws WebSocket proxy
+- [x] 09-01-PLAN.md — Multi-stage Dockerfile, entrypoint.sh, container_server.py CONTAINER_SECRET rename + /vnc-ws WebSocket proxy
 - [ ] 09-02-PLAN.md — Vercel route DAYTONA_* → CONTAINER_* renames across 3 route files + test file
 - [ ] 09-03-PLAN.md — Cloud Run deployment runbook (docs/DEPLOY-GCR.md), .env.local.example update, production smoke test
 

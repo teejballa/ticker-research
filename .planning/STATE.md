@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 9 context gathered
-last_updated: "2026-03-28T17:11:05.285Z"
+status: Ready to execute
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-04-02T02:58:01.792Z"
 progress:
   total_phases: 11
   completed_phases: 7
-  total_plans: 34
-  completed_plans: 33
+  total_plans: 37
+  completed_plans: 34
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — no hallucinated conclusions, only what the data supports.
-**Current focus:** Phase 08 — full-public-deployment-vercel-frontend-daytona-container-for-notebooklm-py-fully-live-and-accessible-to-anyone-on-the-web
+**Current focus:** Phase 09 — migrate-container-from-daytona-to-google-cloud-run
 
 ## Current Position
 
-Phase: 08 (full-public-deployment-vercel-frontend-daytona-container-for-notebooklm-py-fully-live-and-accessible-to-anyone-on-the-web) — EXECUTING
-Plan: 1 of 6
+Phase: 09 (migrate-container-from-daytona-to-google-cloud-run) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Plan: 1 of 6
 | Phase 08 P03 | 172 | 2 tasks | 4 files |
 | Phase 08 P04 | 156 | 2 tasks | 5 files |
 | Phase 08 P05 | 6 | 2 tasks | 5 files |
+| Phase 09 P01 | 110 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,9 @@ Recent decisions affecting current work:
 - [Phase 08]: Account page fetches /api/setup/status on mount for nbmSessionActive — no separate endpoint needed
 - [Phase 08]: ResearchProgress tracks errorMessage state internally, classifies via classifyError(), renders inline
 - [Phase 08]: ALLOWED_ORIGIN documented only in Daytona container section — not in Vercel checklist to prevent operator error
+- [Phase 09]: Multi-stage Dockerfile: builder installs Playwright/Chromium binary, runtime copies them — keeps final image lean
+- [Phase 09]: /vnc-ws WebSocket proxy routes VNC through Cloud Run's single port 8080; websockify stays on internal 6080
+- [Phase 09]: CONTAINER_SECRET replaces DAYTONA_SECRET throughout container_server.py — zero Daytona references remain
 
 ### Roadmap Evolution
 
@@ -187,6 +191,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T17:11:05.281Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-migrate-container-from-daytona-to-google-cloud-run/09-CONTEXT.md
+Last session: 2026-04-02T02:58:01.789Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
