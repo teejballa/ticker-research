@@ -8,7 +8,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export default function middleware(req: NextRequest) {
-  if (process.env.DEPLOYMENT_MODE !== 'web') {
+  // Edge middleware only has access to NEXT_PUBLIC_ env vars at runtime.
+  // DEPLOYMENT_MODE (non-public) is not available here — use NEXT_PUBLIC_DEPLOYMENT_MODE.
+  if ((process.env.NEXT_PUBLIC_DEPLOYMENT_MODE ?? '').trim() !== 'web') {
     // Local mode: no auth gate — pass all requests through immediately
     return NextResponse.next();
   }

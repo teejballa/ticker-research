@@ -1,14 +1,16 @@
 // src/app/api/setup/nbm-auth/route.ts
-// POST /api/setup/nbm-auth — triggers VNC session or OAuth passthrough attempt on the container
+// POST /api/setup/nbm-auth — triggers VNC session on the container
 // GET /api/setup/nbm-auth/status — polls container for NbLM cookie capture status
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+// Cloud Run VNC start takes 7-60s (warm vs cold). Must exceed cold-start time.
+export const maxDuration = 120;
 
 async function getContainerUrl(): Promise<string | null> {
-  return process.env.CONTAINER_URL ?? null;
+  return (process.env.CONTAINER_URL ?? '').trim() || null;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -17,20 +19,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
+  const body = await request.json() as { mode?: 'oauth' | 'vnc' };
+  const mode = body.mode ?? 'vnc';
+
+  // OAuth passthrough is not supported in cloud mode — fail fast so the
+  // frontend falls through to the VNC flow without hitting the container.
+  if (mode === 'oauth') {
+    return NextResponse.json({ error: 'OAuth passthrough not supported' }, { status: 400 });
+  }
+
   const containerUrl = await getContainerUrl();
   if (!containerUrl) {
     return NextResponse.json({ error: 'Container not configured' }, { status: 500 });
   }
 
-  const body = await request.json() as { mode?: 'oauth' | 'vnc' };
-  const mode = body.mode ?? 'vnc';
+  const containerSecret = (process.env.CONTAINER_SECRET ?? '').trim();
+  if (!containerSecret) {
+    return NextResponse.json({ error: 'Container secret not configured' }, { status: 500 });
+  }
 
-  // Proxy to Daytona container VNC management endpoint
+  // Start VNC session on the Cloud Run container
   const res = await fetch(`${containerUrl}/vnc-start`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-container-secret': process.env.CONTAINER_SECRET!,
+      'x-container-secret': containerSecret,
     },
     body: JSON.stringify({ mode, userId: session.user.email }),
   });
@@ -41,11 +54,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   await res.json(); // consume body (container returns {"started": true})
-  // The VNC WebSocket URL is pre-configured as an env var (set at sandbox creation time)
-  const streamUrl = process.env.CONTAINER_VNC_URL;
-  if (!streamUrl) {
+
+  const vncBaseUrl = (process.env.CONTAINER_VNC_URL ?? '').trim();
+  if (!vncBaseUrl) {
     return NextResponse.json({ error: 'VNC stream URL not configured' }, { status: 500 });
   }
+
+  // Append the container secret as a query param so the browser WebSocket can
+  // authenticate. Browsers cannot send custom headers on WebSocket upgrades,
+  // so the /vnc-ws endpoint accepts ?secret= as a fallback.
+  const streamUrl = vncBaseUrl.includes('?')
+    ? `${vncBaseUrl}&secret=${encodeURIComponent(containerSecret)}`
+    : `${vncBaseUrl}?secret=${encodeURIComponent(containerSecret)}`;
+
   return NextResponse.json({ streamUrl });
 }
 

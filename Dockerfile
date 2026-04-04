@@ -26,7 +26,8 @@ COPY --from=builder /install /usr/local
 COPY --from=builder /root/.cache/ms-playwright /root/.cache/ms-playwright
 
 # Playwright needs its own pip install in runtime to register the CLI and API
-RUN pip install --no-cache-dir playwright
+RUN pip install --no-cache-dir playwright \
+    && playwright install-deps chromium
 
 WORKDIR /app
 COPY scripts/ ./scripts/
