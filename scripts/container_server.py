@@ -11,8 +11,10 @@ GET /vnc-ws (WebSocket) — proxies VNC WebSocket frames through Cloud Run's sin
 import asyncio
 import json
 import os
+import socket
 import subprocess
 import tempfile
+import time
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
@@ -22,6 +24,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 SECRET = os.environ.get("CONTAINER_SECRET", "")
+
+
+def _wait_for_port(port: int, timeout: float = 15.0) -> bool:
+    """Block until localhost:port accepts a TCP connection or timeout expires."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection(("localhost", port), timeout=0.5):
+                return True
+        except (ConnectionRefusedError, OSError):
+            time.sleep(0.25)
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -265,6 +279,12 @@ async def vnc_start(
         captured_state=None,
         active=True,
     )
+
+    # Wait for websockify to be ready before returning — avoids black-screen race
+    # where the browser tries to connect before port 6080 is listening.
+    if not _wait_for_port(6080, timeout=15.0):
+        await _stop_vnc()
+        raise HTTPException(status_code=503, detail="websockify did not become ready in time")
 
     return {"started": True}
 
