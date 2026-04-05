@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 import TickerSearch from '@/components/TickerSearch';
@@ -12,26 +13,52 @@ interface SetupStatus {
   authOk: boolean;
   allOk: boolean;
   userEmail: string | null;
+  nbmSessionActive?: boolean;
 }
 
 export default function Terminal() {
+  const router = useRouter();
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
 
+  const isWebMode = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web';
+
   async function fetchSetupStatus() {
-    try {
-      const res = await fetch('/api/setup/status');
-      if (!res.ok) {
-        setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null });
+    // In web mode, retry up to 4 times (with 1.5s delay) before concluding
+    // nbmSessionActive=false. This handles Neon cold-start DB lag that can
+    // cause a false miss immediately after VNC capture completes.
+    const maxRetries = isWebMode ? 4 : 1;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const res = await fetch('/api/setup/status');
+        if (!res.ok) {
+          setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null, nbmSessionActive: true });
+          setLoading(false);
+          return;
+        }
+        const data: SetupStatus = await res.json();
+        // Credential found — stay on terminal
+        if (!isWebMode || data.nbmSessionActive !== false) {
+          setSetupStatus(data);
+          setLoading(false);
+          return;
+        }
+        // nbmSessionActive is false — retry after a short delay before redirecting
+        if (attempt < maxRetries - 1) {
+          await new Promise<void>(r => setTimeout(r, 1500));
+          continue;
+        }
+        // All retries exhausted — send to setup
+        setSetupStatus(data);
+        setLoading(false);
+        router.replace('/setup');
+        return;
+      } catch {
+        setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null, nbmSessionActive: true });
+        setLoading(false);
         return;
       }
-      const data: SetupStatus = await res.json();
-      setSetupStatus(data);
-    } catch {
-      setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null });
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -40,10 +67,14 @@ export default function Terminal() {
     // Stagger-in animation trigger
     const t = setTimeout(() => setReady(true), 60);
     return () => clearTimeout(t);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showSearch = !loading && (setupStatus?.allOk ?? true);
-  const showWizard = !loading && setupStatus !== null && !setupStatus.allOk;
+  // In web mode: ready = Google auth + NbLM connected. In local mode: use allOk.
+  const fullyReady = isWebMode
+    ? (setupStatus?.nbmSessionActive ?? false)
+    : (setupStatus?.allOk ?? true);
+  const showSearch = !loading && fullyReady;
+  const showWizard = !isWebMode && !loading && setupStatus !== null && !setupStatus.allOk;
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col">

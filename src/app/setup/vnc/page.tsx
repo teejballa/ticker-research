@@ -43,7 +43,7 @@ export default function VncPopupPage() {
         setStreamUrl(data.streamUrl);
         setState('ready');
 
-        // Poll for Google login capture
+        // Poll for Google login capture — 500ms for near-instant detection
         pollingRef.current = setInterval(async () => {
           try {
             const r = await fetch('/api/setup/nbm-auth/status');
@@ -53,13 +53,14 @@ export default function VncPopupPage() {
               clearInterval(pollingRef.current!);
               pollingRef.current = null;
               setState('captured');
-              // Give user a moment to see the success state, then close
-              setTimeout(() => window.close(), 1800);
+              // Close immediately — container already navigated browser to about:blank
+              // so there's nothing to show. Brief flash of success state then gone.
+              setTimeout(() => window.close(), 400);
             }
           } catch {
             // keep polling silently
           }
-        }, 3000);
+        }, 500);
       } catch (e) {
         setErrorMsg(e instanceof Error ? e.message : 'Unknown error');
         setState('error');
