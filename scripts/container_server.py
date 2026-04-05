@@ -46,7 +46,6 @@ def _wait_for_port(port: int, timeout: float = 15.0) -> bool:
 class VncSession:
     display: Any = None
     x11vnc_proc: Any = None
-    wsockify_proc: Any = None
     playwright: Any = None
     browser: Any = None
     context: Any = None
@@ -62,12 +61,6 @@ async def _stop_vnc() -> None:
     """Tear down any active VNC session.  Errors in individual steps are swallowed
     so that one failure does not prevent the others from cleaning up."""
     global _vnc_session
-    # Kill websockify
-    try:
-        if _vnc_session.wsockify_proc and _vnc_session.wsockify_proc.poll() is None:
-            _vnc_session.wsockify_proc.kill()
-    except Exception:
-        pass
     # Kill x11vnc
     try:
         if _vnc_session.x11vnc_proc and _vnc_session.x11vnc_proc.poll() is None:
@@ -237,11 +230,14 @@ async def vnc_start(
     page = await context.new_page()
     await page.goto("https://notebooklm.google.com")
 
-    # 3. Start x11vnc (attach to virtual display, expose on port 5900)
+    # 3. Start x11vnc (attach to virtual display, expose raw VNC on port 5900)
+    # Run without -bg so we hold the correct PID for cleanup.
+    # The /vnc-ws proxy connects directly to port 5900 (raw RFB TCP) — no websockify needed
+    # because FastAPI already handles the WebSocket layer from the browser.
     try:
         x11vnc_proc = subprocess.Popen(
             ["x11vnc", "-display", display_id, "-rfbport", "5900",
-             "-nopw", "-forever", "-quiet", "-bg"],
+             "-nopw", "-forever", "-quiet"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -252,26 +248,10 @@ async def vnc_start(
         display.stop()
         raise HTTPException(status_code=503, detail="x11vnc not found") from exc
 
-    # 4. Start websockify (bridge VNC port 5900 → WebSocket port 6080)
-    try:
-        wsockify_proc = subprocess.Popen(
-            ["websockify", "0.0.0.0:6080", "localhost:5900"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except FileNotFoundError as exc:
-        x11vnc_proc.kill()
-        await context.close()
-        await browser.close()
-        await pw.stop()
-        display.stop()
-        raise HTTPException(status_code=503, detail="websockify not found") from exc
-
     # Store session globally
     _vnc_session = VncSession(
         display=display,
         x11vnc_proc=x11vnc_proc,
-        wsockify_proc=wsockify_proc,
         playwright=pw,
         browser=browser,
         context=context,
@@ -280,11 +260,11 @@ async def vnc_start(
         active=True,
     )
 
-    # Wait for websockify to be ready before returning — avoids black-screen race
-    # where the browser tries to connect before port 6080 is listening.
-    if not _wait_for_port(6080, timeout=15.0):
+    # Wait for x11vnc to be ready before returning — avoids black-screen race
+    # where the browser tries to connect before port 5900 is listening.
+    if not _wait_for_port(5900, timeout=15.0):
         await _stop_vnc()
-        raise HTTPException(status_code=503, detail="websockify did not become ready in time")
+        raise HTTPException(status_code=503, detail="x11vnc did not become ready in time")
 
     return {"started": True}
 
@@ -335,6 +315,12 @@ async def vnc_status(
     if logged_in:
         captured_state = json.dumps(state)
         _vnc_session.captured_state = captured_state
+        # Navigate to blank immediately so the VNC stream shows nothing —
+        # prevents user from seeing their NotebookLM notebooks in the VNC window.
+        try:
+            await _vnc_session.page.goto("about:blank")
+        except Exception:
+            pass
         return {"captured": True, "encryptedState": captured_state}
 
     return {"captured": False}
@@ -351,11 +337,12 @@ async def vnc_stop(
 
 @app.websocket("/vnc-ws")
 async def vnc_ws_proxy(websocket: WebSocket) -> None:
-    """Proxy WebSocket frames between react-vnc browser client and websockify on localhost:6080.
+    """Proxy WebSocket frames between react-vnc browser client and x11vnc on localhost:5900.
 
-    Cloud Run exposes only one port (8080/443). The browser cannot reach port 6080 directly.
-    This endpoint proxies the VNC WebSocket through the FastAPI server on the single exposed port.
-    websockify runs internally on localhost:6080 and handles VNC protocol negotiation for react-vnc.
+    Cloud Run exposes only one port (8080/443). The browser cannot reach port 5900 directly.
+    FastAPI handles the WebSocket protocol with the browser (accepts the WS upgrade, decodes frames).
+    The proxy then relays raw RFB bytes between the browser and x11vnc over a plain TCP connection.
+    This is equivalent to what websockify does, but without an extra process hop.
     """
     # Validate shared secret from header (WebSocket upgrade headers are accessible via websocket.headers)
     # Also accept via query param as fallback for clients that cannot set custom headers on WS upgrade
@@ -367,16 +354,15 @@ async def vnc_ws_proxy(websocket: WebSocket) -> None:
         return
 
     # Pass through the WebSocket subprotocol that react-vnc/noVNC sends (typically "binary")
-    # websockify on localhost:6080 will handle VNC protocol negotiation
     subprotocols = websocket.headers.get("sec-websocket-protocol", "")
     subprotocol = subprotocols.split(",")[0].strip() if subprotocols else None
     await websocket.accept(subprotocol=subprotocol)
 
     try:
-        # Connect to websockify on internal port 6080 (bridges VNC TCP to WebSocket protocol)
-        reader, writer = await asyncio.open_connection("localhost", 6080)
+        # Connect to x11vnc raw RFB TCP on port 5900
+        reader, writer = await asyncio.open_connection("localhost", 5900)
 
-        async def browser_to_websockify() -> None:
+        async def browser_to_x11vnc() -> None:
             try:
                 while True:
                     data = await websocket.receive_bytes()
@@ -385,7 +371,7 @@ async def vnc_ws_proxy(websocket: WebSocket) -> None:
             except (WebSocketDisconnect, Exception):
                 pass
 
-        async def websockify_to_browser() -> None:
+        async def x11vnc_to_browser() -> None:
             try:
                 while True:
                     data = await reader.read(4096)
@@ -395,7 +381,7 @@ async def vnc_ws_proxy(websocket: WebSocket) -> None:
             except Exception:
                 pass
 
-        await asyncio.gather(browser_to_websockify(), websockify_to_browser())
+        await asyncio.gather(browser_to_x11vnc(), x11vnc_to_browser())
     finally:
         try:
             writer.close()

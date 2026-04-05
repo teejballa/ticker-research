@@ -14,6 +14,10 @@ export default function middleware(req: NextRequest) {
     // Local mode: no auth gate — pass all requests through immediately
     return NextResponse.next();
   }
+  // Landing page is public — no auth required. Everything else requires a session.
+  if (req.nextUrl.pathname === '/') {
+    return NextResponse.next();
+  }
   // Web mode: delegate to NextAuth middleware
   return (withAuth({
     pages: { signIn: '/auth/signin' },

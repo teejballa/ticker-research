@@ -19,7 +19,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ captured: false, error: 'Container not configured' });
   }
 
-  // Poll Daytona container for capture status
+  // Poll container for capture status
   try {
     const res = await fetch(`${containerUrl}/vnc-status`, {
       method: 'GET',
@@ -30,15 +30,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!res.ok) return NextResponse.json({ captured: false });
     const data = await res.json() as { captured?: boolean; encryptedState?: string };
 
-    // If container reports captured + returns raw storage_state, encrypt and persist to Neon
-    if (data.captured && data.encryptedState) {
-      const { upsertCredential } = await import('@/lib/user-credential-db');
-      const { encrypt } = await import('@/lib/credentials');
-      await upsertCredential(session.user.email, encrypt(data.encryptedState));
+    if (data.captured) {
+      // Best-effort: persist credential to DB.
+      // IMPORTANT: never let a DB or encryption failure mask the captured=true signal —
+      // that would leave the frontend polling forever and the VNC window never closing.
+      if (data.encryptedState) {
+        try {
+          const { upsertCredential } = await import('@/lib/user-credential-db');
+          const { encrypt } = await import('@/lib/credentials');
+          await upsertCredential(session.user.email, encrypt(data.encryptedState));
+        } catch (persistErr) {
+          console.error('[nbm-auth/status] credential persist failed (non-fatal):', persistErr);
+        }
+      }
       return NextResponse.json({ captured: true });
     }
 
-    return NextResponse.json({ captured: data.captured ?? false });
+    return NextResponse.json({ captured: false });
   } catch {
     return NextResponse.json({ captured: false });
   }

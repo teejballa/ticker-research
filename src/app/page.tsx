@@ -119,9 +119,10 @@ export default function Home() {
     };
   }, []);
 
-  // SetupWizard hidden in web mode — CONTEXT.md locked decision
+  // In web mode the landing page is purely marketing — no search or wizard.
+  // The actual research terminal lives at /terminal (requires full setup).
   const isWebMode = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web';
-  const showSearch = !loading && (setupStatus?.allOk ?? true);
+  const showSearch = !isWebMode && !loading && (setupStatus?.allOk ?? true);
   const showWizard = !isWebMode && !loading && setupStatus !== null && !setupStatus.allOk;
   const market     = getMarketStatus();
 
