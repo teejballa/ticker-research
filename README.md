@@ -2,7 +2,7 @@
   <img src="docs/banner.png" alt="Cipher — AI-Powered Investment Research" width="100%" />
 </p>
 
-<h1 align="center">Cipher ([[Ciphersearch.app](url)] </h1>
+<h1 align="center">Cipher ([[Ciphersearch.app]] </h1>
 <p align="center">
   <strong>AI-powered investment research that shows its work.</strong><br/>
   Enter a ticker. Get a source-cited research report with bullish/bearish signals, a Buy/Hold/Sell assessment, and a confidence score — every claim traced back to real data.
