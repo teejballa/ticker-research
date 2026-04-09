@@ -275,7 +275,7 @@ export default function Home() {
               {
                 n: '02', phase: 'Phase_02', label: 'SYNTHESIZE',
                 borderClass: 'border-secondary', colorClass: 'text-secondary', barColorClass: 'bg-secondary', barWidthClass: 'w-1/2',
-                desc: 'Multi-model intelligence extracts bull/bear theses, risk factors, and institutional sentiment shifts via NotebookLM × Gemini.',
+                desc: 'Multi-model intelligence extracts bull/bear theses, risk factors, and institutional sentiment shifts via advanced AI synthesis.',
               },
               {
                 n: '03', phase: 'Phase_03', label: 'REPORT',
@@ -348,7 +348,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto px-6 text-center">
             <h4 className="text-[10px] tracking-[0.3em] font-mono text-outline mb-10 uppercase">Aggregated Intelligence Layers</h4>
             <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale">
-              {['CLAUDE', 'GEMINI', 'NOTEBOOKLM', 'Yahoo! Finance'].map((name) => (
+              {['CLAUDE', 'GEMINI', 'Yahoo! Finance'].map((name) => (
                 <div key={name} className="font-black text-xl tracking-tighter">{name}</div>
               ))}
             </div>
@@ -380,8 +380,8 @@ export default function Home() {
               <h3 className="text-2xl font-bold mb-4">Thematic Synthesis</h3>
               <p className="text-on-surface-variant leading-relaxed text-sm mb-6">Connect dots across industries. Understand how a semiconductor shortage impacts automotive margins instantly.</p>
               <div className="flex gap-4">
-                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">NOTEBOOKLM</span>
                 <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">GEMINI_AI</span>
+                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">CLAUDE_AI</span>
               </div>
             </div>
           </div>

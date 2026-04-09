@@ -107,7 +107,7 @@ export default function VncPopupPage() {
             className="text-[11px] uppercase tracking-widest"
             style={{ color: 'rgba(74,222,128,0.8)' }}
           >
-            NotebookLM connected
+            Research engine connected
           </p>
           <p
             className="text-[10px]"
@@ -161,7 +161,7 @@ export default function VncPopupPage() {
           className="text-[10px] font-mono uppercase tracking-widest"
           style={{ color: 'rgba(245,158,11,0.7)' }}
         >
-          Log in with Google to connect NotebookLM
+          Log in with Google to connect your research engine
         </span>
         <div className="ml-auto flex items-center gap-2">
           <div
