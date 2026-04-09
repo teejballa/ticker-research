@@ -9,6 +9,20 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+
+    // Headed debug mode — run with: npx playwright test --project=debug
+    // Slows down actions, shows browser, captures video, keeps open on failure.
+    {
+      name: 'debug',
+      use: {
+        ...devices['Desktop Chrome'],
+        headless: false,
+        launchOptions: { slowMo: 400 },
+        video: 'on',
+        screenshot: 'on',
+        trace: 'on',
+      },
+    },
   ],
   // Auto-start dev server when no BASE_URL override is provided
   webServer: process.env.BASE_URL ? undefined : {

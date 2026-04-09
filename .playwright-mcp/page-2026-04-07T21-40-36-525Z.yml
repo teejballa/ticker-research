@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: CIPHER // AI RESEARCH TERMINAL
+      - paragraph [ref=e6]: Sign in with Google to access the research engine. You'll connect your NotebookLM account on the next screen.
+    - button "Sign in with Google to access Cipher Research" [ref=e7]: "[ SIGN IN TO AUTHENTICATION AND RESEARCH ]"
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: "01"
+        - generic [ref=e11]: Verify Google account
+      - generic [ref=e12]:
+        - generic [ref=e13]: "02"
+        - generic [ref=e14]: Connect NotebookLM research engine
+  - alert [ref=e15]

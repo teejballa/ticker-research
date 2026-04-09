@@ -1,0 +1,285 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "CIPHER" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - generic [ref=e7]: RESEARCH TERMINAL
+          - generic [ref=e8]: NYSE
+          - generic [ref=e9]: NASDAQ
+      - generic [ref=e10]:
+        - generic [ref=e11]: CONNECTED AS tj.walsh_28@sfuhs.org
+        - link "ACCOUNT" [ref=e12] [cursor=pointer]:
+          - /url: /account
+        - link "Analyze a Ticker →" [ref=e13] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e14]:
+          - generic [ref=e15]: schedule
+          - generic [ref=e16]: fiber_manual_record
+    - generic [ref=e18]:
+      - generic:
+        - generic: AI · EQUITY · INTELLIGENCE
+        - generic: CIPHER
+        - paragraph: Research before you trade. Institutional-grade equity synthesis powered by source-grounded intelligence.
+      - generic [ref=e20]:
+        - img "Cipher terminal"
+        - img "Cipher terminal color"
+      - generic:
+        - generic:
+          - generic:
+            - generic: ">"
+            - textbox "TICKER or company name..."
+            - generic: ⏎
+      - generic [ref=e21]:
+        - generic [ref=e22]: SCROLL
+        - generic [ref=e24]: 0%
+    - generic [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: ▶
+          - generic [ref=e30]: RESEARCH HISTORY
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: SYMBOL
+            - generic [ref=e34]: COMPANY
+            - generic [ref=e35]: DATE
+            - generic [ref=e36]: SENTIMENT
+            - generic [ref=e37]: CONFIDENCE
+          - generic [ref=e40]:
+            - generic [ref=e41]: RTX
+            - generic [ref=e42]: RTX Corporation
+            - generic [ref=e43]: Mar 26, 2026
+            - generic [ref=e44]: neutral
+            - generic [ref=e45]: Low
+            - button "[OPEN]" [ref=e46] [cursor=pointer]
+            - button "[REGEN]" [ref=e47] [cursor=pointer]
+          - generic [ref=e48]:
+            - generic [ref=e49]: AMZN
+            - generic [ref=e50]: Amazon.com, Inc.
+            - generic [ref=e51]: Mar 26, 2026
+            - generic [ref=e52]: bullish
+            - generic [ref=e53]: Low
+            - button "[OPEN]" [ref=e54] [cursor=pointer]
+            - button "[REGEN]" [ref=e55] [cursor=pointer]
+          - generic [ref=e56]:
+            - generic [ref=e57]: AAPL
+            - generic [ref=e58]: Apple Inc.
+            - generic [ref=e59]: Mar 26, 2026
+            - generic [ref=e60]: bullish
+            - generic [ref=e61]: Low
+            - button "[OPEN]" [ref=e62] [cursor=pointer]
+            - button "[REGEN]" [ref=e63] [cursor=pointer]
+          - generic [ref=e64]:
+            - generic [ref=e65]: AAPL
+            - generic [ref=e66]: Apple Inc.
+            - generic [ref=e67]: Mar 25, 2026
+            - generic [ref=e68]: bullish
+            - generic [ref=e69]: Low
+            - button "[OPEN]" [ref=e70] [cursor=pointer]
+            - button "[REGEN]" [ref=e71] [cursor=pointer]
+          - generic [ref=e72]:
+            - generic [ref=e73]: ETHM
+            - generic [ref=e74]: Dynamix Corporation
+            - generic [ref=e75]: Mar 24, 2026
+            - generic [ref=e76]: bullish
+            - generic [ref=e77]: Low
+            - button "[OPEN]" [ref=e78] [cursor=pointer]
+            - button "[REGEN]" [ref=e79] [cursor=pointer]
+          - generic [ref=e80]:
+            - generic [ref=e81]: AMZN
+            - generic [ref=e82]: Amazon.com, Inc.
+            - generic [ref=e83]: Mar 23, 2026
+            - generic [ref=e84]: neutral
+            - generic [ref=e85]: Low
+            - button "[OPEN]" [ref=e86] [cursor=pointer]
+            - button "[REGEN]" [ref=e87] [cursor=pointer]
+          - generic [ref=e88]:
+            - generic [ref=e89]: AAPL
+            - generic [ref=e90]: Apple Inc.
+            - generic [ref=e91]: Mar 23, 2026
+            - generic [ref=e92]: neutral
+            - generic [ref=e93]: Low
+            - button "[OPEN]" [ref=e94] [cursor=pointer]
+            - button "[REGEN]" [ref=e95] [cursor=pointer]
+          - generic [ref=e96]:
+            - generic [ref=e97]: AAPL
+            - generic [ref=e98]: Apple Inc.
+            - generic [ref=e99]: Mar 23, 2026
+            - generic [ref=e100]: bullish
+            - generic [ref=e101]: Low
+            - button "[OPEN]" [ref=e102] [cursor=pointer]
+            - button "[REGEN]" [ref=e103] [cursor=pointer]
+          - generic [ref=e104]:
+            - generic [ref=e105]: AAPL
+            - generic [ref=e106]: Apple Inc.
+            - generic [ref=e107]: Mar 23, 2026
+            - generic [ref=e108]: bullish
+            - generic [ref=e109]: Low
+            - button "[OPEN]" [ref=e110] [cursor=pointer]
+            - button "[REGEN]" [ref=e111] [cursor=pointer]
+          - generic [ref=e112]:
+            - generic [ref=e113]: AAPL
+            - generic [ref=e114]: Apple Inc.
+            - generic [ref=e115]: Mar 12, 2026
+            - generic [ref=e116]: bullish
+            - generic [ref=e117]: High
+            - button "[OPEN]" [ref=e118] [cursor=pointer]
+            - button "[REGEN]" [ref=e119] [cursor=pointer]
+      - generic [ref=e121]:
+        - generic [ref=e122]:
+          - generic [ref=e123]: "01"
+          - generic [ref=e124]: Phase_01
+          - heading "COLLECT" [level=3] [ref=e125]
+          - paragraph [ref=e126]: Aggregates real-time SEC filings, earnings call transcripts, Yahoo Finance data, and global news into a unified raw data stream.
+        - generic [ref=e130]:
+          - generic [ref=e131]: "02"
+          - generic [ref=e132]: Phase_02
+          - heading "SYNTHESIZE" [level=3] [ref=e133]
+          - paragraph [ref=e134]: Multi-model intelligence extracts bull/bear theses, risk factors, and institutional sentiment shifts via NotebookLM × Gemini.
+        - generic [ref=e138]:
+          - generic [ref=e139]: "03"
+          - generic [ref=e140]: Phase_03
+          - heading "REPORT" [level=3] [ref=e141]
+          - paragraph [ref=e142]: Generates high-fidelity investment memos with Buy/Hold/Sell assessment, confidence level, and direct source citations.
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - text: Live Feed
+            - heading "Market Snapshot" [level=2] [ref=e150]
+          - generic [ref=e151]:
+            - generic [ref=e152]: CLOSED
+            - generic [ref=e154]: updated 10:18:25 PM
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - generic [ref=e157]: SYMBOL
+            - generic [ref=e158]: NAME
+            - generic [ref=e159]: LAST PRICE
+            - generic [ref=e160]: CHANGE
+          - generic [ref=e161]:
+            - generic [ref=e162]: AAPL
+            - generic [ref=e163]: Apple Inc.
+            - generic [ref=e164]: "253.50"
+            - generic [ref=e165]: "-2.07%"
+          - generic [ref=e166]:
+            - generic [ref=e167]: MSFT
+            - generic [ref=e168]: Microsoft Corp.
+            - generic [ref=e169]: "372.29"
+            - generic [ref=e170]: "-0.16%"
+          - generic [ref=e171]:
+            - generic [ref=e172]: TSLA
+            - generic [ref=e173]: Tesla, Inc.
+            - generic [ref=e174]: "346.65"
+            - generic [ref=e175]: "-1.75%"
+          - generic [ref=e176]:
+            - generic [ref=e177]: NVDA
+            - generic [ref=e178]: NVIDIA Corp.
+            - generic [ref=e179]: "178.10"
+            - generic [ref=e180]: +0.26%
+          - generic [ref=e181]:
+            - generic [ref=e182]: GOOGL
+            - generic [ref=e183]: Alphabet Inc.
+            - generic [ref=e184]: "305.46"
+            - generic [ref=e185]: +1.82%
+          - generic [ref=e186]:
+            - generic [ref=e187]: AMZN
+            - generic [ref=e188]: Amazon.com
+            - generic [ref=e189]: "213.77"
+            - generic [ref=e190]: +0.46%
+          - generic [ref=e191]:
+            - generic [ref=e192]: META
+            - generic [ref=e193]: Meta Platforms
+            - generic [ref=e194]: "575.05"
+            - generic [ref=e195]: +0.35%
+          - generic [ref=e196]:
+            - generic [ref=e197]: JPM
+            - generic [ref=e198]: JPMorgan Chase
+            - generic [ref=e199]: "297.40"
+            - generic [ref=e200]: +0.66%
+      - generic [ref=e202]:
+        - heading "Aggregated Intelligence Layers" [level=4] [ref=e203]
+        - generic [ref=e204]:
+          - generic [ref=e205]: CLAUDE
+          - generic [ref=e206]: GEMINI
+          - generic [ref=e207]: NOTEBOOKLM
+          - generic [ref=e208]: Yahoo! Finance
+      - generic [ref=e209]:
+        - generic [ref=e210]:
+          - heading "A Professional Terminal for Everyone" [level=2] [ref=e211]
+          - paragraph [ref=e212]: Cipher bridges the gap between retail accessibility and institutional depth.
+        - generic [ref=e213]:
+          - generic [ref=e214]:
+            - generic [ref=e216]: database
+            - heading "Deep Context Mining" [level=3] [ref=e217]
+            - paragraph [ref=e218]: Our engines don't just search — they read. We analyze thousands of pages of filings to find the footnotes that move markets.
+            - generic [ref=e219]:
+              - generic [ref=e220]: YAHOO_FINANCE
+              - generic [ref=e221]: ANTHROPIC_SEARCH
+          - generic [ref=e222]:
+            - generic [ref=e224]: insights
+            - heading "Thematic Synthesis" [level=3] [ref=e225]
+            - paragraph [ref=e226]: Connect dots across industries. Understand how a semiconductor shortage impacts automotive margins instantly.
+            - generic [ref=e227]:
+              - generic [ref=e228]: NOTEBOOKLM
+              - generic [ref=e229]: GEMINI_AI
+      - generic [ref=e231]:
+        - heading "Ready to see deeper?" [level=2] [ref=e232]
+        - paragraph [ref=e233]: Source-grounded equity intelligence with transparent, traceable analysis.
+        - link "Launch Research Terminal" [ref=e234] [cursor=pointer]:
+          - /url: /terminal
+    - contentinfo [ref=e235]:
+      - generic [ref=e237]:
+        - generic [ref=e238]:
+          - generic [ref=e239]: AAPL
+          - generic [ref=e240]: 253.50 -2.07%
+        - generic [ref=e241]:
+          - generic [ref=e242]: MSFT
+          - generic [ref=e243]: 372.29 -0.16%
+        - generic [ref=e244]:
+          - generic [ref=e245]: TSLA
+          - generic [ref=e246]: 346.65 -1.75%
+        - generic [ref=e247]:
+          - generic [ref=e248]: NVDA
+          - generic [ref=e249]: 178.10 +0.26%
+        - generic [ref=e250]:
+          - generic [ref=e251]: GOOGL
+          - generic [ref=e252]: 305.46 +1.82%
+        - generic [ref=e253]:
+          - generic [ref=e254]: AMZN
+          - generic [ref=e255]: 213.77 +0.46%
+        - generic [ref=e256]:
+          - generic [ref=e257]: META
+          - generic [ref=e258]: 575.05 +0.35%
+        - generic [ref=e259]:
+          - generic [ref=e260]: JPM
+          - generic [ref=e261]: 297.40 +0.66%
+        - generic [ref=e262]:
+          - generic [ref=e263]: AAPL
+          - generic [ref=e264]: 253.50 -2.07%
+        - generic [ref=e265]:
+          - generic [ref=e266]: MSFT
+          - generic [ref=e267]: 372.29 -0.16%
+        - generic [ref=e268]:
+          - generic [ref=e269]: TSLA
+          - generic [ref=e270]: 346.65 -1.75%
+        - generic [ref=e271]:
+          - generic [ref=e272]: NVDA
+          - generic [ref=e273]: 178.10 +0.26%
+        - generic [ref=e274]:
+          - generic [ref=e275]: GOOGL
+          - generic [ref=e276]: 305.46 +1.82%
+        - generic [ref=e277]:
+          - generic [ref=e278]: AMZN
+          - generic [ref=e279]: 213.77 +0.46%
+        - generic [ref=e280]:
+          - generic [ref=e281]: META
+          - generic [ref=e282]: 575.05 +0.35%
+        - generic [ref=e283]:
+          - generic [ref=e284]: JPM
+          - generic [ref=e285]: 297.40 +0.66%
+      - generic [ref=e286]:
+        - generic [ref=e287]: fiber_manual_record
+        - generic [ref=e288]: CLOSED
+  - alert [ref=e289]
+  - button "Open Next.js Dev Tools" [ref=e295] [cursor=pointer]:
+    - img [ref=e296]

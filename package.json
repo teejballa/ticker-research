@@ -10,7 +10,15 @@
     "start": "next build && next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:debug": "playwright test --project=debug",
+    "debug": "node scripts/live-debug.mjs",
+    "debug:auth": "node scripts/live-debug.mjs notebooklm-auth",
+    "debug:signin": "node scripts/live-debug.mjs signin",
+    "debug:setup": "node scripts/live-debug.mjs setup-status",
+    "debug:pipeline": "node scripts/live-debug.mjs full-pipeline",
+    "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
