@@ -37,7 +37,7 @@ export default function SetupPage() {
         if (res.ok) {
           const data = await res.json() as { nbmSessionActive?: boolean };
           if (data.nbmSessionActive) {
-            router.push('/terminal');
+            router.push('/dashboard');
             return;
           }
         }
@@ -45,7 +45,7 @@ export default function SetupPage() {
       await new Promise<void>(r => setTimeout(r, 1000));
     }
     // DB didn't confirm within ~8s — navigate anyway; terminal has its own retry.
-    router.push('/terminal');
+    router.push('/dashboard');
   }
 
   function startPolling() {
@@ -100,7 +100,7 @@ export default function SetupPage() {
           const data = await res.json() as { nbmSessionActive?: boolean };
           if (data.nbmSessionActive) {
             setStep('complete');
-            router.push('/terminal');
+            router.push('/dashboard');
             return;
           }
         }
@@ -198,7 +198,7 @@ export default function SetupPage() {
   // ── Error ─────────────────────────────────────────────────────────────────
   if (step === 'error') {
     return (
-      <Shell>
+      <Shell onClose={() => router.push('/dashboard')}>
         <div className="space-y-4">
           <p className="text-xs" style={{ color: 'rgba(255,180,171,0.8)', fontSize: '11px' }}>
             {errorMsg || 'Something went wrong. Please try again.'}
@@ -217,7 +217,7 @@ export default function SetupPage() {
 
   // ── Idle — show connect button ─────────────────────────────────────────────
   return (
-    <Shell>
+    <Shell onClose={() => router.push('/dashboard')}>
       <div className="space-y-5">
         <div>
           <div
@@ -268,16 +268,26 @@ export default function SetupPage() {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, onClose }: { children: React.ReactNode; onClose?: () => void }) {
   return (
     <div
       className="min-h-screen flex items-center justify-center font-mono"
       style={{ backgroundColor: '#080a0f' }}
     >
       <div
-        className="w-96 max-sm:w-full max-sm:mx-4 p-8"
+        className="w-96 max-sm:w-full max-sm:mx-4 p-8 relative"
         style={{ border: '1px solid #1a2d42' }}
       >
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 text-[#3a5070] hover:text-[#8d90a2] transition-colors"
+            aria-label="Close"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        )}
         {children}
       </div>
     </div>
