@@ -27,7 +27,7 @@ function classifyError(message: string): 'session-expired' | 'container-unreacha
 
 const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string }> = {
   'session-expired': {
-    message: 'NotebookLM session expired — reconnect your account to continue.',
+    message: 'Research engine session expired — reconnect your account to continue.',
     cta: 'RECONNECT ACCOUNT →',
     ctaHref: '/account',
   },
@@ -95,7 +95,7 @@ function toVisualStep(pipelineStepIndex: number): number {
 const STEP_LABELS = [
   'Collecting market data',
   'Gathering news & filings',
-  'Synthesizing with NotebookLM',
+  'Synthesizing intelligence',
   'Generating report',
 ];
 

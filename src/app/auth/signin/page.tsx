@@ -70,7 +70,7 @@ function SignInContent() {
         <div className="space-y-2 pt-1" style={{ borderTop: '1px solid #1a2d42' }}>
           {[
             'Verify with Google',
-            'Connect NotebookLM research engine',
+            'Connect your research engine',
             'Access your dashboard',
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-3">

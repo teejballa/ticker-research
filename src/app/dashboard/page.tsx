@@ -215,7 +215,7 @@ export default function DashboardPage() {
                 >
                   <span className="material-symbols-outlined text-outline text-xl mb-2 block">settings</span>
                   <div className="text-xs font-bold text-on-surface">Setup</div>
-                  <div className="text-[10px] text-on-surface-variant mt-0.5">Reconnect NbLM</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5">Reconnect Engine</div>
                 </Link>
                 <button
                   onClick={() => signOut({ callbackUrl: '/auth/signin' })}
