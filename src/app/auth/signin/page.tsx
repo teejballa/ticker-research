@@ -17,61 +17,71 @@ function SignInContent() {
         {/* Header */}
         <div>
           <div
-            className="text-xs font-bold tracking-widest uppercase mb-2"
+            className="text-xs font-bold tracking-widest uppercase mb-3"
             style={{ color: '#f59e0b', fontSize: '11px', letterSpacing: '0.25em' }}
           >
-            CIPHER // AI RESEARCH TERMINAL
+            CIPHER // WELCOME
           </div>
           <p
             className="text-xs leading-relaxed"
-            style={{ color: 'rgba(223,226,235,0.45)', fontSize: '11px' }}
+            style={{ color: 'rgba(223,226,235,0.55)', fontSize: '12px' }}
           >
-            Sign in with Google to access the research engine.
-            You&apos;ll connect your NotebookLM account on the next screen.
+            Create a free account or sign in to access your personal research workspace.
           </p>
         </div>
 
         {/* Sign-in button */}
         <button
           type="button"
-          aria-label="Sign in with Google to access Cipher Research"
+          aria-label="Sign in or create account with Google"
           onClick={() => signIn('google', { callbackUrl: '/setup' })}
           className="w-full text-xs font-bold uppercase tracking-widest transition-colors duration-150"
           style={{
-            minHeight: '40px',
-            padding: '8px 16px',
-            border: '1px solid #3f3f46',
-            color: '#c9d4e0',
+            minHeight: '44px',
+            padding: '10px 16px',
+            border: '1px solid rgba(245,158,11,0.5)',
+            color: 'rgba(245,158,11,0.85)',
             background: 'transparent',
             fontSize: '11px',
             letterSpacing: '0.12em',
+            cursor: 'pointer',
           }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = '#f59e0b';
-            (e.currentTarget as HTMLButtonElement).style.color = '#f59e0b';
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(245,158,11,0.08)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(245,158,11,0.8)';
           }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = '#3f3f46';
-            (e.currentTarget as HTMLButtonElement).style.color = '#c9d4e0';
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(245,158,11,0.5)';
           }}
         >
-          [ SIGN IN TO AUTHENTICATION AND RESEARCH ]
+          [ SIGN IN / CREATE ACCOUNT ]
         </button>
 
+        {/* Social proof */}
+        <p
+          className="text-center text-[10px]"
+          style={{ color: 'rgba(223,226,235,0.25)' }}
+        >
+          Takes 30 seconds · No credit card required
+        </p>
+
         {/* Step preview */}
-        <div className="space-y-2 pt-2" style={{ borderTop: '1px solid #1a2d42' }}>
-          <div className="flex items-center gap-3">
-            <span className="text-xs" style={{ color: 'rgba(245,158,11,0.5)' }}>01</span>
-            <span className="text-xs" style={{ color: 'rgba(223,226,235,0.35)', fontSize: '10px' }}>
-              Verify Google account
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs" style={{ color: 'rgba(245,158,11,0.5)' }}>02</span>
-            <span className="text-xs" style={{ color: 'rgba(223,226,235,0.35)', fontSize: '10px' }}>
-              Connect NotebookLM research engine
-            </span>
-          </div>
+        <div className="space-y-2 pt-1" style={{ borderTop: '1px solid #1a2d42' }}>
+          {[
+            'Verify with Google',
+            'Connect NotebookLM research engine',
+            'Access your dashboard',
+          ].map((step, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="text-xs tabular-nums" style={{ color: 'rgba(245,158,11,0.4)' }}>
+                0{i + 1}
+              </span>
+              <span className="text-xs" style={{ color: 'rgba(223,226,235,0.35)', fontSize: '10px' }}>
+                {step}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

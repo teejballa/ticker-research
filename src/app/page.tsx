@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import TickerSearch from '@/components/TickerSearch';
 import { SetupWizard } from '@/components/SetupWizard';
-import ReportHistory from '@/components/ReportHistory';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 
@@ -237,6 +236,14 @@ export default function Home() {
                 <span className="text-on-surface-variant text-[10px] tracking-widest">INITIALIZING SYSTEM...</span>
               </div>
             )}
+            {isWebMode && !loading && (
+              <Link
+                href={setupStatus?.userEmail ? '/dashboard' : '/auth/signin'}
+                className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
+              >
+                {setupStatus?.userEmail ? 'Open Dashboard →' : 'Sign In to Get Started →'}
+              </Link>
+            )}
           </div>
 
           {/* Scroll progress indicator */}
@@ -255,13 +262,6 @@ export default function Home() {
 
       {/* Below-fold content */}
       <div className="relative z-50 bg-surface">
-
-        {/* Report history */}
-        {!loading && (
-          <section className="py-8 max-w-4xl mx-auto px-6">
-            <ReportHistory />
-          </section>
-        )}
 
         {/* Pipeline Phases */}
         <section className="py-32 px-6 max-w-7xl mx-auto">
@@ -397,10 +397,10 @@ export default function Home() {
               Source-grounded equity intelligence with transparent, traceable analysis.
             </p>
             <Link
-              href="/terminal"
+              href={setupStatus?.userEmail ? '/dashboard' : '/auth/signin'}
               className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
             >
-              Launch Research Terminal
+              {setupStatus?.userEmail ? 'Open Dashboard →' : 'Sign In to Get Started →'}
             </Link>
           </div>
         </section>
