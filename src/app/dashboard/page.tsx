@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import NavBar from '@/components/NavBar';
 import TickerSearch from '@/components/TickerSearch';
 import ReportHistory from '@/components/ReportHistory';
@@ -10,6 +11,14 @@ import ReportHistory from '@/components/ReportHistory';
 interface SetupStatus {
   userEmail: string | null;
   nbmSessionActive?: boolean;
+}
+
+interface SnapshotItem {
+  sym: string;
+  name: string;
+  price: string | null;
+  chg: string | null;
+  up: boolean;
 }
 
 function getGreeting(): string {
@@ -25,10 +34,25 @@ function getFirstName(name: string | null | undefined, email: string | null | un
   return 'there';
 }
 
+function getMarketStatus(): { open: boolean; label: string } {
+  const ny   = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day  = ny.getDay();
+  const mins = ny.getHours() * 60 + ny.getMinutes();
+  const isWeekday = day >= 1 && day <= 5;
+  if (!isWeekday) return { open: false, label: 'WEEKEND' };
+  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return { open: true,  label: 'REGULAR SESSION' };
+  if (mins >= 4 * 60        && mins < 9 * 60 + 30) return { open: true,  label: 'PRE-MARKET' };
+  if (mins >= 16 * 60       && mins < 20 * 60) return { open: true,  label: 'AFTER-HOURS' };
+  return { open: false, label: 'CLOSED' };
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [status, setStatus] = useState<SetupStatus | null>(null);
+  const [snapshot, setSnapshot] = useState<SnapshotItem[]>([]);
+  const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/setup/status')
@@ -37,83 +61,93 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch('/api/market-snapshot')
+      .then(r => r.json())
+      .then((data: { items?: SnapshotItem[]; fetched_at?: string }) => {
+        if (data.items) {
+          setSnapshot(data.items);
+          setSnapshotAt(data.fetched_at ?? null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSnapshotLoading(false));
+  }, []);
+
   const userEmail = session?.user?.email ?? status?.userEmail ?? null;
   const userName = getFirstName(session?.user?.name, userEmail);
   const nbmActive = status?.nbmSessionActive ?? false;
   const greeting = getGreeting();
+  const market = getMarketStatus();
 
   return (
     <div className="bg-surface text-on-surface min-h-screen">
       <NavBar userEmail={userEmail} />
 
       <main className="pt-[44px]">
+
         {/* ── Greeting header ── */}
         <div className="border-b border-outline-variant/10 bg-surface-container-low/40">
-          <div className="max-w-6xl mx-auto px-6 py-10">
-            <p className="text-secondary text-sm font-medium mb-1 tracking-wide">
-              {greeting},
-            </p>
-            <h1 className="text-4xl font-black text-on-surface tracking-tight mb-2">
-              {userName} —
-            </h1>
-            <p className="text-on-surface-variant text-base">
-              Here&apos;s your research workspace.
-            </p>
+          <div className="max-w-6xl mx-auto px-6 py-8 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-secondary text-sm font-medium mb-1 tracking-wide">
+                {greeting},
+              </p>
+              <h1 className="text-4xl font-black text-on-surface tracking-tight mb-2">
+                {userName} —
+              </h1>
+              <p className="text-on-surface-variant text-sm">
+                Here&apos;s your research workspace.
+              </p>
+            </div>
+            {/* Market status badge */}
+            <div className="flex flex-col items-end gap-2 mt-1">
+              <div className="font-mono text-xs text-outline bg-surface-container border border-outline-variant/20 px-3 py-1.5 flex items-center gap-2">
+                <span className={`w-1.5 h-1.5 rounded-full ${market.open ? 'bg-secondary animate-pulse' : 'bg-outline-variant'}`} />
+                <span className={market.open ? 'text-secondary' : 'text-outline'}>{market.label}</span>
+              </div>
+              {snapshotAt && (
+                <span className="font-mono text-[9px] text-outline-variant">
+                  data updated {new Date(snapshotAt).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* ── Main content ── */}
-        <div className="max-w-6xl mx-auto px-6 py-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
-
-            {/* LEFT: Search + quick actions */}
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xs font-bold tracking-[0.3em] text-outline uppercase mb-4">
-                  New Research
-                </h2>
-                <TickerSearch />
-                <div className="mt-4 flex items-center gap-3">
-                  <span className="text-[10px] font-mono text-outline tracking-widest">TRY</span>
-                  {['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN'].map((sym) => (
-                    <button
-                      key={sym}
-                      onClick={() => router.push(`/research/${sym}`)}
-                      className="text-[10px] font-mono text-outline-variant px-2 py-0.5 border border-outline-variant/20 rounded hover:border-secondary/40 hover:text-secondary transition-colors"
-                    >
-                      {sym}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quick links */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
+        {/* ── Search bar — full width, prominent ── */}
+        <div className="border-b border-outline-variant/10 bg-surface-container/30">
+          <div className="max-w-6xl mx-auto px-6 py-6">
+            <div className="text-[10px] font-bold tracking-[0.35em] text-outline uppercase mb-3">
+              New Research
+            </div>
+            <TickerSearch />
+            <div className="mt-3 flex items-center gap-3 flex-wrap">
+              <span className="text-[10px] font-mono text-outline tracking-widest">TRY</span>
+              {['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'GOOGL', 'META'].map((sym) => (
                 <button
-                  onClick={() => router.push('/terminal')}
-                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-primary/30 hover:bg-surface-container-high transition-all group"
+                  key={sym}
+                  onClick={() => router.push(`/research/${sym}`)}
+                  className="text-[10px] font-mono text-outline-variant px-2 py-0.5 border border-outline-variant/20 rounded hover:border-secondary/40 hover:text-secondary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-primary text-xl mb-2 block">terminal</span>
-                  <div className="text-sm font-bold text-on-surface">Research Terminal</div>
-                  <div className="text-xs text-on-surface-variant mt-0.5">Focused analysis mode</div>
+                  {sym}
                 </button>
-                <button
-                  onClick={() => router.push('/')}
-                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-secondary/30 hover:bg-surface-container-high transition-all group"
-                >
-                  <span className="material-symbols-outlined text-secondary text-xl mb-2 block">home</span>
-                  <div className="text-sm font-bold text-on-surface">Home</div>
-                  <div className="text-xs text-on-surface-variant mt-0.5">Marketing overview</div>
-                </button>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Main two-column content ── */}
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
+
+            {/* LEFT: Report history — the star */}
+            <div>
+              <ReportHistory />
             </div>
 
-            {/* RIGHT: Recent reports + account */}
-            <div className="space-y-6">
-              {/* Recent reports */}
-              <div>
-                <ReportHistory />
-              </div>
+            {/* RIGHT: Account + quick nav */}
+            <div className="space-y-4">
 
               {/* Account card */}
               <div className="bg-surface-container border border-outline-variant/20 p-5 space-y-4">
@@ -121,13 +155,11 @@ export default function DashboardPage() {
                   Account
                 </div>
 
-                {/* Email */}
                 <div>
                   <div className="text-[10px] text-primary/50 tracking-widest uppercase mb-1">Connected as</div>
-                  <div className="text-xs font-mono text-on-surface">{userEmail ?? '—'}</div>
+                  <div className="text-xs font-mono text-on-surface truncate">{userEmail ?? '—'}</div>
                 </div>
 
-                {/* NbLM status */}
                 <div>
                   <div className="text-[10px] text-primary/50 tracking-widest uppercase mb-1">Research Engine</div>
                   {nbmActive ? (
@@ -151,7 +183,6 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Sign out */}
                 <button
                   onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                   className="text-[10px] font-bold tracking-widest uppercase text-outline hover:text-error/70 transition-colors"
@@ -159,9 +190,102 @@ export default function DashboardPage() {
                   Sign out
                 </button>
               </div>
+
+              {/* Quick nav */}
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  href="/terminal"
+                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-primary/30 hover:bg-surface-container-high transition-all block"
+                >
+                  <span className="material-symbols-outlined text-primary text-xl mb-2 block">terminal</span>
+                  <div className="text-xs font-bold text-on-surface">Terminal</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5">Focused mode</div>
+                </Link>
+                <Link
+                  href="/"
+                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-secondary/30 hover:bg-surface-container-high transition-all block"
+                >
+                  <span className="material-symbols-outlined text-secondary text-xl mb-2 block">home</span>
+                  <div className="text-xs font-bold text-on-surface">Home</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5">Marketing page</div>
+                </Link>
+                <Link
+                  href="/setup"
+                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-outline/30 hover:bg-surface-container-high transition-all block"
+                >
+                  <span className="material-symbols-outlined text-outline text-xl mb-2 block">settings</span>
+                  <div className="text-xs font-bold text-on-surface">Setup</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5">Reconnect NbLM</div>
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-error/20 hover:bg-surface-container-high transition-all"
+                >
+                  <span className="material-symbols-outlined text-outline text-xl mb-2 block">logout</span>
+                  <div className="text-xs font-bold text-on-surface-variant">Sign Out</div>
+                  <div className="text-[10px] text-on-surface-variant mt-0.5">End session</div>
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* ── Market Snapshot — full width bottom ── */}
+        <div className="border-t border-outline-variant/10 bg-surface-container-low/30">
+          <div className="max-w-6xl mx-auto px-6 py-8">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="text-[10px] font-bold tracking-[0.35em] text-outline uppercase mb-1">Live Market</div>
+                <div className="text-lg font-black tracking-tight text-on-surface">Market Snapshot</div>
+              </div>
+              <div className="font-mono text-xs text-outline bg-surface-container border border-outline-variant/20 px-3 py-1 flex items-center gap-2">
+                <span className={`w-1.5 h-1.5 rounded-full ${market.open ? 'bg-secondary animate-pulse' : 'bg-outline-variant'}`} />
+                {market.label}
+              </div>
+            </div>
+
+            {snapshotLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="bg-surface-container border border-outline-variant/10 p-3 animate-pulse">
+                    <div className="h-2 bg-outline-variant/20 rounded mb-2 w-12" />
+                    <div className="h-4 bg-outline-variant/10 rounded w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : snapshot.length === 0 ? (
+              <p className="text-[11px] text-outline font-mono">Market data unavailable</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {snapshot.map((item) => (
+                  <button
+                    key={item.sym}
+                    onClick={() => router.push(`/research/${item.sym}`)}
+                    className="bg-surface-container border border-outline-variant/10 p-3 text-left hover:border-outline-variant/30 hover:bg-surface-container-high transition-all group"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono font-bold text-sm text-on-surface group-hover:text-primary transition-colors">
+                        {item.sym}
+                      </span>
+                      <span className={`text-[10px] font-mono font-bold ${item.up ? 'text-secondary' : 'text-error'}`}>
+                        {item.chg ?? '—'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-on-surface-variant truncate">{item.name}</div>
+                    <div className="text-xs font-mono text-on-surface mt-1">{item.price ?? '—'}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {snapshot.length > 0 && (
+              <p className="text-[9px] text-outline-variant font-mono mt-3">
+                Click any ticker to run a research report. Data from Yahoo Finance.
+              </p>
+            )}
+          </div>
+        </div>
+
       </main>
     </div>
   );

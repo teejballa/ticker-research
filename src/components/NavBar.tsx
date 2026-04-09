@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 
 function getMarketStatus(): { open: boolean; label: string } {
   const ny   = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -37,8 +36,6 @@ export default function NavBar({
   securityType,
 }: NavBarProps) {
   const market = getMarketStatus();
-  const router = useRouter();
-
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerStatus, setDrawerStatus] = useState<{ userEmail?: string | null; nbmSessionActive?: boolean } | null>(null);
 
@@ -86,12 +83,21 @@ export default function NavBar({
           >
             {navIdentityText}
           </span>
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
-          >
-            ACCOUNT
-          </button>
+          {userEmail ? (
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
+            >
+              ACCOUNT
+            </button>
+          ) : (
+            <Link
+              href="/auth/signin"
+              className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
+            >
+              SIGN IN
+            </Link>
+          )}
           <Link
             href="/"
             className="bg-primary-container text-on-primary-container px-3 py-1 text-xs font-bold rounded hover:bg-primary transition-colors active:scale-95 duration-100"
