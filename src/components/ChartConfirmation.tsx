@@ -165,7 +165,7 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
           </button>
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/dashboard')}
             className="px-5 py-2.5 border border-outline-variant/30 hover:border-outline text-on-surface-variant hover:text-on-surface text-xs tracking-[0.2em] uppercase transition-all duration-150"
           >
             ← BACK
