@@ -1,0 +1,157 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "CIPHER" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - generic [ref=e7]: RESEARCH TERMINAL
+          - generic [ref=e8]: NYSE
+          - generic [ref=e9]: NASDAQ
+      - generic [ref=e10]:
+        - generic [ref=e11]: user@cipher.io
+        - link "ACCOUNT" [ref=e12] [cursor=pointer]:
+          - /url: /account
+        - link "Analyze a Ticker →" [ref=e13] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e14]:
+          - generic [ref=e15]: schedule
+          - generic [ref=e16]: fiber_manual_record
+    - generic [ref=e18]:
+      - generic:
+        - generic: AI · EQUITY · INTELLIGENCE
+        - generic: CIPHER
+        - paragraph: Research before you trade. Institutional-grade equity synthesis powered by source-grounded intelligence.
+      - generic [ref=e20]:
+        - img "Cipher terminal"
+        - img "Cipher terminal color"
+      - generic [ref=e21]:
+        - generic [ref=e22]: SCROLL
+        - generic [ref=e24]: 0%
+    - generic [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: ▶
+          - generic [ref=e30]: RESEARCH HISTORY
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: SYMBOL
+            - generic [ref=e34]: COMPANY
+            - generic [ref=e35]: DATE
+            - generic [ref=e36]: SENTIMENT
+            - generic [ref=e37]: CONFIDENCE
+          - generic [ref=e42]: LOADING HISTORY...
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]: "01"
+          - generic [ref=e51]: Phase_01
+          - heading "COLLECT" [level=3] [ref=e52]
+          - paragraph [ref=e53]: Aggregates real-time SEC filings, earnings call transcripts, Yahoo Finance data, and global news into a unified raw data stream.
+        - generic [ref=e57]:
+          - generic [ref=e58]: "02"
+          - generic [ref=e59]: Phase_02
+          - heading "SYNTHESIZE" [level=3] [ref=e60]
+          - paragraph [ref=e61]: Multi-model intelligence extracts bull/bear theses, risk factors, and institutional sentiment shifts via NotebookLM × Gemini.
+        - generic [ref=e65]:
+          - generic [ref=e66]: "03"
+          - generic [ref=e67]: Phase_03
+          - heading "REPORT" [level=3] [ref=e68]
+          - paragraph [ref=e69]: Generates high-fidelity investment memos with Buy/Hold/Sell assessment, confidence level, and direct source citations.
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - text: Live Feed
+            - heading "Market Snapshot" [level=2] [ref=e77]
+          - generic [ref=e79]: CLOSED
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - generic [ref=e83]: SYMBOL
+            - generic [ref=e84]: NAME
+            - generic [ref=e85]: LAST PRICE
+            - generic [ref=e86]: CHANGE
+          - generic [ref=e88]: Loading market data...
+      - generic [ref=e90]:
+        - heading "Aggregated Intelligence Layers" [level=4] [ref=e91]
+        - generic [ref=e92]:
+          - generic [ref=e93]: CLAUDE
+          - generic [ref=e94]: GEMINI
+          - generic [ref=e95]: NOTEBOOKLM
+          - generic [ref=e96]: Yahoo! Finance
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - heading "A Professional Terminal for Everyone" [level=2] [ref=e99]
+          - paragraph [ref=e100]: Cipher bridges the gap between retail accessibility and institutional depth.
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e104]: database
+            - heading "Deep Context Mining" [level=3] [ref=e105]
+            - paragraph [ref=e106]: Our engines don't just search — they read. We analyze thousands of pages of filings to find the footnotes that move markets.
+            - generic [ref=e107]:
+              - generic [ref=e108]: YAHOO_FINANCE
+              - generic [ref=e109]: ANTHROPIC_SEARCH
+          - generic [ref=e110]:
+            - generic [ref=e112]: insights
+            - heading "Thematic Synthesis" [level=3] [ref=e113]
+            - paragraph [ref=e114]: Connect dots across industries. Understand how a semiconductor shortage impacts automotive margins instantly.
+            - generic [ref=e115]:
+              - generic [ref=e116]: NOTEBOOKLM
+              - generic [ref=e117]: GEMINI_AI
+      - generic [ref=e119]:
+        - heading "Ready to see deeper?" [level=2] [ref=e120]
+        - paragraph [ref=e121]: Source-grounded equity intelligence with transparent, traceable analysis.
+        - link "Launch Research Terminal" [ref=e122] [cursor=pointer]:
+          - /url: /terminal
+    - contentinfo [ref=e123]:
+      - generic [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e127]: AAPL
+          - generic [ref=e128]: —
+        - generic [ref=e129]:
+          - generic [ref=e130]: TSLA
+          - generic [ref=e131]: —
+        - generic [ref=e132]:
+          - generic [ref=e133]: MSFT
+          - generic [ref=e134]: —
+        - generic [ref=e135]:
+          - generic [ref=e136]: NVDA
+          - generic [ref=e137]: —
+        - generic [ref=e138]:
+          - generic [ref=e139]: GOOGL
+          - generic [ref=e140]: —
+        - generic [ref=e141]:
+          - generic [ref=e142]: AMZN
+          - generic [ref=e143]: —
+        - generic [ref=e144]:
+          - generic [ref=e145]: META
+          - generic [ref=e146]: —
+        - generic [ref=e147]:
+          - generic [ref=e148]: JPM
+          - generic [ref=e149]: —
+        - generic [ref=e150]:
+          - generic [ref=e151]: AAPL
+          - generic [ref=e152]: —
+        - generic [ref=e153]:
+          - generic [ref=e154]: TSLA
+          - generic [ref=e155]: —
+        - generic [ref=e156]:
+          - generic [ref=e157]: MSFT
+          - generic [ref=e158]: —
+        - generic [ref=e159]:
+          - generic [ref=e160]: NVDA
+          - generic [ref=e161]: —
+        - generic [ref=e162]:
+          - generic [ref=e163]: GOOGL
+          - generic [ref=e164]: —
+        - generic [ref=e165]:
+          - generic [ref=e166]: AMZN
+          - generic [ref=e167]: —
+        - generic [ref=e168]:
+          - generic [ref=e169]: META
+          - generic [ref=e170]: —
+        - generic [ref=e171]:
+          - generic [ref=e172]: JPM
+          - generic [ref=e173]: —
+      - generic [ref=e174]:
+        - generic [ref=e175]: fiber_manual_record
+        - generic [ref=e176]: CLOSED
+  - alert [ref=e177]

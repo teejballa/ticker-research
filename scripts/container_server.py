@@ -11,6 +11,7 @@ GET /vnc-ws (WebSocket) — proxies VNC WebSocket frames through Cloud Run's sin
 import asyncio
 import json
 import os
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -52,6 +53,7 @@ class VncSession:
     page: Any = None
     captured_state: str | None = None
     active: bool = False
+    user_data_dir: str | None = None  # temp dir for persistent Chromium profile
 
 
 _vnc_session = VncSession()
@@ -92,6 +94,12 @@ async def _stop_vnc() -> None:
     try:
         if _vnc_session.display:
             _vnc_session.display.stop()
+    except Exception:
+        pass
+    # Clean up persistent Chromium profile temp dir
+    try:
+        if _vnc_session.user_data_dir:
+            shutil.rmtree(_vnc_session.user_data_dir, ignore_errors=True)
     except Exception:
         pass
     _vnc_session = VncSession()
@@ -213,27 +221,134 @@ async def vnc_start(
     display_id = f":{display.display}"
     os.environ["DISPLAY"] = display_id
 
-    # 2. Launch Playwright Chromium non-headless on that virtual display
+    # 2. Persistent profile dir — Chrome treats non-ephemeral profiles differently,
+    #    which reduces GAIA's aggressiveness with cross-domain session sync on first load.
+    user_data_dir = tempfile.mkdtemp(prefix="vnc-profile-")
+
+    # 3. Launch Playwright Chromium via launch_persistent_context (no separate browser obj).
+    #    Using a persistent context vs ephemeral context changes how Chrome initialises
+    #    its session state manager, which reduces the number of GAIA cross-domain sync tabs.
     pw = await async_playwright().start()
     try:
-        browser = await pw.chromium.launch(
+        context = await pw.chromium.launch_persistent_context(
+            user_data_dir,
             headless=False,
-            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+            viewport={"width": 1280, "height": 960},
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                # Disable Google account/profile sync and background network activity
+                "--disable-sync",
+                "--disable-background-networking",
+                "--disable-background-mode",
+                "--disable-default-apps",
+                "--no-first-run",
+                "--disable-component-update",
+                "--disable-extensions",
+                # Disable Chrome features that trigger GAIA cross-domain session checks:
+                # - ChromeSignIn: Chrome-level account sign-in (triggers cross-domain sync)
+                # - SyncRequiresSignin: forces sign-in for sync (irrelevant, disable to reduce triggers)
+                # - BackgroundSync: Service Worker Background Sync API (opens tabs on reconnect)
+                # - MediaRouter / DialMediaRouteProvider: cast discovery (opens background tabs)
+                # - OptimizationHints: fetches hints in background
+                # - InterestFeedContentSuggestions: NTP background fetches
+                "--disable-features=ChromeSignIn,Translate,SyncRequiresSignin,"
+                "MediaRouter,DialMediaRouteProvider,OptimizationHints,"
+                "BackgroundSync,InterestFeedContentSuggestions",
+            ],
+            # Re-enable Chrome's native popup blocker (Playwright disables it by default).
+            # Chrome itself blocks non-user-gesture window.open() calls natively.
+            ignore_default_args=["--disable-popup-blocking"],
             env={**os.environ, "DISPLAY": display_id},
         )
     except Exception as exc:
         await pw.stop()
         display.stop()
+        shutil.rmtree(user_data_dir, ignore_errors=True)
         raise HTTPException(status_code=503, detail=f"Chromium launch failed: {exc}") from exc
 
-    context = await browser.new_context(viewport={"width": 1280, "height": 960})
-    page = await context.new_page()
-    await page.goto("https://notebooklm.google.com")
+    # launch_persistent_context opens one blank page automatically
+    pages = context.pages
+    page = pages[0] if pages else await context.new_page()
 
-    # 3. Start x11vnc (attach to virtual display, expose raw VNC on port 5900)
-    # Run without -bg so we hold the correct PID for cleanup.
-    # The /vnc-ws proxy connects directly to port 5900 (raw RFB TCP) — no websockify needed
-    # because FastAPI already handles the WebSocket layer from the browser.
+    # ---- Layer 1: Network-level abort for known GAIA cross-domain sync URLs ----
+    # GAIA opens new tabs to these URLs to check whether the user is already signed in
+    # on other Google services. On a fresh profile they always fail; GAIA detects the
+    # failure and retries → infinite loop. Aborting at the network level means GAIA
+    # gets an immediate network error rather than a "tab closed" signal, which breaks
+    # the retry trigger without leaving any visible tab flicker.
+    _GAIA_BLOCK_PATTERNS = [
+        "*://accounts.youtube.com/**",
+        "*://youtube.com/signin**",
+        "*://myaccount.google.com/notifications**",
+        "*://mail.google.com/accounts/**",
+    ]
+
+    async def _abort_route(route) -> None:
+        try:
+            await route.abort()
+        except Exception:
+            pass
+
+    for _pattern in _GAIA_BLOCK_PATTERNS:
+        await context.route(_pattern, _abort_route)
+
+    # ---- Layer 2: JS-level window.open override (belt-and-suspenders) ----
+    await context.add_init_script("""
+        window.open = () => { console.error('[vnc] window.open blocked'); return null; };
+        document.addEventListener('click', function(e) {
+            var el = e.target && e.target.closest ? e.target.closest('a[target]') : null;
+            if (el && el.target !== '_self' && el.target !== '') {
+                e.preventDefault(); e.stopImmediatePropagation();
+            }
+        }, true);
+    """)
+
+    # ---- Layer 3: Close any tab that still slips through ----
+    # CRITICAL: install a route-abort handler on the new page BEFORE closing it.
+    # If we close the page immediately without aborting its requests, GAIA receives
+    # a "tab closed unexpectedly" signal and retries — creating the infinite loop.
+    # With route-abort installed first, GAIA sees a network error on the request and
+    # does not schedule a retry.
+    _popup_count = [0]
+
+    async def _close_background_tab(new_page) -> None:
+        _popup_count[0] += 1
+        try:
+            url = new_page.url
+        except Exception:
+            url = "<unknown>"
+        print(f"[vnc-popup #{_popup_count[0]}] new page created url={url!r}", flush=True)
+        # Abort all pending requests first — breaks the GAIA retry loop
+        try:
+            await new_page.route("**/*", _abort_route)
+        except Exception:
+            pass
+        try:
+            await new_page.close()
+            print(f"[vnc-popup #{_popup_count[0]}] closed", flush=True)
+        except Exception as e:
+            print(f"[vnc-popup #{_popup_count[0]}] close error: {e!r}", flush=True)
+
+    context.on("page", lambda p: asyncio.ensure_future(_close_background_tab(p)))
+
+    # Navigate directly to the accounts.google.com sign-in page using the exact URL that
+    # notebooklm.google.com's server-side redirect chain produces. The three hops
+    # (notebooklm.google.com → /login?continue=... → accounts.google.com/ServiceLogin?...)
+    # are all 302 redirects with no JavaScript — the browser arrives at the same
+    # destination either way. Going directly skips the hops and avoids any Google-side
+    # analytics/session-init that fires during the redirect chain.
+    await page.goto(
+        "https://accounts.google.com/ServiceLogin"
+        "?passive=1209600"
+        "&osid=1"
+        "&continue=https%3A%2F%2Fnotebooklm.google.com%2Flogin%3Fcontinue%3Dhttps%3A%2F%2Fnotebooklm.google.com%2F"
+        "&followup=https%3A%2F%2Fnotebooklm.google.com%2Flogin%3Fcontinue%3Dhttps%3A%2F%2Fnotebooklm.google.com%2F"
+    )
+
+    # 4. Start x11vnc (attach to virtual display, expose raw VNC on port 5900).
+    # The /vnc-ws proxy connects directly to port 5900 (raw RFB TCP).
     try:
         x11vnc_proc = subprocess.Popen(
             ["x11vnc", "-display", display_id, "-rfbport", "5900",
@@ -243,21 +358,22 @@ async def vnc_start(
         )
     except FileNotFoundError as exc:
         await context.close()
-        await browser.close()
         await pw.stop()
         display.stop()
+        shutil.rmtree(user_data_dir, ignore_errors=True)
         raise HTTPException(status_code=503, detail="x11vnc not found") from exc
 
-    # Store session globally
+    # Store session globally (browser=None — persistent context owns itself)
     _vnc_session = VncSession(
         display=display,
         x11vnc_proc=x11vnc_proc,
         playwright=pw,
-        browser=browser,
+        browser=None,
         context=context,
         page=page,
         captured_state=None,
         active=True,
+        user_data_dir=user_data_dir,
     )
 
     # Wait for x11vnc to be ready before returning — avoids black-screen race
@@ -288,9 +404,17 @@ async def vnc_status(
     except Exception:
         return {"captured": False}
 
-    google_cookies = [
+    # Google session cookies that only appear AFTER successful Google sign-in.
+    # Informational cookies (NID, OTZ, __Host-GAPS, CONSENT) appear on page-load
+    # and must NOT be used for login detection — they cause false positives.
+    _AUTH_COOKIE_NAMES = frozenset({
+        "SID", "SSID", "HSID", "APISID", "SAPISID",
+        "__Secure-1PSID", "__Secure-3PSID",
+        "__Secure-1PAPISID", "__Secure-3PAPISID",
+    })
+    google_auth_cookies = [
         c for c in state.get("cookies", [])
-        if ".google.com" in c.get("domain", "")
+        if c.get("name", "") in _AUTH_COOKIE_NAMES
     ]
     nbm_cookies = [
         c for c in state.get("cookies", [])
@@ -303,7 +427,7 @@ async def vnc_status(
         url = ""
 
     logged_in = (
-        len(google_cookies) >= 3
+        len(google_auth_cookies) >= 1
         or len(nbm_cookies) > 0
         or (
             "notebooklm.google.com" in url
