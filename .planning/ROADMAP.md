@@ -147,9 +147,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
 | 7. Research Quality & Special Situation Coverage | 4/4 | Complete    | 2026-03-25 |
-| 8. Full Public Deployment | 5/6 | In Progress|  |
-| 9. Migrate Container to Google Cloud Run | 1/3 | In Progress|  |
-| 10. Reliable Market Data | 0/? | Planned | |
+| 8. Full Public Deployment | 6/6 | Complete | 2026-04-10 |
+| 9. Migrate Container to Google Cloud Run | 3/3 | Complete | 2026-04-10 |
+| 10. Reliable Market Data | 0/4 | Planned | |
 | 11. Public Sentiment Layer | 0/? | Planned | |
 
 ### Phase 7: Research Quality & Special Situation Coverage
@@ -187,7 +187,7 @@ Plans:
 **Goal:** Wire the built app (Vercel frontend + Daytona container) into a fully publicly accessible product: provision infrastructure, solve web-context per-user NotebookLM auth via VNC browser stream, and ship a live multi-user deployment at ticker-research.vercel.app.
 **Requirements**: TBD
 **Depends on:** Phase 7
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed
 
 Plans:
 - [ ] 08-01-PLAN.md — UserCredential Prisma model, AES-256-GCM credentials crypto lib, Wave 0 test stubs, devcontainer VNC deps
@@ -195,49 +195,50 @@ Plans:
 - [ ] 08-03-PLAN.md — Vercel analysis route web-mode branch: reads source package + decrypts per-user NbLM credentials from Neon, forwards to Daytona container
 - [ ] 08-04-PLAN.md — /setup onboarding page (react-vnc VNC stream), /api/setup/nbm-auth POST/GET endpoints
 - [ ] 08-05-PLAN.md — /account settings page, NavBar ACCOUNT link, cloud error states in ResearchProgress, .env.local.example Phase 8 vars
-- [ ] 08-06-PLAN.md — Daytona workspace provisioning, Vercel deploy, production smoke test checkpoint
+- [x] 08-06-PLAN.md — Daytona workspace provisioning, Vercel deploy, production smoke test checkpoint (completed 2026-04-10)
 
 ### Phase 9: Migrate Container from Daytona to Google Cloud Run
 
 **Goal:** Migrate the `notebooklm-py` research container from Daytona to Google Cloud Run so the container runs on Google infrastructure and can reach `notebooklm.google.com` — Daytona containers run on AWS IPs which are blocked by Google's NotebookLM service.
 **Requirements**: GCR-01, GCR-02, GCR-03
 **Depends on:** Phase 8
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 - [x] 09-01-PLAN.md — Multi-stage Dockerfile, entrypoint.sh, container_server.py CONTAINER_SECRET rename + /vnc-ws WebSocket proxy
-- [ ] 09-02-PLAN.md — Vercel route DAYTONA_* → CONTAINER_* renames across 3 route files + test file
-- [ ] 09-03-PLAN.md — Cloud Run deployment runbook (docs/DEPLOY-GCR.md), .env.local.example update, production smoke test
+- [x] 09-02-PLAN.md — Vercel route DAYTONA_* → CONTAINER_* renames across 3 route files + test file (completed 2026-04-10)
+- [x] 09-03-PLAN.md — Cloud Run deployment runbook (docs/DEPLOY-GCR.md), .env.local.example update, production smoke test (completed 2026-04-10)
 
-### Phase 10: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
+### Phase 10: Reliable Market Data — Multi-Source Aggregation
 
-**Goal**: Any ticker a user enters returns complete, populated market data. Yahoo-finance2 is the primary source but automatically falls back to secondary sources (Alpha Vantage free tier, Financial Modeling Prep free tier, Anthropic web search extraction) when fields are missing or the primary call fails — so major stocks like AAPL never produce empty report sections.
+**Goal**: Any ticker a user enters returns complete, populated market data. Yahoo-finance2 remains the primary source; Alpha Vantage, Finnhub, and FMP are added as optional supplementary sources that run in parallel and feed additional context to NotebookLM — so Gemini can synthesize richer analysis even when yahoo returns null fields.
 
-**Problem being solved**: yahoo-finance2 is an unofficial API that silently returns partial or empty data for many tickers (including large-caps like AAPL). Currently, missing fundamentals fields (P/E, EPS, revenue, market cap) leave report sections blank. Users have no indication that data is missing vs. unavailable.
+**Problem being solved**: yahoo-finance2 silently returns null for many fields (P/E, EPS, revenue, market cap) even for large-cap tickers like AAPL. Currently, missing fundamentals fields leave report sections blank. The fix is not a field-level fallback chain but multi-source aggregation: collect data from all available sources, add each as a separate add_text() source to NotebookLM, and let Gemini synthesize across them.
 
 **Architecture**:
-- `src/lib/market-data.ts`: unified `fetchMarketData(ticker)` function with cascading fallback chain
-  - Primary: yahoo-finance2 (price, volume, fundamentals, 52-week range)
-  - Secondary: Alpha Vantage free tier (OVERVIEW endpoint — P/E, EPS, market cap, revenue)
-  - Tertiary: Financial Modeling Prep free tier (company profile + key metrics)
-  - Final fallback: Anthropic web search extraction for any still-missing fields
-- Each source is tried independently per field — partial data from primary is supplemented by secondary (not replaced wholesale)
-- `DataField` envelope tracks `{ value, source, fetchedAt }` per field so report can show "P/E ratio: 28.4 (via Alpha Vantage)"
-- Missing fields after all fallbacks are explicitly marked `{ value: null, unavailable: true }` — sections show "Data unavailable" instead of rendering empty
-- No API keys required for free tiers in local mode; optional env vars `ALPHA_VANTAGE_API_KEY` and `FMP_API_KEY` unlock higher rate limits
+- Multi-source aggregation: all 3 supplementary sources run eagerly in parallel on every request (not gated on yahoo returning null)
+- Each source formats its data as a labeled text block (`=== MARKET DATA: {SOURCE} ===`) and is added to NotebookLM via `add_text()`
+- New type: `SupplementaryMarketData` with `sources: SupplementarySource[]` added to `SourcePackage` (additive — no breaking changes)
+- New files: `src/lib/data/alpha-vantage.ts`, `finnhub.ts`, `fmp.ts` — each returns `SupplementarySource | null`
+- `source-package.ts` runs 3 new fetchers in `Promise.allSettled` alongside existing calls
+- `scripts/notebooklm_research.py` adds each available source as a separate `add_text()` call after primary market data
+- No UI changes — improvement shows up in report text sections where Gemini now has more data
 
 **Depends on**: Phase 9
 **Requirements**: DATA-RELIABLE-01, DATA-RELIABLE-02, DATA-RELIABLE-03
 **Success Criteria** (what must be TRUE):
-  1. AAPL, TSLA, NVDA, and 10 other major tickers all produce fully-populated report sections with no blank fields
-  2. When primary source (yahoo-finance2) fails or returns partial data, fallback sources fill missing fields transparently
-  3. Report shows source attribution per data field when a fallback was used (e.g., "via Alpha Vantage")
-  4. Tickers with genuinely unavailable data (small-cap, OTC) display "Data unavailable" explicitly rather than blank sections
-  5. Fallback chain completes within 10 seconds total — no single source blocks the pipeline
-**Plans:** 0 plans (run /gsd:plan-phase 10 to break down)
+  1. AAPL, TSLA, NVDA research with at least 2 supplementary sources configured produces richer report sections with no N/A for P/E, EPS, revenue, market cap
+  2. Research with all 3 API keys absent completes normally — yahoo-only path unchanged
+  3. Supplementary source fetches complete within 5 seconds (all run in parallel — no added sequential latency)
+  4. Python script adds each available source as a separate add_text() call with labeled title
+  5. .env.local.example documents 3 new optional keys with sign-up links
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD
+- [ ] 10-01-PLAN.md — SupplementaryMarketData types in types.ts + 3 new data fetcher modules (alpha-vantage.ts, finnhub.ts, fmp.ts)
+- [ ] 10-02-PLAN.md — source-package.ts integration: run 3 fetchers in parallel, populate supplementary_market_data on SourcePackage
+- [ ] 10-03-PLAN.md — Python script add_text() loop for supplementary sources + research-brief.ts header + .env.local.example
+- [ ] 10-04-PLAN.md — Automated validation checks + human verification checkpoint
 
 ### Phase 11: Public Sentiment Layer — X, YouTube, Reddit & Social Signal Ingestion
 
