@@ -100,7 +100,6 @@ export default function SetupPage() {
           const data = await res.json() as { nbmSessionActive?: boolean };
           if (data.nbmSessionActive) {
             setStep('complete');
-            router.push('/dashboard');
             return;
           }
         }
@@ -158,16 +157,25 @@ export default function SetupPage() {
               Research engine connected
             </span>
           </div>
-          <button
-            onClick={async () => {
-              await fetch('/api/setup/nbm-auth', { method: 'DELETE' });
-              setStep('idle');
-            }}
-            className="text-xs uppercase tracking-widest"
-            style={{ color: 'rgba(223,226,235,0.25)', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
-            Reconnect
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="text-xs uppercase tracking-widest"
+              style={{ color: 'rgba(74,222,128,0.5)', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              Go to Dashboard →
+            </button>
+            <button
+              onClick={async () => {
+                await fetch('/api/setup/nbm-auth', { method: 'DELETE' });
+                setStep('idle');
+              }}
+              className="text-xs uppercase tracking-widest"
+              style={{ color: 'rgba(223,226,235,0.2)', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              Reconnect
+            </button>
+          </div>
         </div>
       </Shell>
     );
