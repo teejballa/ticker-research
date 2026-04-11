@@ -19,7 +19,13 @@ interface ResearchProgressProps {
 
 function classifyError(message: string): 'session-expired' | 'container-unreachable' | 'timeout' | 'unknown' {
   const m = message.toLowerCase();
-  if (m.includes('notebooklm') && (m.includes('session') || m.includes('auth') || m.includes('expired') || m.includes('not connected'))) return 'session-expired';
+  if (
+    m.includes('authentication expired') ||
+    m.includes('auth') && (m.includes('expired') || m.includes('invalid')) ||
+    m.includes('not connected') ||
+    m.includes('accounts.google.com') ||
+    (m.includes('notebooklm') && (m.includes('session') || m.includes('auth') || m.includes('expired')))
+  ) return 'session-expired';
   if (m.includes('unreachable') || m.includes('connection') || m.includes('econnrefused') || m.includes('failed to fetch')) return 'container-unreachable';
   if (m.includes('timeout') || m.includes('taking longer')) return 'timeout';
   return 'unknown';
@@ -27,9 +33,9 @@ function classifyError(message: string): 'session-expired' | 'container-unreacha
 
 const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string }> = {
   'session-expired': {
-    message: 'Research engine session expired — reconnect your account to continue.',
-    cta: 'RECONNECT ACCOUNT →',
-    ctaHref: '/account',
+    message: 'Research engine session expired — reconnect your NotebookLM account to continue.',
+    cta: 'RECONNECT →',
+    ctaHref: '/setup',
   },
   'container-unreachable': {
     message: 'Analysis server unreachable. This is temporary — please try again.',
@@ -43,8 +49,8 @@ const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string
   },
   'unknown': {
     message: 'Analysis failed. If this continues, reconnect your account.',
-    cta: 'RECONNECT ACCOUNT →',
-    ctaHref: '/account',
+    cta: 'RECONNECT →',
+    ctaHref: '/setup',
   },
 };
 
