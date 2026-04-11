@@ -151,11 +151,23 @@ export default function SetupPage() {
   if (step === 'complete') {
     return (
       <Shell>
-        <div className="flex items-center gap-3">
-          <span style={{ color: '#4ade80' }}>✓</span>
-          <span className="text-xs uppercase tracking-widest" style={{ color: 'rgba(74,222,128,0.8)', fontSize: '10px' }}>
-            Research engine connected
-          </span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span style={{ color: '#4ade80' }}>✓</span>
+            <span className="text-xs uppercase tracking-widest" style={{ color: 'rgba(74,222,128,0.8)', fontSize: '10px' }}>
+              Research engine connected
+            </span>
+          </div>
+          <button
+            onClick={async () => {
+              await fetch('/api/setup/nbm-auth', { method: 'DELETE' });
+              setStep('idle');
+            }}
+            className="text-xs uppercase tracking-widest"
+            style={{ color: 'rgba(223,226,235,0.25)', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            Reconnect
+          </button>
         </div>
       </Shell>
     );

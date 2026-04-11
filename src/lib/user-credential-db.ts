@@ -25,3 +25,10 @@ export async function getCredential(userId: string): Promise<{ encrypted_state: 
     select: { encrypted_state: true },
   });
 }
+
+/**
+ * Delete the stored NotebookLM credential for a user (force-reconnect flow).
+ */
+export async function deleteCredential(userId: string): Promise<void> {
+  await prisma.userCredential.deleteMany({ where: { user_id: userId } });
+}
