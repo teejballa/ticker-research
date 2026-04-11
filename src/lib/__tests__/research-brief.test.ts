@@ -62,7 +62,6 @@ const basePackage: SourcePackage = {
     sources_checked: ['Reddit', 'Twitter/X', 'StockTwits'],
   },
   collection_errors: [],
-  supplementary_market_data: { sources: [] },
 };
 
 // ---- formatResearchBrief tests ----
