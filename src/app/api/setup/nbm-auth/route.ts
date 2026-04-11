@@ -70,6 +70,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   return NextResponse.json({ streamUrl });
 }
 
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+  const { deleteCredential } = await import('@/lib/user-credential-db');
+  await deleteCredential(session.user.email);
+  return NextResponse.json({ deleted: true });
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
