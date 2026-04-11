@@ -150,6 +150,11 @@ export default function ResearchPage() {
     const isRateLimit =
       errorMessage?.toLowerCase().includes('daily limit') ||
       errorMessage?.toLowerCase().includes('midnight pst');
+    const isAuthExpired =
+      errorMessage?.toLowerCase().includes('authentication expired') ||
+      errorMessage?.toLowerCase().includes('auth') && (errorMessage?.toLowerCase().includes('expired') || errorMessage?.toLowerCase().includes('invalid')) ||
+      errorMessage?.toLowerCase().includes('accounts.google.com') ||
+      errorMessage?.toLowerCase().includes('not connected');
 
     return (
       <div className="flex flex-col min-h-screen bg-surface">
@@ -162,18 +167,31 @@ export default function ResearchPage() {
               <p className="text-xs text-on-surface-variant leading-relaxed mb-5">
                 NotebookLM daily limit reached. Resets at midnight PST — try again tomorrow.
               </p>
+            ) : isAuthExpired ? (
+              <p className="text-xs text-on-surface-variant leading-relaxed mb-5">
+                Your research engine session expired. Reconnect your NotebookLM account to continue.
+              </p>
             ) : (
               <p className="text-xs text-on-surface-variant leading-relaxed mb-5">
                 {errorMessage ?? 'An unexpected error occurred during analysis.'}
               </p>
             )}
             <div className="flex gap-2">
-              <button
-                onClick={handleTryAgain}
-                className="flex-1 py-2 bg-primary-container text-on-primary-container font-bold text-xs tracking-[0.2em] uppercase transition-colors hover:opacity-90"
-              >
-                TRY AGAIN
-              </button>
+              {isAuthExpired ? (
+                <Link
+                  href="/setup"
+                  className="flex-1 py-2 text-center bg-primary-container text-on-primary-container font-bold text-xs tracking-[0.2em] uppercase transition-colors hover:opacity-90"
+                >
+                  RECONNECT →
+                </Link>
+              ) : (
+                <button
+                  onClick={handleTryAgain}
+                  className="flex-1 py-2 bg-primary-container text-on-primary-container font-bold text-xs tracking-[0.2em] uppercase transition-colors hover:opacity-90"
+                >
+                  TRY AGAIN
+                </button>
+              )}
               <Link
                 href="/"
                 className="flex-1 py-2 text-center border border-outline-variant/30 hover:border-outline text-on-surface-variant hover:text-on-surface text-xs tracking-[0.2em] uppercase transition-all"
