@@ -24,24 +24,6 @@ vi.mock('@/lib/data/yahoo', () => ({
   }),
 }));
 
-vi.mock('@/lib/data/finnhub', () => ({
-  fetchFinnhub: vi.fn().mockResolvedValue({
-    name: 'Finnhub',
-    fetched_at: '2026-03-11T00:00:00.000Z',
-    text_block: '=== MARKET DATA: FINNHUB ===\nTicker: AAPL\nP/E (Annual): 28.5',
-    available: true,
-  }),
-}));
-
-vi.mock('@/lib/data/polygon', () => ({
-  fetchPolygon: vi.fn().mockResolvedValue({
-    name: 'Polygon',
-    fetched_at: '2026-03-11T00:00:00.000Z',
-    text_block: '=== MARKET DATA: POLYGON ===\nTicker: AAPL\nMarket Cap: $2.90T',
-    available: true,
-  }),
-}));
-
 vi.mock('@/lib/data/anthropic-search', () => ({
   fetchNews: vi.fn().mockResolvedValue({
     collected_at: '2026-03-11T00:00:00.000Z',
@@ -69,7 +51,7 @@ vi.mock('@/lib/data/anthropic-search', () => ({
 }));
 
 describe('collectAllData', () => {
-  it('returns SourcePackage with all 6 sections and supplementary_market_data', async () => {
+  it('returns SourcePackage with all 6 sections', async () => {
     const { collectAllData } = await import('./source-package');
     const pkg = await collectAllData('AAPL', 'Apple Inc', 'NASDAQ');
     expect(pkg.ticker).toBe('AAPL');
@@ -80,12 +62,6 @@ describe('collectAllData', () => {
     expect(pkg.analyst_sentiment).toBeDefined();
     expect(pkg.sec_filing_summary).toBeDefined();
     expect(pkg.social_sentiment).toBeDefined();
-    // Phase 10 — supplementary sources always present
-    expect(pkg.supplementary_market_data).toBeDefined();
-    expect(pkg.supplementary_market_data.sources).toHaveLength(2);
-    const names = pkg.supplementary_market_data.sources.map(s => s.name);
-    expect(names).toContain('Finnhub');
-    expect(names).toContain('Polygon');
   });
 
   it('all 6 sections have collected_at timestamp (DATA-07)', async () => {
@@ -97,17 +73,6 @@ describe('collectAllData', () => {
     expect(pkg.analyst_sentiment.collected_at).toBeDefined();
     expect(pkg.sec_filing_summary.collected_at).toBeDefined();
     expect(pkg.social_sentiment.collected_at).toBeDefined();
-  });
-
-  it('supplementary_market_data has 2 sources with available:false when fetchers return unavailable', async () => {
-    const { fetchFinnhub } = await import('@/lib/data/finnhub');
-    const { fetchPolygon } = await import('@/lib/data/polygon');
-    vi.mocked(fetchFinnhub).mockResolvedValueOnce({ name: 'Finnhub', fetched_at: new Date().toISOString(), text_block: '', available: false });
-    vi.mocked(fetchPolygon).mockResolvedValueOnce({ name: 'Polygon', fetched_at: new Date().toISOString(), text_block: '', available: false });
-    const { collectAllData } = await import('./source-package');
-    const pkg = await collectAllData('AAPL', 'Apple Inc', 'NASDAQ');
-    expect(pkg.supplementary_market_data.sources).toHaveLength(2);
-    expect(pkg.supplementary_market_data.sources.every(s => !s.available)).toBe(true);
   });
 
   it('continues with partial data when one source fails', async () => {

@@ -94,20 +94,6 @@ export interface SourcePackage {
   sec_filing_summary: SecFilingSummarySection;
   social_sentiment: SocialSentimentSection;
   collection_errors: string[];
-  supplementary_market_data: SupplementaryMarketData;
-}
-
-// ---- Supplementary Market Data — multi-source aggregation (Phase 10) ----
-
-export interface SupplementarySource {
-  name: string;        // "Finnhub" | "Polygon"
-  fetched_at: string;  // ISO 8601
-  text_block: string;  // pre-formatted labeled block for add_text()
-  available: boolean;  // false if API key missing or fetch failed
-}
-
-export interface SupplementaryMarketData {
-  sources: SupplementarySource[];
 }
 
 // ---- AnalysisResult types (Phase 2 — NotebookLM research output) ----

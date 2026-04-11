@@ -3,3 +3,4 @@ fastapi>=0.115.0,<0.116
 uvicorn[standard]>=0.34.0,<0.35
 pyvirtualdisplay>=3.0,<4.0
 python-multipart>=0.0.20,<0.1
+yfinance>=0.2.0

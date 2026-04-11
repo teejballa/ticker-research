@@ -22,6 +22,12 @@ import sys
 from datetime import datetime, timezone
 
 try:
+    import yfinance as yf  # type: ignore[import]
+    _YFINANCE_AVAILABLE = True
+except ImportError:
+    _YFINANCE_AVAILABLE = False
+
+try:
     from notebooklm import NotebookLMClient, RPCError
 except ImportError:
     # notebooklm-py not installed — argv validation still works;
@@ -112,6 +118,44 @@ PREAMBLES = {
         "which do not apply to ETFs. "
     ),
 }
+
+
+# ---------------------------------------------------------------------------
+# yfinance supplement fetcher (Phase 10 — no API key required)
+# ---------------------------------------------------------------------------
+
+def fetch_yfinance_supplement(ticker: str) -> 'str | None':
+    """
+    Fetches supplementary market data for a ticker using yfinance.
+    Returns a formatted text block or None if yfinance is unavailable or fetch fails.
+    """
+    if not _YFINANCE_AVAILABLE:
+        return None
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info
+        if not info or info.get('regularMarketPrice') is None:
+            return None
+        lines = [
+            "=== MARKET DATA: YFINANCE (SUPPLEMENTARY) ===",
+            f"Ticker: {info.get('symbol', ticker)}",
+            f"Company: {info.get('longName', 'N/A')}",
+            f"P/E (Trailing): {info.get('trailingPE', 'N/A')}",
+            f"P/E (Forward): {info.get('forwardPE', 'N/A')}",
+            f"EPS (Trailing): {info.get('trailingEps', 'N/A')}",
+            f"Revenue: {info.get('totalRevenue', 'N/A')}",
+            f"Market Cap: {info.get('marketCap', 'N/A')}",
+            f"Profit Margin: {info.get('profitMargins', 'N/A')}",
+            f"Debt/Equity: {info.get('debtToEquity', 'N/A')}",
+            f"52-Week High: {info.get('fiftyTwoWeekHigh', 'N/A')}",
+            f"52-Week Low: {info.get('fiftyTwoWeekLow', 'N/A')}",
+            f"Beta: {info.get('beta', 'N/A')}",
+            f"ROE: {info.get('returnOnEquity', 'N/A')}",
+            f"ROA: {info.get('returnOnAssets', 'N/A')}",
+        ]
+        return "\n".join(lines)
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -542,9 +586,40 @@ async def main() -> None:
             # Wait for text source to index
             await asyncio.sleep(15)
 
+            # 2b. Add supplementary market data sources (Phase 10 — multi-source aggregation)
+            # Each source was fetched in parallel by TypeScript — Python just adds available ones to NotebookLM
+            source_warnings = []
+            supplementary = pkg.get('supplementary_market_data', {})
+            supplementary_sources = supplementary.get('sources', [])
+            available_supplementary = [s for s in supplementary_sources if s.get('available', False) and s.get('text_block', '').strip()]
+
+            if available_supplementary:
+                progress(f"Adding {len(available_supplementary)} supplementary market data source(s)...")
+                for supp_source in available_supplementary:
+                    source_name = supp_source.get('name', 'Unknown Source')
+                    text_block = supp_source.get('text_block', '')
+                    title = f"{ticker} Market Data — {source_name}"
+                    try:
+                        await client.sources.add_text(nb.id, title, text_block)
+                    except Exception as e:
+                        source_warnings.append(f"Failed to add supplementary source {source_name}: {e}")
+
+                # Brief wait for supplementary sources to index
+                await asyncio.sleep(5)
+            else:
+                progress("No supplementary market data sources available (API keys not configured or fetches failed)")
+
+            # 2c. Add yfinance supplement (Python-native, no API key needed)
+            yfinance_text = fetch_yfinance_supplement(ticker)
+            if yfinance_text:
+                progress("Adding yfinance supplementary market data...")
+                try:
+                    await client.sources.add_text(nb.id, f"{ticker} Market Data — yfinance", yfinance_text)
+                except Exception as e:
+                    source_warnings.append(f"Failed to add yfinance supplement: {e}")
+
             # 3. Add news URLs (per-URL error handling — never aborts pipeline)
             news_urls = extract_news_urls(pkg)
-            source_warnings = []
             progress(f"Adding news sources ({len(news_urls)} URLs)...")
             for url in news_urls:
                 try:

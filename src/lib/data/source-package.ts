@@ -10,9 +10,7 @@ import {
   fetchSecFilingSummary,
   fetchSocialSentiment,
 } from '@/lib/data/anthropic-search';
-import { fetchFinnhub } from '@/lib/data/finnhub';
-import { fetchPolygon } from '@/lib/data/polygon';
-import type { SourcePackage, MarketDataSection, FundamentalsSection, SupplementaryMarketData, SupplementarySource } from '@/lib/types';
+import type { SourcePackage, MarketDataSection, FundamentalsSection } from '@/lib/types';
 import type { SecurityType } from '@/lib/types';
 
 // Empty fallback sections for when a data source fails completely
@@ -48,7 +46,7 @@ export async function collectAllData(
   exchange: string | null = null,
   securityType: SecurityType = 'equity',
 ): Promise<SourcePackage> {
-  // Run all 8 data sources in parallel — Promise.allSettled never throws
+  // Run all 6 data sources in parallel — Promise.allSettled never throws
   const [
     marketDataResult,
     fundamentalsResult,
@@ -56,8 +54,6 @@ export async function collectAllData(
     analystResult,
     secResult,
     socialResult,
-    finnhubResult,
-    polygonResult,
   ] = await Promise.allSettled([
     fetchMarketData(ticker),
     fetchFundamentals(ticker),
@@ -65,8 +61,6 @@ export async function collectAllData(
     fetchAnalystSentiment(ticker, securityType),
     fetchSecFilingSummary(ticker, securityType),
     fetchSocialSentiment(ticker, securityType),
-    fetchFinnhub(ticker),
-    fetchPolygon(ticker),
   ]);
 
   const collection_errors: string[] = [];
@@ -77,27 +71,6 @@ export async function collectAllData(
     collection_errors.push(msg);
     return fallback;
   }
-
-  // settleSupplementary extracts a SupplementarySource from a settled result.
-  // Missing API keys are handled internally by each fetcher (they return available:false),
-  // so only unexpected rejections (network errors not caught inside the fetcher) push to collection_errors.
-  const settleSupplementary = (
-    result: PromiseSettledResult<SupplementarySource>,
-    sourceName: string,
-  ): SupplementarySource => {
-    if (result.status === 'fulfilled') return result.value;
-    collection_errors.push(
-      `${sourceName}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
-    );
-    return { name: sourceName, fetched_at: new Date().toISOString(), text_block: '', available: false };
-  };
-
-  const supplementary_market_data: SupplementaryMarketData = {
-    sources: [
-      settleSupplementary(finnhubResult, 'Finnhub'),
-      settleSupplementary(polygonResult, 'Polygon'),
-    ],
-  };
 
   return {
     ticker,
@@ -112,6 +85,5 @@ export async function collectAllData(
     sec_filing_summary: settle(secResult, { collected_at: new Date().toISOString(), most_recent_10k: null, most_recent_10q: null, filing_dates: { '10k': null, '10q': null }, error: 'SEC filing collection failed' }, 'sec_filing_summary'),
     social_sentiment: settle(socialResult, { collected_at: new Date().toISOString(), overall_tone: null, signals: [], sources_checked: [], error: 'social sentiment collection failed' }, 'social_sentiment'),
     collection_errors,
-    supplementary_market_data,
   };
 }
