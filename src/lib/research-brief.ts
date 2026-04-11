@@ -84,6 +84,8 @@ export function formatResearchBrief(pkg: SourcePackage): string {
   lines.push(`Company: ${fmt(pkg.company_name)}`);
   lines.push(`Exchange: ${fmt(pkg.exchange)}`);
   lines.push(`Data Assembled: ${fmt(pkg.assembled_at)}`);
+  const suppCount = pkg.supplementary_market_data?.sources?.filter(s => s.available).length ?? 0;
+  lines.push(`Supplementary Sources: ${suppCount} of 2 available (Finnhub, Polygon)`);
   lines.push('');
 
   // Market Data
