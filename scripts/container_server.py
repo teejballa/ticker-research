@@ -229,44 +229,24 @@ async def vnc_start(
     #    Using a persistent context vs ephemeral context changes how Chrome initialises
     #    its session state manager, which reduces the number of GAIA cross-domain sync tabs.
     pw = await async_playwright().start()
+    # Use Firefox for the VNC Google sign-in session.
+    # Google's "This browser or app may not be secure" / /v3/signin/rejected check
+    # exclusively targets Chromium-based embedded browsers (WebView detection).
+    # Firefox is never caught by this check — Google's sign-in uses a different
+    # validation path for Firefox that does not include the embedded-browser rejection.
     try:
-        context = await pw.chromium.launch_persistent_context(
+        context = await pw.firefox.launch_persistent_context(
             user_data_dir,
             headless=False,
             viewport={"width": 1280, "height": 960},
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                # Disable Google account/profile sync and background network activity
-                "--disable-sync",
-                "--disable-background-networking",
-                "--disable-background-mode",
-                "--disable-default-apps",
-                "--no-first-run",
-                "--disable-component-update",
-                "--disable-extensions",
-                # Disable Chrome features that trigger GAIA cross-domain session checks:
-                # - ChromeSignIn: Chrome-level account sign-in (triggers cross-domain sync)
-                # - SyncRequiresSignin: forces sign-in for sync (irrelevant, disable to reduce triggers)
-                # - BackgroundSync: Service Worker Background Sync API (opens tabs on reconnect)
-                # - MediaRouter / DialMediaRouteProvider: cast discovery (opens background tabs)
-                # - OptimizationHints: fetches hints in background
-                # - InterestFeedContentSuggestions: NTP background fetches
-                "--disable-features=ChromeSignIn,Translate,SyncRequiresSignin,"
-                "MediaRouter,DialMediaRouteProvider,OptimizationHints,"
-                "BackgroundSync,InterestFeedContentSuggestions",
-            ],
-            # Re-enable Chrome's native popup blocker (Playwright disables it by default).
-            # Chrome itself blocks non-user-gesture window.open() calls natively.
-            ignore_default_args=["--disable-popup-blocking"],
             env={**os.environ, "DISPLAY": display_id},
         )
+        print("[vnc] launched with Firefox (bypasses Google browser security check)", flush=True)
     except Exception as exc:
         await pw.stop()
         display.stop()
         shutil.rmtree(user_data_dir, ignore_errors=True)
-        raise HTTPException(status_code=503, detail=f"Chromium launch failed: {exc}") from exc
+        raise HTTPException(status_code=503, detail=f"Firefox launch failed: {exc}") from exc
 
     # launch_persistent_context opens one blank page automatically
     pages = context.pages
@@ -304,6 +284,9 @@ async def vnc_start(
             }
         }, true);
     """)
+    await context.add_init_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
 
     # ---- Layer 3: Close any tab that still slips through ----
     # CRITICAL: install a route-abort handler on the new page BEFORE closing it.
@@ -333,19 +316,27 @@ async def vnc_start(
 
     context.on("page", lambda p: asyncio.ensure_future(_close_background_tab(p)))
 
-    # Navigate directly to the accounts.google.com sign-in page using the exact URL that
-    # notebooklm.google.com's server-side redirect chain produces. The three hops
-    # (notebooklm.google.com → /login?continue=... → accounts.google.com/ServiceLogin?...)
-    # are all 302 redirects with no JavaScript — the browser arrives at the same
-    # destination either way. Going directly skips the hops and avoids any Google-side
-    # analytics/session-init that fires during the redirect chain.
-    await page.goto(
-        "https://accounts.google.com/ServiceLogin"
-        "?passive=1209600"
-        "&osid=1"
-        "&continue=https%3A%2F%2Fnotebooklm.google.com%2Flogin%3Fcontinue%3Dhttps%3A%2F%2Fnotebooklm.google.com%2F"
-        "&followup=https%3A%2F%2Fnotebooklm.google.com%2Flogin%3Fcontinue%3Dhttps%3A%2F%2Fnotebooklm.google.com%2F"
-    )
+    # ---- Layer 4: Strip osid=1 from all accounts.google.com requests ----
+    # osid=1 triggers Google's v3 dialog-mode which runs stricter browser checks and
+    # routes to /v3/signin/rejected for any automated/cloud browser. We intercept every
+    # request to accounts.google.com and rewrite the URL to remove osid=1 before it lands.
+    async def _strip_osid(route) -> None:
+        url = route.request.url
+        if "osid=1" in url:
+            url = url.replace("&osid=1", "").replace("osid=1&", "").replace("?osid=1", "?")
+            try:
+                await route.continue_(url=url)
+            except Exception:
+                await route.continue_()
+        else:
+            await route.continue_()
+
+    await context.route("**/accounts.google.com/**", _strip_osid)
+
+    # Navigate to NotebookLM directly and let it redirect naturally to Google sign-in.
+    # This avoids hardcoding any Google sign-in URL parameters (including osid=1) and
+    # lets the osid-strip route above handle any that appear in the redirect chain.
+    await page.goto("https://notebooklm.google.com/")
 
     # 4. Start x11vnc (attach to virtual display, expose raw VNC on port 5900).
     # The /vnc-ws proxy connects directly to port 5900 (raw RFB TCP).

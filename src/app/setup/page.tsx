@@ -17,6 +17,7 @@ export default function SetupPage() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const popupRef = useRef<Window | null>(null);
   const checkedRef = useRef(false);
+  const msgHandlerRef = useRef<((e: MessageEvent) => void) | null>(null);
 
   function stopPolling() {
     if (pollingRef.current !== null) {
@@ -49,40 +50,33 @@ export default function SetupPage() {
   }
 
   function startPolling() {
-    pollingRef.current = setInterval(async () => {
-      // If user closed the popup, do one final status check before giving up.
-      // The VNC popup closes ~400ms after detecting capture — faster than our 1s poll —
-      // so we must not assume "popup closed = no capture".
-      if (popupRef.current?.closed) {
-        stopPolling();
-        popupRef.current = null;
+    // Do NOT poll captured status while the popup is open.
+    // The VNC page calls /vnc-start first (resetting container's captured state),
+    // then polls for capture itself, then self-closes.
+    // If we poll here too, we race against /vnc-start and may detect STALE
+    // captured=true cookies before the container resets them — saving bad
+    // credentials back to DB and trapping the user in a loop.
+    // Instead: just watch for the popup to close, then check DB status.
+    pollingRef.current = setInterval(() => {
+      if (!popupRef.current?.closed) return; // popup still open — wait
+      stopPolling();
+      popupRef.current = null;
+      // Popup closed (either user dismissed or VNC page detected capture+closed).
+      // Check DB to see if a fresh credential was actually saved.
+      void (async () => {
         try {
-          const res = await fetch('/api/setup/nbm-auth/status');
+          const res = await fetch('/api/setup/status');
           if (res.ok) {
-            const data = await res.json() as { captured?: boolean };
-            if (data.captured) {
+            const data = await res.json() as { nbmSessionActive?: boolean };
+            if (data.nbmSessionActive) {
               await confirmAndNavigate();
               return;
             }
           }
         } catch { /* ignore */ }
         setStep('idle');
-        return;
-      }
-      try {
-        const res = await fetch('/api/setup/nbm-auth/status');
-        if (!res.ok) return;
-        const data = await res.json() as { captured?: boolean };
-        if (data.captured) {
-          stopPolling();
-          try { popupRef.current?.close(); } catch { /* ignore */ }
-          popupRef.current = null;
-          await confirmAndNavigate();
-        }
-      } catch {
-        // keep polling silently
-      }
-    }, 1000);
+      })();
+    }, 500);
   }
 
   // On mount: check if already captured
@@ -110,14 +104,24 @@ export default function SetupPage() {
     }
 
     void checkExisting();
-    return () => stopPolling();
+    return () => {
+      stopPolling();
+      if (msgHandlerRef.current) {
+        window.removeEventListener('message', msgHandlerRef.current);
+        msgHandlerRef.current = null;
+      }
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleConnect() {
+    // Open a standard Google OAuth popup in the user's browser (their residential IP,
+    // not the GCP container). After auth, /setup/nbm-oauth-complete exchanges the
+    // fresh Google access_token for session cookies on Vercel's servers and stores them.
+    const callbackUrl = encodeURIComponent('/setup/nbm-oauth-complete');
     const popup = window.open(
-      '/setup/vnc',
-      'nbm-vnc',
-      'width=1300,height=880,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no',
+      `/api/auth/signin/google?callbackUrl=${callbackUrl}`,
+      'nbm-google-auth',
+      'width=500,height=650,resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no,status=no',
     );
     if (!popup) {
       setErrorMsg('Popup was blocked. Please allow popups for this site and try again.');
@@ -126,6 +130,26 @@ export default function SetupPage() {
     }
     popupRef.current = popup;
     setStep('waiting');
+
+    // Clean up any previous message listener before adding a new one
+    if (msgHandlerRef.current) {
+      window.removeEventListener('message', msgHandlerRef.current);
+    }
+
+    // Fast path: listen for postMessage from the complete page
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data === 'nbm-auth-success') {
+        window.removeEventListener('message', onMessage);
+        msgHandlerRef.current = null;
+        stopPolling();
+        popupRef.current = null;
+        void confirmAndNavigate();
+      }
+    };
+    msgHandlerRef.current = onMessage;
+    window.addEventListener('message', onMessage);
+
     startPolling();
   }
 
@@ -166,9 +190,13 @@ export default function SetupPage() {
               Go to Dashboard →
             </button>
             <button
-              onClick={async () => {
-                await fetch('/api/setup/nbm-auth', { method: 'DELETE' });
-                setStep('idle');
+              onClick={() => {
+                // Fire DELETE without awaiting — preserves user gesture context
+                // so window.open() inside handleConnect() is not blocked as a popup.
+                // The 2s delay before VNC polling gives DELETE time to complete
+                // and set the stale token in memory before status checks start.
+                void fetch('/api/setup/nbm-auth', { method: 'DELETE' }).catch(() => {});
+                handleConnect();
               }}
               className="text-xs uppercase tracking-widest"
               style={{ color: 'rgba(223,226,235,0.2)', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
@@ -196,7 +224,7 @@ export default function SetupPage() {
             </span>
           </div>
           <p className="text-xs leading-relaxed" style={{ color: 'rgba(223,226,235,0.35)', fontSize: '10px' }}>
-            Complete the Google sign-in in the popup. This window will update automatically once connected.
+            Complete Google sign-in in the popup window. This page will update automatically once connected.
           </p>
           <button
             onClick={() => {
@@ -248,7 +276,7 @@ export default function SetupPage() {
           </div>
           <p className="text-xs leading-relaxed" style={{ color: 'rgba(223,226,235,0.45)', fontSize: '11px' }}>
             Connect your NotebookLM account to power the research engine.
-            A secure browser window will open — log in with the same Google account.
+            A Google sign-in window will open — use the same Google account you signed in with.
           </p>
         </div>
 

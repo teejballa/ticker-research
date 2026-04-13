@@ -5,8 +5,11 @@ COPY scripts/requirements.txt ./requirements.txt
 # Install Python deps to /install prefix so runtime stage can COPY them cleanly
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 # Install Playwright separately WITHOUT --prefix — browser binary must land at /root/.cache/ms-playwright
+# Install both chromium (for notebooklm-py research pipeline) and firefox (for VNC auth session).
+# Firefox is used for the VNC Google sign-in because Google's /v3/signin/rejected check only
+# targets Chromium-based automated browsers — Firefox bypasses it entirely.
 RUN pip install --no-cache-dir playwright \
-    && playwright install --with-deps chromium
+    && playwright install --with-deps chromium firefox
 
 # ---- Stage 2: runtime ----
 FROM python:3.12-slim AS runtime
@@ -27,7 +30,7 @@ COPY --from=builder /root/.cache/ms-playwright /root/.cache/ms-playwright
 
 # Playwright needs its own pip install in runtime to register the CLI and API
 RUN pip install --no-cache-dir playwright \
-    && playwright install-deps chromium
+    && playwright install-deps chromium firefox
 
 WORKDIR /app
 COPY scripts/ ./scripts/
