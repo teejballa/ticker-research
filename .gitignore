@@ -91,3 +91,4 @@ build/
 next-env.d.ts
 .vercel
 .claude/
+.env*.local

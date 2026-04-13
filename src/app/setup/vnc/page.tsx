@@ -43,6 +43,11 @@ export default function VncPopupPage() {
         setStreamUrl(data.streamUrl);
         setState('ready');
 
+        // Wait 2s before polling — gives the container time to reset its
+        // captured=false state after /vnc-start. Without this, stale
+        // captured=true from the previous session is detected immediately.
+        await new Promise<void>(r => setTimeout(r, 2000));
+
         // Poll for Google login capture — 500ms for near-instant detection
         pollingRef.current = setInterval(async () => {
           try {

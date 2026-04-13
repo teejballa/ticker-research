@@ -1,0 +1,147 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "CIPHER" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - generic [ref=e7]: RESEARCH TERMINAL
+          - generic [ref=e8]: NYSE
+          - generic [ref=e9]: NASDAQ
+      - generic [ref=e10]:
+        - generic [ref=e11]: user@cipher.io
+        - link "SIGN IN" [ref=e12] [cursor=pointer]:
+          - /url: /auth/signin
+        - link "Analyze a Ticker →" [ref=e13] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e14]:
+          - generic [ref=e15]: schedule
+          - generic [ref=e16]: fiber_manual_record
+    - generic [ref=e18]:
+      - generic:
+        - generic: AI · EQUITY · INTELLIGENCE
+        - generic: CIPHER
+        - paragraph: Research before you trade. Institutional-grade equity synthesis powered by source-grounded intelligence.
+      - generic [ref=e20]:
+        - img "Cipher terminal"
+        - img "Cipher terminal color"
+      - generic:
+        - generic:
+          - generic: INITIALIZING SYSTEM...
+      - generic [ref=e21]:
+        - generic [ref=e22]: SCROLL
+        - generic [ref=e24]: 0%
+    - generic [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: "01"
+          - generic [ref=e30]: Phase_01
+          - heading "COLLECT" [level=3] [ref=e31]
+          - paragraph [ref=e32]: Aggregates real-time SEC filings, earnings call transcripts, Yahoo Finance data, and global news into a unified raw data stream.
+        - generic [ref=e36]:
+          - generic [ref=e37]: "02"
+          - generic [ref=e38]: Phase_02
+          - heading "SYNTHESIZE" [level=3] [ref=e39]
+          - paragraph [ref=e40]: Multi-model intelligence extracts bull/bear theses, risk factors, and institutional sentiment shifts via advanced AI synthesis.
+        - generic [ref=e44]:
+          - generic [ref=e45]: "03"
+          - generic [ref=e46]: Phase_03
+          - heading "REPORT" [level=3] [ref=e47]
+          - paragraph [ref=e48]: Generates high-fidelity investment memos with Buy/Hold/Sell assessment, confidence level, and direct source citations.
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - text: Live Feed
+            - heading "Market Snapshot" [level=2] [ref=e56]
+          - generic [ref=e58]: CLOSED
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: SYMBOL
+            - generic [ref=e63]: NAME
+            - generic [ref=e64]: LAST PRICE
+            - generic [ref=e65]: CHANGE
+          - generic [ref=e67]: Loading market data...
+      - generic [ref=e69]:
+        - heading "Aggregated Intelligence Layers" [level=4] [ref=e70]
+        - generic [ref=e71]:
+          - generic [ref=e72]: CLAUDE
+          - generic [ref=e73]: GEMINI
+          - generic [ref=e74]: Yahoo! Finance
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - heading "A Professional Terminal for Everyone" [level=2] [ref=e77]
+          - paragraph [ref=e78]: Cipher bridges the gap between retail accessibility and institutional depth.
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e82]: database
+            - heading "Deep Context Mining" [level=3] [ref=e83]
+            - paragraph [ref=e84]: Our engines don't just search — they read. We analyze thousands of pages of filings to find the footnotes that move markets.
+            - generic [ref=e85]:
+              - generic [ref=e86]: YAHOO_FINANCE
+              - generic [ref=e87]: ANTHROPIC_SEARCH
+          - generic [ref=e88]:
+            - generic [ref=e90]: insights
+            - heading "Thematic Synthesis" [level=3] [ref=e91]
+            - paragraph [ref=e92]: Connect dots across industries. Understand how a semiconductor shortage impacts automotive margins instantly.
+            - generic [ref=e93]:
+              - generic [ref=e94]: GEMINI_AI
+              - generic [ref=e95]: CLAUDE_AI
+      - generic [ref=e97]:
+        - heading "Ready to see deeper?" [level=2] [ref=e98]
+        - paragraph [ref=e99]: Source-grounded equity intelligence with transparent, traceable analysis.
+        - link "Sign In to Get Started →" [ref=e100] [cursor=pointer]:
+          - /url: /auth/signin
+    - contentinfo [ref=e101]:
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - generic [ref=e105]: AAPL
+          - generic [ref=e106]: —
+        - generic [ref=e107]:
+          - generic [ref=e108]: TSLA
+          - generic [ref=e109]: —
+        - generic [ref=e110]:
+          - generic [ref=e111]: MSFT
+          - generic [ref=e112]: —
+        - generic [ref=e113]:
+          - generic [ref=e114]: NVDA
+          - generic [ref=e115]: —
+        - generic [ref=e116]:
+          - generic [ref=e117]: GOOGL
+          - generic [ref=e118]: —
+        - generic [ref=e119]:
+          - generic [ref=e120]: AMZN
+          - generic [ref=e121]: —
+        - generic [ref=e122]:
+          - generic [ref=e123]: META
+          - generic [ref=e124]: —
+        - generic [ref=e125]:
+          - generic [ref=e126]: JPM
+          - generic [ref=e127]: —
+        - generic [ref=e128]:
+          - generic [ref=e129]: AAPL
+          - generic [ref=e130]: —
+        - generic [ref=e131]:
+          - generic [ref=e132]: TSLA
+          - generic [ref=e133]: —
+        - generic [ref=e134]:
+          - generic [ref=e135]: MSFT
+          - generic [ref=e136]: —
+        - generic [ref=e137]:
+          - generic [ref=e138]: NVDA
+          - generic [ref=e139]: —
+        - generic [ref=e140]:
+          - generic [ref=e141]: GOOGL
+          - generic [ref=e142]: —
+        - generic [ref=e143]:
+          - generic [ref=e144]: AMZN
+          - generic [ref=e145]: —
+        - generic [ref=e146]:
+          - generic [ref=e147]: META
+          - generic [ref=e148]: —
+        - generic [ref=e149]:
+          - generic [ref=e150]: JPM
+          - generic [ref=e151]: —
+      - generic [ref=e152]:
+        - generic [ref=e153]: fiber_manual_record
+        - generic [ref=e154]: CLOSED
+  - alert [ref=e155]
