@@ -1,7 +1,7 @@
 // src/lib/gemini-analysis.ts
 // Gemini analysis service — calls Gemini via AI SDK + Vercel AI Gateway.
 // Auth: VERCEL_OIDC_TOKEN auto-read from process.env (local) or injected by Vercel runtime (deployed).
-// No provider import needed — plain model string 'google/gemini-3-flash' routes through AI Gateway.
+// No provider import needed — plain model string 'google/gemini-3.0-flash' routes through AI Gateway.
 
 import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
@@ -78,30 +78,38 @@ export function buildUserPrompt(brief: string, newsUrls: string[], communityCont
   return prompt;
 }
 
-// ---- Firecrawl community sentiment scraper ----
+// ---- Firecrawl community sentiment gatherer ----
 
 /**
- * Scrapes community discussion URLs to markdown content via Firecrawl.
- * Returns empty string if FIRECRAWL_API_KEY is absent or urls array is empty.
- * Uses Promise.allSettled — partial failures are skipped gracefully.
+ * Searches for community discussion about the ticker using Firecrawl search.
+ * Returns empty string if FIRECRAWL_API_KEY is absent.
+ *
+ * Uses search (not scrape) because we need URL discovery — the source package
+ * contains source *names* ("Reddit r/investing"), not actual URLs.
+ * Firecrawl search returns page content inline, so one call = discovery + extraction.
+ * Targets Reddit, StockTwits, and Seeking Alpha for highest signal-to-noise ratio.
+ * Limit 3 results = ~3 credits per run (efficient on free tier).
  */
-export async function scrapeCommunitySentiment(urls: string[]): Promise<string> {
-  if (!process.env.FIRECRAWL_API_KEY || urls.length === 0) return '';
+export async function scrapeCommunitySentiment(ticker: string): Promise<string> {
+  if (!process.env.FIRECRAWL_API_KEY) return '';
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
-  const results = await Promise.allSettled(
-    urls.map(url =>
-      fc.scrape(url, {
+  const query = `${ticker} stock discussion community sentiment site:reddit.com OR site:stocktwits.com OR site:seekingalpha.com`;
+  try {
+    const response = await fc.search(query, {
+      limit: 3,
+      scrapeOptions: {
         formats: ['markdown'],
         onlyMainContent: true,
-        timeout: 30000,
-      })
-    )
-  );
-  const pages = results
-    .filter((r): r is PromiseFulfilledResult<{ markdown?: string }> => r.status === 'fulfilled')
-    .map(r => r.value.markdown ?? '')
-    .filter(Boolean);
-  return pages.join('\n\n---\n\n');
+      },
+    } as Parameters<typeof fc.search>[1]);
+    const results = (response as { results?: Array<{ markdown?: string; url?: string }> }).results ?? [];
+    const pages = results
+      .map(r => r.markdown ?? '')
+      .filter(Boolean);
+    return pages.join('\n\n---\n\n');
+  } catch {
+    return '';
+  }
 }
 
 // ---- Market snapshot extractor ----
@@ -143,7 +151,7 @@ export async function runGeminiAnalysis(
 
   try {
     const { output } = await generateText({
-      model: 'google/gemini-3-flash',
+      model: 'google/gemini-3.0-flash',
       output: Output.object({ schema: AnalysisResultSchema }),
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
