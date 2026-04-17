@@ -1,69 +1,146 @@
 // src/app/api/analysis/__tests__/route.test.ts
-// Integration tests for POST /api/analysis/[ticker]
-// Mocks child_process.spawn to control stdout and test SSE event streaming.
+// Tests for POST /api/analysis/[ticker] — Gemini-based analysis route.
+// Mocks: ai module, @mendable/firecrawl-js, fs/promises, @/lib/gemini-analysis.
+// Verifies: SSE event streaming, no spawn() calls, no CONTAINER_URL references.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { EventEmitter } from 'events';
+import { tmpdir } from 'os';
+import type { AnalysisResult } from '@/lib/types';
 
-// Mock child_process before importing the route
-vi.mock('child_process', () => {
-  return {
-    spawn: vi.fn(),
-  };
-});
+// Use the real tmpdir so path validation passes on all platforms (macOS /tmp symlink safe)
+const TMP_FILE = `${tmpdir()}/source-package-AAPL.json`;
 
-// Mock next-auth to return a valid session for web-mode tests
-vi.mock('next-auth/next', () => ({
-  getServerSession: vi.fn().mockResolvedValue({
-    user: { email: 'test@example.com', name: 'Test User' },
+// Mock child_process — assert spawn is never called
+vi.mock('child_process', () => ({
+  spawn: vi.fn(),
+}));
+
+// Mock ai module
+vi.mock('ai', () => ({
+  generateText: vi.fn(),
+  Output: { object: vi.fn() },
+  NoObjectGeneratedError: class NoObjectGeneratedError extends Error {
+    static isInstance(e: unknown): e is NoObjectGeneratedError {
+      return e instanceof NoObjectGeneratedError;
+    }
+  },
+}));
+
+// Mock Firecrawl
+vi.mock('@mendable/firecrawl-js', () => ({
+  default: vi.fn().mockReturnValue({
+    scrape: vi.fn().mockResolvedValue({ markdown: 'community content' }),
   }),
 }));
 
-// Mock @/lib/auth to avoid NextAuth config initialization
-vi.mock('@/lib/auth', () => ({
-  authOptions: {},
-}));
+// Minimal valid SourcePackage for readFile mock
+const MOCK_PKG = {
+  ticker: 'AAPL',
+  company_name: 'Apple Inc.',
+  exchange: 'NASDAQ',
+  security_type: 'equity',
+  assembled_at: '2026-04-17T00:00:00Z',
+  market_data: {
+    collected_at: '2026-04-17T00:00:00Z',
+    price: 180,
+    volume: 1000000,
+    market_cap: 2800000000000,
+    fifty_two_week_high: 200,
+    fifty_two_week_low: 150,
+    percent_change_today: 1.5,
+    exchange: 'NASDAQ',
+  },
+  fundamentals: {
+    collected_at: '2026-04-17T00:00:00Z',
+    pe_ratio: 28,
+    eps: 6.43,
+    revenue: 394000000000,
+    debt_to_equity: 1.8,
+    profit_margin: 0.25,
+  },
+  news: {
+    collected_at: '2026-04-17T00:00:00Z',
+    items: [],
+  },
+  analyst_sentiment: {
+    collected_at: '2026-04-17T00:00:00Z',
+    consensus: 'Buy',
+    avg_price_target: 195,
+    analyst_count: 40,
+    recent_changes: [],
+  },
+  sec_filing_summary: {
+    collected_at: '2026-04-17T00:00:00Z',
+    most_recent_10k: '2024-11-01',
+    most_recent_10q: '2025-02-01',
+    filing_dates: { '10k': '2024-11-01', '10q': '2025-02-01' },
+  },
+  social_sentiment: {
+    collected_at: '2026-04-17T00:00:00Z',
+    overall_tone: 'bullish',
+    signals: [],
+    sources_checked: [],
+  },
+  collection_errors: [],
+  supplementary_market_data: { sources: [] },
+};
 
-// Mock @/lib/user-credential-db to avoid Prisma initialization
-vi.mock('@/lib/user-credential-db', () => ({
-  getCredential: vi.fn().mockResolvedValue({
-    encrypted_state: 'mock-encrypted-state',
-  }),
-}));
-
-// Mock @/lib/credentials to avoid encryption key requirement
-vi.mock('@/lib/credentials', () => ({
-  decrypt: vi.fn().mockReturnValue('{"cookies":[],"origins":[]}'),
-  encrypt: vi.fn().mockReturnValue('mock-encrypted-state'),
-}));
-
-// Mock fs/promises to avoid filesystem reads
+// Mock fs/promises — return a minimal valid SourcePackage
 vi.mock('fs/promises', () => ({
-  readFile: vi.fn().mockResolvedValue('{"ticker":"AAPL","assembled_at":"2026-03-28T00:00:00Z"}'),
+  readFile: vi.fn().mockResolvedValue(JSON.stringify(MOCK_PKG)),
+}));
+
+// Minimal valid AnalysisResult for runGeminiAnalysis mock
+const MOCK_RESULT: AnalysisResult = {
+  ticker: 'AAPL',
+  company_name: 'Apple Inc.',
+  analyzed_at: '2026-04-17T00:00:00Z',
+  market_sentiment: 'bullish',
+  sentiment_reasoning: 'Strong fundamentals and positive momentum.',
+  bullish_signals: [
+    { signal: 'Strong revenue growth', source_citation: 'SEC 10-K 2024' },
+    { signal: 'Analyst consensus Buy', source_citation: 'Bloomberg, 2026-04-17' },
+    { signal: 'High profit margin', source_citation: 'SEC 10-Q 2025' },
+    { signal: 'Positive price momentum', source_citation: 'Yahoo Finance' },
+    { signal: 'Large market cap stability', source_citation: 'Market data' },
+  ],
+  bearish_signals: [
+    { signal: 'High valuation', source_citation: 'P/E ratio analysis' },
+    { signal: 'Debt to equity elevated', source_citation: 'Fundamentals data' },
+    { signal: 'Revenue growth slowing', source_citation: 'SEC 10-Q 2025' },
+    { signal: 'Macro headwinds', source_citation: 'Reuters, 2026-04-15' },
+    { signal: 'Competitive pressure', source_citation: 'Industry analysis' },
+  ],
+  assessment: {
+    buy_pct: 60,
+    hold_pct: 30,
+    sell_pct: 10,
+    buy_rationale: 'Strong fundamentals support upside.',
+    hold_rationale: 'Fair value at current levels.',
+    sell_rationale: 'Elevated valuation is a risk.',
+  },
+  confidence_level: 'High',
+  confidence_explanation: 'Multiple reliable sources corroborate analysis.',
+  price_target: '$195',
+  sources_used: [{ name: 'SEC 10-K 2024', key_fact: 'Revenue $394B' }],
+  source_warnings: [],
+};
+
+// Mock @/lib/gemini-analysis — prevent actual Gemini calls
+vi.mock('@/lib/gemini-analysis', () => ({
+  runGeminiAnalysis: vi.fn().mockResolvedValue(MOCK_RESULT),
+  scrapeCommunitySentiment: vi.fn().mockResolvedValue(''),
+}));
+
+// Mock @/lib/reports to prevent filesystem writes
+vi.mock('@/lib/reports', () => ({
+  writeReport: vi.fn().mockResolvedValue(undefined),
 }));
 
 /**
- * Helper: create a fake child process emitter that mimics spawn() return value.
- * Emits stdout data and close events on demand.
+ * Helper: read a ReadableStream into a concatenated string of all SSE chunks.
  */
-function makeProc() {
-  const stdout = new EventEmitter();
-  const stderr = new EventEmitter();
-  const proc = new EventEmitter() as NodeJS.EventEmitter & {
-    stdout: EventEmitter;
-    stderr: EventEmitter;
-    kill: ReturnType<typeof vi.fn>;
-  };
-  (proc as unknown as { stdout: EventEmitter }).stdout = stdout;
-  (proc as unknown as { stderr: EventEmitter }).stderr = stderr;
-  (proc as unknown as { kill: ReturnType<typeof vi.fn> }).kill = vi.fn();
-  return proc;
-}
-
-/**
- * Helper: read a ReadableStream into an array of SSE data strings.
- */
-async function collectSSE(stream: ReadableStream<Uint8Array>): Promise<string[]> {
+async function collectSSE(stream: ReadableStream<Uint8Array>): Promise<string> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   const parts: string[] = [];
@@ -72,52 +149,47 @@ async function collectSSE(stream: ReadableStream<Uint8Array>): Promise<string[]>
     if (done) break;
     parts.push(decoder.decode(value));
   }
-  return parts;
+  return parts.join('');
 }
 
-describe('POST /api/analysis/[ticker] — web mode', () => {
+/**
+ * Parse SSE events from a collected string into typed event objects.
+ */
+function parseSSEEvents(raw: string): Array<{ type: string; message?: string; data?: unknown }> {
+  const events: Array<{ type: string; message?: string; data?: unknown }> = [];
+  const lines = raw.split('\n');
+  for (const line of lines) {
+    if (!line.startsWith('data: ')) continue;
+    const jsonStr = line.slice('data: '.length).trim();
+    if (!jsonStr) continue;
+    try {
+      events.push(JSON.parse(jsonStr));
+    } catch {
+      // skip malformed
+    }
+  }
+  return events;
+}
+
+describe('POST /api/analysis/[ticker] — Gemini route', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     delete process.env.DEPLOYMENT_MODE;
-    delete process.env.CONTAINER_URL;
+    delete process.env.FIRECRAWL_API_KEY;
   });
 
   afterEach(() => {
     delete process.env.DEPLOYMENT_MODE;
-    delete process.env.CONTAINER_URL;
-    vi.unstubAllGlobals();
+    delete process.env.FIRECRAWL_API_KEY;
   });
 
-  it('proxies to container URL and pipes SSE stream when DEPLOYMENT_MODE=web and CONTAINER_URL is set', async () => {
-    process.env.DEPLOYMENT_MODE = 'web';
-    process.env.CONTAINER_URL = 'https://container-test.run.app';
-
-    // Create a ReadableStream that emits one SSE chunk
-    const sseChunk = new TextEncoder().encode('data: {"type":"progress","message":"Creating notebook..."}\n\n');
-    const upstreamBody = new ReadableStream({
-      start(controller) {
-        controller.enqueue(sseChunk);
-        controller.close();
-      },
-    });
-
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
-      // Health check gets a plain 200; analyze gets the SSE stream
-      if (typeof url === 'string' && url.includes('/health')) {
-        return Promise.resolve(new Response('{"status":"ok"}', { status: 200 }));
-      }
-      return Promise.resolve(new Response(upstreamBody, {
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream' },
-      }));
-    }));
-
+  it('Test 1: returns a response with Content-Type: text/event-stream', async () => {
     const { POST } = await import('@/app/api/analysis/[ticker]/route');
 
     const request = new Request('http://localhost/api/analysis/AAPL', {
       method: 'POST',
-      body: JSON.stringify({ filePath: '/tmp/test.json' }),
+      body: JSON.stringify({ filePath: TMP_FILE }),
       headers: { 'Content-Type': 'application/json' },
     });
 
@@ -126,40 +198,15 @@ describe('POST /api/analysis/[ticker] — web mode', () => {
       { params: Promise.resolve({ ticker: 'AAPL' }) }
     );
 
-    expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/event-stream');
-
-    // Verify the analyze fetch was called. A cold-start health check may also fire first
-    // depending on AbortSignal.timeout availability in the test environment.
-    const fetchMock = vi.mocked(fetch as ReturnType<typeof vi.fn>);
-    expect(fetchMock).toHaveBeenCalled();
-    const analyzeCalls = fetchMock.mock.calls.filter(([url]) =>
-      typeof url === 'string' && url.includes('/analyze/')
-    );
-    expect(analyzeCalls).toHaveLength(1);
-    const [calledUrl, calledOpts] = analyzeCalls[0];
-    expect(calledUrl).toBe('https://container-test.run.app/analyze/AAPL');
-    expect(calledOpts.method).toBe('POST');
-
-    // Verify the SSE body is piped through
-    const parts = await collectSSE(response.body!);
-    const combined = parts.join('');
-    expect(combined).toContain('"type":"progress"');
-    expect(combined).toContain('Creating notebook');
   });
 
-  it('returns 500 with JSON error when DEPLOYMENT_MODE=web and CONTAINER_URL is missing', async () => {
-    process.env.DEPLOYMENT_MODE = 'web';
-    // CONTAINER_URL intentionally not set
-
-    const fetchSpy = vi.fn();
-    vi.stubGlobal('fetch', fetchSpy);
-
+  it('Test 2: SSE stream emits at least one progress event with "creating" substring before Gemini call', async () => {
     const { POST } = await import('@/app/api/analysis/[ticker]/route');
 
     const request = new Request('http://localhost/api/analysis/AAPL', {
       method: 'POST',
-      body: JSON.stringify({ filePath: '/tmp/test.json' }),
+      body: JSON.stringify({ filePath: TMP_FILE }),
       headers: { 'Content-Type': 'application/json' },
     });
 
@@ -168,185 +215,103 @@ describe('POST /api/analysis/[ticker] — web mode', () => {
       { params: Promise.resolve({ ticker: 'AAPL' }) }
     );
 
-    expect(response.status).toBe(500);
-    const json = await response.json();
-    expect(json.message).toContain('CONTAINER_URL');
-    // fetch must NOT be called — route returns before fetching
-    expect(fetchSpy).not.toHaveBeenCalled();
+    const raw = await collectSSE(response.body!);
+    const events = parseSSEEvents(raw);
+    const progressEvents = events.filter(e => e.type === 'progress');
+
+    expect(progressEvents.length).toBeGreaterThan(0);
+    const hasCreating = progressEvents.some(
+      e => typeof e.message === 'string' && e.message.toLowerCase().includes('creating')
+    );
+    expect(hasCreating).toBe(true);
   });
 
-  it('does not call spawn() when DEPLOYMENT_MODE=web', async () => {
-    process.env.DEPLOYMENT_MODE = 'web';
-    process.env.CONTAINER_URL = 'https://container-test.run.app';
+  it('Test 3: SSE stream emits a result event with AnalysisResult data when Gemini succeeds', async () => {
+    const { POST } = await import('@/app/api/analysis/[ticker]/route');
 
-    const sseBody = new ReadableStream({ start(c) { c.close(); } });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(sseBody, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
-    ));
+    const request = new Request('http://localhost/api/analysis/AAPL', {
+      method: 'POST',
+      body: JSON.stringify({ filePath: TMP_FILE }),
+      headers: { 'Content-Type': 'application/json' },
+    });
 
+    const response = await POST(
+      request as unknown as import('next/server').NextRequest,
+      { params: Promise.resolve({ ticker: 'AAPL' }) }
+    );
+
+    const raw = await collectSSE(response.body!);
+    const events = parseSSEEvents(raw);
+    const resultEvents = events.filter(e => e.type === 'result');
+
+    expect(resultEvents).toHaveLength(1);
+    const resultData = (resultEvents[0] as { type: 'result'; data: AnalysisResult }).data;
+    expect(resultData.ticker).toBe('AAPL');
+    expect(resultData.market_sentiment).toBe('bullish');
+  });
+
+  it('Test 4: SSE stream emits an error event when runGeminiAnalysis throws', async () => {
+    const { runGeminiAnalysis } = await import('@/lib/gemini-analysis');
+    (runGeminiAnalysis as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('Gemini API unavailable')
+    );
+
+    const { POST } = await import('@/app/api/analysis/[ticker]/route');
+
+    const request = new Request('http://localhost/api/analysis/AAPL', {
+      method: 'POST',
+      body: JSON.stringify({ filePath: TMP_FILE }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await POST(
+      request as unknown as import('next/server').NextRequest,
+      { params: Promise.resolve({ ticker: 'AAPL' }) }
+    );
+
+    const raw = await collectSSE(response.body!);
+    const events = parseSSEEvents(raw);
+    const errorEvents = events.filter(e => e.type === 'error');
+
+    expect(errorEvents.length).toBeGreaterThan(0);
+    expect((errorEvents[0] as { type: 'error'; message: string }).message).toContain('Gemini API unavailable');
+  });
+
+  it('Test 5: spawn() from child_process is never called', async () => {
     const { spawn } = await import('child_process');
     const { POST } = await import('@/app/api/analysis/[ticker]/route');
 
     const request = new Request('http://localhost/api/analysis/AAPL', {
       method: 'POST',
-      body: JSON.stringify({ filePath: '/tmp/test.json' }),
+      body: JSON.stringify({ filePath: TMP_FILE }),
       headers: { 'Content-Type': 'application/json' },
     });
 
-    await POST(
+    const response = await POST(
       request as unknown as import('next/server').NextRequest,
       { params: Promise.resolve({ ticker: 'AAPL' }) }
     );
+
+    // Drain the stream to ensure the route async function completes
+    await collectSSE(response.body!);
 
     expect(spawn as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
-});
 
-describe('POST /api/analysis/[ticker]', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    vi.clearAllMocks();
-    delete process.env.DEPLOYMENT_MODE;
-    delete process.env.CONTAINER_URL;
-  });
-
-  it('streams a progress SSE event when Python script emits PROGRESS: line', async () => {
-    const { spawn } = await import('child_process');
-    const proc = makeProc();
-    (spawn as ReturnType<typeof vi.fn>).mockReturnValue(proc);
-
+  it('Test 6: returns 400 when filePath is outside os.tmpdir() (path traversal guard)', async () => {
     const { POST } = await import('@/app/api/analysis/[ticker]/route');
 
     const request = new Request('http://localhost/api/analysis/AAPL', {
       method: 'POST',
-      body: JSON.stringify({ filePath: '/tmp/test.json' }),
+      body: JSON.stringify({ filePath: '/etc/passwd' }),
       headers: { 'Content-Type': 'application/json' },
     });
 
-    const responsePromise = POST(
+    const response = await POST(
       request as unknown as import('next/server').NextRequest,
       { params: Promise.resolve({ ticker: 'AAPL' }) }
     );
 
-    // Emit a PROGRESS line from the fake process
-    setImmediate(() => {
-      proc.stdout.emit('data', Buffer.from('PROGRESS: Creating notebook...\n'));
-      // Emit RESULT to close the stream
-      const resultJson = JSON.stringify({
-        ticker: 'AAPL',
-        company_name: 'Apple Inc.',
-        analyzed_at: '2026-03-12T00:00:00Z',
-        market_sentiment: 'bullish',
-        sentiment_reasoning: 'Strong.',
-        bullish_signals: [
-          { signal: 'A', source_citation: 'S1' },
-          { signal: 'B', source_citation: 'S2' },
-          { signal: 'C', source_citation: 'S3' },
-        ],
-        bearish_signals: [
-          { signal: 'X', source_citation: 'S1' },
-          { signal: 'Y', source_citation: 'S2' },
-          { signal: 'Z', source_citation: 'S3' },
-        ],
-        assessment: { buy_pct: 60, hold_pct: 30, sell_pct: 10, buy_rationale: 'Strong', hold_rationale: 'Moderate', sell_rationale: 'Minor' },
-        confidence_level: 'High',
-        confidence_explanation: 'Multiple sources agree.',
-        sources_used: [],
-        source_warnings: [],
-      });
-      proc.stdout.emit('data', Buffer.from(`RESULT: ${resultJson}\n`));
-    });
-
-    const response = await responsePromise;
-    expect(response.headers.get('Content-Type')).toBe('text/event-stream');
-
-    const parts = await collectSSE(response.body!);
-    const combined = parts.join('');
-    expect(combined).toContain('"type":"progress"');
-    expect(combined).toContain('"message":"Creating notebook..."');
-  });
-
-  it('streams a result SSE event when Python script emits RESULT: JSON', async () => {
-    const { spawn } = await import('child_process');
-    const proc = makeProc();
-    (spawn as ReturnType<typeof vi.fn>).mockReturnValue(proc);
-
-    const { POST } = await import('@/app/api/analysis/[ticker]/route');
-
-    const request = new Request('http://localhost/api/analysis/AAPL', {
-      method: 'POST',
-      body: JSON.stringify({ filePath: '/tmp/test.json' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const responsePromise = POST(
-      request as unknown as import('next/server').NextRequest,
-      { params: Promise.resolve({ ticker: 'AAPL' }) }
-    );
-
-    const resultData = {
-      ticker: 'AAPL',
-      company_name: 'Apple Inc.',
-      analyzed_at: '2026-03-12T00:00:00Z',
-      market_sentiment: 'bullish',
-      sentiment_reasoning: 'Strong.',
-      bullish_signals: [
-        { signal: 'A', source_citation: 'S1' },
-        { signal: 'B', source_citation: 'S2' },
-        { signal: 'C', source_citation: 'S3' },
-      ],
-      bearish_signals: [
-        { signal: 'X', source_citation: 'S1' },
-        { signal: 'Y', source_citation: 'S2' },
-        { signal: 'Z', source_citation: 'S3' },
-      ],
-      assessment: { buy_pct: 60, hold_pct: 30, sell_pct: 10, buy_rationale: 'Strong', hold_rationale: 'Moderate', sell_rationale: 'Minor' },
-      confidence_level: 'High',
-      confidence_explanation: 'Multiple sources agree.',
-      sources_used: [],
-      source_warnings: [],
-    };
-
-    setImmediate(() => {
-      proc.stdout.emit('data', Buffer.from(`RESULT: ${JSON.stringify(resultData)}\n`));
-    });
-
-    const response = await responsePromise;
-    const parts = await collectSSE(response.body!);
-    const combined = parts.join('');
-
-    expect(combined).toContain('"type":"result"');
-    expect(combined).toContain('"ticker":"AAPL"');
-    expect(combined).toContain('"market_sentiment":"bullish"');
-  });
-
-  it('streams an error SSE event when Python script emits ERROR: line', async () => {
-    const { spawn } = await import('child_process');
-    const proc = makeProc();
-    (spawn as ReturnType<typeof vi.fn>).mockReturnValue(proc);
-
-    const { POST } = await import('@/app/api/analysis/[ticker]/route');
-
-    const request = new Request('http://localhost/api/analysis/AAPL', {
-      method: 'POST',
-      body: JSON.stringify({ filePath: '/tmp/test.json' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const responsePromise = POST(
-      request as unknown as import('next/server').NextRequest,
-      { params: Promise.resolve({ ticker: 'AAPL' }) }
-    );
-
-    setImmediate(() => {
-      proc.stdout.emit('data', Buffer.from('ERROR: NotebookLM daily limit reached. Resets at midnight PST — try again tomorrow.\n'));
-    });
-
-    const response = await responsePromise;
-    const parts = await collectSSE(response.body!);
-    const combined = parts.join('');
-
-    expect(combined).toContain('"type":"error"');
-    expect(combined).toContain('daily limit');
+    expect(response.status).toBe(400);
   });
 });
