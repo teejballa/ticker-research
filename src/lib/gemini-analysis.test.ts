@@ -20,30 +20,38 @@ describe('scrapeCommunitySentiment', () => {
     vi.unstubAllEnvs();
   });
 
-  it('Test 1: returns empty string for empty URL list without calling Firecrawl', async () => {
-    vi.stubEnv('FIRECRAWL_API_KEY', 'test-key');
-    const result = await scrapeCommunitySentiment([]);
-    expect(result).toBe('');
-    expect(Firecrawl).not.toHaveBeenCalled();
-  });
-
-  it('Test 2: returns empty string when FIRECRAWL_API_KEY is absent, without throwing', async () => {
+  it('Test 1: returns empty string when FIRECRAWL_API_KEY is absent, without calling Firecrawl', async () => {
     vi.stubEnv('FIRECRAWL_API_KEY', '');
-    const result = await scrapeCommunitySentiment(['https://reddit.com/r/stocks/1', 'https://stocktwits.com/2']);
+    const result = await scrapeCommunitySentiment('AAPL');
     expect(result).toBe('');
     expect(Firecrawl).not.toHaveBeenCalled();
   });
 
-  it('Test 3: returns only successful content when one URL fails (Promise.allSettled)', async () => {
+  it('Test 2: calls fc.search with a query containing the ticker and returns joined markdown', async () => {
     vi.stubEnv('FIRECRAWL_API_KEY', 'test-key');
-    const mockScrape = vi.fn()
-      .mockResolvedValueOnce({ markdown: 'good content' })
-      .mockRejectedValueOnce(new Error('scrape failed'));
-    (Firecrawl as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ scrape: mockScrape });
+    const mockSearch = vi.fn().mockResolvedValue({
+      results: [
+        { markdown: 'reddit post content', url: 'https://reddit.com/r/stocks/1' },
+        { markdown: 'stocktwits content', url: 'https://stocktwits.com/2' },
+      ],
+    });
+    (Firecrawl as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ search: mockSearch });
 
-    const result = await scrapeCommunitySentiment(['https://url1.com', 'https://url2.com']);
-    expect(result).toContain('good content');
-    expect(result).not.toContain('scrape failed');
+    const result = await scrapeCommunitySentiment('AAPL');
+    expect(mockSearch).toHaveBeenCalledOnce();
+    const [query] = mockSearch.mock.calls[0];
+    expect(query).toContain('AAPL');
+    expect(result).toContain('reddit post content');
+    expect(result).toContain('stocktwits content');
+  });
+
+  it('Test 3: returns empty string gracefully when fc.search throws', async () => {
+    vi.stubEnv('FIRECRAWL_API_KEY', 'test-key');
+    const mockSearch = vi.fn().mockRejectedValue(new Error('search failed'));
+    (Firecrawl as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ search: mockSearch });
+
+    const result = await scrapeCommunitySentiment('AAPL');
+    expect(result).toBe('');
   });
 });
 

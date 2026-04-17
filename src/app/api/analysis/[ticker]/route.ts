@@ -88,18 +88,11 @@ export async function POST(
       // Step 2: emit 'adding news' to trigger stepper step 2
       enqueue(JSON.stringify({ type: 'progress', message: 'Adding news sources and SEC filings...' }));
 
-      // Step 3: Firecrawl community sentiment scraping (optional — graceful skip)
-      // Only scrape URLs already vetted by Anthropic search (T-12-02-03 SSRF mitigation — never user-provided URLs)
+      // Step 3: Firecrawl community sentiment search (optional — graceful skip)
+      // Uses Firecrawl search to discover + extract Reddit/StockTwits/SeekingAlpha content.
+      // sources_checked contains source names ("Reddit r/investing"), not URLs — search is correct here.
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying community sentiment sources...' }));
-      let communityContent = '';
-      if (process.env.FIRECRAWL_API_KEY) {
-        const communityUrls = (pkg.social_sentiment?.sources_checked ?? []).slice(0, 3);
-        try {
-          communityContent = await scrapeCommunitySentiment(communityUrls);
-        } catch {
-          // Non-fatal — proceed without community content
-        }
-      }
+      const communityContent = await scrapeCommunitySentiment(ticker);
 
       // Step 4: Gemini call — emit 'querying sentiment' to trigger stepper step 3
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying sentiment analysis via Gemini...' }));
