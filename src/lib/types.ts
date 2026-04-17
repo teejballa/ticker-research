@@ -110,7 +110,7 @@ export interface SupplementaryMarketData {
   sources: SupplementarySource[];
 }
 
-// ---- AnalysisResult types (Phase 2 — NotebookLM research output) ----
+// ---- AnalysisResult types (Phase 12 — Gemini direct intelligence pipeline) ----
 
 export interface AnalysisSignal {
   signal: string;
@@ -129,6 +129,7 @@ export interface BuySellBreakdown {
 export interface AnalysisSource {
   name: string;
   key_fact: string;
+  url?: string;  // optional source URL for direct attribution (D-11)
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
@@ -150,14 +151,16 @@ export interface AnalysisResult {
   analyzed_at: string;         // ISO 8601
   market_sentiment: 'bullish' | 'neutral' | 'bearish';
   sentiment_reasoning: string;
-  bullish_signals: AnalysisSignal[];   // exactly 3
-  bearish_signals: AnalysisSignal[];   // exactly 3
+  bullish_signals: AnalysisSignal[];   // 1-5 signals
+  bearish_signals: AnalysisSignal[];   // 1-5 signals
   assessment: BuySellBreakdown;
   confidence_level: 'Low' | 'Medium' | 'High';
   confidence_explanation: string;
+  price_target?: string | null;  // analyst-consensus price target or range — optional for backward compat (D-10)
   sources_used: AnalysisSource[];
   source_warnings: string[];
-  market_snapshot?: MarketSnapshot;  // optional — populated by Python script (Phase 3)
+  community_sentiment_available?: boolean;  // true if Firecrawl community content was included (D-11)
+  market_snapshot?: MarketSnapshot;  // optional — populated by analysis pipeline (Phase 3)
   security_type?: SecurityType;  // optional — old persisted reports may not have this field
 }
 
