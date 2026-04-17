@@ -34,7 +34,7 @@ function SignInContent() {
         <button
           type="button"
           aria-label="Sign in or create account with Google"
-          onClick={() => signIn('google', { callbackUrl: '/setup' })}
+          onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
           className="w-full text-xs font-bold uppercase tracking-widest transition-colors duration-150"
           style={{
             minHeight: '44px',

@@ -35,7 +35,7 @@ const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string
   'session-expired': {
     message: 'Research engine session expired — reconnect your NotebookLM account to continue.',
     cta: 'RECONNECT →',
-    ctaHref: '/setup',
+    ctaHref: '/dashboard',
   },
   'container-unreachable': {
     message: 'Analysis server unreachable. This is temporary — please try again.',
@@ -50,7 +50,7 @@ const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string
   'unknown': {
     message: 'Analysis failed. If this continues, reconnect your account.',
     cta: 'RECONNECT →',
-    ctaHref: '/setup',
+    ctaHref: '/dashboard',
   },
 };
 
