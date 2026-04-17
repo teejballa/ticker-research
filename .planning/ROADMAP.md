@@ -151,6 +151,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 9. Migrate Container to Google Cloud Run | 1/3 | In Progress|  |
 | 10. Reliable Market Data | 0/? | Planned | |
 | 11. Public Sentiment Layer | 0/? | Planned | |
+| 12. Intelligence Pipeline Rebuild | 0/4 | Planned | |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
@@ -270,3 +271,16 @@ Plans:
 
 Plans:
 - [ ] TBD
+
+### Phase 12: Intelligence Pipeline Rebuild — Replace NotebookLM with Polygon + Finnhub + Firecrawl + Gemini
+
+**Goal:** Replace the Python/NotebookLM/Cloud Run reasoning layer with a direct TypeScript pipeline: call Gemini via AI SDK + Vercel AI Gateway from the analysis route, add Firecrawl for community sentiment scraping, evolve the AnalysisResult schema, and decommission all container infrastructure.
+**Requirements**: INTEL-01, INTEL-02, INTEL-03, INTEL-04, INTEL-05, INTEL-06, INTEL-07, INTEL-08, INTEL-09, INTEL-10
+**Depends on:** Phase 9 (current active phase — phases 10/11 queued for after Phase 12)
+**Plans:** 4 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Install ai@6.0.168 + @mendable/firecrawl-js@4.18.3, evolve AnalysisResult schema (price_target, 5 signals, improved attribution), remove prestart hook
+- [ ] 12-02-PLAN.md — Create gemini-analysis.ts service (Zod schema, Gemini call, Firecrawl scraper, prompt builder), rewrite analysis route (no subprocess, no CONTAINER_URL), update route tests
+- [ ] 12-03-PLAN.md — Container decommission: delete Python scripts + Dockerfiles + VNC/setup routes, simplify setup/status to session-only
+- [ ] 12-04-PLAN.md — Build verification, .env.local.example update (FIRECRAWL_API_KEY, remove CONTAINER_*), human e2e smoke test
