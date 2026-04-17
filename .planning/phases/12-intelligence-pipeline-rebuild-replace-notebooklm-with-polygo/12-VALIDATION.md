@@ -51,10 +51,10 @@ created: 2026-04-16
 
 ## Wave 0 Requirements
 
-- [ ] `__tests__/lib/gemini-analysis.test.ts` — stubs for Gemini structured output
-- [ ] `__tests__/lib/firecrawl-scraper.test.ts` — stubs for Firecrawl scraping with graceful skip
-- [ ] `__tests__/api/analysis-route.test.ts` — stubs for SSE streaming from TypeScript route
-- [ ] `__tests__/lib/types.test.ts` — schema evolution tests for AnalysisResult
+- [ ] `src/lib/gemini-analysis.test.ts` — Vitest tests for `scrapeCommunitySentiment` and `buildUserPrompt` (5 behavior stubs; created in 12-02 Task 1)
+- [ ] `tests/unit/analysis-schema.test.ts` — covers D-09 (5 bullish/bearish signals), D-10 (`price_target` optional field)
+- [ ] `src/app/api/analysis/__tests__/route.test.ts` — rewritten to mock `ai` module, assert no `spawn()`, verify SSE events (updated in 12-02 Task 2)
+- [ ] `tests/unit/analysis-web-mode.test.ts` — remove `CONTAINER_URL` references (updated in 12-03 decommission plan)
 
 ---
 

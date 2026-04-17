@@ -689,27 +689,31 @@ const content: string = result.markdown ?? '';
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Model string: D-03 specifies `gemini-2.0-flash` but `gemini-3-flash` is available**
    - What we know: Gateway has `google/gemini-3-flash` (newest), `google/gemini-2.5-flash`, `google/gemini-2.0-flash` (D-03 original)
    - What's unclear: CONTEXT.md D-03 was written when 2.x was the latest available
    - Recommendation: Use `google/gemini-3-flash` — higher version, better reasoning, same cost tier as flash. The planner should default to `google/gemini-3-flash` unless the user wants to pin to `gemini-2.0-flash` for cost predictability.
+   - RESOLVED: Plans use `google/gemini-3-flash` throughout (12-02 Task 1 action and interface block).
 
 2. **`user_credentials` Neon table fate after NotebookLM removal**
    - What we know: Table stores encrypted NotebookLM `storage_state.json` per user. No code will read it after Phase 12.
    - What's unclear: Whether to drop the table in Phase 12 or leave it
    - Recommendation: Leave the table in Phase 12 (zero cost, zero risk). Schedule cleanup in a separate maintenance phase.
+   - RESOLVED: Table left in place. No migration or deletion in Phase 12 plans (12-03 decommission scope excludes DB).
 
 3. **`setup.sh` `prestart` hook scope**
    - What we know: `package.json` runs `bash scripts/setup.sh` before `npm start`. `setup.sh` validates Python/NbLM.
    - What's unclear: Should `setup.sh` be deleted or simplified to Node-only checks?
    - Recommendation: Delete `setup.sh` and remove `prestart` hook — the app no longer has local Python prerequisites. The data collection layer (yahoo-finance2 and Anthropic web search via existing env vars) requires only Node.js — no setup wizard is needed.
+   - RESOLVED: `setup.sh` deletion and `prestart` hook removal included in 12-03 decommission plan.
 
 4. **Community sentiment URL count for Firecrawl**
    - What we know: Each Firecrawl scrape takes up to 30s with basic proxy
    - What's unclear: How many URLs per run before latency becomes user-noticeable
    - Recommendation: 3 URLs max, scraped in parallel with `Promise.allSettled`. Total community sentiment phase target: under 15 seconds.
+   - RESOLVED: Cap of 3 URLs enforced in 12-02 route.ts via `.slice(0, 3)` on `pkg.social_sentiment.sources_checked`.
 
 ---
 
