@@ -37,15 +37,6 @@ export default function NavBar({
 }: NavBarProps) {
   const market = getMarketStatus();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerStatus, setDrawerStatus] = useState<{ userEmail?: string | null; nbmSessionActive?: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!drawerOpen) return;
-    fetch('/api/setup/status')
-      .then(r => r.json())
-      .then(d => setDrawerStatus(d))
-      .catch(() => {});
-  }, [drawerOpen]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -195,33 +186,8 @@ export default function NavBar({
               <div>
                 <div className="text-[10px] text-primary/50 tracking-widest uppercase mb-1">Connected as</div>
                 <div className="text-xs font-mono text-on-surface">
-                  {drawerStatus?.userEmail ?? userEmail ?? '—'}
+                  {userEmail ?? '—'}
                 </div>
-              </div>
-
-              {/* NbLM status */}
-              <div>
-                <div className="text-[10px] text-primary/50 tracking-widest uppercase mb-2">Research Engine</div>
-                {drawerStatus?.nbmSessionActive ? (
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                    <span className="text-[11px] font-mono text-secondary">Connected</span>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
-                      <span className="text-[11px] font-mono text-tertiary">Session expired</span>
-                    </div>
-                    <Link
-                      href="/setup"
-                      onClick={() => setDrawerOpen(false)}
-                      className="text-[10px] font-bold tracking-wider text-tertiary border border-tertiary/30 px-2 py-1 hover:bg-tertiary/10 transition-colors inline-block"
-                    >
-                      RECONNECT →
-                    </Link>
-                  </div>
-                )}
               </div>
 
               {/* Dashboard link */}

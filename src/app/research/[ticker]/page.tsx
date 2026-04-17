@@ -179,10 +179,10 @@ export default function ResearchPage() {
             <div className="flex gap-2">
               {isAuthExpired ? (
                 <Link
-                  href="/setup"
+                  href="/dashboard"
                   className="flex-1 py-2 text-center bg-primary-container text-on-primary-container font-bold text-xs tracking-[0.2em] uppercase transition-colors hover:opacity-90"
                 >
-                  RECONNECT →
+                  DASHBOARD →
                 </Link>
               ) : (
                 <button

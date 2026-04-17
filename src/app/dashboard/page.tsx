@@ -8,11 +8,6 @@ import NavBar from '@/components/NavBar';
 import TickerSearch from '@/components/TickerSearch';
 import ReportHistory from '@/components/ReportHistory';
 
-interface SetupStatus {
-  userEmail: string | null;
-  nbmSessionActive?: boolean;
-}
-
 interface SnapshotItem {
   sym: string;
   name: string;
@@ -49,17 +44,9 @@ function getMarketStatus(): { open: boolean; label: string } {
 export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [status, setStatus] = useState<SetupStatus | null>(null);
   const [snapshot, setSnapshot] = useState<SnapshotItem[]>([]);
   const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/setup/status')
-      .then(r => r.json())
-      .then((d: SetupStatus) => setStatus(d))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     fetch('/api/market-snapshot')
@@ -74,9 +61,8 @@ export default function DashboardPage() {
       .finally(() => setSnapshotLoading(false));
   }, []);
 
-  const userEmail = session?.user?.email ?? status?.userEmail ?? null;
+  const userEmail = session?.user?.email ?? null;
   const userName = getFirstName(session?.user?.name, userEmail);
-  const nbmActive = status?.nbmSessionActive ?? false;
   const greeting = getGreeting();
   const market = getMarketStatus();
 
@@ -160,29 +146,6 @@ export default function DashboardPage() {
                   <div className="text-xs font-mono text-on-surface truncate">{userEmail ?? '—'}</div>
                 </div>
 
-                <div>
-                  <div className="text-[10px] text-primary/50 tracking-widest uppercase mb-1">Research Engine</div>
-                  {nbmActive ? (
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                      <span className="text-[11px] font-mono text-secondary">Connected</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
-                        <span className="text-[11px] font-mono text-tertiary">Session expired</span>
-                      </div>
-                      <button
-                        onClick={() => router.push('/setup')}
-                        className="text-[10px] font-bold tracking-wider text-tertiary border border-tertiary/30 px-2 py-1 hover:bg-tertiary/10 transition-colors"
-                      >
-                        RECONNECT →
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 <button
                   onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                   className="text-[10px] font-bold tracking-widest uppercase text-outline hover:text-error/70 transition-colors"
@@ -208,14 +171,6 @@ export default function DashboardPage() {
                   <span className="material-symbols-outlined text-secondary text-xl mb-2 block">home</span>
                   <div className="text-xs font-bold text-on-surface">Home</div>
                   <div className="text-[10px] text-on-surface-variant mt-0.5">Marketing page</div>
-                </Link>
-                <Link
-                  href="/setup"
-                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-outline/30 hover:bg-surface-container-high transition-all block"
-                >
-                  <span className="material-symbols-outlined text-outline text-xl mb-2 block">settings</span>
-                  <div className="text-xs font-bold text-on-surface">Setup</div>
-                  <div className="text-[10px] text-on-surface-variant mt-0.5">Reconnect Engine</div>
                 </Link>
                 <button
                   onClick={() => signOut({ callbackUrl: '/auth/signin' })}

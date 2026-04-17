@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import TickerSearch from '@/components/TickerSearch';
-import { SetupWizard } from '@/components/SetupWizard';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 
@@ -13,14 +12,6 @@ interface SnapshotItem {
   price: string | null;
   chg: string | null;
   up: boolean;
-}
-
-interface SetupStatus {
-  pythonOk: boolean;
-  notebooklmOk: boolean;
-  authOk: boolean;
-  allOk: boolean;
-  userEmail: string | null;
 }
 
 function getMarketStatus(): { open: boolean; label: string } {
@@ -36,8 +27,6 @@ function getMarketStatus(): { open: boolean; label: string } {
 }
 
 export default function Home() {
-  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
-  const [loading, setLoading]         = useState(true);
   const [snapshot, setSnapshot]       = useState<SnapshotItem[]>([]);
   const [snapshotAt, setSnapshotAt]   = useState<string | null>(null);
 
@@ -55,22 +44,6 @@ export default function Home() {
   const sceneRef = useRef<HTMLDivElement>(null);
   const rafRef   = useRef<number>(0);
 
-  async function fetchSetupStatus() {
-    try {
-      const res = await fetch('/api/setup/status');
-      if (!res.ok) {
-        setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null });
-        return;
-      }
-      const data: SetupStatus = await res.json();
-      setSetupStatus(data);
-    } catch {
-      setSetupStatus({ pythonOk: true, notebooklmOk: true, authOk: true, allOk: true, userEmail: null });
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
     fetch('/api/market-snapshot')
       .then((r) => r.json())
@@ -84,8 +57,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    fetchSetupStatus();
-
     // ── Scroll handler ─────────────────────────────────────────
     function updateAnim() {
       if (!sceneRef.current) return;
@@ -118,12 +89,8 @@ export default function Home() {
     };
   }, []);
 
-  // In web mode the landing page is purely marketing — no search or wizard.
-  // The actual research terminal lives at /terminal (requires full setup).
   const isWebMode = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web';
-  const showSearch = !isWebMode && !loading && (setupStatus?.allOk ?? true);
-  const showWizard = !isWebMode && !loading && setupStatus !== null && !setupStatus.allOk;
-  const market     = getMarketStatus();
+  const market    = getMarketStatus();
 
   // ── Stitch cinematic animation — matches Stitch HTML exactly ──
   // Terminal animation lives in 20%–90% of total scroll progress
@@ -145,7 +112,7 @@ export default function Home() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen pb-8">
-      <NavBar userEmail={setupStatus?.userEmail} />
+      <NavBar />
 
       {/* ── HERO: sticky scroll scene (400vh) ─── */}
       <div ref={sceneRef} style={{ height: '400vh' }}>
@@ -228,21 +195,15 @@ export default function Home() {
             className="absolute bottom-20 left-1/2 -translate-x-1/2 w-full max-w-xl px-6 z-30 transition-opacity duration-300"
             style={{ opacity: showSearch2 ? 1 : 0, pointerEvents: showSearch2 ? 'auto' : 'none' }}
           >
-            {showWizard && <SetupWizard onSetupComplete={fetchSetupStatus} />}
-            {showSearch && <TickerSearch />}
-            {loading && (
-              <div className="bg-surface-container-high p-4 flex items-center gap-3 rounded-lg">
-                <span className="w-3 h-3 border border-primary/50 border-t-transparent rounded-full animate-spin shrink-0" />
-                <span className="text-on-surface-variant text-[10px] tracking-widest">INITIALIZING SYSTEM...</span>
-              </div>
-            )}
-            {isWebMode && !loading && (
+            {isWebMode ? (
               <Link
-                href={setupStatus?.userEmail ? '/dashboard' : '/auth/signin'}
+                href="/auth/signin"
                 className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
               >
-                {setupStatus?.userEmail ? 'Open Dashboard →' : 'Sign In to Get Started →'}
+                Sign In to Get Started →
               </Link>
+            ) : (
+              <TickerSearch />
             )}
           </div>
 
@@ -397,10 +358,10 @@ export default function Home() {
               Source-grounded equity intelligence with transparent, traceable analysis.
             </p>
             <Link
-              href={setupStatus?.userEmail ? '/dashboard' : '/auth/signin'}
+              href="/auth/signin"
               className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
             >
-              {setupStatus?.userEmail ? 'Open Dashboard →' : 'Sign In to Get Started →'}
+              Sign In to Get Started →
             </Link>
           </div>
         </section>
