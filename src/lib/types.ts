@@ -132,6 +132,12 @@ export interface AnalysisSource {
   url?: string;  // optional source URL for direct attribution (D-11)
 }
 
+export interface CatalystEvent {
+  event: string;    // e.g. "Q2 Earnings Release", "FDA Decision on GLP-1 drug"
+  timing: string;   // e.g. "Expected May 2026", "Q3 2026"
+  impact: 'positive' | 'negative' | 'uncertain';
+}
+
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
 
 export interface MarketSnapshot {
@@ -157,6 +163,11 @@ export interface AnalysisResult {
   confidence_level: 'Low' | 'Medium' | 'High';
   confidence_explanation: string;
   price_target?: string | null;  // analyst-consensus price target or range — optional for backward compat (D-10)
+  executive_summary?: string;   // One-paragraph institutional thesis
+  investment_thesis?: string;   // Bull case narrative (2-3 sentences)
+  key_risks?: string;           // Bear case narrative (2-3 sentences)
+  valuation_context?: string;   // Cheap/fair/expensive vs P/E history and analyst target
+  catalyst_watch?: CatalystEvent[];  // Upcoming events that could move the stock
   sources_used: AnalysisSource[];
   source_warnings: string[];
   community_sentiment_available?: boolean;  // true if Firecrawl community content was included (D-11)
