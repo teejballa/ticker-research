@@ -37,16 +37,15 @@ The project follows an 8-point scale mapped to Tailwind utility classes. All new
 |-------|---------------|-------|-------|
 | xs | p-1 / gap-1 | 4px | Icon-to-label gap inside stat chips |
 | sm | p-2 / gap-2 | 8px | Gap between chips inside the stats card |
-| md | p-3 / gap-3 | 12px | Signal row padding (existing pattern from bullish/bearish rows) |
+| md | p-3 / gap-3 | 12px | Signal row padding — codebase exception: existing bullish/bearish signal rows use `p-3` at ResearchReport.tsx lines 243, 262. Phase 13 does not introduce new `p-3` uses. |
 | md+ | p-4 / gap-4 | 16px | Card internal padding (compact variant) |
-| lg | p-5 / gap-5 | 20px | Card internal padding (standard variant) |
 | xl | p-6 / gap-6 | 24px | Section-level card padding (matches existing Market Sentiment card) |
 | 2xl | space-y-8 | 32px | Between top-level sections in `<main>` (existing) |
 
 Exceptions:
 - Sentiment Intelligence card uses `p-4` (compact, 16px) — intentionally tighter than standard `p-6` cards, per D-18 "compact/scannable" directive
 - Forward Outlook section uses `p-6` (24px) to match Executive Summary weight
-- Stat chip pill padding: `px-3 py-1` (12px / 4px) — matches existing badge pattern (Market Sentiment badge uses `px-4 py-1`)
+- Stat chip pill padding: `px-4 py-1` (16px / 4px) — matches existing Market Sentiment badge pattern (`px-4 py-1`)
 
 ---
 
@@ -112,7 +111,7 @@ Two new UI elements are introduced in Phase 13. Both are added to `ResearchRepor
 ```
 
 **Chip anatomy (each of 3 chips):**
-- Container: `bg-surface-container-highest px-3 py-2 rounded flex flex-col items-center gap-1`
+- Container: `bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1`
 - Label: `text-[10px] font-bold tracking-widest uppercase text-on-surface-variant` — e.g. "BULL", "BEAR", "P/C RATIO"
 - Value: `text-sm font-mono font-bold` + color token per above
   - Bull chip value: `text-secondary`
@@ -226,6 +225,7 @@ No third-party component registries are used. Phase 13 UI is implemented with ex
 | Forward Outlook position (final section) | CONTEXT.md D-19: "end of the report" | After Sources section, before FooterTicker |
 | Sentiment Intelligence position | CONTEXT.md D-18: "after Market Sentiment section" | Inside left column, after Market Sentiment card |
 | Conditional render pattern | ResearchReport.tsx lines 186, 277, 369, 394 | `{field && (...)}` for all optional fields |
+| p-3 codebase exception | ResearchReport.tsx lines 243, 262 (bullish/bearish signal rows) | Existing codebase use — not introduced by Phase 13 |
 
 ---
 
