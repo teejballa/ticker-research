@@ -79,6 +79,12 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     sources_used,
     source_warnings,
     market_snapshot,
+    // New Wall Street fields
+    executive_summary,
+    investment_thesis,
+    key_risks,
+    valuation_context,
+    catalyst_watch,
   } = analysisResult;
 
   function handleExportPdf() {
@@ -176,6 +182,20 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           </div>
         </section>
 
+        {/* Executive Summary */}
+        {executive_summary && (
+          <section className="bg-surface-container p-6 rounded-lg border-l-4 border-primary relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 blur-[100px]" />
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>analyst_insights</span>
+              <h3 className="text-[11px] font-bold tracking-widest uppercase text-primary">Executive Summary</h3>
+            </div>
+            <p className="text-sm text-on-surface leading-relaxed max-w-4xl">
+              <Md text={executive_summary} />
+            </p>
+          </section>
+        )}
+
         {/* Main Dashboard Grid (Asymmetric) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
@@ -252,6 +272,32 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                 </div>
               </div>
             </div>
+
+            {/* Investment Thesis + Key Risks */}
+            {(investment_thesis || key_risks) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {investment_thesis && (
+                  <div className="bg-secondary/5 border border-secondary/20 p-5 rounded-lg">
+                    <h4 className="text-[10px] font-bold tracking-widest uppercase text-secondary flex items-center gap-2 mb-3">
+                      <span className="material-symbols-outlined text-sm">rocket_launch</span> Investment Thesis
+                    </h4>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      <Md text={investment_thesis} />
+                    </p>
+                  </div>
+                )}
+                {key_risks && (
+                  <div className="bg-error/5 border border-error/20 p-5 rounded-lg">
+                    <h4 className="text-[10px] font-bold tracking-widest uppercase text-error flex items-center gap-2 mb-3">
+                      <span className="material-symbols-outlined text-sm">shield_with_heart</span> Key Risks
+                    </h4>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      <Md text={key_risks} />
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Assessment & Confidence (col-span-4) */}
@@ -319,6 +365,19 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               </p>
             </div>
 
+            {/* Valuation Context */}
+            {valuation_context && (
+              <div className="bg-surface-container-high p-5 rounded-lg">
+                <h3 className="text-[11px] font-bold tracking-widest uppercase text-on-surface-variant mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm text-tertiary">finance_mode</span>
+                  Valuation
+                </h3>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  <Md text={valuation_context} />
+                </p>
+              </div>
+            )}
+
             {/* Source Warnings */}
             {source_warnings.length > 0 && (
               <div className="bg-surface-container-low border-l-2 border-error p-4 rounded-r">
@@ -330,6 +389,38 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             )}
           </div>
         </div>
+
+        {/* Catalyst Watch */}
+        {catalyst_watch && catalyst_watch.length > 0 && (
+          <section className="space-y-4">
+            <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm text-tertiary">event_upcoming</span>
+              Catalyst Watch
+              <span className="ml-1 font-mono text-tertiary">[{catalyst_watch.length} events]</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {catalyst_watch.map((catalyst, i) => {
+                const impactColor =
+                  catalyst.impact === 'positive' ? 'border-secondary text-secondary' :
+                  catalyst.impact === 'negative' ? 'border-error text-error' :
+                  'border-outline text-on-surface-variant';
+                const impactBg =
+                  catalyst.impact === 'positive' ? 'bg-secondary/5' :
+                  catalyst.impact === 'negative' ? 'bg-error/5' :
+                  'bg-surface-container-low';
+                return (
+                  <div key={i} className={`${impactBg} border-l-2 ${impactColor} p-4 rounded-r`}>
+                    <span className={`text-[9px] font-black tracking-widest uppercase block mb-1 ${impactColor.split(' ')[1]}`}>
+                      {catalyst.impact}
+                    </span>
+                    <h5 className="text-xs font-bold text-on-surface mb-1">{catalyst.event}</h5>
+                    <p className="text-[10px] text-on-surface-variant">{catalyst.timing}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Sources Section */}
         <section className="space-y-4">
