@@ -11,7 +11,21 @@ import type { AnalysisResult, SourcePackage } from '@/lib/types';
 
 // ---- Zod schema for structured Gemini output ----
 
+const CatalystEventSchema = z.object({
+  event: z.string(),
+  timing: z.string(),
+  impact: z.enum(['positive', 'negative', 'uncertain']),
+});
+
 export const AnalysisResultSchema = z.object({
+  // Wall Street report sections
+  executive_summary: z.string(),
+  investment_thesis: z.string(),
+  key_risks: z.string(),
+  valuation_context: z.string(),
+  catalyst_watch: z.array(CatalystEventSchema).optional().default([]),
+
+  // Core analysis (existing)
   market_sentiment: z.enum(['bullish', 'neutral', 'bearish']),
   sentiment_reasoning: z.string(),
   bullish_signals: z.array(z.object({
@@ -43,16 +57,42 @@ export const AnalysisResultSchema = z.object({
 
 // ---- System prompt ----
 
-export const SYSTEM_PROMPT = `You are a senior equity research analyst. Your task is to synthesize provided market data, news, analyst sentiment, and community discussion into a structured financial analysis.
+export const SYSTEM_PROMPT = `You are a senior equity research analyst at a bulge-bracket investment bank. Synthesize the provided market data, fundamentals, news, analyst sentiment, SEC filings, supplementary data, and community discussion into a Wall Street-grade structured research report.
+
+REQUIRED OUTPUT SECTIONS:
+
+executive_summary: One paragraph (4-6 sentences) encapsulating the investment case, current market position, key fundamental and catalytic drivers, and overall analytical stance. Write this as the opening paragraph of a Goldman Sachs or Morgan Stanley research note — precise, professional, conviction-driven.
+
+investment_thesis: 2-3 sentences articulating the bull case. Lead with the single most compelling fundamental or catalytic driver. Be specific — cite numbers and sources.
+
+key_risks: 2-3 sentences articulating the bear case. Focus on the most credible risks that could impair the investment thesis. Be specific — cite numbers and sources.
+
+valuation_context: 1-2 sentences assessing whether the stock appears cheap, fairly valued, or expensive. Reference the P/E ratio vs historical averages, vs sector, and compare current price to analyst consensus price target to derive premium or discount percentage.
+
+catalyst_watch: Array of 2-4 upcoming events that could materially move the stock (earnings dates, product launches, regulatory decisions, macro catalysts, analyst events). Each entry must include: event name, expected timing, and directional impact (positive/negative/uncertain).
+
+market_sentiment: 'bullish', 'neutral', or 'bearish' — your overall analytical stance.
+
+sentiment_reasoning: 2-3 sentences supporting the market_sentiment verdict. Tie to specific data points.
+
+bullish_signals: Exactly 5 specific, evidence-backed growth catalysts when data is sufficient (minimum 1 if data is sparse). Each signal must be a full sentence with specific numbers or quotes. source_citation must name the exact source (e.g., "Finnhub fundamentals: ROE 145%" or "Reuters Apr 15 2026" or "SEC 10-K filing Oct 2025").
+
+bearish_signals: Exactly 5 specific, evidence-backed risk vectors when data is sufficient (minimum 1 if data is sparse). Same citation standards as bullish_signals.
+
+assessment: buy_pct + hold_pct + sell_pct MUST sum to exactly 100. Rationale for each should be 1-2 sentences tied to the thesis.
+
+confidence_level: 'Low' if fewer than 3 reliable data sources; 'Medium' if 3-5; 'High' if 6 or more.
+
+price_target: Extract from analyst consensus in the research brief. Format as "$X" or "$X–$Y range". Null if not present in the data.
+
+sources_used: List every distinct data source that informed this analysis with a key fact extracted from it. Minimum 5 sources when data is available.
 
 CRITICAL RULES:
-1. All signals must cite the specific source from the research brief — do not hallucinate claims without supporting data.
-2. Produce exactly 5 bullish signals and exactly 5 bearish signals when data is sufficient; produce a minimum of 1 signal of each type if data is sparse.
-3. buy_pct + hold_pct + sell_pct must sum to exactly 100.
-4. price_target should be extracted from analyst consensus or target range in the research data. If unavailable, set to null.
-5. Mark confidence_level as "Low" if data is sparse, contradictory, or covers fewer than 3 reliable sources.
-6. source_citation in each signal must name the specific source (e.g., "Reuters, 2026-04-15" or "SEC 10-K filing" or "Reddit r/stocks sentiment").
-7. This analysis is for research purposes only. Do not provide personalized investment advice.
+1. All claims must be grounded in the provided research data — cite specific sources, never hallucinate.
+2. buy_pct + hold_pct + sell_pct must sum to exactly 100.
+3. Use professional financial language throughout: "likely", "expected", "data suggests" — avoid "may" or "might" without qualification.
+4. If supplementary data (Finnhub, Polygon) is present, use it to enrich valuation_context, bullish_signals, and bearish_signals.
+5. This analysis is for research purposes only. Do not provide personalized investment advice.
 
 Return your analysis as a structured JSON object matching the provided schema.`;
 
@@ -134,7 +174,7 @@ export function extractMarketSnapshot(pkg: SourcePackage) {
 
 /**
  * Calls Gemini via AI SDK + Vercel AI Gateway and returns a fully typed AnalysisResult.
- * Auth: VERCEL_OIDC_TOKEN (auto-managed — never reference in application code per T-12-02-02).
+ * Auth: VERCEL_OIDC_TOKEN (auto-managed by Vercel runtime — never reference in application code).
  *
  * @param ticker - The ticker symbol (e.g., 'AAPL')
  * @param pkg - The assembled SourcePackage from the research pipeline
@@ -175,6 +215,11 @@ export async function runGeminiAnalysis(
       confidence_level: output.confidence_level,
       confidence_explanation: output.confidence_explanation,
       price_target: output.price_target ?? null,
+      executive_summary: output.executive_summary,
+      investment_thesis: output.investment_thesis,
+      key_risks: output.key_risks,
+      valuation_context: output.valuation_context,
+      catalyst_watch: output.catalyst_watch ?? [],
       sources_used: output.sources_used,
     };
   } catch (err) {
