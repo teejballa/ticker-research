@@ -85,7 +85,10 @@ export function formatResearchBrief(pkg: SourcePackage): string {
   lines.push(`Exchange: ${fmt(pkg.exchange)}`);
   lines.push(`Data Assembled: ${fmt(pkg.assembled_at)}`);
   const suppCount = pkg.supplementary_market_data?.sources?.filter(s => s.available).length ?? 0;
-  lines.push(`Supplementary Sources: ${suppCount} of 2 available (Finnhub, Polygon)`);
+  const suppNames = suppCount > 0
+    ? pkg.supplementary_market_data.sources.filter(s => s.available).map(s => s.name).join(', ')
+    : 'none';
+  lines.push(`Supplementary Sources Included: ${suppCount} (${suppNames})`);
   lines.push('');
 
   // Market Data
@@ -136,6 +139,17 @@ export function formatResearchBrief(pkg: SourcePackage): string {
     }
   }
   lines.push('');
+
+  // Supplementary Market Data (Finnhub, Polygon) — append available text_blocks
+  const availableSuppSources = pkg.supplementary_market_data?.sources?.filter(s => s.available) ?? [];
+  if (availableSuppSources.length > 0) {
+    lines.push('--- SUPPLEMENTARY MARKET DATA ---');
+    for (const source of availableSuppSources) {
+      lines.push('');
+      lines.push(source.text_block);
+    }
+    lines.push('');
+  }
 
   // Collection Notes
   lines.push('--- COLLECTION NOTES ---');

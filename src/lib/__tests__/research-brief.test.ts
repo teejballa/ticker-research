@@ -269,6 +269,70 @@ describe('formatResearchBrief', () => {
     const result = formatResearchBrief(basePackage);
     expect(result.length).toBeGreaterThan(500);
   });
+
+  it('includes Finnhub text_block when supplementary source is available', () => {
+    const pkg: SourcePackage = {
+      ...basePackage,
+      supplementary_market_data: {
+        sources: [
+          {
+            name: 'Finnhub',
+            fetched_at: '2026-04-17T10:00:00Z',
+            text_block: '=== MARKET DATA: FINNHUB ===\nBeta: 1.2\nROE (TTM): 145%',
+            available: true,
+          },
+        ],
+      },
+    };
+    const result = formatResearchBrief(pkg);
+    expect(result).toContain('=== MARKET DATA: FINNHUB ===');
+    expect(result).toContain('Beta: 1.2');
+    expect(result).toContain('ROE (TTM): 145%');
+  });
+
+  it('excludes text_block when supplementary source is not available', () => {
+    const pkg: SourcePackage = {
+      ...basePackage,
+      supplementary_market_data: {
+        sources: [
+          {
+            name: 'Finnhub',
+            fetched_at: '2026-04-17T10:00:00Z',
+            text_block: '=== MARKET DATA: FINNHUB ===\nBeta: 1.2',
+            available: false,
+          },
+        ],
+      },
+    };
+    const result = formatResearchBrief(pkg);
+    expect(result).not.toContain('=== MARKET DATA: FINNHUB ===');
+  });
+
+  it('includes both Finnhub and Polygon blocks when both available', () => {
+    const pkg: SourcePackage = {
+      ...basePackage,
+      supplementary_market_data: {
+        sources: [
+          {
+            name: 'Finnhub',
+            fetched_at: '2026-04-17T10:00:00Z',
+            text_block: '=== MARKET DATA: FINNHUB ===\nBeta: 1.2',
+            available: true,
+          },
+          {
+            name: 'Polygon',
+            fetched_at: '2026-04-17T10:00:00Z',
+            text_block: '=== MARKET DATA: POLYGON ===\nEmployees: 161000',
+            available: true,
+          },
+        ],
+      },
+    };
+    const result = formatResearchBrief(pkg);
+    expect(result).toContain('=== MARKET DATA: FINNHUB ===');
+    expect(result).toContain('=== MARKET DATA: POLYGON ===');
+    expect(result).toContain('Employees: 161000');
+  });
 });
 
 // ---- extractNewsUrls tests ----
