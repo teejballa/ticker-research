@@ -20,6 +20,7 @@
     "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.71",
     "@anthropic-ai/sdk": "^0.78.0",
     "@mendable/firecrawl-js": "4.18.3",
     "@neondatabase/serverless": "^1.0.2",
