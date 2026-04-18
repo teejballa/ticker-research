@@ -1,7 +1,7 @@
 // src/lib/gemini-analysis.ts
 // Gemini analysis service — calls Gemini via AI SDK + Vercel AI Gateway.
 // Auth: VERCEL_OIDC_TOKEN auto-read from process.env (local) or injected by Vercel runtime (deployed).
-// No provider import needed — plain model string 'google/gemini-3.0-flash' routes through AI Gateway.
+// No provider import needed — plain model string 'google/gemini-3-flash' routes through AI Gateway.
 
 import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
@@ -151,7 +151,7 @@ export async function runGeminiAnalysis(
 
   try {
     const { output } = await generateText({
-      model: 'google/gemini-3.0-flash',
+      model: 'google/gemini-3-flash',
       output: Output.object({ schema: AnalysisResultSchema }),
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
