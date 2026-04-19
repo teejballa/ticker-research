@@ -61,6 +61,16 @@ export const AnalysisResultSchema = z.object({
     url: z.string().optional(),
   })),
   source_warnings: z.array(z.string()).optional().default([]),
+  future_projection: z.string().optional().default(''),
+  community_sources_scraped: z.number().optional(),
+  sentiment_intelligence_summary: z.object({
+    stocktwits_bull_pct: z.number().nullable().optional(),
+    stocktwits_bear_pct: z.number().nullable().optional(),
+    stocktwits_message_count: z.number().nullable().optional(),
+    stocktwits_is_trending: z.boolean().nullable().optional(),
+    put_call_ratio: z.number().nullable().optional(),
+    put_call_interpretation: z.enum(['bullish', 'bearish', 'neutral']).nullable().optional(),
+  }).optional(),
 });
 
 // ---- System prompt ----
@@ -95,22 +105,40 @@ price_target: Extract from analyst consensus in the research brief. Format as "$
 
 sources_used: List every distinct data source that informed this analysis with a key fact extracted from it. Minimum 5 sources when data is available.
 
+future_projection: A 2-3 sentence forward-looking outlook synthesizing ALL available signals into a specific directional stance. Draw from: StockTwits retail sentiment (bull/bear percentages), options market put/call ratio and its interpretation, community discussion tone, price target vs current price, catalyst_watch events, fundamental trends, and technical context. Be specific — cite data points. This is the capstone forward-looking statement of the report. Omit if all signal inputs are null.
+
+sentiment_intelligence_summary: Echo back the structured sentiment signals provided in the SENTIMENT INTELLIGENCE section of the research data: stocktwits_bull_pct, stocktwits_bear_pct, stocktwits_message_count, stocktwits_is_trending, put_call_ratio, put_call_interpretation. Return the values exactly as provided — do not fabricate. If the section is absent or all values are null, return null for the entire object.
+
 CRITICAL RULES:
 1. All claims must be grounded in the provided research data — cite specific sources, never hallucinate.
 2. buy_pct + hold_pct + sell_pct must sum to exactly 100.
 3. Use professional financial language throughout: "likely", "expected", "data suggests" — avoid "may" or "might" without qualification.
 4. If supplementary data (Finnhub, Polygon) is present, use it to enrich valuation_context, bullish_signals, and bearish_signals.
 5. This analysis is for research purposes only. Do not provide personalized investment advice.
+6. future_projection must synthesize StockTwits sentiment percentages and options put/call ratio into the outlook when those values are non-null. Do not ignore these signals.
+7. sentiment_intelligence_summary must echo back the exact numeric values from the SENTIMENT INTELLIGENCE section — never invent numbers.
 
 Return your analysis as a structured JSON object matching the provided schema.`;
 
 // ---- Prompt builder ----
 
 /**
- * Assembles the Gemini user prompt from the research brief, news URLs, and optional
- * Firecrawl community sentiment content.
+ * Assembles the Gemini user prompt from the research brief, news URLs, optional
+ * Firecrawl community sentiment content, and optional structured sentiment intelligence data.
  */
-export function buildUserPrompt(brief: string, newsUrls: string[], communityContent: string): string {
+export function buildUserPrompt(
+  brief: string,
+  newsUrls: string[],
+  communityContent: string,
+  sentimentIntelligence?: {
+    stocktwits_bull_pct: number | null;
+    stocktwits_bear_pct: number | null;
+    stocktwits_message_count: number | null;
+    stocktwits_is_trending: boolean | null;
+    put_call_ratio: number | null;
+    put_call_interpretation: string | null;
+  } | null,
+): string {
   let prompt = brief + '\n\n';
   if (newsUrls.length > 0) {
     prompt += '=== NEWS SOURCES ===\n';
@@ -121,6 +149,18 @@ export function buildUserPrompt(brief: string, newsUrls: string[], communityCont
     prompt += '=== COMMUNITY SENTIMENT ===\n';
     prompt += communityContent;
     prompt += '\n\n';
+  }
+  // Inject sentiment intelligence section for Gemini to echo back + use in future_projection
+  if (sentimentIntelligence) {
+    const si = sentimentIntelligence;
+    prompt += '=== SENTIMENT INTELLIGENCE ===\n';
+    prompt += `StockTwits Bullish: ${si.stocktwits_bull_pct != null ? si.stocktwits_bull_pct + '%' : 'N/A'}\n`;
+    prompt += `StockTwits Bearish: ${si.stocktwits_bear_pct != null ? si.stocktwits_bear_pct + '%' : 'N/A'}\n`;
+    prompt += `StockTwits Messages: ${si.stocktwits_message_count ?? 'N/A'}\n`;
+    prompt += `StockTwits Trending: ${si.stocktwits_is_trending != null ? si.stocktwits_is_trending : 'N/A'}\n`;
+    prompt += `Options Put/Call Ratio: ${si.put_call_ratio != null ? si.put_call_ratio.toFixed(3) : 'N/A'}\n`;
+    prompt += `Options Interpretation: ${si.put_call_interpretation ?? 'N/A'}\n`;
+    prompt += '\n';
   }
   prompt += 'Analyze the ticker based on all research data above. Return the structured analysis.';
   return prompt;
@@ -266,7 +306,7 @@ export async function runGeminiAnalysis(
 ): Promise<AnalysisResult> {
   const brief = formatResearchBrief(pkg);
   const newsUrls = extractNewsUrls(pkg);
-  const userPrompt = buildUserPrompt(brief, newsUrls, communityContent);
+  const userPrompt = buildUserPrompt(brief, newsUrls, communityContent, pkg.sentiment_intelligence);
 
   try {
     const { output } = await generateText({
@@ -300,6 +340,16 @@ export async function runGeminiAnalysis(
       valuation_context: output.valuation_context,
       catalyst_watch: output.catalyst_watch ?? [],
       sources_used: output.sources_used,
+      future_projection: output.future_projection || undefined,
+      community_sources_scraped: _lastCommunityScrapePageCount > 0 ? _lastCommunityScrapePageCount : undefined,
+      sentiment_intelligence: output.sentiment_intelligence_summary ? {
+        stocktwits_bull_pct: output.sentiment_intelligence_summary.stocktwits_bull_pct ?? null,
+        stocktwits_bear_pct: output.sentiment_intelligence_summary.stocktwits_bear_pct ?? null,
+        stocktwits_message_count: output.sentiment_intelligence_summary.stocktwits_message_count ?? null,
+        stocktwits_is_trending: output.sentiment_intelligence_summary.stocktwits_is_trending ?? null,
+        put_call_ratio: output.sentiment_intelligence_summary.put_call_ratio ?? null,
+        put_call_interpretation: output.sentiment_intelligence_summary.put_call_interpretation ?? null,
+      } : undefined,
     };
   } catch (err) {
     if (NoObjectGeneratedError.isInstance(err)) {
