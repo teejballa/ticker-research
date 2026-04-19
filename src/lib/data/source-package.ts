@@ -12,7 +12,9 @@ import {
 } from '@/lib/data/anthropic-search';
 import { fetchFinnhub } from '@/lib/data/finnhub';
 import { fetchPolygon } from '@/lib/data/polygon';
-import type { SourcePackage, MarketDataSection, FundamentalsSection, SupplementaryMarketData, SupplementarySource } from '@/lib/types';
+import { fetchStockTwitsSentiment } from '@/lib/data/stocktwits';
+import { fetchOptionsSentiment } from '@/lib/data/options-sentiment';
+import type { SourcePackage, MarketDataSection, FundamentalsSection, SupplementaryMarketData, SupplementarySource, SentimentIntelligenceSection } from '@/lib/types';
 import type { SecurityType } from '@/lib/types';
 
 // Empty fallback sections for when a data source fails completely
@@ -42,13 +44,33 @@ function emptyFundamentals(error: string): FundamentalsSection {
   };
 }
 
+async function fetchSentimentIntelligence(ticker: string): Promise<SentimentIntelligenceSection> {
+  const collected_at = new Date().toISOString();
+  const [stwitsResult, optionsResult] = await Promise.allSettled([
+    fetchStockTwitsSentiment(ticker),
+    fetchOptionsSentiment(ticker),
+  ]);
+  const stwits = stwitsResult.status === 'fulfilled' ? stwitsResult.value : null;
+  const options = optionsResult.status === 'fulfilled' ? optionsResult.value : null;
+  return {
+    collected_at,
+    stocktwits_bull_pct: stwits?.stocktwits_bull_pct ?? null,
+    stocktwits_bear_pct: stwits?.stocktwits_bear_pct ?? null,
+    stocktwits_message_count: stwits?.stocktwits_message_count ?? null,
+    stocktwits_is_trending: stwits?.stocktwits_is_trending ?? null,
+    reddit_tone: null,  // derived qualitatively by Gemini from community content
+    put_call_ratio: options?.put_call_ratio ?? null,
+    put_call_interpretation: options?.put_call_interpretation ?? null,
+  };
+}
+
 export async function collectAllData(
   ticker: string,
   companyName: string = ticker,
   exchange: string | null = null,
   securityType: SecurityType = 'equity',
 ): Promise<SourcePackage> {
-  // Run all 8 data sources in parallel — Promise.allSettled never throws
+  // Run all 9 data sources in parallel — Promise.allSettled never throws
   const [
     marketDataResult,
     fundamentalsResult,
@@ -58,6 +80,7 @@ export async function collectAllData(
     socialResult,
     finnhubResult,
     polygonResult,
+    sentimentIntelligenceResult,
   ] = await Promise.allSettled([
     fetchMarketData(ticker),
     fetchFundamentals(ticker),
@@ -67,6 +90,7 @@ export async function collectAllData(
     fetchSocialSentiment(ticker, securityType),
     fetchFinnhub(ticker),
     fetchPolygon(ticker),
+    fetchSentimentIntelligence(ticker),
   ]);
 
   const collection_errors: string[] = [];
@@ -113,5 +137,20 @@ export async function collectAllData(
     social_sentiment: settle(socialResult, { collected_at: new Date().toISOString(), overall_tone: null, signals: [], sources_checked: [], error: 'social sentiment collection failed' }, 'social_sentiment'),
     collection_errors,
     supplementary_market_data,
+    sentiment_intelligence: settle(
+      sentimentIntelligenceResult,
+      {
+        collected_at: new Date().toISOString(),
+        stocktwits_bull_pct: null,
+        stocktwits_bear_pct: null,
+        stocktwits_message_count: null,
+        stocktwits_is_trending: null,
+        reddit_tone: null,
+        put_call_ratio: null,
+        put_call_interpretation: null,
+        error: 'sentiment intelligence collection failed',
+      },
+      'sentiment_intelligence',
+    ),
   };
 }
