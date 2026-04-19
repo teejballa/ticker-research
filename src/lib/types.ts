@@ -153,6 +153,16 @@ export interface CatalystEvent {
   impact: 'positive' | 'negative' | 'uncertain';
 }
 
+export interface CommunityHighlight {
+  community_name: string;           // e.g. "r/SecurityAnalysis", "BioPharma Catalyst Forum"
+  community_type: 'mainstream' | 'niche';
+  audience: string;                 // e.g. "institutional-adjacent analysts"
+  standout_quote: string;           // actual user opinion extracted from scraped content
+  theme: string;                    // e.g. "Accounting concerns / earnings quality"
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+  engagement_signal: 'high' | 'medium' | 'low';
+}
+
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
 
 export interface MarketSnapshot {
@@ -202,6 +212,8 @@ export interface AnalysisResult {
     put_call_ratio: number | null;
     put_call_interpretation: 'bullish' | 'bearish' | 'neutral' | null;
   };
+  community_highlights?: CommunityHighlight[];   // per-community structured findings
+  community_analysis?: string;                   // Gemini-written narrative paragraph
 }
 
 // ---- StoredReport — persisted report file (Phase 5) ----
