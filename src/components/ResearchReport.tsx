@@ -87,6 +87,9 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     market_snapshot,
     // New Wall Street fields
     executive_summary,
+    business_description,
+    financial_analysis,
+    competitive_landscape,
     investment_thesis,
     key_risks,
     valuation_context,
@@ -201,6 +204,19 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             </div>
             <p className="text-sm text-on-surface leading-relaxed max-w-4xl">
               <Md text={executive_summary} />
+            </p>
+          </section>
+        )}
+
+        {/* Business Description */}
+        {business_description && (
+          <section className="bg-surface-container-low border border-surface-container-high p-6 rounded-lg">
+            <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-sm text-tertiary">domain</span>
+              About the Company
+            </h3>
+            <p className="text-sm text-on-surface-variant leading-relaxed max-w-4xl">
+              <Md text={business_description} />
             </p>
           </section>
         )}
@@ -363,6 +379,32 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                 )}
               </div>
             )}
+            {/* Financial Analysis */}
+            {financial_analysis && (
+              <div className="bg-surface-container-low border border-surface-container-high p-5 rounded-lg">
+                <h4 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2 mb-3">
+                  <span className="material-symbols-outlined text-sm text-tertiary">monitoring</span>
+                  Financial Analysis
+                </h4>
+                <p className="text-sm text-on-surface-variant leading-relaxed">
+                  <Md text={financial_analysis} />
+                </p>
+              </div>
+            )}
+
+            {/* Competitive Landscape */}
+            {competitive_landscape && (
+              <div className="bg-surface-container-low border border-surface-container-high p-5 rounded-lg">
+                <h4 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2 mb-3">
+                  <span className="material-symbols-outlined text-sm text-tertiary">leaderboard</span>
+                  Competitive Landscape
+                </h4>
+                <p className="text-sm text-on-surface-variant leading-relaxed">
+                  <Md text={competitive_landscape} />
+                </p>
+              </div>
+            )}
+
           </div>
 
           {/* Right Column: Assessment & Confidence (col-span-4) */}
