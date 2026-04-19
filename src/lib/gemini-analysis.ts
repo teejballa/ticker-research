@@ -25,6 +25,16 @@ const CatalystEventSchema = z.object({
   impact: z.enum(['positive', 'negative', 'uncertain']),
 });
 
+const CommunityHighlightSchema = z.object({
+  community_name: z.string(),
+  community_type: z.enum(['mainstream', 'niche']),
+  audience: z.string(),
+  standout_quote: z.string(),
+  theme: z.string(),
+  sentiment: z.enum(['bullish', 'bearish', 'neutral']),
+  engagement_signal: z.enum(['high', 'medium', 'low']),
+});
+
 export const AnalysisResultSchema = z.object({
   // Wall Street report sections
   executive_summary: z.string(),
@@ -74,6 +84,8 @@ export const AnalysisResultSchema = z.object({
     put_call_ratio: z.number().nullable().optional(),
     put_call_interpretation: z.enum(['bullish', 'bearish', 'neutral']).nullable().optional(),
   }).optional(),
+  community_highlights: z.array(CommunityHighlightSchema).optional().default([]),
+  community_analysis: z.string().optional().default(''),
 });
 
 // ---- System prompt ----
@@ -118,6 +130,10 @@ future_projection: 3-4 sentences forward-looking outlook synthesizing ALL availa
 
 sentiment_intelligence_summary: Echo back the structured sentiment signals from the SENTIMENT INTELLIGENCE section exactly as provided. Do not fabricate. Return null for the entire object if the section is absent or all values are null.
 
+community_highlights: Echo back the structured community findings exactly as provided in the COMMUNITY INTELLIGENCE section. Do not invent communities or quotes. Return empty array if the COMMUNITY INTELLIGENCE section is absent.
+
+community_analysis: Write one sentence per community found in the COMMUNITY INTELLIGENCE section. For each community, name it, characterize who uses it and whether it is niche or mainstream, describe the specific topic or concern members discussed, and state whether this is bullish or bearish for the stock. Use this format for each sentence: "In [community name], [audience characterization], members [discussed/raised/questioned] [specific topic], [sentiment direction implication]." Combine all sentences into a single flowing paragraph with no bullet points or headers. If no COMMUNITY INTELLIGENCE section is present in the data, return an empty string.
+
 CRITICAL RULES:
 1. All claims must be grounded in the provided research data — cite specific sources, never hallucinate.
 2. buy_pct + hold_pct + sell_pct must sum to exactly 100.
@@ -127,6 +143,7 @@ CRITICAL RULES:
 6. future_projection must incorporate StockTwits sentiment percentages and options put/call ratio when non-null.
 7. sentiment_intelligence_summary must echo exact numeric values from the SENTIMENT INTELLIGENCE section — never invent numbers.
 8. business_description, financial_analysis, and competitive_landscape must be substantive — do not produce one-sentence answers. These sections give the reader genuine understanding of the company.
+9. community_analysis must name each community individually using the one-sentence-per-community format — do not write vague summaries like "retail communities were cautious". Each sentence must name a specific community.
 
 Return your analysis as a structured JSON object matching the provided schema.`;
 
