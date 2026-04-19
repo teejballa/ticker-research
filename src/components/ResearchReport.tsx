@@ -316,9 +316,9 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
 
             {/* Community Intelligence Card */}
             {community_highlights && community_highlights.length > 0 && (
-              <div className="bg-surface-container rounded-xl p-5 space-y-4">
+              <div className="bg-surface-container rounded-lg p-5 space-y-4">
                 <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">groups</span>
+                  <span className="material-symbols-outlined text-sm text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
                   Community Intelligence
                   <span className="ml-auto text-[9px] font-normal normal-case text-on-surface-variant/60">
                     {community_highlights.length} source{community_highlights.length !== 1 ? 's' : ''} analyzed
