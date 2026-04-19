@@ -188,6 +188,10 @@ export interface AnalysisResult {
   community_sentiment_available?: boolean;  // true if Firecrawl community content was included (D-11)
   market_snapshot?: MarketSnapshot;  // optional — populated by analysis pipeline (Phase 3)
   security_type?: SecurityType;  // optional — old persisted reports may not have this field
+  // Depth sections — added for richer report content
+  business_description?: string;        // What the company does, revenue model, key segments
+  financial_analysis?: string;          // Revenue trend, margins, FCF, debt — numbers and direction
+  competitive_landscape?: string;       // Main competitors, market position, moat
   future_projection?: string;           // D-15: Gemini forward-looking synthesis
   community_sources_scraped?: number;   // D-18: count of pages returned from community scrape
   sentiment_intelligence?: {            // D-17: structured signals for report display
