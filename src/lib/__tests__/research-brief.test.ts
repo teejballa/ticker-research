@@ -65,6 +65,16 @@ const basePackage: SourcePackage = {
   supplementary_market_data: {
     sources: [],
   },
+  sentiment_intelligence: {
+    collected_at: '2026-03-12T14:22:30Z',
+    stocktwits_bull_pct: null,
+    stocktwits_bear_pct: null,
+    stocktwits_message_count: null,
+    stocktwits_is_trending: null,
+    reddit_tone: null,
+    put_call_ratio: null,
+    put_call_interpretation: null,
+  },
 };
 
 // ---- formatResearchBrief tests ----

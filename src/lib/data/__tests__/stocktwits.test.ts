@@ -2,14 +2,15 @@
 // Unit tests for fetchStockTwitsSentiment (D-06, D-07)
 // Tests cover: null return paths, bull/bear computation, is_trending derivation.
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchStockTwitsSentiment } from '../stocktwits';
 
 // Mock global fetch for all tests
-const mockFetch = jest.fn();
+const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('fetchStockTwitsSentiment', () => {

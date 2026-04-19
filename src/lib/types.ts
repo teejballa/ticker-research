@@ -67,6 +67,20 @@ export interface SocialSentimentSection extends SourceSection {
   sources_checked: string[];
 }
 
+// ---- SentimentIntelligenceSection — Phase 13: Deep Sentiment Intelligence ----
+// D-14: structured signals from StockTwits API + options put/call ratio.
+// reddit_tone is set to null here (derived qualitatively from community content by Gemini).
+
+export interface SentimentIntelligenceSection extends SourceSection {
+  stocktwits_bull_pct: number | null;
+  stocktwits_bear_pct: number | null;
+  stocktwits_message_count: number | null;
+  stocktwits_is_trending: boolean | null;  // derived: Math.abs(sentiment_change) > 0.5 (no API flag)
+  reddit_tone: 'bullish' | 'bearish' | 'neutral' | null;  // null — set by Gemini qualitatively
+  put_call_ratio: number | null;
+  put_call_interpretation: 'bullish' | 'bearish' | 'neutral' | null;
+}
+
 export interface ChartDataPoint {
   time: string;   // YYYY-MM-DD format for lightweight-charts
   value: number;  // closing price
@@ -95,6 +109,7 @@ export interface SourcePackage {
   social_sentiment: SocialSentimentSection;
   collection_errors: string[];
   supplementary_market_data: SupplementaryMarketData;
+  sentiment_intelligence: SentimentIntelligenceSection;
 }
 
 // ---- Supplementary Market Data — multi-source aggregation (Phase 10) ----
@@ -173,6 +188,16 @@ export interface AnalysisResult {
   community_sentiment_available?: boolean;  // true if Firecrawl community content was included (D-11)
   market_snapshot?: MarketSnapshot;  // optional — populated by analysis pipeline (Phase 3)
   security_type?: SecurityType;  // optional — old persisted reports may not have this field
+  future_projection?: string;           // D-15: Gemini forward-looking synthesis
+  community_sources_scraped?: number;   // D-18: count of pages returned from community scrape
+  sentiment_intelligence?: {            // D-17: structured signals for report display
+    stocktwits_bull_pct: number | null;
+    stocktwits_bear_pct: number | null;
+    stocktwits_message_count: number | null;
+    stocktwits_is_trending: boolean | null;
+    put_call_ratio: number | null;
+    put_call_interpretation: 'bullish' | 'bearish' | 'neutral' | null;
+  };
 }
 
 // ---- StoredReport — persisted report file (Phase 5) ----
