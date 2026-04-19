@@ -2,21 +2,22 @@
 // Unit tests for fetchOptionsSentiment (D-09 through D-13)
 // Tests cover: null return paths, put/call ratio computation, D-11 threshold logic.
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchOptionsSentiment } from '../options-sentiment';
 
 // Mock yahoo-finance2
-jest.mock('yahoo-finance2', () => ({
-  __esModule: true,
+vi.mock('yahoo-finance2', () => ({
   default: {
-    options: jest.fn(),
+    options: vi.fn(),
   },
 }));
 
 import yahooFinance from 'yahoo-finance2';
-const mockOptions = yahooFinance.options as jest.Mock;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockOptions = yahooFinance.options as any;
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('fetchOptionsSentiment', () => {
@@ -99,7 +100,7 @@ describe('fetchOptionsSentiment', () => {
       expect(result.put_call_interpretation).toBe('neutral');
     });
 
-    it('returns bullish at exactly 0.5 boundary (< 0.5 is bullish, = 0.5 is neutral)', async () => {
+    it('returns neutral at exactly 0.5 boundary (< 0.5 is bullish, = 0.5 is neutral)', async () => {
       mockOptions.mockResolvedValueOnce({
         options: [{ calls: [{ openInterest: 1000 }], puts: [{ openInterest: 500 }] }],
       });
