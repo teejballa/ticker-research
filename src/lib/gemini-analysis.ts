@@ -6,8 +6,16 @@
 import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
 import Firecrawl from '@mendable/firecrawl-js';
+import Anthropic from '@anthropic-ai/sdk';
 import { formatResearchBrief, extractNewsUrls } from '@/lib/research-brief';
 import type { AnalysisResult, SourcePackage } from '@/lib/types';
+
+const anthropicClient = new Anthropic();
+// Reads ANTHROPIC_API_KEY from process.env automatically.
+
+// Tracks community pages scraped in the most recent scrapeCommunitySentiment() call.
+// Set before returning — read by runGeminiAnalysis() immediately after the call.
+let _lastCommunityScrapePageCount = 0;
 
 // ---- Zod schema for structured Gemini output ----
 
@@ -120,36 +128,107 @@ export function buildUserPrompt(brief: string, newsUrls: string[], communityCont
 
 // ---- Firecrawl community sentiment gatherer ----
 
-/**
- * Searches for community discussion about the ticker using Firecrawl search.
- * Returns empty string if FIRECRAWL_API_KEY is absent.
- *
- * Uses search (not scrape) because we need URL discovery — the source package
- * contains source *names* ("Reddit r/investing"), not actual URLs.
- * Firecrawl search returns page content inline, so one call = discovery + extraction.
- * Targets Reddit, StockTwits, and Seeking Alpha for highest signal-to-noise ratio.
- * Limit 3 results = ~3 credits per run (efficient on free tier).
- */
-export async function scrapeCommunitySentiment(ticker: string): Promise<string> {
-  if (!process.env.FIRECRAWL_API_KEY) return '';
-  const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
-  const query = `${ticker} stock discussion community sentiment site:reddit.com OR site:stocktwits.com OR site:seekingalpha.com`;
+// Domain tier ranking for URL selection (Claude's Discretion).
+// Higher tier = more retail sentiment signal. Top 5 by tier are scraped.
+function domainTier(url: string): number {
   try {
-    const response = await fc.search(query, {
-      limit: 3,
-      scrapeOptions: {
-        formats: ['markdown'],
-        onlyMainContent: true,
-      },
-    } as Parameters<typeof fc.search>[1]);
-    const results = (response as { results?: Array<{ markdown?: string; url?: string }> }).results ?? [];
-    const pages = results
-      .map(r => r.markdown ?? '')
-      .filter(Boolean);
-    return pages.join('\n\n---\n\n');
+    const host = new URL(url).hostname.replace('www.', '');
+    if (['reddit.com', 'stocktwits.com'].includes(host)) return 4;
+    if (['seekingalpha.com'].includes(host)) return 3;
+    if (['investorshub.com', 'elitetrader.com', 'valueinvestorsclub.com'].includes(host)) return 2;
+    return 1;
+  } catch {
+    return 0;
+  }
+}
+
+// Scrape a single URL via Firecrawl. Returns '' on failure or paywall content.
+async function scrapeUrlWithFirecrawl(fc: Firecrawl, url: string): Promise<string> {
+  try {
+    const doc = await fc.scrape(url, {
+      formats: ['markdown'],
+      onlyMainContent: true,
+    } as Parameters<typeof fc.scrape>[1]);
+    const content = (doc as { markdown?: string }).markdown ?? '';
+    // Paywall/bot guard: skip pages with < 200 chars (login walls, bot blocks)
+    return content.length >= 200 ? content : '';
   } catch {
     return '';
   }
+}
+
+/**
+ * Discovers community discussion URLs for the ticker using Anthropic Haiku web search,
+ * then scrapes the top 5 most relevant URLs via Firecrawl for full content.
+ *
+ * Two-step process per D-01 to D-05:
+ * Step 1: stocktwits.com/symbol/{ticker} is pinned as a guaranteed candidate (D-05).
+ *         Haiku then discovers up to 10 additional candidate URLs from Reddit, StockTwits
+ *         threads, SeekingAlpha, and niche forums.
+ * Step 2: All candidates (pinned + discovered) are ranked by domain tier; top 5 scraped via fc.scrape().
+ *
+ * StockTwits thread scraping (qualitative text) is separate from the StockTwits API
+ * structured data (bull/bear counts) gathered in source-package.ts — both per D-05.
+ *
+ * Sets _lastCommunityScrapePageCount to the number of non-empty pages scraped.
+ * Returns empty string if FIRECRAWL_API_KEY is absent.
+ */
+export async function scrapeCommunitySentiment(ticker: string): Promise<string> {
+  _lastCommunityScrapePageCount = 0;
+  if (!process.env.FIRECRAWL_API_KEY) return '';
+  const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
+
+  // D-05: Pin StockTwits thread URL as a guaranteed candidate.
+  // encodeURIComponent ensures safe URL even for tickers like BRK.A.
+  const pinnedStockTwitsUrl = `https://stocktwits.com/symbol/${encodeURIComponent(ticker)}`;
+  let candidateUrls: string[] = [pinnedStockTwitsUrl];
+
+  // Step 1: Haiku URL discovery (D-02, D-03, D-04) — adds dynamic ticker-specific sources
+  try {
+    const discoveryResponse = await anthropicClient.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 5 }],
+      messages: [{
+        role: 'user',
+        content: `Find 10 URLs where ${ticker} stock is being actively discussed right now. ` +
+          `Target: Reddit posts in r/wallstreetbets, r/stocks, r/investing, r/SecurityAnalysis; ` +
+          `StockTwits discussion threads; SeekingAlpha articles; Investors Hub and Elite Trader forums. ` +
+          `Prefer recent posts (past 7 days). ` +
+          `Return ONLY a JSON array of URL strings, no commentary. Example: ["https://reddit.com/r/...", ...]`,
+      }],
+    });
+
+    // Extract text block from response
+    const textBlock = discoveryResponse.content.filter(b => b.type === 'text').pop();
+    const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+
+    // Parse JSON, strip markdown fences
+    const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    try {
+      const parsed = JSON.parse(cleaned) as unknown;
+      if (Array.isArray(parsed)) {
+        // Filter to valid HTTP URLs only (guard against malformed Haiku output)
+        const discovered = (parsed as unknown[])
+          .filter((u): u is string => typeof u === 'string' && u.startsWith('http'))
+          .slice(0, 10);
+        // Append discovered URLs — pinned StockTwits URL remains at index 0
+        candidateUrls = [...candidateUrls, ...discovered];
+      }
+    } catch { /* parse failure — proceed with pinned URL only */ }
+  } catch { /* Haiku call failure — proceed with pinned URL only */ }
+
+  // Step 2: Rank by domain tier, take top 5, scrape each (D-03)
+  // De-duplicate by URL string before ranking
+  const unique = [...new Set(candidateUrls)];
+  const ranked = unique.sort((a, b) => domainTier(b) - domainTier(a));
+  const top5 = ranked.slice(0, 5);
+
+  const scraped = await Promise.all(top5.map(url => scrapeUrlWithFirecrawl(fc, url)));
+  const pages = scraped.filter(Boolean);
+
+  _lastCommunityScrapePageCount = pages.length;
+  return pages.join('\n\n---\n\n');
 }
 
 // ---- Market snapshot extractor ----
