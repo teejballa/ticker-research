@@ -310,6 +310,67 @@ export async function scrapeCommunitySentiment(
   };
 }
 
+/**
+ * Extraction pass: Haiku reads raw scraped markdown and extracts structured
+ * per-community findings with standout quotes and sentiment direction.
+ *
+ * Returns an array of CommunityHighlight objects. Empty array on failure.
+ * Filters out pages with no real user opinions (price tables, login walls, etc.).
+ */
+export async function extractCommunityHighlights(
+  pinnedContent: string,
+  nicheContent: string,
+  nicheUrls: string[],
+): Promise<import('@/lib/types').CommunityHighlight[]> {
+  const allContent = [pinnedContent, nicheContent].filter(Boolean).join('\n\n===PAGE BREAK===\n\n');
+  if (!allContent || allContent.length < 200) return [];
+
+  const extractionPrompt =
+    `You are extracting structured community sentiment findings from scraped investor discussion pages. ` +
+    `For each distinct community or page in the content below, extract ONE finding object. ` +
+    `\n\nRULES:\n` +
+    `- standout_quote must be an ACTUAL USER OPINION or concern, not an article headline or price summary.\n` +
+    `- If a page has no real user opinions (just price data, login walls, or article text), SKIP it.\n` +
+    `- community_name should be the real name (e.g. "r/SecurityAnalysis", "ValueInvestorsClub", "BioPharma Catalyst Forum").\n` +
+    `- community_type: "mainstream" for Reddit/SeekingAlpha; "niche" for everything else.\n` +
+    `- audience: describe who uses this community in 3-6 words (e.g. "institutional-adjacent analysts", "retail momentum traders").\n` +
+    `- engagement_signal: "high" if many active replies/upvotes visible, "low" if sparse.\n` +
+    `\nNiche URLs found (for reference): ${nicheUrls.join(', ')}\n\n` +
+    `SCRAPED CONTENT:\n${allContent.slice(0, 12000)}\n\n` +
+    `Return ONLY a JSON array. Each element:\n` +
+    `{"community_name":"...","community_type":"mainstream|niche","audience":"...","standout_quote":"...","theme":"...","sentiment":"bullish|bearish|neutral","engagement_signal":"high|medium|low"}`;
+
+  try {
+    const response = await anthropicClient.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: extractionPrompt }],
+    });
+
+    const textBlock = response.content.filter(b => b.type === 'text').pop();
+    const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+    const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (!arrayMatch) return [];
+
+    const parsed = JSON.parse(arrayMatch[0]) as unknown;
+    if (!Array.isArray(parsed)) return [];
+
+    return (parsed as unknown[]).filter((item): item is import('@/lib/types').CommunityHighlight => {
+      if (typeof item !== 'object' || item === null) return false;
+      const h = item as Record<string, unknown>;
+      return (
+        typeof h.community_name === 'string' &&
+        typeof h.standout_quote === 'string' &&
+        typeof h.theme === 'string' &&
+        ['bullish', 'bearish', 'neutral'].includes(h.sentiment as string)
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
 // ---- Market snapshot extractor ----
 
 /**
