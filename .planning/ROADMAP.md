@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 10. Reliable Market Data | 0/? | Planned | |
 | 11. Public Sentiment Layer | 0/? | Planned | |
 | 12. Intelligence Pipeline Rebuild | 3/4 | In Progress|  |
-| 13. Deep Sentiment Intelligence | 0/3 | Planned | |
+| 13. Deep Sentiment Intelligence | 1/3 | In Progress|  |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
@@ -291,9 +291,9 @@ Plans:
 **Goal:** Upgrade the sentiment pipeline with three new structured signals: StockTwits API bull/bear percentages, yahoo-finance2 options put/call ratio, and a dynamic Haiku URL discovery + Firecrawl scrape replacement for community sentiment. Extend AnalysisResult with a forward-looking future_projection field and surface both new signals and the outlook in the report.
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17, D-18, D-19, D-20
 **Depends on:** Phase 12
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 13-01-PLAN.md — SentimentIntelligenceSection type, stocktwits.ts (StockTwits API wrapper), options-sentiment.ts (put/call ratio), source-package.ts 9th parallel fetch
+- [x] 13-01-PLAN.md — SentimentIntelligenceSection type, stocktwits.ts (StockTwits API wrapper), options-sentiment.ts (put/call ratio), source-package.ts 9th parallel fetch
 - [ ] 13-02-PLAN.md — Replace scrapeCommunitySentiment() with Haiku URL discovery + fc.scrape(), extend AnalysisResultSchema + SYSTEM_PROMPT + runGeminiAnalysis() for future_projection and sentiment_intelligence
 - [ ] 13-03-PLAN.md — ResearchReport.tsx: Sentiment Intelligence compact stats card + Forward Outlook section, visual checkpoint
