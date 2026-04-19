@@ -427,16 +427,30 @@ export function extractMarketSnapshot(pkg: SourcePackage) {
  *
  * @param ticker - The ticker symbol (e.g., 'AAPL')
  * @param pkg - The assembled SourcePackage from the research pipeline
- * @param communityContent - Scraped community sentiment markdown (empty string if unavailable)
+ * @param communityData - Structured community data from the scrape + extraction pass, or null if unavailable
  */
 export async function runGeminiAnalysis(
   ticker: string,
   pkg: SourcePackage,
-  communityContent: string,
+  communityData: {
+    pinnedContent: string;
+    nicheContent: string;
+    nicheUrls: string[];
+    highlights: import('@/lib/types').CommunityHighlight[];
+  } | null,
 ): Promise<AnalysisResult> {
   const brief = formatResearchBrief(pkg);
   const newsUrls = extractNewsUrls(pkg);
-  const userPrompt = buildUserPrompt(brief, newsUrls, communityContent, pkg.sentiment_intelligence);
+  const combinedContent = communityData
+    ? [communityData.pinnedContent, communityData.nicheContent].filter(Boolean).join('\n\n---\n\n')
+    : '';
+  const userPrompt = buildUserPrompt(
+    brief,
+    newsUrls,
+    combinedContent,
+    pkg.sentiment_intelligence,
+    communityData?.highlights ?? [],
+  );
 
   try {
     const { output } = await generateText({
@@ -454,7 +468,7 @@ export async function runGeminiAnalysis(
       analyzed_at: new Date().toISOString(),
       security_type: pkg.security_type,
       market_snapshot: extractMarketSnapshot(pkg),
-      community_sentiment_available: communityContent.length > 0,
+      community_sentiment_available: combinedContent.length > 0,
       source_warnings: output.source_warnings ?? [],
       market_sentiment: output.market_sentiment,
       sentiment_reasoning: output.sentiment_reasoning,
@@ -483,6 +497,10 @@ export async function runGeminiAnalysis(
         put_call_ratio: output.sentiment_intelligence_summary.put_call_ratio ?? null,
         put_call_interpretation: output.sentiment_intelligence_summary.put_call_interpretation ?? null,
       } : undefined,
+      community_highlights: output.community_highlights?.length
+        ? output.community_highlights
+        : undefined,
+      community_analysis: output.community_analysis || undefined,
     };
   } catch (err) {
     if (NoObjectGeneratedError.isInstance(err)) {
