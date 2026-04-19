@@ -160,3 +160,10 @@ None - no external service configuration required. StockTwits API is public (no 
 ---
 *Phase: 13-deep-sentiment-intelligence*
 *Completed: 2026-04-19*
+
+## Self-Check: PASSED
+
+- All 7 key files exist on disk
+- All 6 task commits verified in git log (ad337ad, ad97340, 1f9a59b, 4065fa7, 7720864, e043352)
+- `npx tsc --noEmit` exits 0
+- 17 vitest tests passing
