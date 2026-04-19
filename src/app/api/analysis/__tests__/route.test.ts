@@ -129,7 +129,7 @@ const MOCK_RESULT: AnalysisResult = {
 // Mock @/lib/gemini-analysis — prevent actual Gemini calls
 vi.mock('@/lib/gemini-analysis', () => ({
   runGeminiAnalysis: vi.fn().mockResolvedValue(MOCK_RESULT),
-  scrapeCommunitySentiment: vi.fn().mockResolvedValue(''),
+  scrapeCommunitySentiment: vi.fn().mockResolvedValue({ pinnedContent: '', nicheContent: '', nicheUrls: [] }),
 }));
 
 // Mock @/lib/reports to prevent filesystem writes

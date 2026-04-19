@@ -92,7 +92,10 @@ export async function POST(
       // Uses Firecrawl search to discover + extract Reddit/StockTwits/SeekingAlpha content.
       // sources_checked contains source names ("Reddit r/investing"), not URLs — search is correct here.
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying community sentiment sources...' }));
-      const communityContent = await scrapeCommunitySentiment(ticker);
+      const community = await scrapeCommunitySentiment(ticker, pkg.company_name);
+      const communityContent = [community.pinnedContent, community.nicheContent]
+        .filter(Boolean)
+        .join('\n\n---\n\n');
 
       // Step 4: Gemini call — emit 'querying sentiment' to trigger stepper step 3
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying sentiment analysis via Gemini...' }));

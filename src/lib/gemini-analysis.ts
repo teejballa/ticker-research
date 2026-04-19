@@ -178,18 +178,15 @@ export function buildUserPrompt(
 
 // ---- Firecrawl community sentiment gatherer ----
 
-// Domain tier ranking for URL selection (Claude's Discretion).
-// Higher tier = more retail sentiment signal. Top 5 by tier are scraped.
-function domainTier(url: string): number {
-  try {
-    const host = new URL(url).hostname.replace('www.', '');
-    if (['reddit.com', 'stocktwits.com'].includes(host)) return 4;
-    if (['seekingalpha.com'].includes(host)) return 3;
-    if (['investorshub.com', 'elitetrader.com', 'valueinvestorsclub.com'].includes(host)) return 2;
-    return 1;
-  } catch {
-    return 0;
-  }
+// Pinned mainstream URLs — always scraped regardless of ticker.
+// StockTwits web page stripped (login wall) — structured API data from stocktwits.ts covers it.
+const PINNED_URLS = [
+  'https://www.reddit.com/search/?q={TICKER}&sort=new',
+  'https://seekingalpha.com/symbol/{TICKER}',
+];
+
+function buildPinnedUrls(ticker: string): string[] {
+  return PINNED_URLS.map(u => u.replace('{TICKER}', ticker));
 }
 
 // Scrape a single URL via Firecrawl. Returns '' on failure or paywall content.
@@ -200,7 +197,6 @@ async function scrapeUrlWithFirecrawl(fc: Firecrawl, url: string): Promise<strin
       onlyMainContent: true,
     } as Parameters<typeof fc.scrape>[1]);
     const content = (doc as { markdown?: string }).markdown ?? '';
-    // Paywall/bot guard: skip pages with < 200 chars (login walls, bot blocks)
     return content.length >= 200 ? content : '';
   } catch {
     return '';
@@ -208,77 +204,110 @@ async function scrapeUrlWithFirecrawl(fc: Firecrawl, url: string): Promise<strin
 }
 
 /**
- * Discovers community discussion URLs for the ticker using Anthropic Haiku web search,
- * then scrapes the top 5 most relevant URLs via Firecrawl for full content.
+ * Two-pool community scraping:
+ *   Pool A (pinned): Reddit + SeekingAlpha — always scraped.
+ *   Pool B (niche):  Haiku discovers sector-specific niche communities for this ticker,
+ *                    excluding mainstream sites. Top 5-6 scraped via Firecrawl.
  *
- * Two-step process per D-01 to D-05:
- * Step 1: stocktwits.com/symbol/{ticker} is pinned as a guaranteed candidate (D-05).
- *         Haiku then discovers up to 10 additional candidate URLs from Reddit, StockTwits
- *         threads, SeekingAlpha, and niche forums.
- * Step 2: All candidates (pinned + discovered) are ranked by domain tier; top 5 scraped via fc.scrape().
- *
- * StockTwits thread scraping (qualitative text) is separate from the StockTwits API
- * structured data (bull/bear counts) gathered in source-package.ts — both per D-05.
- *
- * Sets _lastCommunityScrapePageCount to the number of non-empty pages scraped.
- * Returns empty string if FIRECRAWL_API_KEY is absent.
+ * Returns: { pinnedContent: string, nicheContent: string, nicheUrls: string[] }
+ * Sets _lastCommunityScrapePageCount to total non-empty pages scraped.
  */
-export async function scrapeCommunitySentiment(ticker: string): Promise<string> {
+export async function scrapeCommunitySentiment(
+  ticker: string,
+  companyName: string,
+): Promise<{ pinnedContent: string; nicheContent: string; nicheUrls: string[] }> {
   _lastCommunityScrapePageCount = 0;
-  if (!process.env.FIRECRAWL_API_KEY) return '';
+
+  const empty = { pinnedContent: '', nicheContent: '', nicheUrls: [] };
+  if (!process.env.FIRECRAWL_API_KEY) return empty;
+
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
 
-  // D-05: Pin StockTwits thread URL as a guaranteed candidate.
-  // encodeURIComponent ensures safe URL even for tickers like BRK.A.
-  const pinnedStockTwitsUrl = `https://stocktwits.com/symbol/${encodeURIComponent(ticker)}`;
-  let candidateUrls: string[] = [pinnedStockTwitsUrl];
+  // ── Pool A: Pinned mainstream URLs ──────────────────────────────────────
+  const pinnedUrls = buildPinnedUrls(ticker);
+  const pinnedScraped = await Promise.all(pinnedUrls.map(u => scrapeUrlWithFirecrawl(fc, u)));
+  const pinnedPages = pinnedScraped.filter(Boolean);
 
-  // Step 1: Haiku URL discovery (D-02, D-03, D-04) — adds dynamic ticker-specific sources
+  // ── Pool B: Niche discovery via Haiku ───────────────────────────────────
+  let nicheUrls: string[] = [];
+
   try {
-    const discoveryResponse = await anthropicClient.messages.create({
+    // Search 1: community mapping — what niche places discuss this stock?
+    const mapResponse = await anthropicClient.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 5 }],
+      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 3 }],
       messages: [{
         role: 'user',
-        content: `Find 10 URLs where ${ticker} stock is being actively discussed right now. ` +
-          `Target: Reddit posts in r/wallstreetbets, r/stocks, r/investing, r/SecurityAnalysis; ` +
-          `StockTwits discussion threads; SeekingAlpha articles; Investors Hub and Elite Trader forums. ` +
-          `Prefer recent posts (past 7 days). ` +
-          `Return ONLY a JSON array of URL strings, no commentary. Example: ["https://reddit.com/r/...", ...]`,
+        content:
+          `Find the most active NICHE communities that discuss ${ticker} (${companyName}) stock online. ` +
+          `Target sector-specific forums, specialized subreddits (NOT r/wallstreetbets or r/stocks), ` +
+          `Discord communities, Substack comment sections, ValueInvestorsClub, Bogleheads forums, ` +
+          `EliteTrader threads, industry fan/critic sites, financial blogs, and any specialized ` +
+          `investor community that would uniquely discuss this company. ` +
+          `Exclude: reddit.com/r/wallstreetbets, reddit.com/r/stocks, reddit.com/r/investing, seekingalpha.com, stocktwits.com. ` +
+          `Return ONLY a JSON array of URL strings. Example: ["https://valueinvestorsclub.com/...", ...]`,
       }],
     });
 
-    // Extract text block from response
-    const textBlock = discoveryResponse.content.filter(b => b.type === 'text').pop();
-    const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+    // Search 2: recent discussion threads in niche communities
+    const threadResponse = await anthropicClient.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 3 }],
+      messages: [{
+        role: 'user',
+        content:
+          `Find recent (past 14 days) discussion threads specifically about ${ticker} stock in niche ` +
+          `investor communities. Look in specialized subreddits, sector-specific forums, ` +
+          `financial Discord communities, Substack comments, EliteTrader, ValueInvestorsClub, ` +
+          `industry analyst blogs, and any non-mainstream discussion venue. ` +
+          `Exclude: reddit.com/r/wallstreetbets, reddit.com/r/stocks, reddit.com/r/investing, seekingalpha.com, stocktwits.com. ` +
+          `Return ONLY a JSON array of URL strings.`,
+      }],
+    });
 
-    // Parse JSON, strip markdown fences
-    const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    try {
-      const parsed = JSON.parse(cleaned) as unknown;
-      if (Array.isArray(parsed)) {
-        // Filter to valid HTTP URLs only (guard against malformed Haiku output)
-        const discovered = (parsed as unknown[])
-          .filter((u): u is string => typeof u === 'string' && u.startsWith('http'))
-          .slice(0, 10);
-        // Append discovered URLs — pinned StockTwits URL remains at index 0
-        candidateUrls = [...candidateUrls, ...discovered];
+    // Extract and merge URLs from both searches
+    for (const response of [mapResponse, threadResponse]) {
+      const textBlock = response.content.filter(b => b.type === 'text').pop();
+      const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+      const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      // Find JSON array anywhere in the text
+      const arrayMatch = cleaned.match(/\[[\s\S]*?\]/);
+      if (arrayMatch) {
+        try {
+          const parsed = JSON.parse(arrayMatch[0]) as unknown;
+          if (Array.isArray(parsed)) {
+            const urls = (parsed as unknown[])
+              .filter((u): u is string => typeof u === 'string' && u.startsWith('http'))
+              .slice(0, 8);
+            nicheUrls = [...nicheUrls, ...urls];
+          }
+        } catch { /* ignore parse errors */ }
       }
-    } catch { /* parse failure — proceed with pinned URL only */ }
-  } catch { /* Haiku call failure — proceed with pinned URL only */ }
+    }
+  } catch { /* Haiku failure — proceed with pinned only */ }
 
-  // Step 2: Rank by domain tier, take top 5, scrape each (D-03)
-  // De-duplicate by URL string before ranking
-  const unique = [...new Set(candidateUrls)];
-  const ranked = unique.sort((a, b) => domainTier(b) - domainTier(a));
-  const top5 = ranked.slice(0, 5);
+  // Deduplicate niche URLs, exclude pinned domains
+  const pinnedDomains = new Set(['reddit.com', 'seekingalpha.com', 'stocktwits.com']);
+  const uniqueNiche = [...new Set(nicheUrls)].filter(u => {
+    try {
+      const host = new URL(u).hostname.replace('www.', '');
+      return !pinnedDomains.has(host);
+    } catch { return false; }
+  }).slice(0, 6);
 
-  const scraped = await Promise.all(top5.map(url => scrapeUrlWithFirecrawl(fc, url)));
-  const pages = scraped.filter(Boolean);
+  // Scrape niche pool
+  const nicheScraped = await Promise.all(uniqueNiche.map(u => scrapeUrlWithFirecrawl(fc, u)));
+  const nichePages = nicheScraped.filter(Boolean);
 
-  _lastCommunityScrapePageCount = pages.length;
-  return pages.join('\n\n---\n\n');
+  _lastCommunityScrapePageCount = pinnedPages.length + nichePages.length;
+
+  return {
+    pinnedContent: pinnedPages.join('\n\n---\n\n'),
+    nicheContent: nichePages.join('\n\n---\n\n'),
+    nicheUrls: uniqueNiche,
+  };
 }
 
 // ---- Market snapshot extractor ----
