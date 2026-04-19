@@ -97,6 +97,8 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     future_projection,          // D-15
     community_sources_scraped,  // D-18
     sentiment_intelligence,     // D-17
+    community_highlights,   // community intelligence
+    community_analysis,     // community narrative
   } = analysisResult;
 
   function handleExportPdf() {
@@ -308,6 +310,69 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                   {community_sources_scraped != null && community_sources_scraped > 0 && (
                     <span className="ml-auto">{community_sources_scraped} community {community_sources_scraped === 1 ? 'source' : 'sources'} scraped</span>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Community Intelligence Card */}
+            {community_highlights && community_highlights.length > 0 && (
+              <div className="bg-surface-container rounded-xl p-5 space-y-4">
+                <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">groups</span>
+                  Community Intelligence
+                  <span className="ml-auto text-[9px] font-normal normal-case text-on-surface-variant/60">
+                    {community_highlights.length} source{community_highlights.length !== 1 ? 's' : ''} analyzed
+                  </span>
+                </h3>
+
+                {community_analysis && (
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    {community_analysis}
+                  </p>
+                )}
+
+                <div className="space-y-3">
+                  {community_highlights.map((h, i) => (
+                    <div key={i} className="flex items-start gap-3 p-3 bg-surface-container-low rounded-lg hover:bg-surface-container-high transition-colors">
+                      <span
+                        className={`material-symbols-outlined text-sm mt-0.5 shrink-0 ${
+                          h.sentiment === 'bullish' ? 'text-secondary' :
+                          h.sentiment === 'bearish' ? 'text-error' :
+                          'text-on-surface-variant'
+                        }`}
+                      >
+                        {h.sentiment === 'bullish' ? 'trending_up' : h.sentiment === 'bearish' ? 'trending_down' : 'remove'}
+                      </span>
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-[11px] font-bold text-on-surface">{h.community_name}</span>
+                          <span className={`text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded ${
+                            h.community_type === 'niche'
+                              ? 'bg-tertiary/10 text-tertiary border border-tertiary/20'
+                              : 'bg-surface-container-highest text-on-surface-variant border border-outline/20'
+                          }`}>
+                            {h.community_type}
+                          </span>
+                          <span className="text-[10px] text-on-surface-variant/70">{h.audience}</span>
+                        </div>
+
+                        <div className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wide">{h.theme}</div>
+
+                        <blockquote className="text-[11px] text-on-surface leading-relaxed italic border-l-2 border-outline/30 pl-2">
+                          &ldquo;{h.standout_quote}&rdquo;
+                        </blockquote>
+                      </div>
+
+                      <span className={`text-[9px] font-bold shrink-0 mt-0.5 ${
+                        h.engagement_signal === 'high' ? 'text-secondary' :
+                        h.engagement_signal === 'medium' ? 'text-on-surface-variant' :
+                        'text-on-surface-variant/50'
+                      }`}>
+                        {h.engagement_signal}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
