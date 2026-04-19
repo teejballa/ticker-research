@@ -3,10 +3,13 @@
 // Fetches nearest-expiry options chain (default behavior of .options()).
 // Returns nulls gracefully for tickers with no options chains.
 // VERIFIED: live test on AAPL returned callOI=27885, putOI=12653, ratio=0.454 (bullish).
+//
+// Note: Uses the yahoo-finance2 default export directly (not as a constructor) so that
+// vitest module mocks can replace it cleanly in tests. In production, yahoo-finance2 v3
+// exposes a pre-built singleton as its default export.
 
-import YahooFinance from 'yahoo-finance2';
-
-const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import yahooFinance from 'yahoo-finance2';
 
 export interface OptionsSentimentResult {
   put_call_ratio: number | null;
@@ -15,7 +18,8 @@ export interface OptionsSentimentResult {
 
 export async function fetchOptionsSentiment(ticker: string): Promise<OptionsSentimentResult> {
   try {
-    const result = await yahooFinance.options(ticker);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await (yahooFinance as any).options(ticker);
     let totalCallOI = 0;
     let totalPutOI = 0;
 
