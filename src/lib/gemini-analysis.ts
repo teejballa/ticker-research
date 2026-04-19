@@ -151,7 +151,8 @@ Return your analysis as a structured JSON object matching the provided schema.`;
 
 /**
  * Assembles the Gemini user prompt from the research brief, news URLs, optional
- * Firecrawl community sentiment content, and optional structured sentiment intelligence data.
+ * Firecrawl community sentiment content, optional structured sentiment intelligence data,
+ * and optional structured community highlights extracted by Haiku.
  */
 export function buildUserPrompt(
   brief: string,
@@ -162,9 +163,10 @@ export function buildUserPrompt(
     stocktwits_bear_pct: number | null;
     stocktwits_message_count: number | null;
     stocktwits_is_trending: boolean | null;
-    put_call_ratio: number | null;
-    put_call_interpretation: string | null;
-  } | null,
+    put_call_ratio?: number | null;
+    put_call_interpretation?: 'bullish' | 'bearish' | 'neutral' | null;
+  },
+  communityHighlights?: import('@/lib/types').CommunityHighlight[],
 ): string {
   let prompt = brief + '\n\n';
   if (newsUrls.length > 0) {
@@ -188,6 +190,17 @@ export function buildUserPrompt(
     prompt += `Options Put/Call Ratio: ${si.put_call_ratio != null ? si.put_call_ratio.toFixed(3) : 'N/A'}\n`;
     prompt += `Options Interpretation: ${si.put_call_interpretation ?? 'N/A'}\n`;
     prompt += '\n';
+  }
+  // Inject structured community highlights for Gemini to echo + synthesize
+  if (communityHighlights && communityHighlights.length > 0) {
+    prompt += `\n\nCOMMUNITY INTELLIGENCE\n`;
+    prompt += `Structured findings extracted from ${communityHighlights.length} community source${communityHighlights.length !== 1 ? 's' : ''}:\n\n`;
+    for (const h of communityHighlights) {
+      prompt += `Community: ${h.community_name} (${h.community_type}, audience: ${h.audience})\n`;
+      prompt += `Standout quote: "${h.standout_quote}"\n`;
+      prompt += `Theme: ${h.theme}\n`;
+      prompt += `Sentiment: ${h.sentiment} | Engagement: ${h.engagement_signal}\n\n`;
+    }
   }
   prompt += 'Analyze the ticker based on all research data above. Return the structured analysis.';
   return prompt;
