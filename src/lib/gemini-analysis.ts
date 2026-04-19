@@ -193,7 +193,7 @@ export function buildUserPrompt(
   }
   // Inject structured community highlights for Gemini to echo + synthesize
   if (communityHighlights && communityHighlights.length > 0) {
-    prompt += `\n\nCOMMUNITY INTELLIGENCE\n`;
+    prompt += `\n\n=== COMMUNITY INTELLIGENCE ===\n`;
     prompt += `Structured findings extracted from ${communityHighlights.length} community source${communityHighlights.length !== 1 ? 's' : ''}:\n\n`;
     for (const h of communityHighlights) {
       prompt += `Community: ${h.community_name} (${h.community_type}, audience: ${h.audience})\n`;
