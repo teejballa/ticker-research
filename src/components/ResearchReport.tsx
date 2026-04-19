@@ -56,6 +56,12 @@ function getSentimentBadgeClass(sentiment: string | undefined): string {
   return 'bg-outline/20 text-outline border-outline/30';
 }
 
+function getPutCallColor(interpretation: 'bullish' | 'bearish' | 'neutral' | null | undefined): string {
+  if (interpretation === 'bullish') return 'text-secondary';
+  if (interpretation === 'bearish') return 'text-error';
+  return 'text-on-surface-variant';
+}
+
 // confidence_level is 'Low' | 'Medium' | 'High' — map to 0-100
 function confidenceToPercent(level: 'Low' | 'Medium' | 'High'): number {
   if (level === 'High')   return 90;
@@ -85,6 +91,9 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     key_risks,
     valuation_context,
     catalyst_watch,
+    future_projection,          // D-15
+    community_sources_scraped,  // D-18
+    sentiment_intelligence,     // D-17
   } = analysisResult;
 
   function handleExportPdf() {
@@ -230,6 +239,62 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                 <Md text={sentiment_reasoning} />
               </p>
             </div>
+
+            {/* Sentiment Intelligence Card — D-18 */}
+            {sentiment_intelligence && (
+              sentiment_intelligence.stocktwits_bull_pct != null ||
+              sentiment_intelligence.put_call_ratio != null
+            ) && (
+              <div className="bg-surface-container p-5 rounded-lg">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-sm text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>sensors</span>
+                  <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">Sentiment Intelligence</h3>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {/* StockTwits Bullish % */}
+                  <div className="bg-surface-container-high p-3 rounded-lg text-center">
+                    <span className="text-[9px] font-bold tracking-widest uppercase text-on-surface-variant block mb-1">ST Bullish</span>
+                    <span className={`font-mono text-lg font-bold ${sentiment_intelligence.stocktwits_bull_pct != null ? 'text-secondary' : 'text-on-surface-variant'}`}>
+                      {sentiment_intelligence.stocktwits_bull_pct != null ? `${sentiment_intelligence.stocktwits_bull_pct}%` : '—'}
+                    </span>
+                  </div>
+                  {/* StockTwits Bearish % */}
+                  <div className="bg-surface-container-high p-3 rounded-lg text-center">
+                    <span className="text-[9px] font-bold tracking-widest uppercase text-on-surface-variant block mb-1">ST Bearish</span>
+                    <span className={`font-mono text-lg font-bold ${sentiment_intelligence.stocktwits_bear_pct != null ? 'text-error' : 'text-on-surface-variant'}`}>
+                      {sentiment_intelligence.stocktwits_bear_pct != null ? `${sentiment_intelligence.stocktwits_bear_pct}%` : '—'}
+                    </span>
+                  </div>
+                  {/* Options Put/Call */}
+                  <div className="bg-surface-container-high p-3 rounded-lg text-center">
+                    <span className="text-[9px] font-bold tracking-widest uppercase text-on-surface-variant block mb-1">Put/Call</span>
+                    <span className={`font-mono text-lg font-bold ${getPutCallColor(sentiment_intelligence.put_call_interpretation)}`}>
+                      {sentiment_intelligence.put_call_ratio != null ? sentiment_intelligence.put_call_ratio.toFixed(2) : '—'}
+                    </span>
+                    {sentiment_intelligence.put_call_interpretation && (
+                      <span className={`text-[9px] font-bold tracking-widest uppercase block mt-0.5 ${getPutCallColor(sentiment_intelligence.put_call_interpretation)}`}>
+                        {sentiment_intelligence.put_call_interpretation}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* StockTwits message count + trending + community sources — secondary metadata row */}
+                <div className="mt-3 flex items-center gap-3 text-[10px] text-on-surface-variant flex-wrap">
+                  {sentiment_intelligence.stocktwits_message_count != null && (
+                    <>
+                      <span className="material-symbols-outlined text-xs">forum</span>
+                      <span>{sentiment_intelligence.stocktwits_message_count} recent messages</span>
+                    </>
+                  )}
+                  {sentiment_intelligence.stocktwits_is_trending && (
+                    <span className="text-tertiary font-bold tracking-wider">TRENDING</span>
+                  )}
+                  {community_sources_scraped != null && community_sources_scraped > 0 && (
+                    <span className="ml-auto">{community_sources_scraped} community {community_sources_scraped === 1 ? 'source' : 'sources'} scraped</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Bullish/Bearish Factors */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -418,6 +483,22 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                   </div>
                 );
               })}
+            </div>
+          </section>
+        )}
+
+        {/* Forward Outlook Section — D-19 */}
+        {future_projection && future_projection.length > 0 && (
+          <section className="space-y-4">
+            <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm text-tertiary">arrow_forward</span>
+              Forward Outlook
+            </h3>
+            <div className="bg-surface-container border-l-4 border-primary p-6 rounded-r-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 blur-[80px]" />
+              <p className="text-sm text-on-surface leading-relaxed max-w-4xl relative z-10">
+                <Md text={future_projection} />
+              </p>
             </div>
           </section>
         )}
