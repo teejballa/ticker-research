@@ -12,7 +12,7 @@ import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 import { realpathSync } from 'fs';
 import { tmpdir } from 'os';
-import { runGeminiAnalysis, scrapeCommunitySentiment } from '@/lib/gemini-analysis';
+import { runGeminiAnalysis, scrapeCommunitySentiment, extractCommunityHighlights } from '@/lib/gemini-analysis';
 import type { SourcePackage } from '@/lib/types';
 
 // Force dynamic evaluation so Vercel reads env vars at request time, not build time.
@@ -92,14 +92,16 @@ export async function POST(
       // Uses Firecrawl search to discover + extract Reddit/StockTwits/SeekingAlpha content.
       // sources_checked contains source names ("Reddit r/investing"), not URLs — search is correct here.
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying community sentiment sources...' }));
-      const community = await scrapeCommunitySentiment(ticker, pkg.company_name);
-      const communityContent = [community.pinnedContent, community.nicheContent]
-        .filter(Boolean)
-        .join('\n\n---\n\n');
+      const scraped = await scrapeCommunitySentiment(ticker, pkg.company_name);
+      const highlights = await extractCommunityHighlights(
+        scraped.pinnedContent,
+        scraped.nicheContent,
+        scraped.nicheUrls,
+      );
 
       // Step 4: Gemini call — emit 'querying sentiment' to trigger stepper step 3
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying sentiment analysis via Gemini...' }));
-      const result = await runGeminiAnalysis(ticker, pkg, communityContent);
+      const result = await runGeminiAnalysis(ticker, pkg, { ...scraped, highlights });
 
       // Step 5: emit 'querying confidence' to trigger stepper step 4
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying confidence and source attribution...' }));
