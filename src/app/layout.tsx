@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from './providers';
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({
   weight: ['400', '500', '700', '800', '900'],
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-[family-name:var(--font-inter)] antialiased bg-surface text-on-surface`}>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
