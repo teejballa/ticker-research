@@ -157,10 +157,14 @@ export interface CommunityHighlight {
   community_name: string;           // e.g. "r/SecurityAnalysis", "BioPharma Catalyst Forum"
   community_type: 'mainstream' | 'niche';
   audience: string;                 // e.g. "institutional-adjacent analysts"
-  standout_quote: string;           // actual user opinion extracted from scraped content
-  theme: string;                    // e.g. "Accounting concerns / earnings quality"
+  standout_quote: string;           // best single user opinion (backward compat)
+  theme: string;                    // primary theme (backward compat)
   sentiment: 'bullish' | 'bearish' | 'neutral';
   engagement_signal: 'high' | 'medium' | 'low';
+  quotes?: string[];                // 3-5 verbatim user quotes extracted from comments
+  recurring_themes?: string[];      // themes mentioned by 2+ distinct users
+  unique_to_community?: string[];   // signals discussed here but absent from mainstream financial coverage
+  analysis_paragraph?: string;      // Gemini-written 150-250 word investigative prose per community
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----

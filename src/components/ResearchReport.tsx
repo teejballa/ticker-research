@@ -314,69 +314,6 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               </div>
             )}
 
-            {/* Community Intelligence Card */}
-            {community_highlights && community_highlights.length > 0 && (
-              <div className="bg-surface-container rounded-lg p-5 space-y-4">
-                <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
-                  Community Intelligence
-                  <span className="ml-auto text-[9px] font-normal normal-case text-on-surface-variant/60">
-                    {community_highlights.length} source{community_highlights.length !== 1 ? 's' : ''} analyzed
-                  </span>
-                </h3>
-
-                {community_analysis && (
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    {community_analysis}
-                  </p>
-                )}
-
-                <div className="space-y-3">
-                  {community_highlights.map((h, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 bg-surface-container-low rounded-lg hover:bg-surface-container-high transition-colors">
-                      <span
-                        className={`material-symbols-outlined text-sm mt-0.5 shrink-0 ${
-                          h.sentiment === 'bullish' ? 'text-secondary' :
-                          h.sentiment === 'bearish' ? 'text-error' :
-                          'text-on-surface-variant'
-                        }`}
-                      >
-                        {h.sentiment === 'bullish' ? 'trending_up' : h.sentiment === 'bearish' ? 'trending_down' : 'remove'}
-                      </span>
-
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-[11px] font-bold text-on-surface">{h.community_name}</span>
-                          <span className={`text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded ${
-                            h.community_type === 'niche'
-                              ? 'bg-tertiary/10 text-tertiary border border-tertiary/20'
-                              : 'bg-surface-container-highest text-on-surface-variant border border-outline/20'
-                          }`}>
-                            {h.community_type}
-                          </span>
-                          <span className="text-[10px] text-on-surface-variant/70">{h.audience}</span>
-                        </div>
-
-                        <div className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wide">{h.theme}</div>
-
-                        <blockquote className="text-[11px] text-on-surface leading-relaxed italic border-l-2 border-outline/30 pl-2">
-                          &ldquo;{h.standout_quote}&rdquo;
-                        </blockquote>
-                      </div>
-
-                      <span className={`text-[9px] font-bold shrink-0 mt-0.5 ${
-                        h.engagement_signal === 'high' ? 'text-secondary' :
-                        h.engagement_signal === 'medium' ? 'text-on-surface-variant' :
-                        'text-on-surface-variant/50'
-                      }`}>
-                        {h.engagement_signal}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Bullish/Bearish Factors */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Bullish */}
@@ -561,6 +498,102 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             )}
           </div>
         </div>
+
+        {/* Community Intelligence — Full Width */}
+        {community_highlights && community_highlights.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
+              <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">Community Intelligence</h2>
+              <div className="flex-1 h-px bg-surface-container" />
+              <span className="text-[10px] text-on-surface-variant/60">
+                {community_highlights.length} {community_highlights.length === 1 ? 'source' : 'sources'} analyzed
+              </span>
+            </div>
+
+            {community_analysis && (
+              <p className="text-sm text-on-surface-variant leading-relaxed max-w-4xl">{community_analysis}</p>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {community_highlights.map((h, i) => (
+                <div key={i} className="bg-surface-container rounded-lg p-6 space-y-4">
+                  {/* Header */}
+                  <div className="flex items-start gap-3">
+                    <span className={`material-symbols-outlined text-lg mt-0.5 shrink-0 ${
+                      h.sentiment === 'bullish' ? 'text-secondary' :
+                      h.sentiment === 'bearish' ? 'text-error' :
+                      'text-on-surface-variant'
+                    }`}>
+                      {h.sentiment === 'bullish' ? 'trending_up' : h.sentiment === 'bearish' ? 'trending_down' : 'remove'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-mono text-sm font-bold text-on-surface">{h.community_name}</span>
+                        <span className={`text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded ${
+                          h.community_type === 'niche'
+                            ? 'bg-tertiary/10 text-tertiary border border-tertiary/20'
+                            : 'bg-surface-container-highest text-on-surface-variant border border-outline/20'
+                        }`}>{h.community_type}</span>
+                        <span className={`text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded ${
+                          h.sentiment === 'bullish' ? 'bg-secondary/10 text-secondary border border-secondary/20' :
+                          h.sentiment === 'bearish' ? 'bg-error/10 text-error border border-error/20' :
+                          'bg-outline/10 text-on-surface-variant border border-outline/20'
+                        }`}>{h.sentiment}</span>
+                      </div>
+                      <span className="text-[10px] text-on-surface-variant/70">{h.audience}</span>
+                    </div>
+                  </div>
+
+                  {/* Main prose — analysis_paragraph if available, else standout quote */}
+                  {h.analysis_paragraph ? (
+                    <p className="text-sm text-on-surface-variant leading-relaxed">
+                      <Md text={h.analysis_paragraph} />
+                    </p>
+                  ) : (
+                    <blockquote className="text-sm text-on-surface leading-relaxed italic border-l-2 border-outline/30 pl-3">
+                      &ldquo;{h.standout_quote}&rdquo;
+                    </blockquote>
+                  )}
+
+                  {/* Pulled quotes */}
+                  {h.quotes && h.quotes.length > 0 && (
+                    <div className="space-y-2 pt-3 border-t border-surface-container-high">
+                      {h.quotes.slice(0, 3).map((q, qi) => (
+                        <blockquote key={qi} className="text-xs text-on-surface-variant/80 leading-relaxed italic border-l-2 border-tertiary/30 pl-3">
+                          &ldquo;{q}&rdquo;
+                        </blockquote>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Unique signals callout */}
+                  {h.unique_to_community && h.unique_to_community.length > 0 && (
+                    <div className="bg-tertiary/5 border border-tertiary/20 rounded p-3 space-y-1">
+                      <span className="text-[9px] font-bold tracking-widest uppercase text-tertiary block">Only discussed here</span>
+                      {h.unique_to_community.map((signal, si) => (
+                        <p key={si} className="text-xs text-on-surface-variant flex items-start gap-2">
+                          <span className="text-tertiary shrink-0 mt-0.5">·</span>
+                          {signal}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer: theme + engagement */}
+                  <div className="flex items-center justify-between text-[10px] text-on-surface-variant/50 pt-1">
+                    <span className="uppercase tracking-wide">{h.theme}</span>
+                    <span className={`font-bold uppercase tracking-wide ${
+                      h.engagement_signal === 'high' ? 'text-secondary' :
+                      h.engagement_signal === 'medium' ? 'text-on-surface-variant' :
+                      'text-on-surface-variant/40'
+                    }`}>{h.engagement_signal} engagement</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Catalyst Watch */}
         {catalyst_watch && catalyst_watch.length > 0 && (

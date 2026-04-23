@@ -33,6 +33,10 @@ const CommunityHighlightSchema = z.object({
   theme: z.string(),
   sentiment: z.enum(['bullish', 'bearish', 'neutral']),
   engagement_signal: z.enum(['high', 'medium', 'low']),
+  quotes: z.array(z.string()).optional().default([]),
+  recurring_themes: z.array(z.string()).optional().default([]),
+  unique_to_community: z.array(z.string()).optional().default([]),
+  analysis_paragraph: z.string().optional().default(''),
 });
 
 export const AnalysisResultSchema = z.object({
@@ -130,9 +134,9 @@ future_projection: 3-4 sentences forward-looking outlook synthesizing ALL availa
 
 sentiment_intelligence_summary: Echo back the structured sentiment signals from the SENTIMENT INTELLIGENCE section exactly as provided. Do not fabricate. Return null for the entire object if the section is absent or all values are null.
 
-community_highlights: Echo back the structured community findings exactly as provided in the COMMUNITY INTELLIGENCE section. Do not invent communities or quotes. Return empty array if the COMMUNITY INTELLIGENCE section is absent.
+community_highlights: Echo back the structured community findings exactly as provided in the COMMUNITY INTELLIGENCE section. Do not invent communities or quotes. Return empty array if the COMMUNITY INTELLIGENCE section is absent. For each community highlight, ALSO write an analysis_paragraph field (150-250 words of investigative-journalism-style prose). REQUIREMENTS for analysis_paragraph: (1) Use frequency language — "multiple users flagged...", "a recurring concern across the thread was...", "several commenters independently noted..."; (2) Weave in 2-3 direct quote fragments inline from the provided quotes array — "one commenter noted '...'"; (3) Explicitly name any signals from unique_to_community that do not appear in mainstream financial coverage, introduced with "Notably absent from analyst coverage..."; (4) End with a one-sentence verdict: is this community's signal meaningful alpha or retail noise, and why? FORBIDDEN in analysis_paragraph: vague phrases like "the community is cautiously optimistic", "members expressed concern", "sentiment was mixed". Every sentence must name a specific topic, user behavior, or quote fragment.
 
-community_analysis: Write one sentence per community found in the COMMUNITY INTELLIGENCE section. For each community, name it, characterize who uses it and whether it is niche or mainstream, describe the specific topic or concern members discussed, and state whether this is bullish or bearish for the stock. Use this format for each sentence: "In [community name], [audience characterization], members [discussed/raised/questioned] [specific topic], [sentiment direction implication]." Combine all sentences into a single flowing paragraph with no bullet points or headers. If no COMMUNITY INTELLIGENCE section is present in the data, return an empty string.
+community_analysis: Write a 2-3 sentence intro overview naming ALL communities analyzed, the dominant directional pattern across them, and whether community signals broadly confirm or contradict the mainstream news and analyst picture. This is the section intro — per-community deep-dives are in each highlight's analysis_paragraph. If no COMMUNITY INTELLIGENCE section is present, return an empty string.
 
 CRITICAL RULES:
 1. All claims must be grounded in the provided research data — cite specific sources, never hallucinate.
@@ -197,9 +201,21 @@ export function buildUserPrompt(
     prompt += `Structured findings extracted from ${communityHighlights.length} community source${communityHighlights.length !== 1 ? 's' : ''}:\n\n`;
     for (const h of communityHighlights) {
       prompt += `Community: ${h.community_name} (${h.community_type}, audience: ${h.audience})\n`;
-      prompt += `Standout quote: "${h.standout_quote}"\n`;
-      prompt += `Theme: ${h.theme}\n`;
-      prompt += `Sentiment: ${h.sentiment} | Engagement: ${h.engagement_signal}\n\n`;
+      prompt += `Sentiment: ${h.sentiment} | Engagement: ${h.engagement_signal}\n`;
+      prompt += `Primary theme: ${h.theme}\n`;
+      if (h.quotes && h.quotes.length > 0) {
+        prompt += `Direct user quotes (verbatim):\n`;
+        h.quotes.forEach(q => { prompt += `  - "${q}"\n`; });
+      } else {
+        prompt += `Standout quote: "${h.standout_quote}"\n`;
+      }
+      if (h.recurring_themes && h.recurring_themes.length > 0) {
+        prompt += `Recurring themes (mentioned by multiple users): ${h.recurring_themes.join('; ')}\n`;
+      }
+      if (h.unique_to_community && h.unique_to_community.length > 0) {
+        prompt += `Unique to this community (not in mainstream financial news): ${h.unique_to_community.join('; ')}\n`;
+      }
+      prompt += '\n';
     }
   }
   prompt += 'Analyze the ticker based on all research data above. Return the structured analysis.';
@@ -217,6 +233,14 @@ const PINNED_URLS = [
 
 function buildPinnedUrls(ticker: string): string[] {
   return PINNED_URLS.map(u => u.replace('{TICKER}', ticker));
+}
+
+// Extract reddit.com comment thread URLs from a scraped search page's markdown.
+function extractRedditThreadUrls(markdown: string): string[] {
+  const pattern = /https?:\/\/(?:www\.)?reddit\.com\/r\/\w+\/comments\/[a-z0-9]+\/[^\s\)\]"'<>]*/gi;
+  const matches = markdown.match(pattern) ?? [];
+  const cleaned = matches.map(u => u.replace(/[.,;!?]+$/, ''));
+  return [...new Set(cleaned)].slice(0, 3);
 }
 
 // Scrape a single URL via Firecrawl. Returns '' on failure or paywall content.
@@ -257,6 +281,14 @@ export async function scrapeCommunitySentiment(
   const pinnedUrls = buildPinnedUrls(ticker);
   const pinnedScraped = await Promise.all(pinnedUrls.map(u => scrapeUrlWithFirecrawl(fc, u)));
   const pinnedPages = pinnedScraped.filter(Boolean);
+
+  // ── Pool A+: Reddit comment threads ─────────────────────────────────────
+  // Extract actual thread URLs from the Reddit search page and scrape the comment content.
+  const redditSearchMarkdown = pinnedScraped[0] ?? '';
+  const redditThreadUrls = extractRedditThreadUrls(redditSearchMarkdown);
+  const redditThreadPages = redditThreadUrls.length > 0
+    ? (await Promise.all(redditThreadUrls.map(u => scrapeUrlWithFirecrawl(fc, u)))).filter(Boolean)
+    : [];
 
   // ── Pool B: Niche discovery via Haiku ───────────────────────────────────
   let nicheUrls: string[] = [];
@@ -331,10 +363,11 @@ export async function scrapeCommunitySentiment(
   const nicheScraped = await Promise.all(uniqueNiche.map(u => scrapeUrlWithFirecrawl(fc, u)));
   const nichePages = nicheScraped.filter(Boolean);
 
-  _lastCommunityScrapePageCount = pinnedPages.length + nichePages.length;
+  const allPinnedPages = [...pinnedPages, ...redditThreadPages];
+  _lastCommunityScrapePageCount = allPinnedPages.length + nichePages.length;
 
   return {
-    pinnedContent: pinnedPages.join('\n\n---\n\n'),
+    pinnedContent: allPinnedPages.join('\n\n---\n\n'),
     nicheContent: nichePages.join('\n\n---\n\n'),
     nicheUrls: uniqueNiche,
   };
@@ -359,16 +392,19 @@ export async function extractCommunityHighlights(
     `You are extracting structured community sentiment findings from scraped investor discussion pages. ` +
     `For each distinct community or page in the content below, extract ONE finding object. ` +
     `\n\nRULES:\n` +
-    `- standout_quote must be an ACTUAL USER OPINION or concern, not an article headline or price summary.\n` +
-    `- If a page has no real user opinions (just price data, login walls, or article text), SKIP it.\n` +
+    `- If a page has fewer than 3 actual user opinions (just price data, login walls, or article text with no comments), SKIP it entirely.\n` +
+    `- standout_quote: the single most revealing or surprising user opinion you found.\n` +
+    `- quotes: extract 3-5 VERBATIM user quotes that represent the range of opinion. Must be actual user words, not article text or price data.\n` +
+    `- recurring_themes: list ONLY themes mentioned independently by 2 or more distinct users. If a concern appears once, omit it.\n` +
+    `- unique_to_community: list signals, concerns, or viewpoints discussed in this community that would NOT appear in mainstream financial news or analyst reports (e.g. insider anecdotes, product experiences, regulatory rumors, niche competitive intel). Omit if nothing qualifies.\n` +
     `- community_name should be the real name (e.g. "r/SecurityAnalysis", "ValueInvestorsClub", "BioPharma Catalyst Forum").\n` +
     `- community_type: "mainstream" for Reddit/SeekingAlpha; "niche" for everything else.\n` +
     `- audience: describe who uses this community in 3-6 words (e.g. "institutional-adjacent analysts", "retail momentum traders").\n` +
     `- engagement_signal: "high" if many active replies/upvotes visible, "low" if sparse.\n` +
     `\nNiche URLs found (for reference): ${nicheUrls.join(', ')}\n\n` +
-    `SCRAPED CONTENT:\n${allContent.slice(0, 12000)}\n\n` +
+    `SCRAPED CONTENT:\n${allContent.slice(0, 18000)}\n\n` +
     `Return ONLY a JSON array. Each element:\n` +
-    `{"community_name":"...","community_type":"mainstream|niche","audience":"...","standout_quote":"...","theme":"...","sentiment":"bullish|bearish|neutral","engagement_signal":"high|medium|low"}`;
+    `{"community_name":"...","community_type":"mainstream|niche","audience":"...","standout_quote":"...","theme":"...","sentiment":"bullish|bearish|neutral","engagement_signal":"high|medium|low","quotes":["verbatim quote 1","verbatim quote 2","verbatim quote 3"],"recurring_themes":["theme mentioned by 2+ users"],"unique_to_community":["signal not in mainstream financial news"]}`;
 
   try {
     const response = await anthropicClient.messages.create({
