@@ -153,6 +153,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 11. Public Sentiment Layer | 0/? | Planned | |
 | 12. Intelligence Pipeline Rebuild | 3/4 | In Progress|  |
 | 13. Deep Sentiment Intelligence | 2/3 | In Progress|  |
+| 14. Database Verification & Report Persistence QA | 0/? | Planned | |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
@@ -297,3 +298,34 @@ Plans:
 - [x] 13-01-PLAN.md — SentimentIntelligenceSection type, stocktwits.ts (StockTwits API wrapper), options-sentiment.ts (put/call ratio), source-package.ts 9th parallel fetch
 - [x] 13-02-PLAN.md — Replace scrapeCommunitySentiment() with Haiku URL discovery + fc.scrape(), extend AnalysisResultSchema + SYSTEM_PROMPT + runGeminiAnalysis() for future_projection and sentiment_intelligence
 - [ ] 13-03-PLAN.md — ResearchReport.tsx: Sentiment Intelligence compact stats card + Forward Outlook section, visual checkpoint
+
+### Phase 14: Database Verification & Report Persistence QA
+
+**Goal:** Confirm the Neon database works correctly end-to-end in production — reports are written and read back cleanly, returning users see all their previous reports, per-user isolation holds, and the evolved AnalysisResult schema (Phases 12/13 additions) round-trips correctly through the `analysis` JSON column.
+
+**Problem being solved**: Phases 12 and 13 significantly expanded `AnalysisResult` (added `sentiment_intelligence`, `future_projection`, `price_target`, `signals` array, community sentiment fields) but the Prisma `Report` model stores the whole result as an opaque `Json` column. There is no guarantee that: (a) new fields survive the write/read cycle, (b) reports written before Phase 12 load without crashing the history page, (c) the `listReportsFromDb` → history UI path works correctly for a user who ran reports in a previous session, or (d) per-user scoping prevents cross-user data leaks in production.
+
+**Architecture**:
+- `src/lib/reports-db.ts`: verify `writeReportToDb` / `listReportsFromDb` / `readReportFromDb` handle the current `AnalysisResult` shape fully — no dropped fields, no type coercion bugs
+- Prisma schema: confirm `analysis Json` column round-trips all new top-level fields from Phases 12/13 (`sentiment_intelligence`, `future_projection`, `price_target`, etc.)
+- History API (`GET /api/history`): verify DEPLOYMENT_MODE switch routes correctly to Neon in web mode; confirm response shape matches what `ReportHistory` component expects
+- History UI: verify a returning authenticated user's full report list renders — not just the current session's reports
+- Schema migration: confirm `prisma migrate deploy` runs clean against the production Neon instance with no pending migrations
+- Backward compatibility: old reports (pre-Phase 12 schema) stored as JSON must degrade gracefully — missing new fields should show as absent/empty in the UI rather than crashing the report page
+- Per-user isolation: verify `readReportFromDb(id, userId)` cannot be accessed by a different authenticated user (security boundary test)
+
+**Depends on:** Phase 13
+**Requirements**: DB-QA-01 through DB-QA-08
+**Success Criteria** (what must be TRUE):
+  1. A report written by `writeReportToDb` is retrieved verbatim by `readReportFromDb` with all Phase 12/13 fields intact (`sentiment_intelligence`, `future_projection`, `price_target`, `signals`)
+  2. A returning user who signed in previously and ran at least one report sees their full report history on the home page — not an empty list
+  3. Running the same ticker multiple times for the same user creates multiple distinct timestamped records (no silent deduplication or overwrites)
+  4. `GET /api/history` in web mode returns all reports for the authenticated user ordered newest first
+  5. A report written before Phase 12 (missing new fields) loads on the report page without a runtime crash — missing fields render as absent sections
+  6. `readReportFromDb` returns 404/throws for a valid report ID requested by a different user — no cross-user data leak
+  7. `prisma migrate deploy` runs against the production Neon database with no errors and no pending migrations
+  8. Playwright e2e: sign in → run research on ticker A → sign out → sign in again → history shows ticker A report → open it → report renders correctly
+**Plans:** 0 plans (run /gsd-plan-phase 14 to break down)
+
+Plans:
+- [ ] TBD
