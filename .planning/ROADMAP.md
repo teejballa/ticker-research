@@ -325,7 +325,8 @@ Plans:
   6. `readReportFromDb` returns 404/throws for a valid report ID requested by a different user — no cross-user data leak
   7. `prisma migrate deploy` runs against the production Neon database with no errors and no pending migrations
   8. Playwright e2e: sign in → run research on ticker A → sign out → sign in again → history shows ticker A report → open it → report renders correctly
-**Plans:** 0 plans (run /gsd-plan-phase 14 to break down)
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD
+- [ ] 14-01-PLAN.md — Bug fixes + unit tests: StoredReport id field, reports-db.ts mapping, ReportHistory nav, ResearchReport backward-compat guards, full vitest suite green
+- [ ] 14-02-PLAN.md — Migration smoke test + Playwright e2e: prisma migrate status, cleanup API route, full sign-in → history → OPEN flow
