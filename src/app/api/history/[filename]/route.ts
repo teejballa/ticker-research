@@ -32,7 +32,7 @@ export async function GET(
     // Try UUID lookup first (normal path post-Phase-14)
     try {
       const report = await readReportFromDb(filename, session.user.email);
-      return NextResponse.json({ report });
+      return NextResponse.json(report);
     } catch {
       // UUID lookup failed — try old-filename fallback for pre-Phase-14 bookmarked URLs
       // Old format: TICKER-YYYY-MM-DDTHH-MM-SSZ.json (colons replaced with hyphens in time)
@@ -42,7 +42,7 @@ export async function GET(
         const { readReportFromDbByTimestamp } = await import('@/lib/reports-db');
         try {
           const report = await readReportFromDbByTimestamp(isoTs, session.user.email);
-          return NextResponse.json({ report });
+          return NextResponse.json(report);
         } catch {
           // genuinely not found
         }
