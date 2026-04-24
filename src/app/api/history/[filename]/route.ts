@@ -29,11 +29,24 @@ export async function GET(
       return NextResponse.json({ error: 'Missing report id' }, { status: 400 });
     }
 
+    // Try UUID lookup first (normal path post-Phase-14)
     try {
       const report = await readReportFromDb(filename, session.user.email);
       return NextResponse.json({ report });
     } catch {
-      // readReportFromDb throws when not found or user_id mismatch — return 404
+      // UUID lookup failed — try old-filename fallback for pre-Phase-14 bookmarked URLs
+      // Old format: TICKER-YYYY-MM-DDTHH-MM-SSZ.json (colons replaced with hyphens in time)
+      const m = filename.match(/^.+-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z\.json$/);
+      if (m) {
+        const isoTs = `${m[1]}T${m[2]}:${m[3]}:${m[4]}.000Z`;
+        const { readReportFromDbByTimestamp } = await import('@/lib/reports-db');
+        try {
+          const report = await readReportFromDbByTimestamp(isoTs, session.user.email);
+          return NextResponse.json({ report });
+        } catch {
+          // genuinely not found
+        }
+      }
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
   }
