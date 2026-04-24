@@ -87,6 +87,22 @@ describe('listReportsFromDb (WEB-04)', () => {
     const reports = await listReportsFromDb('other@example.com');
     expect(reports).toHaveLength(0);
   });
+
+  it('includes id field from DB row in returned StoredReport', async () => {
+    const dbRow = {
+      id: 'uuid-phase14-test',
+      user_id: 'user@example.com',
+      ticker: 'AAPL',
+      company_name: 'Apple Inc.',
+      analyzed_at: new Date('2026-03-20T10:00:00.000Z'),
+      market_sentiment: 'bullish',
+      confidence_level: 'High',
+      analysis: mockResult,
+    };
+    mockFindMany.mockResolvedValueOnce([dbRow]);
+    const reports = await listReportsFromDb('user@example.com');
+    expect(reports[0].id).toBe('uuid-phase14-test');
+  });
 });
 
 describe('readReportFromDb (WEB-04 single report)', () => {
@@ -115,5 +131,63 @@ describe('readReportFromDb (WEB-04 single report)', () => {
   it('throws when report not found (user_id mismatch treated as not found)', async () => {
     mockFindFirst.mockResolvedValueOnce(null);
     await expect(readReportFromDb('uuid-1', 'attacker@example.com')).rejects.toThrow();
+  });
+
+  it('includes id field from DB row in returned StoredReport', async () => {
+    const dbRow = {
+      id: 'uuid-read-test',
+      user_id: 'user@example.com',
+      ticker: 'AAPL',
+      company_name: 'Apple Inc.',
+      analyzed_at: new Date('2026-03-20T10:00:00.000Z'),
+      market_sentiment: 'bullish',
+      confidence_level: 'High',
+      analysis: mockResult,
+    };
+    mockFindFirst.mockResolvedValueOnce(dbRow);
+    const report = await readReportFromDb('uuid-read-test', 'user@example.com');
+    expect(report.id).toBe('uuid-read-test');
+  });
+
+  it('round-trips all Phase 12/13 fields through analysis JSON column', async () => {
+    const phase13Result = {
+      ...mockResult,
+      price_target: '$195-$210',
+      future_projection: 'Strong growth outlook for next 12 months.',
+      sentiment_intelligence: {
+        stocktwits_bull_pct: 72,
+        stocktwits_bear_pct: 28,
+        stocktwits_message_count: 1500,
+        stocktwits_is_trending: true,
+        put_call_ratio: 0.85,
+        put_call_interpretation: 'bullish' as const,
+      },
+      community_highlights: [{
+        community_name: 'r/stocks',
+        theme: 'earnings',
+        sentiment: 'bullish' as const,
+        community_type: 'mainstream' as const,
+        audience: 'retail',
+        standout_quote: 'AAPL is solid.',
+        engagement_signal: 'high' as const,
+      }],
+    };
+    const dbRow = {
+      id: 'uuid-phase13',
+      user_id: 'user@example.com',
+      ticker: 'AAPL',
+      company_name: 'Apple Inc.',
+      analyzed_at: new Date('2026-04-20T10:00:00.000Z'),
+      market_sentiment: 'bullish',
+      confidence_level: 'High',
+      analysis: phase13Result,
+    };
+    mockFindFirst.mockResolvedValueOnce(dbRow);
+    const report = await readReportFromDb('uuid-phase13', 'user@example.com');
+    expect(report.id).toBe('uuid-phase13');
+    expect(report.analysis.price_target).toBe('$195-$210');
+    expect(report.analysis.future_projection).toBeDefined();
+    expect(report.analysis.sentiment_intelligence?.stocktwits_bull_pct).toBe(72);
+    expect(report.analysis.community_highlights).toHaveLength(1);
   });
 });

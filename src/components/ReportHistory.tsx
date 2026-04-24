@@ -88,10 +88,10 @@ export default function ReportHistory() {
         {/* Report rows */}
         {status === 'loaded' && reports.map((report) => {
           const sentStyle = SENTIMENT_STYLE[report.market_sentiment] ?? SENTIMENT_STYLE.neutral;
-          const filename = toFilename(report);
+          const navKey = report.id ?? toFilename(report);
           return (
             <div
-              key={filename}
+              key={navKey}
               data-testid="history-row"
               className={`grid ${GRID_COLS} px-4 items-center border-b border-[#0f1a27] last:border-b-0`}
               style={{ height: '40px', transition: 'background 0.12s', cursor: 'default' }}
@@ -111,7 +111,7 @@ export default function ReportHistory() {
               <button
                 data-testid="history-open-btn"
                 className="text-[#f59e0b] text-[9px] tracking-[0.1em] bg-transparent border-none cursor-pointer hover:text-[#fbbf24] transition-colors"
-                onClick={() => router.push(`/research/${report.ticker}?report=${encodeURIComponent(filename)}`)}
+                onClick={() => router.push(`/research/${report.ticker}?report=${encodeURIComponent(navKey)}`)}
               >
                 [OPEN]
               </button>
