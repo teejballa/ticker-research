@@ -225,6 +225,7 @@ export interface AnalysisResult {
 // Written to ~/.cipher/reports/{TICKER}-{analyzed_at_sanitized}.json
 
 export interface StoredReport {
+  id?: string; // UUID from Neon (web mode only — undefined for local filesystem reports)
   ticker: string;
   company_name: string;
   analyzed_at: string;

@@ -36,6 +36,7 @@ export async function listReportsFromDb(userId: string): Promise<StoredReport[]>
     orderBy: { analyzed_at: 'desc' },
   });
   return rows.map((r) => ({
+    id: r.id,
     ticker: r.ticker,
     company_name: r.company_name,
     analyzed_at: r.analyzed_at.toISOString(),
@@ -60,6 +61,7 @@ export async function readReportFromDb(
     throw new Error(`Report ${id} not found for user ${userId}`);
   }
   return {
+    id: row.id,
     ticker: row.ticker,
     company_name: row.company_name,
     analyzed_at: row.analyzed_at.toISOString(),

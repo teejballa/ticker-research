@@ -137,6 +137,7 @@ vi.mock('@/lib/gemini-analysis', () => ({
     source_warnings: [],
   }),
   scrapeCommunitySentiment: vi.fn().mockResolvedValue(''),
+  extractCommunityHighlights: vi.fn().mockResolvedValue([]),
 }));
 vi.mock('@/lib/reports', () => ({ writeReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/lib/reports-db', () => ({ writeReportToDb: vi.fn().mockResolvedValue(undefined) }));
