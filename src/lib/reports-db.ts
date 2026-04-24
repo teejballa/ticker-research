@@ -46,6 +46,26 @@ export async function listReportsFromDb(userId: string): Promise<StoredReport[]>
   }));
 }
 
+function mapRow(r: {
+  id: string;
+  ticker: string;
+  company_name: string;
+  analyzed_at: Date;
+  market_sentiment: string;
+  confidence_level: string;
+  analysis: unknown;
+}): StoredReport {
+  return {
+    id: r.id,
+    ticker: r.ticker,
+    company_name: r.company_name,
+    analyzed_at: r.analyzed_at.toISOString(),
+    market_sentiment: r.market_sentiment as StoredReport['market_sentiment'],
+    confidence_level: r.confidence_level as StoredReport['confidence_level'],
+    analysis: r.analysis as unknown as AnalysisResult,
+  };
+}
+
 /**
  * Read a single report by ID, scoped to the given user_id.
  * Throws if not found (user_id mismatch is treated as not found for security).
@@ -60,13 +80,23 @@ export async function readReportFromDb(
   if (!row) {
     throw new Error(`Report ${id} not found for user ${userId}`);
   }
-  return {
-    id: row.id,
-    ticker: row.ticker,
-    company_name: row.company_name,
-    analyzed_at: row.analyzed_at.toISOString(),
-    market_sentiment: row.market_sentiment as StoredReport['market_sentiment'],
-    confidence_level: row.confidence_level as StoredReport['confidence_level'],
-    analysis: row.analysis as unknown as AnalysisResult,
-  };
+  return mapRow(row);
+}
+
+/**
+ * Read a single report by analyzed_at timestamp, scoped to the given user_id.
+ * Fallback for old-format ?report= params (e.g. GOOGL-2026-04-18T04-55-20Z.json).
+ * Throws if not found.
+ */
+export async function readReportFromDbByTimestamp(
+  analyzedAt: string,
+  userId: string
+): Promise<StoredReport> {
+  const row = await prisma.report.findFirst({
+    where: { analyzed_at: new Date(analyzedAt), user_id: userId },
+  });
+  if (!row) {
+    throw new Error(`Report at ${analyzedAt} not found for user ${userId}`);
+  }
+  return mapRow(row);
 }
