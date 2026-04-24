@@ -153,7 +153,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 11. Public Sentiment Layer | 0/? | Planned | |
 | 12. Intelligence Pipeline Rebuild | 3/4 | In Progress|  |
 | 13. Deep Sentiment Intelligence | 2/3 | In Progress|  |
-| 14. Database Verification & Report Persistence QA | 0/? | Planned | |
+| 14. Database Verification & Report Persistence QA | 1/2 | In Progress|  |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
@@ -325,8 +325,8 @@ Plans:
   6. `readReportFromDb` returns 404/throws for a valid report ID requested by a different user — no cross-user data leak
   7. `prisma migrate deploy` runs against the production Neon database with no errors and no pending migrations
   8. Playwright e2e: sign in → run research on ticker A → sign out → sign in again → history shows ticker A report → open it → report renders correctly
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 14-01-PLAN.md — Bug fixes + unit tests: StoredReport id field, reports-db.ts mapping, ReportHistory nav, ResearchReport backward-compat guards, full vitest suite green
+- [x] 14-01-PLAN.md — Bug fixes + unit tests: StoredReport id field, reports-db.ts mapping, ReportHistory nav, ResearchReport backward-compat guards, full vitest suite green
 - [ ] 14-02-PLAN.md — Migration smoke test + Playwright e2e: prisma migrate status, cleanup API route, full sign-in → history → OPEN flow
