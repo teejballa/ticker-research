@@ -26,7 +26,7 @@ export default function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Protect all routes except NextAuth callbacks, static assets, and favicon
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    // Protect all routes except NextAuth callbacks, static assets, favicon, and e2e test helpers
+    '/((?!api/auth|api/test|_next/static|_next/image|favicon.ico).*)',
   ],
 };
