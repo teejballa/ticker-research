@@ -6,16 +6,15 @@
 import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
 import Firecrawl from '@mendable/firecrawl-js';
+// Direct Anthropic SDK is required here — Pool B niche discovery and community extraction use
+// the `web_search_20250305` tool, which is an Anthropic-native feature not available through
+// the AI Gateway. Gemini calls route through the Gateway via plain model strings as normal.
 import Anthropic from '@anthropic-ai/sdk';
 import { formatResearchBrief, extractNewsUrls } from '@/lib/research-brief';
 import type { AnalysisResult, SourcePackage } from '@/lib/types';
 
-const anthropicClient = new Anthropic();
 // Reads ANTHROPIC_API_KEY from process.env automatically.
-
-// Tracks community pages scraped in the most recent scrapeCommunitySentiment() call.
-// Set before returning — read by runGeminiAnalysis() immediately after the call.
-let _lastCommunityScrapePageCount = 0;
+const anthropicClient = new Anthropic();
 
 // ---- Zod schema for structured Gemini output ----
 
@@ -27,7 +26,7 @@ const CatalystEventSchema = z.object({
 
 const CommunityHighlightSchema = z.object({
   community_name: z.string(),
-  community_type: z.enum(['mainstream', 'niche']),
+  community_type: z.enum(['mainstream', 'middle', 'niche']),
   audience: z.string(),
   standout_quote: z.string(),
   theme: z.string(),
@@ -171,9 +170,17 @@ export function buildUserPrompt(
     put_call_interpretation?: 'bullish' | 'bearish' | 'neutral' | null;
   },
   communityHighlights?: import('@/lib/types').CommunityHighlight[],
+  newsItems?: import('@/lib/types').NewsItem[],
 ): string {
   let prompt = brief + '\n\n';
-  if (newsUrls.length > 0) {
+  if (newsItems && newsItems.length > 0) {
+    prompt += '=== NEWS SOURCES ===\n';
+    for (const item of newsItems.slice(0, 15)) {
+      prompt += `[${item.published_date}] ${item.headline} (${item.source})\n`;
+      prompt += `  URL: ${item.url}\n`;
+    }
+    prompt += '\n';
+  } else if (newsUrls.length > 0) {
     prompt += '=== NEWS SOURCES ===\n';
     prompt += newsUrls.map(url => `- ${url}`).join('\n');
     prompt += '\n\n';
@@ -263,16 +270,14 @@ async function scrapeUrlWithFirecrawl(fc: Firecrawl, url: string): Promise<strin
  *   Pool B (niche):  Haiku discovers sector-specific niche communities for this ticker,
  *                    excluding mainstream sites. Top 5-6 scraped via Firecrawl.
  *
- * Returns: { pinnedContent: string, nicheContent: string, nicheUrls: string[] }
- * Sets _lastCommunityScrapePageCount to total non-empty pages scraped.
+ * Returns: { pinnedContent, nicheContent, nicheUrls, pageCount }
+ * pageCount is the total number of non-empty pages successfully scraped.
  */
 export async function scrapeCommunitySentiment(
   ticker: string,
   companyName: string,
-): Promise<{ pinnedContent: string; nicheContent: string; nicheUrls: string[] }> {
-  _lastCommunityScrapePageCount = 0;
-
-  const empty = { pinnedContent: '', nicheContent: '', nicheUrls: [] };
+): Promise<{ pinnedContent: string; nicheContent: string; nicheUrls: string[]; pageCount: number }> {
+  const empty = { pinnedContent: '', nicheContent: '', nicheUrls: [], pageCount: 0 };
   if (!process.env.FIRECRAWL_API_KEY) return empty;
 
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
@@ -296,7 +301,7 @@ export async function scrapeCommunitySentiment(
   try {
     // Search 1: community mapping — what niche places discuss this stock?
     const mapResponse = await anthropicClient.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4.5',
       max_tokens: 1024,
       tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 3 }],
       messages: [{
@@ -314,7 +319,7 @@ export async function scrapeCommunitySentiment(
 
     // Search 2: recent discussion threads in niche communities
     const threadResponse = await anthropicClient.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4.5',
       max_tokens: 1024,
       tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 3 }],
       messages: [{
@@ -364,12 +369,13 @@ export async function scrapeCommunitySentiment(
   const nichePages = nicheScraped.filter(Boolean);
 
   const allPinnedPages = [...pinnedPages, ...redditThreadPages];
-  _lastCommunityScrapePageCount = allPinnedPages.length + nichePages.length;
+  const pageCount = allPinnedPages.length + nichePages.length;
 
   return {
     pinnedContent: allPinnedPages.join('\n\n---\n\n'),
     nicheContent: nichePages.join('\n\n---\n\n'),
     nicheUrls: uniqueNiche,
+    pageCount,
   };
 }
 
@@ -408,7 +414,7 @@ export async function extractCommunityHighlights(
 
   try {
     const response = await anthropicClient.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4.5',
       max_tokens: 2048,
       messages: [{ role: 'user', content: extractionPrompt }],
     });
@@ -416,7 +422,7 @@ export async function extractCommunityHighlights(
     const textBlock = response.content.filter(b => b.type === 'text').pop();
     const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
     const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+    const arrayMatch = cleaned.match(/\[[\s\S]*?\]/);
     if (!arrayMatch) return [];
 
     const parsed = JSON.parse(arrayMatch[0]) as unknown;
@@ -472,6 +478,7 @@ export async function runGeminiAnalysis(
     pinnedContent: string;
     nicheContent: string;
     nicheUrls: string[];
+    pageCount: number;
     highlights: import('@/lib/types').CommunityHighlight[];
   } | null,
 ): Promise<AnalysisResult> {
@@ -486,6 +493,7 @@ export async function runGeminiAnalysis(
     combinedContent,
     pkg.sentiment_intelligence,
     communityData?.highlights ?? [],
+    pkg.news.items ?? [],
   );
 
   try {
@@ -524,7 +532,7 @@ export async function runGeminiAnalysis(
       catalyst_watch: output.catalyst_watch ?? [],
       sources_used: output.sources_used,
       future_projection: output.future_projection || undefined,
-      community_sources_scraped: _lastCommunityScrapePageCount > 0 ? _lastCommunityScrapePageCount : undefined,
+      community_sources_scraped: communityData?.pageCount && communityData.pageCount > 0 ? communityData.pageCount : undefined,
       sentiment_intelligence: output.sentiment_intelligence_summary ? {
         stocktwits_bull_pct: output.sentiment_intelligence_summary.stocktwits_bull_pct ?? null,
         stocktwits_bear_pct: output.sentiment_intelligence_summary.stocktwits_bear_pct ?? null,
