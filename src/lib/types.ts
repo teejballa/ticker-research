@@ -155,7 +155,7 @@ export interface CatalystEvent {
 
 export interface CommunityHighlight {
   community_name: string;           // e.g. "r/SecurityAnalysis", "BioPharma Catalyst Forum"
-  community_type: 'mainstream' | 'niche';
+  community_type: 'mainstream' | 'middle' | 'niche';
   audience: string;                 // e.g. "institutional-adjacent analysts"
   standout_quote: string;           // best single user opinion (backward compat)
   theme: string;                    // primary theme (backward compat)
