@@ -231,15 +231,23 @@ export function buildUserPrompt(
 
 // ---- Firecrawl community sentiment gatherer ----
 
-// Pinned mainstream URLs — always scraped regardless of ticker.
-// StockTwits web page stripped (login wall) — structured API data from stocktwits.ts covers it.
-const PINNED_URLS = [
-  'https://www.reddit.com/search/?q={TICKER}&sort=new',
+// Mainstream tier — high volume, hype-heavy, ideas arrive after spreading
+const MAINSTREAM_URLS = [
+  'https://www.reddit.com/r/wallstreetbets/search/?q={TICKER}&sort=new&t=week',
+  'https://finance.yahoo.com/quote/{TICKER}/community/',
+];
+
+// Middle tier — general investor audience, mixed quality
+const MIDDLE_URLS = [
+  'https://www.reddit.com/search/?q={TICKER}+stock&sort=new',
   'https://seekingalpha.com/symbol/{TICKER}',
 ];
 
-function buildPinnedUrls(ticker: string): string[] {
-  return PINNED_URLS.map(u => u.replace('{TICKER}', ticker));
+function buildTieredUrls(ticker: string): { mainstream: string[]; middle: string[] } {
+  return {
+    mainstream: MAINSTREAM_URLS.map(u => u.replace('{TICKER}', encodeURIComponent(ticker))),
+    middle: MIDDLE_URLS.map(u => u.replace('{TICKER}', encodeURIComponent(ticker))),
+  };
 }
 
 // Extract reddit.com comment thread URLs from a scraped search page's markdown.
@@ -265,31 +273,43 @@ async function scrapeUrlWithFirecrawl(fc: Firecrawl, url: string): Promise<strin
 }
 
 /**
- * Two-pool community scraping:
- *   Pool A (pinned): Reddit + SeekingAlpha — always scraped.
- *   Pool B (niche):  Haiku discovers sector-specific niche communities for this ticker,
- *                    excluding mainstream sites. Top 5-6 scraped via Firecrawl.
+ * Three-tier community scraping:
+ *   Mainstream: r/WallStreetBets, Yahoo Finance — high volume, hype-heavy.
+ *   Middle:     Reddit search + SeekingAlpha — general investor audience.
+ *   Niche:      Haiku discovers sector-specific communities for this ticker.
  *
- * Returns: { pinnedContent, nicheContent, nicheUrls, pageCount }
+ * Returns: { pinnedContent, nicheContent, nicheUrls, pageCount, mainstreamPageCount, middlePageCount, nichePageCount }
  * pageCount is the total number of non-empty pages successfully scraped.
  */
 export async function scrapeCommunitySentiment(
   ticker: string,
   companyName: string,
-): Promise<{ pinnedContent: string; nicheContent: string; nicheUrls: string[]; pageCount: number }> {
-  const empty = { pinnedContent: '', nicheContent: '', nicheUrls: [], pageCount: 0 };
+): Promise<{
+  pinnedContent: string;
+  nicheContent: string;
+  nicheUrls: string[];
+  pageCount: number;
+  mainstreamPageCount: number;
+  middlePageCount: number;
+  nichePageCount: number;
+}> {
+  const empty = { pinnedContent: '', nicheContent: '', nicheUrls: [], pageCount: 0, mainstreamPageCount: 0, middlePageCount: 0, nichePageCount: 0 };
   if (!process.env.FIRECRAWL_API_KEY) return empty;
 
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
 
-  // ── Pool A: Pinned mainstream URLs ──────────────────────────────────────
-  const pinnedUrls = buildPinnedUrls(ticker);
-  const pinnedScraped = await Promise.all(pinnedUrls.map(u => scrapeUrlWithFirecrawl(fc, u)));
-  const pinnedPages = pinnedScraped.filter(Boolean);
+  // ── Mainstream + Middle tiers ─────────────────────────────────────────────
+  const { mainstream, middle } = buildTieredUrls(ticker);
+  const [mainstreamScraped, middleScraped] = await Promise.all([
+    Promise.all(mainstream.map(u => scrapeUrlWithFirecrawl(fc, u))),
+    Promise.all(middle.map(u => scrapeUrlWithFirecrawl(fc, u))),
+  ]);
+  const mainstreamPages = mainstreamScraped.filter(Boolean);
+  const middlePages = middleScraped.filter(Boolean);
 
   // ── Pool A+: Reddit comment threads ─────────────────────────────────────
-  // Extract actual thread URLs from the Reddit search page and scrape the comment content.
-  const redditSearchMarkdown = pinnedScraped[0] ?? '';
+  // Extract actual thread URLs from the Reddit search page (middleScraped[0]) and scrape the comment content.
+  const redditSearchMarkdown = middleScraped[0] ?? '';
   const redditThreadUrls = extractRedditThreadUrls(redditSearchMarkdown);
   const redditThreadPages = redditThreadUrls.length > 0
     ? (await Promise.all(redditThreadUrls.map(u => scrapeUrlWithFirecrawl(fc, u)))).filter(Boolean)
@@ -368,14 +388,17 @@ export async function scrapeCommunitySentiment(
   const nicheScraped = await Promise.all(uniqueNiche.map(u => scrapeUrlWithFirecrawl(fc, u)));
   const nichePages = nicheScraped.filter(Boolean);
 
-  const allPinnedPages = [...pinnedPages, ...redditThreadPages];
-  const pageCount = allPinnedPages.length + nichePages.length;
+  const allMiddlePages = [...middlePages, ...redditThreadPages];
+  const pageCount = mainstreamPages.length + allMiddlePages.length + nichePages.length;
 
   return {
-    pinnedContent: allPinnedPages.join('\n\n---\n\n'),
+    pinnedContent: [...mainstreamPages, ...allMiddlePages].join('\n\n---\n\n'),
     nicheContent: nichePages.join('\n\n---\n\n'),
     nicheUrls: uniqueNiche,
     pageCount,
+    mainstreamPageCount: mainstreamPages.length,
+    middlePageCount: allMiddlePages.length,
+    nichePageCount: nichePages.length,
   };
 }
 
@@ -404,13 +427,13 @@ export async function extractCommunityHighlights(
     `- recurring_themes: list ONLY themes mentioned independently by 2 or more distinct users. If a concern appears once, omit it.\n` +
     `- unique_to_community: list signals, concerns, or viewpoints discussed in this community that would NOT appear in mainstream financial news or analyst reports (e.g. insider anecdotes, product experiences, regulatory rumors, niche competitive intel). Omit if nothing qualifies.\n` +
     `- community_name should be the real name (e.g. "r/SecurityAnalysis", "ValueInvestorsClub", "BioPharma Catalyst Forum").\n` +
-    `- community_type: "mainstream" for Reddit/SeekingAlpha; "niche" for everything else.\n` +
+    `- community_type: "mainstream" for r/WallStreetBets and Yahoo Finance boards; "middle" for r/investing, r/stocks, SeekingAlpha, r/SecurityAnalysis; "niche" for all sector-specific, ticker-specific, or specialized communities (ValueInvestorsClub, EliteTrader, r/NVDA, industry blogs, Bogleheads).\n` +
     `- audience: describe who uses this community in 3-6 words (e.g. "institutional-adjacent analysts", "retail momentum traders").\n` +
     `- engagement_signal: "high" if many active replies/upvotes visible, "low" if sparse.\n` +
     `\nNiche URLs found (for reference): ${nicheUrls.join(', ')}\n\n` +
     `SCRAPED CONTENT:\n${allContent.slice(0, 18000)}\n\n` +
     `Return ONLY a JSON array. Each element:\n` +
-    `{"community_name":"...","community_type":"mainstream|niche","audience":"...","standout_quote":"...","theme":"...","sentiment":"bullish|bearish|neutral","engagement_signal":"high|medium|low","quotes":["verbatim quote 1","verbatim quote 2","verbatim quote 3"],"recurring_themes":["theme mentioned by 2+ users"],"unique_to_community":["signal not in mainstream financial news"]}`;
+    `{"community_name":"...","community_type":"mainstream|middle|niche","audience":"...","standout_quote":"...","theme":"...","sentiment":"bullish|bearish|neutral","engagement_signal":"high|medium|low","quotes":["verbatim quote 1","verbatim quote 2","verbatim quote 3"],"recurring_themes":["theme mentioned by 2+ users"],"unique_to_community":["signal not in mainstream financial news"]}`;
 
   try {
     const response = await anthropicClient.messages.create({
