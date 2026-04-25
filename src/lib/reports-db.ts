@@ -3,6 +3,7 @@
 // All functions filter by user_id (session.user.email) — reports are private per-user.
 import { prisma } from '@/lib/db';
 import type { AnalysisResult, StoredReport } from '@/lib/types';
+import type { SentimentDimensions } from './sentiment-dimensions';
 
 /**
  * Persist a completed AnalysisResult to Neon for the given user.
@@ -10,7 +11,8 @@ import type { AnalysisResult, StoredReport } from '@/lib/types';
  */
 export async function writeReportToDb(
   result: AnalysisResult,
-  userId: string
+  userId: string,
+  opts?: { price_at_report?: number; community_data?: SentimentDimensions },
 ): Promise<string> {
   const report = await prisma.report.create({
     data: {
@@ -21,6 +23,8 @@ export async function writeReportToDb(
       market_sentiment: result.market_sentiment,
       confidence_level: result.confidence_level,
       analysis: result as object,
+      price_at_report: opts?.price_at_report ?? null,
+      community_data: opts?.community_data ? (opts.community_data as object) : undefined,
     },
   });
   return report.id;

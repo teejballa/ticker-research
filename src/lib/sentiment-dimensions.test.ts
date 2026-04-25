@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { computeSentimentDimensions } from './sentiment-dimensions';
 import type { CommunityHighlight } from './types';
 
