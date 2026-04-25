@@ -9,11 +9,14 @@
 
 import { NextRequest } from 'next/server';
 import { readFile } from 'fs/promises';
-import { resolve } from 'path';
+import { resolve, join as pathJoin } from 'path';
 import { realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { runGeminiAnalysis, scrapeCommunitySentiment, extractCommunityHighlights } from '@/lib/gemini-analysis';
+import { cleanupSourcePackage } from '@/lib/temp-file';
 import type { SourcePackage } from '@/lib/types';
+import { computeSentimentDimensions, type SentimentDimensions } from '@/lib/sentiment-dimensions';
+import YahooFinance from 'yahoo-finance2';
 
 // Force dynamic evaluation so Vercel reads env vars at request time, not build time.
 export const dynamic = 'force-dynamic';
@@ -40,7 +43,7 @@ export async function POST(
   } catch {
     // File does not exist yet — canonicalize the parent directory instead
     try {
-      canonicalPath = realpathSync(dirname(resolvedPath)) + '/' + basename(resolvedPath);
+      canonicalPath = pathJoin(realpathSync(dirname(resolvedPath)), basename(resolvedPath));
     } catch {
       canonicalPath = resolvedPath;
     }
@@ -50,6 +53,16 @@ export async function POST(
       JSON.stringify({ type: 'error', message: 'Invalid file path.' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
+  }
+
+  // HI-03: Auth guard for web mode — must have an authenticated session before any file I/O.
+  if (process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web') {
+    const { getServerSession } = await import('next-auth/next');
+    const { authOptions } = await import('@/lib/auth');
+    const sess = await getServerSession(authOptions);
+    if (!sess?.user?.email) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    }
   }
 
   const encode = (data: string) =>
@@ -80,7 +93,7 @@ export async function POST(
     try {
       // Step 0: Load source package — emit 'creating' to trigger stepper step 0
       enqueue(JSON.stringify({ type: 'progress', message: 'Creating research context from source package...' }));
-      const pkg: SourcePackage = JSON.parse(await readFile(resolvedPath, 'utf-8'));
+      const pkg: SourcePackage = JSON.parse(await readFile(canonicalPath, 'utf-8'));
 
       // Step 1: emit 'adding market' to trigger stepper step 1
       enqueue(JSON.stringify({ type: 'progress', message: 'Adding market data and fundamentals to context...' }));
@@ -106,6 +119,24 @@ export async function POST(
       // Step 5: emit 'querying confidence' to trigger stepper step 4
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying confidence and source attribution...' }));
 
+      // Snapshot price + compute sentiment dimensions (non-fatal)
+      let priceAtReport: number | undefined;
+      let communityData: SentimentDimensions | undefined;
+      try {
+        const yf2 = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+        const quote = await yf2.quote(ticker);
+        priceAtReport = typeof quote.regularMarketPrice === 'number' ? quote.regularMarketPrice : undefined;
+        const si = result.sentiment_intelligence;
+        communityData = computeSentimentDimensions(
+          result.community_highlights ?? [],
+          si?.stocktwits_bull_pct != null && si?.stocktwits_message_count != null
+            ? { bull: si.stocktwits_bull_pct, bear: si.stocktwits_bear_pct ?? 0, messageCount: si.stocktwits_message_count }
+            : null,
+        );
+      } catch {
+        // non-fatal — report saves without sentiment dims
+      }
+
       // Persist report (non-fatal) — DEPLOYMENT_MODE=web distinction is for history only, not analysis
       if (process.env.DEPLOYMENT_MODE === 'web') {
         try {
@@ -114,7 +145,10 @@ export async function POST(
           const { authOptions } = await import('@/lib/auth');
           const sess = await getServerSession(authOptions);
           if (sess?.user?.email) {
-            await writeReportToDb(result, sess.user.email);
+            await writeReportToDb(result, sess.user.email, {
+              price_at_report: priceAtReport,
+              community_data: communityData,
+            });
           }
         } catch (writeErr) {
           console.error('[history] Web mode: Failed to write report to DB:', writeErr);
@@ -135,6 +169,8 @@ export async function POST(
       const msg = err instanceof Error ? err.message : 'Analysis failed';
       enqueue(JSON.stringify({ type: 'error', message: msg }));
     } finally {
+      // LO-06: Clean up the source package temp file; non-fatal.
+      try { await cleanupSourcePackage(canonicalPath); } catch { /* ignore cleanup errors */ }
       close();
     }
   })();
