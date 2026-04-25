@@ -18,6 +18,10 @@ model Report {
   market_sentiment String
   confidence_level String
   analysis         Json
+  price_at_report  Float?
+  community_data   Json?
+
+  outcomes         PriceOutcome[]
 
   @@index([user_id, analyzed_at(sort: Desc)])
   @@map("reports")
@@ -30,4 +34,32 @@ model UserCredential {
   updated_at       DateTime @updatedAt @db.Timestamptz
 
   @@map("user_credentials")
+}
+
+model SentimentSnapshot {
+  id            String   @id @default(uuid())
+  ticker        String
+  scanned_at    DateTime @db.Timestamptz
+  price_at_scan Float
+  community_data Json
+
+  outcomes      PriceOutcome[]
+
+  @@index([ticker, scanned_at(sort: Desc)])
+  @@map("sentiment_snapshots")
+}
+
+model PriceOutcome {
+  id          String   @id @default(uuid())
+  report_id   String?
+  snapshot_id String?
+  days_after  Int
+  price       Float
+  pct_change  Float
+  recorded_at DateTime @db.Timestamptz
+
+  report      Report?            @relation(fields: [report_id], references: [id])
+  snapshot    SentimentSnapshot? @relation(fields: [snapshot_id], references: [id])
+
+  @@map("price_outcomes")
 }
