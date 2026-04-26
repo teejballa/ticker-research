@@ -36,6 +36,9 @@ export async function POST(
   }
 
   const upperTicker = ticker.toUpperCase();
+  if (!/^[A-Z0-9.\-^=]{1,20}$/.test(upperTicker)) {
+    return NextResponse.json({ error: 'Invalid ticker format' }, { status: 400 });
+  }
 
   try {
     // Resolve company name and exchange for the source package metadata

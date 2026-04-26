@@ -23,7 +23,7 @@ describe('scrapeCommunitySentiment', () => {
   it('Test 1: returns empty result when FIRECRAWL_API_KEY is absent, without calling Firecrawl', async () => {
     vi.stubEnv('FIRECRAWL_API_KEY', '');
     const result = await scrapeCommunitySentiment('AAPL', 'Apple Inc.');
-    expect(result).toEqual({ pinnedContent: '', nicheContent: '', nicheUrls: [] });
+    expect(result).toEqual({ pinnedContent: '', nicheContent: '', nicheUrls: [], pageCount: 0 });
     expect(Firecrawl).not.toHaveBeenCalled();
   });
 

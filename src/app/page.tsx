@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import TickerSearch from '@/components/TickerSearch';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
+import { getMarketStatus } from '@/lib/market-status';
 
 interface SnapshotItem {
   sym: string;
@@ -14,19 +16,8 @@ interface SnapshotItem {
   up: boolean;
 }
 
-function getMarketStatus(): { open: boolean; label: string } {
-  const ny = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const day  = ny.getDay();
-  const mins = ny.getHours() * 60 + ny.getMinutes();
-  const isWeekday = day >= 1 && day <= 5;
-  if (!isWeekday) return { open: false, label: 'WEEKEND' };
-  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return { open: true,  label: 'REGULAR SESSION' };
-  if (mins >= 4 * 60        && mins < 9 * 60 + 30) return { open: true,  label: 'PRE-MARKET' };
-  if (mins >= 16 * 60       && mins < 20 * 60) return { open: true,  label: 'AFTER-HOURS' };
-  return { open: false, label: 'CLOSED' };
-}
-
 export default function Home() {
+  const { data: session } = useSession();
   const [snapshot, setSnapshot]       = useState<SnapshotItem[]>([]);
   const [snapshotAt, setSnapshotAt]   = useState<string | null>(null);
 
@@ -195,12 +186,19 @@ export default function Home() {
             className="absolute bottom-20 left-1/2 -translate-x-1/2 w-full max-w-xl px-6 z-30 transition-opacity duration-300"
             style={{ opacity: showSearch2 ? 1 : 0, pointerEvents: showSearch2 ? 'auto' : 'none' }}
           >
-            {isWebMode ? (
+            {isWebMode && !session ? (
               <Link
                 href="/auth/signin"
                 className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
               >
                 Sign In to Get Started →
+              </Link>
+            ) : isWebMode && session ? (
+              <Link
+                href="/dashboard"
+                className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
+              >
+                Go to Dashboard →
               </Link>
             ) : (
               <TickerSearch />
@@ -357,12 +355,23 @@ export default function Home() {
             <p className="text-on-primary-container/80 text-xl mb-12 max-w-xl mx-auto">
               Source-grounded equity intelligence with transparent, traceable analysis.
             </p>
-            <Link
-              href="/auth/signin"
-              className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
-            >
-              Sign In to Get Started →
-            </Link>
+            {isWebMode && session ? (
+              <Link
+                href="/dashboard"
+                className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
+              >
+                Go to Dashboard →
+              </Link>
+            ) : isWebMode ? (
+              <Link
+                href="/auth/signin"
+                className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
+              >
+                Sign In to Get Started →
+              </Link>
+            ) : (
+              <TickerSearch />
+            )}
           </div>
         </section>
 

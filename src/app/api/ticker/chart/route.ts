@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
   }
 
   const ticker = symbol.trim().toUpperCase();
+  if (!/^[A-Z0-9.\-^=]{1,20}$/.test(ticker)) {
+    return NextResponse.json({ error: 'Invalid ticker format' }, { status: 400 });
+  }
 
   try {
     const period1 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

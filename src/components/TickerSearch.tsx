@@ -178,9 +178,6 @@ export default function TickerSearch({ className }: TickerSearchProps) {
             </button>
           ))}
 
-          <div className="px-3.5 py-1 border-t border-outline-variant/40">
-            <span className="text-[9px] text-outline/60 select-none">↑↓ navigate · ↵ select</span>
-          </div>
         </div>
       )}
     </div>
