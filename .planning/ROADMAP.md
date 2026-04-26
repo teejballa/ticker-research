@@ -17,6 +17,18 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Report Output** - Formatted research report rendering with source attribution and PDF export (completed 2026-03-18)
 - [x] **Phase 4: Deployment** - Local execution packaging and web application deployment (completed 2026-03-18)
 - [x] **Phase 5: User Identity & Report History** - Google auth as app identity, persistent report storage, home page history with regeneration (completed 2026-03-20)
+- [x] **Phase 6: Full Web Deployment** - NextAuth + Neon + middleware + custom sign-in page (completed 2026-03-23)
+- [x] **Phase 7: Research Quality & Special Situation Coverage** - Security-type detection, SPAC/ETF prompt branching (completed 2026-03-25)
+- [x] **Phase 8: Full Public Deployment** - Daytona container infra, VNC auth, multi-user web app (completed 2026-03-28; superseded by Phase 12)
+- [x] **Phase 9: Migrate Container to Google Cloud Run** - Multi-stage Dockerfile, Cloud Run deploy (completed 2026-04-01; superseded by Phase 12)
+- [~] **Phase 10: Reliable Market Data** - Polygon + Finnhub fallback live (3/4 plans; 10-04 smoke test pending)
+- [x] **Phase 11: Public Sentiment Layer** - Delivered as Community Intelligence (Firecrawl + 3-tier classification + sentiment dimensions) (completed 2026-04-22)
+- [x] **Phase 12: Intelligence Pipeline Rebuild** - Gemini via AI Gateway, container decommission, Firecrawl community scraping (completed 2026-04-15)
+- [x] **Phase 13: Deep Sentiment Intelligence** - StockTwits API, options put/call, Forward Outlook section in report (completed 2026-04-23)
+- [x] **Phase 14: Database Verification & Report Persistence QA** - Playwright e2e db-persistence spec passing (completed 2026-04-24)
+- [x] **Phase 15: Diffusion Learning Engine** - Bayesian crons + EngineCalibrationPanel + InsightsDashboard (completed 2026-04-26)
+- [ ] **Phase 16: Technical Analysis** - Planned (context only)
+- [ ] **Phase 17: Institutional & Insider Intelligence** - Planned (context only)
 
 ## Phase Details
 
@@ -147,13 +159,16 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 5. User Identity & Report History | 5/5 | Complete   | 2026-03-20 |
 | 6. Full Web Deployment | 4/4 | Complete   | 2026-03-23 |
 | 7. Research Quality & Special Situation Coverage | 4/4 | Complete    | 2026-03-25 |
-| 8. Full Public Deployment | 5/6 | In Progress|  |
-| 9. Migrate Container to Google Cloud Run | 1/3 | In Progress|  |
-| 10. Reliable Market Data | 0/? | Planned | |
-| 11. Public Sentiment Layer | 0/? | Planned | |
-| 12. Intelligence Pipeline Rebuild | 3/4 | In Progress|  |
-| 13. Deep Sentiment Intelligence | 2/3 | In Progress|  |
-| 14. Database Verification & Report Persistence QA | 1/2 | In Progress|  |
+| 8. Full Public Deployment | 6/6 | Complete   | 2026-03-28 |
+| 9. Migrate Container to Google Cloud Run | 3/3 | Complete (later superseded by Phase 12 container decommission) | 2026-04-01 |
+| 10. Reliable Market Data | 3/4 | Mostly Complete (Polygon + Finnhub fallback live; 10-04 smoke test pending) |  |
+| 11. Public Sentiment Layer | — | Delivered as Community Intelligence (firecrawl scrape + 3-tier classification + sentiment dims) | 2026-04-22 |
+| 12. Intelligence Pipeline Rebuild | 4/4 | Complete | 2026-04-15 |
+| 13. Deep Sentiment Intelligence | 3/3 | Complete (Sentiment Intelligence card + Forward Outlook section live in ResearchReport) | 2026-04-23 |
+| 14. Database Verification & Report Persistence QA | 2/2 | Complete (Playwright e2e db-persistence spec passing) | 2026-04-24 |
+| 15. Diffusion Learning Engine | — | Complete (Bayesian crons + InsightsDashboard + EngineCalibrationPanel) | 2026-04-26 |
+| 16. Technical Analysis | 0/? | Planned (16-CONTEXT only) |  |
+| 17. Institutional & Insider Intelligence | 0/? | Planned (16-CONTEXT only) |  |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
@@ -190,27 +205,27 @@ Plans:
 **Goal:** Wire the built app (Vercel frontend + Daytona container) into a fully publicly accessible product: provision infrastructure, solve web-context per-user NotebookLM auth via VNC browser stream, and ship a live multi-user deployment at ticker-research.vercel.app.
 **Requirements**: TBD
 **Depends on:** Phase 7
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed (later superseded by Phase 12 container decommission)
 
 Plans:
-- [ ] 08-01-PLAN.md — UserCredential Prisma model, AES-256-GCM credentials crypto lib, Wave 0 test stubs, devcontainer VNC deps
-- [ ] 08-02-PLAN.md — FastAPI container server (scripts/container_server.py) wrapping notebooklm_research.py with per-request temp file isolation
-- [ ] 08-03-PLAN.md — Vercel analysis route web-mode branch: reads source package + decrypts per-user NbLM credentials from Neon, forwards to Daytona container
-- [ ] 08-04-PLAN.md — /setup onboarding page (react-vnc VNC stream), /api/setup/nbm-auth POST/GET endpoints
-- [ ] 08-05-PLAN.md — /account settings page, NavBar ACCOUNT link, cloud error states in ResearchProgress, .env.local.example Phase 8 vars
-- [ ] 08-06-PLAN.md — Daytona workspace provisioning, Vercel deploy, production smoke test checkpoint
+- [x] 08-01-PLAN.md — UserCredential Prisma model, AES-256-GCM credentials crypto lib, Wave 0 test stubs, devcontainer VNC deps
+- [x] 08-02-PLAN.md — FastAPI container server (scripts/container_server.py) wrapping notebooklm_research.py with per-request temp file isolation
+- [x] 08-03-PLAN.md — Vercel analysis route web-mode branch: reads source package + decrypts per-user NbLM credentials from Neon, forwards to Daytona container
+- [x] 08-04-PLAN.md — /setup onboarding page (react-vnc VNC stream), /api/setup/nbm-auth POST/GET endpoints
+- [x] 08-05-PLAN.md — /account settings page, NavBar ACCOUNT link, cloud error states in ResearchProgress, .env.local.example Phase 8 vars
+- [x] 08-06-PLAN.md — Daytona workspace provisioning, Vercel deploy, production smoke test checkpoint
 
 ### Phase 9: Migrate Container from Daytona to Google Cloud Run
 
 **Goal:** Migrate the `notebooklm-py` research container from Daytona to Google Cloud Run so the container runs on Google infrastructure and can reach `notebooklm.google.com` — Daytona containers run on AWS IPs which are blocked by Google's NotebookLM service.
 **Requirements**: GCR-01, GCR-02, GCR-03
 **Depends on:** Phase 8
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed (later superseded by Phase 12 container decommission — entire container layer removed)
 
 Plans:
 - [x] 09-01-PLAN.md — Multi-stage Dockerfile, entrypoint.sh, container_server.py CONTAINER_SECRET rename + /vnc-ws WebSocket proxy
-- [ ] 09-02-PLAN.md — Vercel route DAYTONA_* → CONTAINER_* renames across 3 route files + test file
-- [ ] 09-03-PLAN.md — Cloud Run deployment runbook (docs/DEPLOY-GCR.md), .env.local.example update, production smoke test
+- [x] 09-02-PLAN.md — Vercel route DAYTONA_* → CONTAINER_* renames across 3 route files + test file
+- [x] 09-03-PLAN.md — Cloud Run deployment runbook (docs/DEPLOY-GCR.md), .env.local.example update, production smoke test
 
 ### Phase 10: Reliable Market Data — Multi-Source Fallback & Full Ticker Coverage
 
@@ -278,26 +293,26 @@ Plans:
 
 **Goal:** Replace the Python/NotebookLM/Cloud Run reasoning layer with a direct TypeScript pipeline: call Gemini via AI SDK + Vercel AI Gateway from the analysis route, add Firecrawl for community sentiment scraping, evolve the AnalysisResult schema, and decommission all container infrastructure.
 **Requirements**: INTEL-01, INTEL-02, INTEL-03, INTEL-04, INTEL-05, INTEL-06, INTEL-07, INTEL-08, INTEL-09, INTEL-10
-**Depends on:** Phase 9 (current active phase — phases 10/11 queued for after Phase 12)
-**Plans:** 3/4 plans executed
+**Depends on:** Phase 9
+**Plans:** 4/4 plans executed
 
 Plans:
 - [x] 12-01-PLAN.md — Install ai@6.0.168 + @mendable/firecrawl-js@4.18.3, evolve AnalysisResult schema (price_target, 5 signals, improved attribution), remove prestart hook
 - [x] 12-02-PLAN.md — Create gemini-analysis.ts service (Zod schema, Gemini call, Firecrawl scraper, prompt builder), rewrite analysis route (no subprocess, no CONTAINER_URL), update route tests
 - [x] 12-03-PLAN.md — Container decommission: delete Python scripts + Dockerfiles + VNC/setup routes, simplify setup/status to session-only
-- [ ] 12-04-PLAN.md — Build verification, .env.local.example update (FIRECRAWL_API_KEY, remove CONTAINER_*), human e2e smoke test
+- [x] 12-04-PLAN.md — Build verification, .env.local.example update (FIRECRAWL_API_KEY, remove CONTAINER_*), human e2e smoke test
 
 ### Phase 13: Deep Sentiment Intelligence — StockTwits API, Options Put/Call, Dynamic Community Scraping, Forward Outlook
 
 **Goal:** Upgrade the sentiment pipeline with three new structured signals: StockTwits API bull/bear percentages, yahoo-finance2 options put/call ratio, and a dynamic Haiku URL discovery + Firecrawl scrape replacement for community sentiment. Extend AnalysisResult with a forward-looking future_projection field and surface both new signals and the outlook in the report.
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17, D-18, D-19, D-20
 **Depends on:** Phase 12
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 - [x] 13-01-PLAN.md — SentimentIntelligenceSection type, stocktwits.ts (StockTwits API wrapper), options-sentiment.ts (put/call ratio), source-package.ts 9th parallel fetch
 - [x] 13-02-PLAN.md — Replace scrapeCommunitySentiment() with Haiku URL discovery + fc.scrape(), extend AnalysisResultSchema + SYSTEM_PROMPT + runGeminiAnalysis() for future_projection and sentiment_intelligence
-- [ ] 13-03-PLAN.md — ResearchReport.tsx: Sentiment Intelligence compact stats card + Forward Outlook section, visual checkpoint
+- [x] 13-03-PLAN.md — ResearchReport.tsx: Sentiment Intelligence compact stats card + Forward Outlook section, visual checkpoint
 
 ### Phase 14: Database Verification & Report Persistence QA
 
@@ -325,8 +340,34 @@ Plans:
   6. `readReportFromDb` returns 404/throws for a valid report ID requested by a different user — no cross-user data leak
   7. `prisma migrate deploy` runs against the production Neon database with no errors and no pending migrations
   8. Playwright e2e: sign in → run research on ticker A → sign out → sign in again → history shows ticker A report → open it → report renders correctly
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
 - [x] 14-01-PLAN.md — Bug fixes + unit tests: StoredReport id field, reports-db.ts mapping, ReportHistory nav, ResearchReport backward-compat guards, full vitest suite green
-- [ ] 14-02-PLAN.md — Migration smoke test + Playwright e2e: prisma migrate status, cleanup API route, full sign-in → history → OPEN flow
+- [x] 14-02-PLAN.md — Migration smoke test + Playwright e2e: prisma migrate status, cleanup API route, full sign-in → history → OPEN flow
+
+### Phase 15: Diffusion Learning Engine — Auto-Updating Thesis Calibrated Against S&P 500
+
+**Goal:** Reports self-improve over time. A daily cron loop scans watchlist tickers for sentiment, records each ticker's price moves N days later vs SPY, and Bayesian-updates LearnedPattern priors per (sentiment_type × cap_class × direction). At report time, the matching prior is injected into the Gemini prompt as an Engine Calibration block so the thesis reasons from learned alpha-vs-SPY evidence, not generic logic. Surfaced via `EngineCalibrationPanel` per report and `InsightsDashboard` globally at `/insights`.
+**Status:** Complete (2026-04-26)
+
+Plans:
+- [x] Bayesian primitives library (`src/lib/learning.ts`) + vitest suite
+- [x] `/api/cron/sentiment-scan` — periodic watchlist sweep, writes SentimentSnapshot rows
+- [x] `/api/cron/price-followup` — closes prediction loop at 3/7/14 days, computes alpha vs SPY
+- [x] `/api/cron/learn` — daily Bayesian update writing LearnedPattern store
+- [x] `src/lib/engine-context.ts` — `getEngineContextForTicker()` prior lookup at report time
+- [x] `runGeminiAnalysis()` — injects Engine Calibration block + returns `engine_calibration` in AnalysisResult
+- [x] `EngineCalibrationPanel.tsx` — surfaces calibration in `/research/[ticker]`
+- [x] `InsightsDashboard.tsx` (`/insights`) — Pattern Library, Live Diffusion Map, Engine Memory, cinematic editorial UI
+- [x] Playwright suite for EngineCalibrationPanel + insights flow
+
+### Phase 16: Technical Analysis (Planned — context only)
+
+**Goal:** Add technical analysis layer (chart patterns, moving averages, momentum, support/resistance) as a structured signal feeding both the Gemini prompt and the report.
+**Status:** Planned. `16-CONTEXT.md` exists. Plans: 0/? (run `/gsd-plan-phase 16` to break down).
+
+### Phase 17: Institutional & Insider Intelligence (Planned — context only)
+
+**Goal:** Surface institutional ownership changes (13F filings) and insider transactions (Form 4) as a distinct sentiment signal class with its own report section.
+**Status:** Planned. Context document exists. Plans: 0/? (run `/gsd-plan-phase 17` to break down).
