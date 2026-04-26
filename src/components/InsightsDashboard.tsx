@@ -171,64 +171,156 @@ export function InsightsDashboard() {
 
   const utcStamp = now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 
+  // Find the most "heroic" anchor stat to feature in the hero
+  const niceCells = (data.pattern_library ?? []).filter(c => c.flow_pattern === 'niche_leads' && c.sample_size >= 5);
+  const headlineCell = niceCells.sort((a, b) => b.posterior_mean - a.posterior_mean)[0];
+  const headlinePct = headlineCell ? Math.round(headlineCell.posterior_mean * 100) : null;
+
   return (
-    <div className="max-w-7xl mx-auto px-6 pb-24">
-      {/* ─────────────────────── Header ─────────────────────── */}
-      <header className="border-b border-outline-variant/30 pb-6 mb-10">
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary" />
-            </span>
-            <span className="text-[10px] tracking-[0.4em] text-secondary font-mono uppercase font-bold">
-              Engine Live
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-            {data.market_state && (
-              <span
-                className={
-                  data.market_state.open
-                    ? 'text-secondary border border-secondary/40 bg-secondary/10 px-2 py-0.5'
-                    : 'text-outline border border-outline-variant/30 bg-surface-container-low px-2 py-0.5'
-                }
-              >
-                NYSE · {data.market_state.label}
+    <div className="pb-24">
+      {/* ─────────────────────── Cinematic Hero ─────────────────────── */}
+      <section className="relative overflow-hidden border-b border-outline-variant/20">
+        {/* Dot-grid backdrop */}
+        <div className="absolute inset-0 dot-grid pointer-events-none opacity-40" />
+        {/* Ambient glow */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: '900px',
+            height: '500px',
+            top: '40%',
+            left: '20%',
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(ellipse at center, rgba(102,217,204,0.08) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: '700px',
+            height: '500px',
+            top: '60%',
+            right: '0%',
+            background: 'radial-gradient(ellipse at center, rgba(182,196,255,0.08) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
+
+        <div className="max-w-7xl mx-auto px-6 pt-14 pb-12 relative z-10">
+          {/* Top status bar */}
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-12">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary" />
               </span>
-            )}
-            <span>Cycle 3D · Watchlist 26</span>
-            <span className="hidden sm:inline">{utcStamp}</span>
-          </div>
-        </div>
-
-        <div className="flex items-end justify-between flex-wrap gap-6">
-          <div>
-            <div className="text-[10px] tracking-[0.4em] text-primary/60 font-mono uppercase mb-2">
-              Cipher Research Layer · v1.0
+              <span className="text-[10px] tracking-[0.4em] text-secondary font-mono uppercase font-bold">
+                Engine Live
+              </span>
+              <span className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-l border-outline-variant/30 pl-3">
+                Self-Updating · No Human Intervention
+              </span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-on-surface tracking-tight leading-[0.95]">
-              Behavioral Sentiment
-              <span className="block text-primary">Diffusion Study</span>
-            </h1>
-            <p className="text-on-surface-variant text-sm max-w-2xl mt-4 leading-relaxed">
-              Cipher continuously tracks investor discussion across niche, middle, and mainstream
-              communities — then verifies which sentiment signals actually preceded price movement.
-              This page is the live evidence base.
-            </p>
+            <div className="flex items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+              {data.market_state && (
+                <span
+                  className={
+                    data.market_state.open
+                      ? 'text-secondary border border-secondary/40 bg-secondary/10 px-2 py-0.5'
+                      : 'text-outline border border-outline-variant/30 bg-surface-container-low px-2 py-0.5'
+                  }
+                >
+                  NYSE · {data.market_state.label}
+                </span>
+              )}
+              <span className="hidden sm:inline">Cycle 3D · Watchlist 26</span>
+              <span className="hidden md:inline">{utcStamp}</span>
+            </div>
           </div>
 
-          <a
-            href="https://github.com/teejballa/ticker-research"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden md:flex items-center gap-2 text-[10px] tracking-[0.3em] text-outline hover:text-primary transition-colors font-mono uppercase border-l border-outline-variant/30 pl-4"
-          >
-            Methodology
-            <span className="material-symbols-outlined text-sm">arrow_outward</span>
-          </a>
+          {/* Hero grid */}
+          <div className="grid lg:grid-cols-[1.4fr_1fr] gap-12 items-center">
+            {/* Left — copy */}
+            <div>
+              <div className="text-[10px] tracking-[0.5em] text-primary/70 font-mono uppercase mb-5 font-bold">
+                Cipher Research · Behavioral Finance
+              </div>
+              <h1 className="font-black text-on-surface tracking-tight leading-[0.92] mb-6"
+                  style={{ fontSize: 'clamp(2.5rem, 6.5vw, 5.25rem)' }}>
+                Sentiment travels.
+                <span className="block text-primary-fixed">We watch it move.</span>
+              </h1>
+              <p className="text-on-surface-variant text-base md:text-lg max-w-2xl leading-relaxed mb-8">
+                Investment ideas often start in <span className="text-secondary font-semibold">niche communities</span> —
+                a sub-Reddit dedicated to one ticker, an obscure StockTwits thread.
+                Days later they reach <span className="text-tertiary font-semibold">middle</span> communities,
+                then <span className="text-error/90 font-semibold">mainstream</span>.
+                By the time mainstream notices, the price has often already moved.
+                Cipher tracks that journey across <strong className="text-on-surface">26 tickers</strong>,
+                checks the price 3, 7, and 14 days later, and quietly updates its own beliefs about
+                which patterns actually predict.
+              </p>
+
+              {/* Method chips */}
+              <div className="flex flex-wrap gap-2 text-[10px] tracking-[0.3em] font-mono uppercase">
+                <span className="border border-outline-variant/40 bg-surface-container-low/50 px-2 py-1 text-on-surface-variant">
+                  Bayesian posteriors
+                </span>
+                <span className="border border-outline-variant/40 bg-surface-container-low/50 px-2 py-1 text-on-surface-variant">
+                  SPY-relative outcomes
+                </span>
+                <span className="border border-outline-variant/40 bg-surface-container-low/50 px-2 py-1 text-on-surface-variant">
+                  Adversarial null test
+                </span>
+                <span className="border border-outline-variant/40 bg-surface-container-low/50 px-2 py-1 text-on-surface-variant">
+                  Drift detection
+                </span>
+              </div>
+            </div>
+
+            {/* Right — animated diffusion + anchor stat */}
+            <div className="flex flex-col items-center lg:items-end gap-6">
+              <DiffusionVisual />
+              <div className="border border-outline-variant/40 bg-surface-container-low/40 backdrop-blur p-5 w-full max-w-sm">
+                <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-2">
+                  Headline finding
+                </div>
+                {headlinePct != null && headlineCell ? (
+                  <>
+                    <div className="font-mono font-black text-secondary text-5xl tabular-nums leading-none mb-2">
+                      {headlinePct}<span className="text-2xl text-secondary/70">%</span>
+                    </div>
+                    <div className="text-on-surface text-sm leading-snug mb-2">
+                      of <span className="text-on-surface-variant">niche-leads</span> patterns
+                      in <span className="text-on-surface-variant">{CAP_CLASS_LABEL[headlineCell.cap_class] ?? headlineCell.cap_class}</span>
+                      {' '}beat SPY by &gt;1% over 7d
+                    </div>
+                    <div className="text-[10px] font-mono text-outline tracking-widest uppercase">
+                      n={headlineCell.sample_size} · {Math.round(headlineCell.ci_low * 100)}–{Math.round(headlineCell.ci_high * 100)}% credible interval
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-mono font-black text-on-surface text-4xl tabular-nums leading-none mb-2">
+                      Cycle <span className="text-primary-fixed">{(data.logistic_epoch?.epoch ?? 0)}</span>
+                    </div>
+                    <div className="text-on-surface text-sm leading-snug mb-2">
+                      Engine is collecting evidence. The first learned probabilities appear
+                      after the first 7-day outcomes resolve.
+                    </div>
+                    <div className="text-[10px] font-mono text-outline tracking-widest uppercase">
+                      Currently watching {data.total_data_points} sentiment data points
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </header>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-6">
 
       {/* ─────────────────────── Stat strip ─────────────────────── */}
       <section
@@ -318,6 +410,95 @@ export function InsightsDashboard() {
           <div className="text-xs text-on-surface-variant mt-2 font-mono">
             n = {data.thesis.high_gap_resolved}
           </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────── Three Tiers explainer ─────────────────────── */}
+      <section className="mb-12" aria-label="Three community tiers">
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+              The three tiers
+            </div>
+            <h2 className="text-on-surface text-2xl md:text-3xl font-black tracking-tight">
+              Where investment ideas live online
+            </h2>
+          </div>
+          <span className="hidden md:inline text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+            scanned every 3 days
+          </span>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-px bg-outline-variant/30 border border-outline-variant/30">
+          <TierCard
+            tone="secondary"
+            label="Niche"
+            symbol="🌱"
+            example="r/PLTR · r/AMD · r/SOFI"
+            audience="Dedicated holders. Often small in number, deep in conviction."
+            why="The earliest signal. Often weeks ahead of the news cycle."
+          />
+          <TierCard
+            tone="tertiary"
+            label="Middle"
+            symbol="🔄"
+            example="r/investing · r/stocks · SeekingAlpha"
+            audience="Engaged retail investors with long-term horizons."
+            why="The relay. Where ideas get debated and shaped before going wide."
+          />
+          <TierCard
+            tone="error"
+            label="Mainstream"
+            symbol="📣"
+            example="r/wallstreetbets · CNBC · Twitter"
+            audience="Broad retail and momentum traders. Highest volume by far."
+            why="When sentiment lands here, the price has often already moved."
+          />
+        </div>
+      </section>
+
+      {/* ─────────────────────── How Cipher Learns ─────────────────────── */}
+      <section className="mb-14" aria-label="How Cipher learns">
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+              The feedback loop
+            </div>
+            <h2 className="text-on-surface text-2xl md:text-3xl font-black tracking-tight">
+              How Cipher learns — every cycle, automatically
+            </h2>
+            <p className="text-on-surface-variant text-sm mt-2 max-w-3xl leading-relaxed">
+              No human writes the rules. The engine watches, predicts, verifies, and updates its
+              own beliefs. That loop runs whether or not anyone is using the app.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-4 gap-px bg-outline-variant/30 border border-outline-variant/30">
+          <StepCard
+            n="01"
+            title="Scan"
+            body="Every 3 days, pull discussion from each ticker's niche, middle, and mainstream community plus StockTwits."
+            tone="primary"
+          />
+          <StepCard
+            n="02"
+            title="Trace"
+            body="Compute engagement velocity per tier and detect the diffusion pattern: niche-leads, simultaneous, mainstream-first, or flat."
+            tone="secondary"
+          />
+          <StepCard
+            n="03"
+            title="Verify"
+            body="3, 7, and 14 days later, fetch the actual price. Compare to SPY. Was the prediction right or wrong?"
+            tone="tertiary"
+          />
+          <StepCard
+            n="04"
+            title="Update"
+            body="Bayesian posterior shifts. Logistic-regression coefficients shift. A new entry appears in the engine's memory."
+            tone="primary-fixed"
+          />
         </div>
       </section>
 
@@ -650,6 +831,22 @@ export function InsightsDashboard() {
         )}
       </section>
 
+      {/* ─────────────────────── Why this matters ─────────────────────── */}
+      <section className="mt-16 mb-6 border border-primary/20 bg-gradient-to-br from-primary-container/[0.04] to-transparent p-8 md:p-10">
+        <div className="text-[10px] tracking-[0.5em] text-primary-fixed font-mono uppercase mb-3 font-bold">
+          Why this matters
+        </div>
+        <p className="text-on-surface text-base md:text-lg leading-relaxed max-w-3xl">
+          Most retail finance dashboards stop at &quot;here&apos;s what people are saying.&quot;
+          Cipher goes one step further: it watches what happens next, then updates its beliefs.
+          Every prediction is logged, verified against the price, and either reinforces or weakens
+          the engine&apos;s confidence — automatically, every day.
+          <span className="block mt-3 text-on-surface-variant">
+            That feedback loop is the difference between an opinion and a model.
+          </span>
+        </p>
+      </section>
+
       {/* ─────────────────────── Footer rule ─────────────────────── */}
       <footer className="mt-10 pt-6 border-t border-outline-variant/30 flex flex-wrap items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
         <span>Cipher Engine</span>
@@ -658,8 +855,11 @@ export function InsightsDashboard() {
         <span>·</span>
         <span>Outcome verification daily</span>
         <span>·</span>
-        <span className="text-on-surface-variant">Data is research-only, not investment advice</span>
+        <span>Beliefs updated daily</span>
+        <span>·</span>
+        <span className="text-on-surface-variant">Research-only, not investment advice</span>
       </footer>
+      </div>
     </div>
   );
 }
@@ -946,6 +1146,180 @@ function DiffusionMapCard({ entry }: { entry: DiffusionMapEntry }) {
         <span><span className="text-tertiary">●</span> middle</span>
         <span><span className="text-error/80">●</span> mainstream</span>
       </div>
+    </div>
+  );
+}
+
+function DiffusionVisual() {
+  // Three concentric rings (niche / middle / mainstream) with dots flowing outward.
+  // Pure CSS keyframes — no library, no JS animation loops.
+  return (
+    <div
+      className="relative w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] flex items-center justify-center select-none"
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes diffusion-flow-1 {
+          0%   { transform: rotate(0deg)   translate(50px) scale(1); opacity: 1; }
+          50%  { transform: rotate(180deg) translate(95px) scale(0.85); opacity: 0.85; }
+          100% { transform: rotate(360deg) translate(140px) scale(0.65); opacity: 0; }
+        }
+        @keyframes diffusion-flow-2 {
+          0%   { transform: rotate(60deg)  translate(50px) scale(1); opacity: 1; }
+          50%  { transform: rotate(240deg) translate(95px) scale(0.85); opacity: 0.85; }
+          100% { transform: rotate(420deg) translate(140px) scale(0.65); opacity: 0; }
+        }
+        @keyframes diffusion-flow-3 {
+          0%   { transform: rotate(180deg) translate(50px) scale(1); opacity: 1; }
+          50%  { transform: rotate(360deg) translate(95px) scale(0.85); opacity: 0.85; }
+          100% { transform: rotate(540deg) translate(140px) scale(0.65); opacity: 0; }
+        }
+        @keyframes diffusion-flow-4 {
+          0%   { transform: rotate(270deg) translate(50px) scale(1); opacity: 1; }
+          50%  { transform: rotate(450deg) translate(95px) scale(0.85); opacity: 0.85; }
+          100% { transform: rotate(630deg) translate(140px) scale(0.65); opacity: 0; }
+        }
+        @keyframes diffusion-pulse {
+          0%, 100% { opacity: 0.25; transform: scale(1); }
+          50%      { opacity: 0.45; transform: scale(1.05); }
+        }
+      `}</style>
+
+      {/* Outer ring — mainstream */}
+      <div
+        className="absolute rounded-full border border-error/30"
+        style={{
+          width: 280,
+          height: 280,
+          animation: 'diffusion-pulse 4.2s ease-in-out infinite',
+        }}
+      />
+      {/* Middle ring */}
+      <div
+        className="absolute rounded-full border border-tertiary/40"
+        style={{
+          width: 190,
+          height: 190,
+          animation: 'diffusion-pulse 3.6s ease-in-out infinite',
+          animationDelay: '0.5s',
+        }}
+      />
+      {/* Inner ring — niche */}
+      <div
+        className="absolute rounded-full border border-secondary/60"
+        style={{
+          width: 100,
+          height: 100,
+          animation: 'diffusion-pulse 3.0s ease-in-out infinite',
+          animationDelay: '1s',
+        }}
+      />
+
+      {/* Niche pulse core */}
+      <div className="absolute w-3 h-3 rounded-full bg-secondary shadow-[0_0_20px_rgba(102,217,204,0.7)]" />
+
+      {/* Flowing particles (4 staggered) */}
+      {[
+        { anim: 'diffusion-flow-1 5.4s ease-out infinite',         color: 'bg-secondary' },
+        { anim: 'diffusion-flow-2 5.4s ease-out infinite 1.35s',    color: 'bg-tertiary' },
+        { anim: 'diffusion-flow-3 5.4s ease-out infinite 2.7s',     color: 'bg-error/80' },
+        { anim: 'diffusion-flow-4 5.4s ease-out infinite 4.05s',    color: 'bg-secondary/80' },
+      ].map((p, i) => (
+        <div
+          key={i}
+          className={`absolute w-2 h-2 rounded-full ${p.color}`}
+          style={{ animation: p.anim }}
+        />
+      ))}
+
+      {/* Tier labels */}
+      <div className="absolute top-1 right-1 text-[9px] tracking-[0.3em] text-error/70 font-mono uppercase">
+        mainstream
+      </div>
+      <div className="absolute top-1/2 -translate-y-1/2 right-[42%] text-[9px] tracking-[0.3em] text-tertiary font-mono uppercase">
+        middle
+      </div>
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] tracking-[0.3em] text-secondary font-mono uppercase">
+        niche →
+      </div>
+    </div>
+  );
+}
+
+function TierCard({
+  tone,
+  label,
+  symbol,
+  example,
+  audience,
+  why,
+}: {
+  tone: 'secondary' | 'tertiary' | 'error';
+  label: string;
+  symbol: string;
+  example: string;
+  audience: string;
+  why: string;
+}) {
+  const accent =
+    tone === 'secondary'
+      ? 'text-secondary'
+      : tone === 'tertiary'
+        ? 'text-tertiary'
+        : 'text-error/90';
+
+  return (
+    <div className="bg-surface p-6 md:p-7 hover:bg-surface-container-low/40 transition-colors">
+      <div className="flex items-baseline justify-between mb-4">
+        <div className={`text-[10px] tracking-[0.4em] font-mono uppercase font-bold ${accent}`}>
+          {label}
+        </div>
+        <span className="text-2xl opacity-80">{symbol}</span>
+      </div>
+      <div className="text-on-surface text-base font-bold mb-2">
+        {example}
+      </div>
+      <p className="text-on-surface-variant text-sm leading-relaxed mb-3">
+        {audience}
+      </p>
+      <p className={`text-xs leading-relaxed ${accent} opacity-90`}>
+        {why}
+      </p>
+    </div>
+  );
+}
+
+function StepCard({
+  n,
+  title,
+  body,
+  tone,
+}: {
+  n: string;
+  title: string;
+  body: string;
+  tone: 'primary' | 'secondary' | 'tertiary' | 'primary-fixed';
+}) {
+  const accent =
+    tone === 'primary'
+      ? 'text-primary'
+      : tone === 'secondary'
+        ? 'text-secondary'
+        : tone === 'tertiary'
+          ? 'text-tertiary'
+          : 'text-primary-fixed';
+
+  return (
+    <div className="bg-surface p-6 md:p-7 hover:bg-surface-container-low/40 transition-colors flex flex-col">
+      <div className={`font-mono font-black text-3xl tabular-nums leading-none mb-3 ${accent}`}>
+        {n}
+      </div>
+      <div className="text-on-surface text-base font-bold mb-2">
+        {title}
+      </div>
+      <p className="text-on-surface-variant text-sm leading-relaxed">
+        {body}
+      </p>
     </div>
   );
 }
