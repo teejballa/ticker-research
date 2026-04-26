@@ -49,7 +49,7 @@ export async function fetchStockTwitsSentiment(ticker: string): Promise<StockTwi
       `https://api.stocktwits.com/api/2/streams/symbol/${encodeURIComponent(ticker)}.json`,
       { signal: AbortSignal.timeout(5000) },
     );
-    if (!res.ok) return empty(`StockTwits API error: ${res.status}`);
+    if (!res.ok) return empty(`StockTwits API error: ${res.status} ${res.statusText}`);
 
     const data = await res.json() as StockTwitsResponse;
     const messages = data.messages ?? [];

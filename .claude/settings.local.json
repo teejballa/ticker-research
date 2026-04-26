@@ -12,7 +12,30 @@
       "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs\\(01\\): capture phase context\" --files \".planning/phases/01-data-pipeline/01-CONTEXT.md\")",
       "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs: update data sources to yahoo-finance2 + Anthropic web search\" --files \".planning/ROADMAP.md .planning/REQUIREMENTS.md .planning/PROJECT.md .planning/STATE.md claude.md\")",
       "Bash(git add .planning/ROADMAP.md .planning/REQUIREMENTS.md .planning/PROJECT.md .planning/STATE.md claude.md && git commit -m \"docs: update data sources to yahoo-finance2 + Anthropic web search\n\nRemove Finnhub, SEC EDGAR direct, Reddit/Stocktwits API requirements.\nReplace with yahoo-finance2 \\(free, no key\\) for market data/fundamentals\nand Anthropic web search for news, filings, analyst content, and sentiment.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\")",
-      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" state record-session \\\\\n  --stopped-at \"Phase 1 context gathered\" \\\\\n  --resume-file \".planning/phases/01-data-pipeline/01-CONTEXT.md\" && \\\\\nnode \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs\\(state\\): record phase 1 context session\" --files .planning/STATE.md)"
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" state record-session \\\\\n  --stopped-at \"Phase 1 context gathered\" \\\\\n  --resume-file \".planning/phases/01-data-pipeline/01-CONTEXT.md\" && \\\\\nnode \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\" commit \"docs\\(state\\): record phase 1 context session\" --files .planning/STATE.md)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npx prisma *)",
+      "Bash(DIRECT_URL=\"postgresql://neondb_owner:npg_CJ8PGckSo5pK@ep-lucky-recipe-akltfhuz.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require\" npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(git commit *)",
+      "Bash(npx jest *)",
+      "Bash(npx vitest *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npx next *)",
+      "Bash(openssl rand *)",
+      "Bash(vercel --version)",
+      "Bash(git push *)",
+      "Bash(vercel env *)",
+      "Bash(vercel --prod --yes)",
+      "Bash(curl -s -H \"Authorization: Bearer 05471fadc2fe6b52140b7c890d35133330e054f193230de9663cdda95cb7b21f\" https://ciphersearch.app/api/cron/sentiment-scan --max-time 290)",
+      "Bash(curl -sI -H \"Authorization: Bearer 05471fadc2fe6b52140b7c890d35133330e054f193230de9663cdda95cb7b21f\" https://ciphersearch.app/api/cron/sentiment-scan)",
+      "Bash(curl -sI https://ciphersearch.app/insights)",
+      "Bash(curl -s https://ciphersearch.app/api/insights)",
+      "Bash(python3 /Users/tj/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.0.1/.claude/skills/ui-ux-pro-max/scripts/search.py \"fintech research analytics dashboard sophisticated dark editorial\" --design-system -p \"Cipher Insights\")",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot"
     ]
   }
 }

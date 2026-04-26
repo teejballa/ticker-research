@@ -7,6 +7,7 @@ import Link from 'next/link';
 import NavBar from '@/components/NavBar';
 import TickerSearch from '@/components/TickerSearch';
 import ReportHistory from '@/components/ReportHistory';
+import { getMarketStatus } from '@/lib/market-status';
 
 interface SnapshotItem {
   sym: string;
@@ -29,17 +30,6 @@ function getFirstName(name: string | null | undefined, email: string | null | un
   return 'there';
 }
 
-function getMarketStatus(): { open: boolean; label: string } {
-  const ny   = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const day  = ny.getDay();
-  const mins = ny.getHours() * 60 + ny.getMinutes();
-  const isWeekday = day >= 1 && day <= 5;
-  if (!isWeekday) return { open: false, label: 'WEEKEND' };
-  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return { open: true,  label: 'REGULAR SESSION' };
-  if (mins >= 4 * 60        && mins < 9 * 60 + 30) return { open: true,  label: 'PRE-MARKET' };
-  if (mins >= 16 * 60       && mins < 20 * 60) return { open: true,  label: 'AFTER-HOURS' };
-  return { open: false, label: 'CLOSED' };
-}
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -172,14 +162,6 @@ export default function DashboardPage() {
                   <div className="text-xs font-bold text-on-surface">Home</div>
                   <div className="text-[10px] text-on-surface-variant mt-0.5">Marketing page</div>
                 </Link>
-                <button
-                  onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                  className="bg-surface-container border border-outline-variant/20 p-4 text-left hover:border-error/20 hover:bg-surface-container-high transition-all"
-                >
-                  <span className="material-symbols-outlined text-outline text-xl mb-2 block">logout</span>
-                  <div className="text-xs font-bold text-on-surface-variant">Sign Out</div>
-                  <div className="text-[10px] text-on-surface-variant mt-0.5">End session</div>
-                </button>
               </div>
             </div>
           </div>

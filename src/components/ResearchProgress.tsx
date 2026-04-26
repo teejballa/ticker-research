@@ -207,6 +207,34 @@ export default function ResearchProgress({
     return () => { controller.abort(); };
   }, [ticker, filePath]);
 
+  function renderError(msg: string) {
+    const kind = classifyError(msg);
+    const { message, cta, ctaHref } = ERROR_COPY[kind];
+    return (
+      <div className="relative z-10 w-full max-w-md px-6 mt-3">
+        <p className="text-xs text-error/70">{message}</p>
+        <div className="mt-2">
+          {ctaHref ? (
+            <a
+              href={ctaHref}
+              className="text-[10px] font-bold tracking-widest uppercase text-error/60 border border-error/40 px-2 py-1 hover:text-error transition-colors"
+            >
+              {cta}
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="text-[10px] font-bold tracking-widest uppercase text-error/60 border border-error/40 px-2 py-1 hover:text-error transition-colors"
+            >
+              {cta}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Derive current visual step index from pipeline steps state
   const activePipelineIndex = steps.findIndex((s) => s.status === 'active');
   const doneCount           = steps.filter((s) => s.status === 'done').length;
@@ -289,33 +317,7 @@ export default function ResearchProgress({
         </div>
 
         {/* Inline cloud error state */}
-        {errorMessage && (() => {
-          const kind = classifyError(errorMessage);
-          const { message, cta, ctaHref } = ERROR_COPY[kind];
-          return (
-            <div className="relative z-10 w-full max-w-md px-6 mt-3">
-              <p className="text-xs text-error/70">{message}</p>
-              <div className="mt-2">
-                {ctaHref ? (
-                  <a
-                    href={ctaHref}
-                    className="text-[10px] font-bold tracking-widest uppercase text-error/60 border border-error/40 px-2 py-1 hover:text-error transition-colors"
-                  >
-                    {cta}
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onRetry}
-                    className="text-[10px] font-bold tracking-widest uppercase text-error/60 border border-error/40 px-2 py-1 hover:text-error transition-colors"
-                  >
-                    {cta}
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })()}
+        {errorMessage && renderError(errorMessage)}
 
       </main>
 

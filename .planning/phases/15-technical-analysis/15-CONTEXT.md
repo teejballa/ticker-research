@@ -1,4 +1,4 @@
-# Phase 14 — Technical Analysis Layer
+# Phase 15 — Technical Analysis Layer
 
 ## Goal
 Add RSI, MACD, and moving average signals to the research pipeline. Gemini receives

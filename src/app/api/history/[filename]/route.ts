@@ -57,6 +57,17 @@ export async function GET(
   if (!/^[A-Z0-9.+\-_]+\.json$/i.test(filename)) {
     return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
   }
+  // HI-04: explicit path boundary check — reject any filename that resolves outside REPORTS_DIR
+  {
+    const { default: pathMod } = await import('path');
+    const { default: os } = await import('os');
+    const REPORTS_DIR = pathMod.join(os.homedir(), '.cipher', 'reports');
+    const resolvedDir = pathMod.resolve(REPORTS_DIR);
+    const resolvedFile = pathMod.resolve(pathMod.join(REPORTS_DIR, filename));
+    if (!resolvedFile.startsWith(resolvedDir + pathMod.sep)) {
+      return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
+    }
+  }
   try {
     const report = await readReport(filename);
     return NextResponse.json(report);

@@ -1,6 +1,10 @@
 // src/lib/auth.ts
 // NextAuth v4 authOptions — Google OAuth with JWT session strategy.
 // user_id is always session.user.email (stable, human-readable — per RESEARCH.md Pattern 4 note).
+//
+// Type augmentation for when accessToken is re-added (Phase 4 — Daytona proxy):
+//   declare module 'next-auth' { interface Session { accessToken?: string } }
+//   declare module 'next-auth/jwt' { interface JWT { accessToken?: string } }
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
@@ -16,16 +20,14 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
   callbacks: {
-    async jwt({ token, account }) {
-      // Persist access_token on first sign-in only (account only present at that time)
-      if (account?.access_token) {
-        token.accessToken = account.access_token;
-      }
+    async jwt({ token }) {
+      // NOTE (Phase 4 — Daytona): to propagate the Google access token, add:
+      //   if (account?.access_token) token.accessToken = account.access_token;
       return token;
     },
-    async session({ session, token }) {
-      // Expose accessToken server-side for Daytona proxy requests
-      (session as any).accessToken = token.accessToken;
+    async session({ session }) {
+      // NOTE (Phase 4 — Daytona): to expose accessToken, add:
+      //   session.accessToken = token.accessToken;
       return session;
     },
   },
