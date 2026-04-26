@@ -35,7 +35,8 @@
       "Bash(python3 /Users/tj/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.0.1/.claude/skills/ui-ux-pro-max/scripts/search.py \"fintech research analytics dashboard sophisticated dark editorial\" --design-system -p \"Cipher Insights\")",
       "mcp__playwright__browser_resize",
       "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(git -C /Users/tj/Desktop/Cipher log --oneline --since=\"2026-03-25\")"
     ]
   }
 }
