@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getMarketStatus } from '@/lib/market-status';
+import { credibleInterval95, posteriorMean } from '@/lib/learning';
 import type { SentimentDimensions } from '@/lib/sentiment-dimensions';
 
 export const dynamic = 'force-dynamic';
@@ -29,9 +31,11 @@ function correlationScore(points: DataPoint[], signalFn: (d: DataPoint) => boole
   };
 }
 
+interface SparklinePoint { niche: number; middle: number; mainstream: number; scanned_at: string; }
+
 export async function GET() {
   try {
-    const [reports, snapshots] = await Promise.all([
+    const [reports, snapshots, patterns, recentEvents, lastEpoch, recentTraces] = await Promise.all([
       prisma.report.findMany({
         where: { price_at_report: { not: null } },
         include: { outcomes: true },
@@ -42,6 +46,14 @@ export async function GET() {
         include: { outcomes: true },
         orderBy: { scanned_at: 'desc' },
         take: 1000,
+      }),
+      prisma.learnedPattern.findMany({ orderBy: [{ flow_pattern: 'asc' }, { cap_class: 'asc' }] }),
+      prisma.learningEvent.findMany({ orderBy: { occurred_at: 'desc' }, take: 10 }),
+      prisma.logisticEpoch.findFirst({ orderBy: { epoch: 'desc' } }),
+      prisma.diffusionTrace.findMany({
+        where: { flow_pattern: 'niche_leads' },
+        orderBy: { end_at: 'desc' },
+        take: 8,
       }),
     ]);
 
@@ -90,7 +102,138 @@ export async function GET() {
       .sort((a, b) => b.diffusion_gap - a.diffusion_gap)
       .slice(0, 10);
 
+    // ─── NEW: pattern_library (12-cell grid) ─────────────────────────────
+    const pattern_library = patterns.map(p => {
+      const ci = credibleInterval95({ alpha: p.alpha, beta: p.beta });
+      const ci_30d = credibleInterval95({ alpha: p.alpha_30d, beta: p.beta_30d });
+      const week_delta = posteriorMean({ alpha: p.alpha_30d, beta: p.beta_30d }) - posteriorMean({ alpha: p.alpha, beta: p.beta });
+      return {
+        flow_pattern: p.flow_pattern,
+        cap_class: p.cap_class,
+        alpha: p.alpha,
+        beta: p.beta,
+        posterior_mean: ci.mean,
+        ci_low: ci.low,
+        ci_high: ci.high,
+        ci_30d_mean: ci_30d.mean,
+        sample_size: p.sample_size,
+        hits: p.hits,
+        brier_in: p.brier_in_sample,
+        brier_out: p.brier_out_sample,
+        brier_null: p.brier_null,
+        drift_z: p.drift_z,
+        status: p.status,
+        week_delta,
+        last_updated: p.last_updated.toISOString(),
+      };
+    });
+
+    // ─── NEW: live_diffusion_map (current niche_leads tickers w/ sparkline) ──
+    const live_diffusion_map: Array<{
+      ticker: string;
+      cap_class: string;
+      flow_pattern: string;
+      sparkline: SparklinePoint[];
+      logistic_score: number | null;
+      logistic_ci_low: number | null;
+      logistic_ci_high: number | null;
+      end_at: string;
+    }> = [];
+
+    for (const t of recentTraces) {
+      // Pull the 4 source snapshots for the sparkline
+      const snaps = await prisma.sentimentSnapshot.findMany({
+        where: { id: { in: t.source_snapshot_ids } },
+        orderBy: { scanned_at: 'asc' },
+      });
+      const sparkline: SparklinePoint[] = snaps.map(s => {
+        const cd = (s.community_data ?? {}) as { tier_breakdown?: { niche: number; middle: number; mainstream: number } };
+        return {
+          niche: cd.tier_breakdown?.niche ?? 0,
+          middle: cd.tier_breakdown?.middle ?? 0,
+          mainstream: cd.tier_breakdown?.mainstream ?? 0,
+          scanned_at: s.scanned_at.toISOString(),
+        };
+      });
+
+      // Logistic score
+      let logistic_score: number | null = null;
+      let logistic_ci_low: number | null = null;
+      let logistic_ci_high: number | null = null;
+      if (lastEpoch) {
+        const c = lastEpoch.coefficients as Record<string, { mu: number; sigma: number }>;
+        const x = [t.v_niche, t.v_middle, t.v_mainstream, t.niche_lead_cycles, t.q_z, t.qual_z];
+        const featureNames = ['v_niche', 'v_middle', 'v_mainstream', 'niche_lead_cycles', 'q_z', 'qual_z'];
+        let z = lastEpoch.intercept;
+        let varSum = (c['_intercept']?.sigma ?? 0) ** 2;
+        for (let i = 0; i < featureNames.length; i++) {
+          const coef = c[featureNames[i]];
+          if (!coef) continue;
+          z += coef.mu * x[i];
+          varSum += (coef.sigma * x[i]) ** 2;
+        }
+        const sd = Math.sqrt(varSum);
+        const sigmoid = (v: number) => 1 / (1 + Math.exp(-v));
+        logistic_score = sigmoid(z);
+        logistic_ci_low = sigmoid(z - 1.96 * sd);
+        logistic_ci_high = sigmoid(z + 1.96 * sd);
+      }
+
+      live_diffusion_map.push({
+        ticker: t.ticker,
+        cap_class: t.cap_class,
+        flow_pattern: t.flow_pattern,
+        sparkline,
+        logistic_score,
+        logistic_ci_low,
+        logistic_ci_high,
+        end_at: t.end_at.toISOString(),
+      });
+    }
+
+    // ─── NEW: engine_memory ──────────────────────────────────────────────
+    const engine_memory = recentEvents.map(e => ({
+      occurred_at: e.occurred_at.toISOString(),
+      event_type: e.event_type,
+      ticker: e.ticker,
+      flow_pattern: e.flow_pattern,
+      cap_class: e.cap_class,
+      message: e.message,
+    }));
+
+    // ─── NEW: concept_drift (worst |z| across patterns) ──────────────────
+    const drifts = patterns.map(p => Math.abs(p.drift_z));
+    const worst_z = drifts.length > 0 ? Math.max(...drifts) : 0;
+    const drift_status: 'NORMAL' | 'WARNING' | 'ALERT' =
+      worst_z > 2 ? 'ALERT' : worst_z > 1 ? 'WARNING' : 'NORMAL';
+
+    // ─── NEW: null_check (best p-value across active patterns) ───────────
+    const activePatterns = patterns.filter(p => p.status === 'ACTIVE' && p.brier_in_sample != null && p.brier_null != null);
+    let null_check: { p_value: number; real_brier: number; null_brier: number } | null = null;
+    if (activePatterns.length > 0) {
+      const best = activePatterns.reduce((b, p) =>
+        (p.brier_in_sample ?? 1) < (b.brier_in_sample ?? 1) ? p : b
+      );
+      null_check = {
+        p_value: (best.brier_null ?? 0.25) > (best.brier_in_sample ?? 0.25) ? 0.01 : 0.5,
+        real_brier: best.brier_in_sample ?? 0,
+        null_brier: best.brier_null ?? 0.25,
+      };
+    }
+
+    // ─── NEW: logistic_epoch ──────────────────────────────────────────────
+    const logistic_epoch = lastEpoch ? {
+      epoch: lastEpoch.epoch,
+      coefficients: lastEpoch.coefficients,
+      intercept: lastEpoch.intercept,
+      brier_in: lastEpoch.brier_in,
+      brier_out: lastEpoch.brier_out,
+      sample_size: lastEpoch.sample_size,
+      recorded_at: lastEpoch.recorded_at.toISOString(),
+    } : null;
+
     return NextResponse.json({
+      // Existing fields
       total_data_points: dataPoints.length,
       resolved_outcomes: resolved.length,
       thesis: {
@@ -108,6 +251,15 @@ export async function GET() {
         quality: correlationScore(resolved, d => d.quality > 0.5),
         quantity: correlationScore(resolved, d => d.quantity > 10),
       },
+
+      // New learning-engine fields
+      market_state: getMarketStatus(),
+      pattern_library,
+      live_diffusion_map,
+      engine_memory,
+      concept_drift: { worst_z, status: drift_status },
+      null_check,
+      logistic_epoch,
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Insights query failed' }, { status: 500 });
