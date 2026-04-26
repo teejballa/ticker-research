@@ -12,6 +12,7 @@ import {
 } from '@/lib/data/anthropic-search';
 import { fetchFinnhub } from '@/lib/data/finnhub';
 import { fetchPolygon } from '@/lib/data/polygon';
+import { mergeMarketData, mergeFundamentals } from '@/lib/data/merge';
 import { fetchStockTwitsSentiment } from '@/lib/data/stocktwits';
 import { fetchOptionsSentiment } from '@/lib/data/options-sentiment';
 import type { SourcePackage, MarketDataSection, FundamentalsSection, SupplementaryMarketData, SupplementarySource, SentimentIntelligenceSection } from '@/lib/types';
@@ -116,12 +117,16 @@ export async function collectAllData(
     return { name: sourceName, fetched_at: new Date().toISOString(), text_block: '', available: false };
   };
 
-  const supplementary_market_data: SupplementaryMarketData = {
-    sources: [
-      settleSupplementary(finnhubResult, 'Finnhub'),
-      settleSupplementary(polygonResult, 'Polygon'),
-    ],
-  };
+  const finnhub = settleSupplementary(finnhubResult, 'Finnhub');
+  const polygon = settleSupplementary(polygonResult, 'Polygon');
+  const supplementary_market_data: SupplementaryMarketData = { sources: [finnhub, polygon] };
+
+  // Field-level merge (Phase 10-FIX-01): yahoo → finnhub → polygon. First non-null wins.
+  // Source attribution is recorded per-field in `_field_sources` so the UI can render badges.
+  const yahooMarket = settle(marketDataResult, emptyMarketData('market data collection failed'), 'market_data');
+  const yahooFundamentals = settle(fundamentalsResult, emptyFundamentals('fundamentals collection failed'), 'fundamentals');
+  const merged_market = mergeMarketData(yahooMarket, finnhub.available ? finnhub : null, polygon.available ? polygon : null);
+  const merged_fundamentals = mergeFundamentals(yahooFundamentals, finnhub.available ? finnhub : null, polygon.available ? polygon : null);
 
   return {
     ticker,
@@ -129,8 +134,8 @@ export async function collectAllData(
     exchange,
     security_type: securityType,
     assembled_at: new Date().toISOString(),
-    market_data: settle(marketDataResult, emptyMarketData('market data collection failed'), 'market_data'),
-    fundamentals: settle(fundamentalsResult, emptyFundamentals('fundamentals collection failed'), 'fundamentals'),
+    market_data: merged_market,
+    fundamentals: merged_fundamentals,
     news: settle(newsResult, { collected_at: new Date().toISOString(), items: [], error: 'news collection failed' }, 'news'),
     analyst_sentiment: settle(analystResult, { collected_at: new Date().toISOString(), consensus: null, avg_price_target: null, analyst_count: null, recent_changes: [], error: 'analyst collection failed' }, 'analyst_sentiment'),
     sec_filing_summary: settle(secResult, { collected_at: new Date().toISOString(), most_recent_10k: null, most_recent_10q: null, filing_dates: { '10k': null, '10q': null }, error: 'SEC filing collection failed' }, 'sec_filing_summary'),

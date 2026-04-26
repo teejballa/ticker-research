@@ -4,9 +4,16 @@
 // Financial statements (vX endpoint) are optional — skipped gracefully if unavailable.
 // Field names verified against live API (AAPL test, April 2026).
 
-import type { SupplementarySource } from '@/lib/types';
+import type {
+  SupplementarySource,
+  SupplementaryMarketFields,
+  SupplementaryFundamentalsFields,
+} from '@/lib/types';
 
 const BASE = 'https://api.polygon.io';
+
+const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
 
 export async function fetchPolygon(ticker: string): Promise<SupplementarySource> {
   const key = process.env.POLYGON_API_KEY;
@@ -66,7 +73,31 @@ export async function fetchPolygon(ticker: string): Promise<SupplementarySource>
       `Data As Of: ${fetched_at}`,
     ].join('\n');
 
-    return { name: 'Polygon', fetched_at, text_block, available: true };
+    // Parsed structured fields for the Phase-10 merge layer.
+    // Polygon's /v3/reference/tickers endpoint does not return current price/volume,
+    // so those stay null and the merge cascade falls through to yahoo / finnhub.
+    const market: SupplementaryMarketFields = {
+      price: null,
+      volume: null,
+      market_cap: num(r.market_cap),
+      fifty_two_week_high: null,
+      fifty_two_week_low: null,
+      percent_change_today: null,
+      exchange: str(r.primary_exchange),
+    };
+
+    const profitMargin =
+      revenues != null && revenues !== 0 && netIncome != null ? netIncome / revenues : null;
+
+    const fundamentals: SupplementaryFundamentalsFields = {
+      pe_ratio: null,
+      eps: epsBasic,
+      revenue: revenues,
+      debt_to_equity: null,
+      profit_margin: profitMargin,
+    };
+
+    return { name: 'Polygon', fetched_at, text_block, available: true, market, fundamentals };
   } catch {
     return empty(false);
   }
