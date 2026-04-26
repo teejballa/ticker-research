@@ -259,57 +259,52 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             </div>
 
             {/* Sentiment Intelligence Card — D-18 */}
-            {sentiment_intelligence && (
-              sentiment_intelligence.stocktwits_bull_pct != null ||
-              sentiment_intelligence.put_call_ratio != null
-            ) && (
-              <div className="bg-surface-container p-5 rounded-lg">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-sm text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>sensors</span>
-                  <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">Sentiment Intelligence</h3>
+            {(sentiment_intelligence != null) && (
+              <div className="bg-surface-container p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm text-tertiary">monitoring</span>
+                    <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">Sentiment Intelligence</h3>
+                  </div>
+                  {sentiment_intelligence.stocktwits_is_trending && (
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">TRENDING</span>
+                  )}
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {/* StockTwits Bullish % */}
-                  <div className="bg-surface-container-high p-3 rounded-lg text-center">
-                    <span className="text-[9px] font-bold tracking-widest uppercase text-on-surface-variant block mb-1">ST Bullish</span>
-                    <span className={`font-mono text-lg font-bold ${sentiment_intelligence.stocktwits_bull_pct != null ? 'text-secondary' : 'text-on-surface-variant'}`}>
+                <div className="flex gap-2">
+                  {/* Bull % chip */}
+                  <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">BULL</span>
+                    <span className={`text-sm font-mono font-bold ${sentiment_intelligence.stocktwits_bull_pct != null ? 'text-secondary' : 'text-on-surface-variant'}`}>
                       {sentiment_intelligence.stocktwits_bull_pct != null ? `${sentiment_intelligence.stocktwits_bull_pct}%` : '—'}
                     </span>
                   </div>
-                  {/* StockTwits Bearish % */}
-                  <div className="bg-surface-container-high p-3 rounded-lg text-center">
-                    <span className="text-[9px] font-bold tracking-widest uppercase text-on-surface-variant block mb-1">ST Bearish</span>
-                    <span className={`font-mono text-lg font-bold ${sentiment_intelligence.stocktwits_bear_pct != null ? 'text-error' : 'text-on-surface-variant'}`}>
+                  {/* Bear % chip */}
+                  <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">BEAR</span>
+                    <span className={`text-sm font-mono font-bold ${sentiment_intelligence.stocktwits_bear_pct != null ? 'text-error' : 'text-on-surface-variant'}`}>
                       {sentiment_intelligence.stocktwits_bear_pct != null ? `${sentiment_intelligence.stocktwits_bear_pct}%` : '—'}
                     </span>
                   </div>
-                  {/* Options Put/Call */}
-                  <div className="bg-surface-container-high p-3 rounded-lg text-center">
-                    <span className="text-[9px] font-bold tracking-widest uppercase text-on-surface-variant block mb-1">Put/Call</span>
-                    <span className={`font-mono text-lg font-bold ${getPutCallColor(sentiment_intelligence.put_call_interpretation)}`}>
+                  {/* P/C Ratio chip */}
+                  <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">P/C RATIO</span>
+                    <span className={`text-sm font-mono font-bold ${sentiment_intelligence.put_call_ratio != null ? 'text-tertiary' : 'text-on-surface-variant'}`}>
                       {sentiment_intelligence.put_call_ratio != null ? sentiment_intelligence.put_call_ratio.toFixed(2) : '—'}
                     </span>
-                    {sentiment_intelligence.put_call_interpretation && (
-                      <span className={`text-[9px] font-bold tracking-widest uppercase block mt-0.5 ${getPutCallColor(sentiment_intelligence.put_call_interpretation)}`}>
-                        {sentiment_intelligence.put_call_interpretation}
+                    {sentiment_intelligence.put_call_interpretation && sentiment_intelligence.put_call_ratio != null && (
+                      <span className="text-[10px] text-tertiary tracking-widest uppercase">
+                        {sentiment_intelligence.put_call_interpretation.toUpperCase()}
                       </span>
                     )}
                   </div>
                 </div>
-                {/* StockTwits message count + trending + community sources — secondary metadata row */}
-                <div className="mt-3 flex items-center gap-3 text-[10px] text-on-surface-variant flex-wrap">
-                  {sentiment_intelligence.stocktwits_message_count != null && (
-                    <>
-                      <span className="material-symbols-outlined text-xs">forum</span>
-                      <span>{sentiment_intelligence.stocktwits_message_count} recent messages</span>
-                    </>
-                  )}
-                  {sentiment_intelligence.stocktwits_is_trending && (
-                    <span className="text-tertiary font-bold tracking-wider">TRENDING</span>
-                  )}
-                  {community_sources_scraped != null && community_sources_scraped > 0 && (
-                    <span className="ml-auto">{community_sources_scraped} community {community_sources_scraped === 1 ? 'source' : 'sources'} scraped</span>
-                  )}
+                {/* Annotation row */}
+                <div className="border-t border-surface-container-highest pt-2 mt-2">
+                  <span className="text-[11px] text-on-surface-variant">
+                    {community_sources_scraped != null && community_sources_scraped > 0
+                      ? `${community_sources_scraped} community sources scraped`
+                      : 'Community sources unavailable'}
+                  </span>
                 </div>
               </div>
             )}
@@ -592,6 +587,34 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                 </div>
               ))}
             </div>
+
+            {/* 3-tier community breakdown — diffusion at a glance */}
+            {(() => {
+              const mainstream = community_highlights.filter((h: { community_type: string }) => h.community_type === 'mainstream');
+              const middle = community_highlights.filter((h: { community_type: string }) => h.community_type === 'middle');
+              const niche = community_highlights.filter((h: { community_type: string }) => h.community_type === 'niche');
+
+              return (
+                <div className="mt-6 grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Mainstream', communities: mainstream, color: 'text-red-400', desc: 'r/WallStreetBets, Yahoo Finance' },
+                    { label: 'Middle', communities: middle, color: 'text-amber-400', desc: 'r/investing, SeekingAlpha' },
+                    { label: 'Niche', communities: niche, color: 'text-emerald-400', desc: 'Sector-specific communities' },
+                  ].map(tier => (
+                    <div key={tier.label} className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
+                      <div className={`text-xs font-semibold uppercase tracking-widest mb-1 ${tier.color}`}>{tier.label}</div>
+                      <div className="text-2xl font-bold text-white mb-1">{tier.communities.length}</div>
+                      <div className="text-xs text-zinc-500">{tier.desc}</div>
+                      {tier.communities.length > 0 && (
+                        <div className="text-xs text-zinc-400 mt-1 truncate">
+                          {tier.communities.map((c: { community_name: string }) => c.community_name).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </section>
         )}
 
@@ -627,22 +650,6 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           </section>
         )}
 
-        {/* Forward Outlook Section — D-19 */}
-        {future_projection && future_projection.length > 0 && (
-          <section className="space-y-4">
-            <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm text-tertiary">arrow_forward</span>
-              Forward Outlook
-            </h3>
-            <div className="bg-surface-container border-l-4 border-primary p-6 rounded-r-lg relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 blur-[80px]" />
-              <p className="text-sm text-on-surface leading-relaxed max-w-4xl relative z-10">
-                <Md text={future_projection} />
-              </p>
-            </div>
-          </section>
-        )}
-
         {/* Sources Section */}
         <section className="space-y-4">
           <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
@@ -665,6 +672,20 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             ))}
           </div>
         </section>
+
+        {/* Forward Outlook Section — D-19 (final section, after Sources) */}
+        {future_projection && future_projection.length > 0 && (
+          <section className="bg-surface-container p-6 rounded-lg border-l-4 border-primary relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 blur-[100px]" />
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+              <h3 className="text-[11px] font-bold tracking-widest uppercase text-primary">Forward Outlook</h3>
+            </div>
+            <p className="text-sm text-on-surface leading-relaxed max-w-4xl relative z-10">
+              <Md text={future_projection} />
+            </p>
+          </section>
+        )}
 
       </main>
 
