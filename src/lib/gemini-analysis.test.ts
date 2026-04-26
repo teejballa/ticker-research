@@ -8,6 +8,10 @@ vi.mock('@mendable/firecrawl-js', () => ({
   default: vi.fn(),
 }));
 
+// gemini-analysis.ts now imports engine-context (which imports @/lib/db).
+// Stub the prisma client so vitest doesn't need a live DATABASE_URL.
+vi.mock('@/lib/db', () => ({ prisma: {} }));
+
 import Firecrawl from '@mendable/firecrawl-js';
 import { scrapeCommunitySentiment, buildUserPrompt } from './gemini-analysis';
 

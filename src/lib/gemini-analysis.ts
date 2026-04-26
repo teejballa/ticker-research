@@ -11,7 +11,8 @@ import Firecrawl from '@mendable/firecrawl-js';
 // the AI Gateway. Gemini calls route through the Gateway via plain model strings as normal.
 import Anthropic from '@anthropic-ai/sdk';
 import { formatResearchBrief, extractNewsUrls } from '@/lib/research-brief';
-import type { AnalysisResult, SourcePackage } from '@/lib/types';
+import type { AnalysisResult, EngineCalibration, SourcePackage } from '@/lib/types';
+import { getEngineContextForTicker, type EngineContext } from '@/lib/engine-context';
 
 // Reads ANTHROPIC_API_KEY from process.env automatically.
 const anthropicClient = new Anthropic();
@@ -89,6 +90,13 @@ export const AnalysisResultSchema = z.object({
   }).optional(),
   community_highlights: z.array(CommunityHighlightSchema).optional().default([]),
   community_analysis: z.string().optional().default(''),
+  // Engine calibration block — Gemini contributes only the alignment/disagreement
+  // strings. Numeric fields are overwritten post-generation with authoritative
+  // values from getEngineContextForTicker.
+  engine_calibration: z.object({
+    engine_alignment: z.string().nullable().default(null),
+    engine_disagreement: z.string().nullable().default(null),
+  }).optional(),
 });
 
 // ---- System prompt ----
@@ -484,6 +492,74 @@ export function extractMarketSnapshot(pkg: SourcePackage) {
   };
 }
 
+// ---- Engine calibration prompt + post-process ----
+
+/**
+ * Build the ENGINE CALIBRATION CONTEXT block appended to the system prompt.
+ * Numbers are formatted as percentages where appropriate. The LLM is told the
+ * numbers will be overwritten post-generation, so it should focus on producing
+ * the engine_alignment / engine_disagreement strings.
+ */
+export function buildEngineContextBlock(ctx: EngineContext): string {
+  if (ctx.status === 'NO_DATA') {
+    return `
+
+═══ ENGINE CALIBRATION CONTEXT ═══
+
+The Cipher learning engine has no historical data for this ticker's
+current diffusion regime yet (status: NO_DATA, cycle ${ctx.cycle_count}).
+Your qualitative read is the only signal. In the engine_calibration
+object, set engine_alignment to null and write engine_disagreement
+explaining that the engine has no prior to defer to (≤300 chars).
+`;
+  }
+
+  const pct = (n: number | null) => (n != null ? (n * 100).toFixed(0) + '%' : '—');
+  const fix = (n: number | null) => (n != null ? n.toFixed(2) : '—');
+
+  return `
+
+═══ ENGINE CALIBRATION CONTEXT ═══
+
+Cipher's self-supervised learning engine has accumulated ${ctx.cycle_count}
+cycles of evidence about how sentiment-diffusion patterns predict 7-day
+returns vs SPY (excess > +1%). For this ticker right now:
+
+  Pattern detected:    ${ctx.flow_pattern} × ${ctx.cap_class}
+  Engine prior:        ${pct(ctx.posterior_mean)} [CI ${pct(ctx.ci_low)}–${pct(ctx.ci_high)}]
+                       n=${ctx.sample_size}, status: ${ctx.status}
+  Logistic score:      ${pct(ctx.logistic_score)} [CI ${pct(ctx.logistic_ci_low)}–${pct(ctx.logistic_ci_high)}]
+                       (engine has trained on ${ctx.logistic_sample_size} resolved outcomes)
+  Adversarial null:    real Brier ${fix(ctx.brier_in_sample)}
+                       null Brier ${fix(ctx.brier_null)}
+  Concept drift:       z = ${ctx.drift_z.toFixed(2)} (>2σ = drifting)
+
+INSTRUCTIONS for engine_calibration:
+1. Treat these numbers as CALIBRATED PRIORS. Do not invent numbers; the
+   numeric fields will be overwritten post-generation regardless of what
+   you output.
+2. In engine_alignment (string, ≤300 chars):
+   - If the engine prior is HIGH (>60%) and your qualitative read is bullish,
+     OR the engine prior is LOW (<40%) and your read is bearish: write a
+     single sentence affirming alignment, naming the pattern, and noting
+     the sample size.
+   - Otherwise, leave engine_alignment as null.
+3. In engine_disagreement (string, ≤500 chars):
+   - If your qualitative read CONTRADICTS a high-confidence prior
+     (sample_size ≥ 10 AND status = ACTIVE), write a single paragraph
+     explaining specifically WHY you disagree. Cite specific community
+     evidence that overrides the prior.
+   - If status is DEPRECATED (drift detected), explicitly note that the
+     pattern has drifted and you are NOT deferring to the historical prior.
+   - Otherwise, leave engine_disagreement as null.
+4. Your investment_thesis, key_risks, and confidence_level MUST be
+   consistent with the engine prior unless you have explicitly populated
+   engine_disagreement above.
+5. If status is EXPLORATORY (n < 10), treat the prior as weak and weight
+   your qualitative read more heavily.
+`;
+}
+
 // ---- Main analysis function ----
 
 /**
@@ -519,15 +595,57 @@ export async function runGeminiAnalysis(
     pkg.news.items ?? [],
   );
 
+  // Fetch engine calibration context. Failures are non-fatal — the report
+  // generates without an engine_calibration block (UI hides the panel).
+  let engineCtx: EngineContext | null = null;
+  try {
+    engineCtx = await getEngineContextForTicker(ticker, new Date(pkg.assembled_at));
+  } catch (err) {
+    console.error('[gemini-analysis] engine context fetch failed:', err);
+  }
+
+  const systemPrompt = engineCtx
+    ? SYSTEM_PROMPT + buildEngineContextBlock(engineCtx)
+    : SYSTEM_PROMPT;
+
   try {
     const { output } = await generateText({
       model: 'google/gemini-3-flash',
       output: Output.object({ schema: AnalysisResultSchema }),
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
     });
+
+    // Build the authoritative engine_calibration block. Numeric fields come
+    // from the database via engineCtx; LLM contributes only the prose.
+    let engine_calibration: EngineCalibration | undefined;
+    if (engineCtx) {
+      const llm = output.engine_calibration ?? { engine_alignment: null, engine_disagreement: null };
+      engine_calibration = {
+        cycle_count: engineCtx.cycle_count,
+        flow_pattern: engineCtx.flow_pattern,
+        cap_class: engineCtx.cap_class,
+        trace_window_size: engineCtx.trace_window_size,
+        posterior_mean: engineCtx.posterior_mean,
+        ci_low: engineCtx.ci_low,
+        ci_high: engineCtx.ci_high,
+        sample_size: engineCtx.sample_size,
+        status: engineCtx.status,
+        brier_in_sample: engineCtx.brier_in_sample,
+        brier_null: engineCtx.brier_null,
+        drift_z: engineCtx.drift_z,
+        logistic_score: engineCtx.logistic_score,
+        logistic_ci_low: engineCtx.logistic_ci_low,
+        logistic_ci_high: engineCtx.logistic_ci_high,
+        logistic_sample_size: engineCtx.logistic_sample_size,
+        predicted_at: engineCtx.predicted_at.toISOString(),
+        engine_alignment: llm.engine_alignment ?? null,
+        engine_disagreement: llm.engine_disagreement ?? null,
+        diffusion_sparkline: engineCtx.diffusion_sparkline,
+      };
+    }
 
     return {
       ticker,
@@ -568,6 +686,7 @@ export async function runGeminiAnalysis(
         ? output.community_highlights
         : undefined,
       community_analysis: output.community_analysis || undefined,
+      engine_calibration,
     };
   } catch (err) {
     if (NoObjectGeneratedError.isInstance(err)) {
