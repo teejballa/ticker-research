@@ -10,6 +10,29 @@ export type SecurityType = 'equity' | 'spac' | 'etf' | 'adr' | 'preferred' | 'cr
 export interface SourceSection {
   collected_at: string; // ISO 8601 — DATA-07
   error?: string;       // Set if this section's collection failed gracefully
+  unavailable_fields?: string[]; // fields where every source returned null (Phase 10 merge)
+}
+
+// Per-field provenance after the Phase-10 merge layer runs.
+// null when no source supplied a value (the field is genuinely unavailable).
+export type FieldOrigin = 'yahoo' | 'finnhub' | 'polygon' | null;
+
+export interface MarketDataFieldSources {
+  price: FieldOrigin;
+  volume: FieldOrigin;
+  market_cap: FieldOrigin;
+  fifty_two_week_high: FieldOrigin;
+  fifty_two_week_low: FieldOrigin;
+  percent_change_today: FieldOrigin;
+  exchange: FieldOrigin;
+}
+
+export interface FundamentalsFieldSources {
+  pe_ratio: FieldOrigin;
+  eps: FieldOrigin;
+  revenue: FieldOrigin;
+  debt_to_equity: FieldOrigin;
+  profit_margin: FieldOrigin;
 }
 
 export interface MarketDataSection extends SourceSection {
@@ -20,9 +43,31 @@ export interface MarketDataSection extends SourceSection {
   fifty_two_week_low: number | null;
   percent_change_today: number | null;
   exchange: string | null;
+  _field_sources?: MarketDataFieldSources; // populated by mergeMarketData
 }
 
 export interface FundamentalsSection extends SourceSection {
+  pe_ratio: number | null;
+  eps: number | null;
+  revenue: number | null;
+  debt_to_equity: number | null;
+  profit_margin: number | null;
+  _field_sources?: FundamentalsFieldSources; // populated by mergeFundamentals
+}
+
+// Structured fields the merge layer can read. Mirror MarketDataSection / FundamentalsSection
+// minus the bookkeeping. Optional on SupplementarySource so legacy callers are unaffected.
+export interface SupplementaryMarketFields {
+  price: number | null;
+  volume: number | null;
+  market_cap: number | null;
+  fifty_two_week_high: number | null;
+  fifty_two_week_low: number | null;
+  percent_change_today: number | null;
+  exchange: string | null;
+}
+
+export interface SupplementaryFundamentalsFields {
   pe_ratio: number | null;
   eps: number | null;
   revenue: number | null;
@@ -119,6 +164,8 @@ export interface SupplementarySource {
   fetched_at: string;  // ISO 8601
   text_block: string;  // pre-formatted labeled block for add_text()
   available: boolean;  // false if API key missing or fetch failed
+  market?: SupplementaryMarketFields;             // structured fields consumed by mergeMarketData
+  fundamentals?: SupplementaryFundamentalsFields; // structured fields consumed by mergeFundamentals
 }
 
 export interface SupplementaryMarketData {
