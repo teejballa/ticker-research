@@ -63,3 +63,75 @@ model PriceOutcome {
 
   @@map("price_outcomes")
 }
+
+model DiffusionTrace {
+  id                  String   @id @default(uuid())
+  ticker              String
+  cap_class           String
+  end_at              DateTime @db.Timestamptz
+  window_cycles       Int
+  v_niche             Float
+  v_middle            Float
+  v_mainstream        Float
+  q_z                 Float
+  qual_z              Float
+  niche_lead_cycles   Int
+  flow_pattern        String
+  source_snapshot_ids String[]
+  created_at          DateTime @default(now()) @db.Timestamptz
+
+  @@index([ticker, end_at(sort: Desc)])
+  @@index([flow_pattern, cap_class, end_at(sort: Desc)])
+  @@map("diffusion_traces")
+}
+
+model LearnedPattern {
+  id                String   @id @default(uuid())
+  flow_pattern      String
+  cap_class         String
+  alpha             Float    @default(1)
+  beta              Float    @default(1)
+  sample_size       Int      @default(0)
+  hits              Int      @default(0)
+  brier_in_sample   Float?
+  brier_out_sample  Float?
+  brier_null        Float?
+  alpha_30d         Float    @default(1)
+  beta_30d          Float    @default(1)
+  drift_z           Float    @default(0)
+  status            String   @default("EXPLORATORY")
+  last_updated      DateTime @updatedAt @db.Timestamptz
+
+  @@unique([flow_pattern, cap_class])
+  @@map("learned_patterns")
+}
+
+model LearningEvent {
+  id           String   @id @default(uuid())
+  occurred_at  DateTime @default(now()) @db.Timestamptz
+  event_type   String
+  ticker       String?
+  outcome_id   String?
+  flow_pattern String?
+  cap_class    String?
+  delta        Json
+  message      String   @db.Text
+
+  @@index([occurred_at(sort: Desc)])
+  @@index([outcome_id])
+  @@map("learning_events")
+}
+
+model LogisticEpoch {
+  id            String   @id @default(uuid())
+  epoch         Int
+  recorded_at   DateTime @default(now()) @db.Timestamptz
+  coefficients  Json
+  intercept     Float
+  brier_in      Float
+  brier_out     Float
+  sample_size   Int
+
+  @@index([epoch(sort: Desc)])
+  @@map("logistic_epochs")
+}
