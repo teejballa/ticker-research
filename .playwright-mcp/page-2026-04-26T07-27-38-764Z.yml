@@ -1,0 +1,147 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "CIPHER" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - generic [ref=e7]: RESEARCH TERMINAL
+          - link "INSIGHTS" [ref=e8] [cursor=pointer]:
+            - /url: /insights
+          - generic [ref=e9]: NYSE
+          - generic [ref=e10]: NASDAQ
+      - generic [ref=e11]:
+        - generic [ref=e12]: user@cipher.io
+        - link "SIGN IN" [ref=e13] [cursor=pointer]:
+          - /url: /auth/signin
+        - link "Analyze a Ticker →" [ref=e14] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e15]:
+          - generic [ref=e16]: schedule
+          - generic [ref=e17]: fiber_manual_record
+    - main [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e30]: Engine Live
+            - generic [ref=e31]:
+              - generic [ref=e32]: NYSE · WEEKEND
+              - generic [ref=e33]: Cycle 3D · Watchlist 26
+              - generic [ref=e34]: 2026-04-26 07:27:38 UTC
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: Cipher Research Layer · v1.0
+              - heading "Behavioral Sentiment Diffusion Study" [level=1] [ref=e38]:
+                - text: Behavioral Sentiment
+                - generic [ref=e39]: Diffusion Study
+              - paragraph [ref=e40]: Cipher continuously tracks investor discussion across niche, middle, and mainstream communities — then verifies which sentiment signals actually preceded price movement. This page is the live evidence base.
+            - link "Methodology arrow_outward" [ref=e41] [cursor=pointer]:
+              - /url: https://github.com/teejballa/ticker-research
+              - text: Methodology
+              - generic [ref=e42]: arrow_outward
+        - region "Top-line research statistics" [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e45]: Data Points
+            - generic [ref=e46]: "26"
+            - generic [ref=e47]: Reports + scans
+          - generic [ref=e48]:
+            - generic [ref=e49]: Resolved
+            - generic [ref=e50]: "0"
+            - generic [ref=e51]: With 7d outcome
+          - generic [ref=e52]:
+            - generic [ref=e53]: Thesis Hit Rate
+            - generic [ref=e54]: —
+            - generic [ref=e55]: Outcomes resolving
+          - generic [ref=e56]:
+            - generic [ref=e57]: Concept Drift
+            - generic [ref=e58]: NORMAL
+            - generic [ref=e59]: worst |z| = 0.00
+          - generic [ref=e60]:
+            - generic [ref=e61]: Null Check
+            - generic [ref=e62]: —
+            - generic [ref=e63]: No active patterns yet
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - generic [ref=e66]: Live Research Thesis
+            - paragraph [ref=e67]: Accumulating data — thesis will appear once outcomes resolve (3–7 days after first scans).
+            - generic [ref=e68]:
+              - generic [ref=e69]: Hypothesis Test
+              - generic [ref=e71]: Price gain > 3% in 7d when diffusion gap > 2x
+          - generic [ref=e72]:
+            - generic [ref=e73]: Confidence
+            - generic [ref=e74]: —
+            - generic [ref=e75]: n = 0
+        - generic [ref=e76]:
+          - region "Diffusion Tracker" [ref=e77]:
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - generic [ref=e80]: Diffusion Tracker
+                - heading "Niche active before mainstream" [level=2] [ref=e81]
+              - generic [ref=e82]: Top 10 · Live
+            - generic [ref=e83]:
+              - generic [ref=e84]: radar
+              - generic [ref=e85]: No early signals detected
+              - paragraph [ref=e86]: A new scan completes every 3 days. Diffusion signals will appear when niche-tier engagement exceeds 2.5× mainstream activity.
+          - region "Signal Correlation" [ref=e87]:
+            - generic [ref=e89]:
+              - generic [ref=e90]: Signal Quality
+              - heading "Which dimension predicts best?" [level=2] [ref=e91]
+            - generic [ref=e92]:
+              - generic [ref=e93]:
+                - generic [ref=e94]:
+                  - generic [ref=e95]:
+                    - generic [ref=e96]: Diffusion Gap
+                    - generic [ref=e97]: Niche-vs-mainstream activity ratio
+                  - generic [ref=e98]:
+                    - generic [ref=e99]: 0%
+                    - generic [ref=e100]: n=0
+                - generic [ref=e103]: avg 7d return · 0%
+              - generic [ref=e104]:
+                - generic [ref=e105]:
+                  - generic [ref=e106]:
+                    - generic [ref=e107]: Direction
+                    - generic [ref=e108]: Bullish weighting across communities
+                  - generic [ref=e109]:
+                    - generic [ref=e110]: 0%
+                    - generic [ref=e111]: n=0
+                - generic [ref=e114]: avg 7d return · 0%
+              - generic [ref=e115]:
+                - generic [ref=e116]:
+                  - generic [ref=e117]:
+                    - generic [ref=e118]: Quality
+                    - generic [ref=e119]: Analytical-tier engagement share
+                  - generic [ref=e120]:
+                    - generic [ref=e121]: 0%
+                    - generic [ref=e122]: n=0
+                - generic [ref=e125]: avg 7d return · 0%
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - generic [ref=e128]:
+                    - generic [ref=e129]: Quantity
+                    - generic [ref=e130]: Total cross-community volume
+                  - generic [ref=e131]:
+                    - generic [ref=e132]: 0%
+                    - generic [ref=e133]: n=0
+                - generic [ref=e136]: avg 7d return · 0%
+        - region "Outcome log" [ref=e137]:
+          - generic [ref=e138]:
+            - generic [ref=e139]:
+              - generic [ref=e140]: Outcome Log
+              - heading "Every prediction, checked against price" [level=2] [ref=e141]
+              - paragraph [ref=e142]: Every report and scan is auto-verified at 3, 7, and 14 days. No manual curation — this is the raw evidence base.
+            - generic [ref=e143]: Showing 0
+          - generic [ref=e145]:
+            - generic [ref=e146]: schedule
+            - generic [ref=e147]: Outcomes appear after 3 days
+            - paragraph [ref=e148]: The first scan ran today. Once 3-day price outcomes resolve, predictions will start appearing here. The dataset grows continuously without user input.
+        - generic [ref=e149]:
+          - generic [ref=e150]: Cipher Engine
+          - generic [ref=e151]: ·
+          - generic [ref=e152]: Sentiment scan every 3d
+          - generic [ref=e153]: ·
+          - generic [ref=e154]: Outcome verification daily
+          - generic [ref=e155]: ·
+          - generic [ref=e156]: Data is research-only, not investment advice
+  - button "Open Next.js Dev Tools" [ref=e162] [cursor=pointer]:
+    - img [ref=e163]
+  - alert [ref=e23]

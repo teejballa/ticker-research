@@ -1,0 +1,221 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "CIPHER" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - generic [ref=e7]: RESEARCH TERMINAL
+          - link "INSIGHTS" [ref=e8] [cursor=pointer]:
+            - /url: /insights
+          - generic [ref=e9]: NYSE
+          - generic [ref=e10]: NASDAQ
+      - generic [ref=e11]:
+        - generic [ref=e12]: user@cipher.io
+        - link "SIGN IN" [ref=e13] [cursor=pointer]:
+          - /url: /auth/signin
+        - link "Analyze a Ticker →" [ref=e14] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e15]:
+          - generic [ref=e16]: schedule
+          - generic [ref=e17]: fiber_manual_record
+    - main [ref=e18]:
+      - generic [ref=e19]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - generic [ref=e30]: Engine Live
+              - generic [ref=e31]: Self-Updating · No Human Intervention
+            - generic [ref=e32]:
+              - generic [ref=e33]: NYSE · WEEKEND
+              - generic [ref=e34]: Cycle 3D · Watchlist 26
+              - generic [ref=e35]: 2026-04-26 07:45:11 UTC
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - generic [ref=e38]: Cipher Research · Behavioral Finance
+              - heading "Sentiment travels. We watch it move." [level=1] [ref=e39]:
+                - text: Sentiment travels.
+                - generic [ref=e40]: We watch it move.
+              - paragraph [ref=e41]:
+                - text: Investment ideas often start in niche communities — a sub-Reddit dedicated to one ticker, an obscure StockTwits thread. Days later they reach middle communities, then mainstream. By the time mainstream notices, the price has often already moved. Cipher tracks that journey across
+                - strong [ref=e42]: 26 tickers
+                - text: ", checks the price 3, 7, and 14 days later, and quietly updates its own beliefs about which patterns actually predict."
+              - generic [ref=e43]:
+                - generic [ref=e44]: Bayesian posteriors
+                - generic [ref=e45]: SPY-relative outcomes
+                - generic [ref=e46]: Adversarial null test
+                - generic [ref=e47]: Drift detection
+            - generic [ref=e48]:
+              - generic [ref=e49]:
+                - generic [ref=e58]: mainstream
+                - generic [ref=e59]: middle
+                - generic [ref=e60]: niche →
+              - generic [ref=e61]:
+                - generic [ref=e62]: Headline finding
+                - generic [ref=e63]: Cycle 0
+                - generic [ref=e64]: Engine is collecting evidence. The first learned probabilities appear after the first 7-day outcomes resolve.
+                - generic [ref=e65]: Currently watching 26 sentiment data points
+        - generic [ref=e66]:
+          - region "Top-line research statistics" [ref=e67]:
+            - generic [ref=e68]:
+              - generic [ref=e69]: Data Points
+              - generic [ref=e70]: "26"
+              - generic [ref=e71]: Reports + scans
+            - generic [ref=e72]:
+              - generic [ref=e73]: Resolved
+              - generic [ref=e74]: "0"
+              - generic [ref=e75]: With 7d outcome
+            - generic [ref=e76]:
+              - generic [ref=e77]: Thesis Hit Rate
+              - generic [ref=e78]: —
+              - generic [ref=e79]: Outcomes resolving
+            - generic [ref=e80]:
+              - generic [ref=e81]: Concept Drift
+              - generic [ref=e82]: NORMAL
+              - generic [ref=e83]: worst |z| = 0.00
+            - generic [ref=e84]:
+              - generic [ref=e85]: Null Check
+              - generic [ref=e86]: —
+              - generic [ref=e87]: No active patterns yet
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - generic [ref=e90]: Live Research Thesis
+              - paragraph [ref=e91]: Accumulating data — thesis will appear once outcomes resolve (3–7 days after first scans).
+              - generic [ref=e92]:
+                - generic [ref=e93]: Hypothesis Test
+                - generic [ref=e95]: Price gain > 3% in 7d when diffusion gap > 2x
+            - generic [ref=e96]:
+              - generic [ref=e97]: Confidence
+              - generic [ref=e98]: —
+              - generic [ref=e99]: n = 0
+          - region "Three community tiers" [ref=e100]:
+            - generic [ref=e101]:
+              - generic [ref=e102]:
+                - generic [ref=e103]: The three tiers
+                - heading "Where investment ideas live online" [level=2] [ref=e104]
+              - generic [ref=e105]: scanned every 3 days
+            - generic [ref=e106]:
+              - generic [ref=e107]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]: Niche
+                  - generic [ref=e110]: 🌱
+                - generic [ref=e111]: r/PLTR · r/AMD · r/SOFI
+                - paragraph [ref=e112]: Dedicated holders. Often small in number, deep in conviction.
+                - paragraph [ref=e113]: The earliest signal. Often weeks ahead of the news cycle.
+              - generic [ref=e114]:
+                - generic [ref=e115]:
+                  - generic [ref=e116]: Middle
+                  - generic [ref=e117]: 🔄
+                - generic [ref=e118]: r/investing · r/stocks · SeekingAlpha
+                - paragraph [ref=e119]: Engaged retail investors with long-term horizons.
+                - paragraph [ref=e120]: The relay. Where ideas get debated and shaped before going wide.
+              - generic [ref=e121]:
+                - generic [ref=e122]:
+                  - generic [ref=e123]: Mainstream
+                  - generic [ref=e124]: 📣
+                - generic [ref=e125]: r/wallstreetbets · CNBC · Twitter
+                - paragraph [ref=e126]: Broad retail and momentum traders. Highest volume by far.
+                - paragraph [ref=e127]: When sentiment lands here, the price has often already moved.
+          - region "How Cipher learns" [ref=e128]:
+            - generic [ref=e130]:
+              - generic [ref=e131]: The feedback loop
+              - heading "How Cipher learns — every cycle, automatically" [level=2] [ref=e132]
+              - paragraph [ref=e133]: No human writes the rules. The engine watches, predicts, verifies, and updates its own beliefs. That loop runs whether or not anyone is using the app.
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]: "01"
+                - generic [ref=e137]: Scan
+                - paragraph [ref=e138]: Every 3 days, pull discussion from each ticker's niche, middle, and mainstream community plus StockTwits.
+              - generic [ref=e139]:
+                - generic [ref=e140]: "02"
+                - generic [ref=e141]: Trace
+                - paragraph [ref=e142]: "Compute engagement velocity per tier and detect the diffusion pattern: niche-leads, simultaneous, mainstream-first, or flat."
+              - generic [ref=e143]:
+                - generic [ref=e144]: "03"
+                - generic [ref=e145]: Verify
+                - paragraph [ref=e146]: 3, 7, and 14 days later, fetch the actual price. Compare to SPY. Was the prediction right or wrong?
+              - generic [ref=e147]:
+                - generic [ref=e148]: "04"
+                - generic [ref=e149]: Update
+                - paragraph [ref=e150]: Bayesian posterior shifts. Logistic-regression coefficients shift. A new entry appears in the engine's memory.
+          - generic [ref=e151]:
+            - region "Diffusion Tracker" [ref=e152]:
+              - generic [ref=e153]:
+                - generic [ref=e154]:
+                  - generic [ref=e155]: Diffusion Tracker
+                  - heading "Niche active before mainstream" [level=2] [ref=e156]
+                - generic [ref=e157]: Top 10 · Live
+              - generic [ref=e158]:
+                - generic [ref=e159]: radar
+                - generic [ref=e160]: No early signals detected
+                - paragraph [ref=e161]: A new scan completes every 3 days. Diffusion signals will appear when niche-tier engagement exceeds 2.5× mainstream activity.
+            - region "Signal Correlation" [ref=e162]:
+              - generic [ref=e164]:
+                - generic [ref=e165]: Signal Quality
+                - heading "Which dimension predicts best?" [level=2] [ref=e166]
+              - generic [ref=e167]:
+                - generic [ref=e168]:
+                  - generic [ref=e169]:
+                    - generic [ref=e170]:
+                      - generic [ref=e171]: Diffusion Gap
+                      - generic [ref=e172]: Niche-vs-mainstream activity ratio
+                    - generic [ref=e173]:
+                      - generic [ref=e174]: 0%
+                      - generic [ref=e175]: n=0
+                  - generic [ref=e178]: avg 7d return · 0%
+                - generic [ref=e179]:
+                  - generic [ref=e180]:
+                    - generic [ref=e181]:
+                      - generic [ref=e182]: Direction
+                      - generic [ref=e183]: Bullish weighting across communities
+                    - generic [ref=e184]:
+                      - generic [ref=e185]: 0%
+                      - generic [ref=e186]: n=0
+                  - generic [ref=e189]: avg 7d return · 0%
+                - generic [ref=e190]:
+                  - generic [ref=e191]:
+                    - generic [ref=e192]:
+                      - generic [ref=e193]: Quality
+                      - generic [ref=e194]: Analytical-tier engagement share
+                    - generic [ref=e195]:
+                      - generic [ref=e196]: 0%
+                      - generic [ref=e197]: n=0
+                  - generic [ref=e200]: avg 7d return · 0%
+                - generic [ref=e201]:
+                  - generic [ref=e202]:
+                    - generic [ref=e203]:
+                      - generic [ref=e204]: Quantity
+                      - generic [ref=e205]: Total cross-community volume
+                    - generic [ref=e206]:
+                      - generic [ref=e207]: 0%
+                      - generic [ref=e208]: n=0
+                  - generic [ref=e211]: avg 7d return · 0%
+          - region "Outcome log" [ref=e212]:
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - generic [ref=e215]: Outcome Log
+                - heading "Every prediction, checked against price" [level=2] [ref=e216]
+                - paragraph [ref=e217]: Every report and scan is auto-verified at 3, 7, and 14 days. No manual curation — this is the raw evidence base.
+              - generic [ref=e218]: Showing 0
+            - generic [ref=e220]:
+              - generic [ref=e221]: schedule
+              - generic [ref=e222]: Outcomes appear after 3 days
+              - paragraph [ref=e223]: The first scan ran today. Once 3-day price outcomes resolve, predictions will start appearing here. The dataset grows continuously without user input.
+          - generic [ref=e224]:
+            - generic [ref=e225]: Why this matters
+            - paragraph [ref=e226]:
+              - text: "Most retail finance dashboards stop at \"here's what people are saying.\" Cipher goes one step further: it watches what happens next, then updates its beliefs. Every prediction is logged, verified against the price, and either reinforces or weakens the engine's confidence — automatically, every day."
+              - generic [ref=e227]: That feedback loop is the difference between an opinion and a model.
+          - generic [ref=e228]:
+            - generic [ref=e229]: Cipher Engine
+            - generic [ref=e230]: ·
+            - generic [ref=e231]: Sentiment scan every 3d
+            - generic [ref=e232]: ·
+            - generic [ref=e233]: Outcome verification daily
+            - generic [ref=e234]: ·
+            - generic [ref=e235]: Beliefs updated daily
+            - generic [ref=e236]: ·
+            - generic [ref=e237]: Research-only, not investment advice
+  - button "Open Next.js Dev Tools" [ref=e243] [cursor=pointer]:
+    - img [ref=e244]
+  - alert [ref=e247]
