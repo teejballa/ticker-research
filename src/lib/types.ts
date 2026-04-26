@@ -167,6 +167,40 @@ export interface CommunityHighlight {
   analysis_paragraph?: string;      // Gemini-written 150-250 word investigative prose per community
 }
 
+// ---- EngineCalibration — diffusion-engine prior carried inside each report ----
+// Numeric fields are authoritative — written by getEngineContextForTicker, never by the LLM.
+// Old persisted reports won't have this key; UI hides the panel if absent.
+
+export interface EngineCalibration {
+  cycle_count: number;
+  flow_pattern: 'niche_leads' | 'simultaneous' | 'mainstream_first' | 'flat' | null;
+  cap_class: 'large_cap' | 'mid_cap' | 'small_cap' | 'unknown';
+  trace_window_size: number;
+
+  posterior_mean: number | null;
+  ci_low: number | null;
+  ci_high: number | null;
+  sample_size: number;
+  status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+  brier_in_sample: number | null;
+  brier_null: number | null;
+  drift_z: number;
+
+  logistic_score: number | null;
+  logistic_ci_low: number | null;
+  logistic_ci_high: number | null;
+  logistic_sample_size: number;
+
+  predicted_at: string;        // ISO 8601
+
+  // LLM-authored qualitative reaction to the prior (post-process keeps these strings only)
+  engine_alignment: string | null;     // present if Gemini's read agrees
+  engine_disagreement: string | null;  // present if Gemini's read disagrees
+
+  // Sparkline data — last 4 snapshots' tier_breakdown (so UI doesn't refetch)
+  diffusion_sparkline: Array<{ niche: number; middle: number; mainstream: number; scanned_at: string }>;
+}
+
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
 
 export interface MarketSnapshot {
@@ -218,6 +252,7 @@ export interface AnalysisResult {
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph
+  engine_calibration?: EngineCalibration;        // diffusion-engine prior at report-generation time
 }
 
 // ---- StoredReport — persisted report file (Phase 5) ----
