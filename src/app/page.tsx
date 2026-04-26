@@ -187,19 +187,35 @@ export default function Home() {
             style={{ opacity: showSearch2 ? 1 : 0, pointerEvents: showSearch2 ? 'auto' : 'none' }}
           >
             {isWebMode && !session ? (
-              <Link
-                href="/auth/signin"
-                className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
-              >
-                Sign In to Get Started →
-              </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Link
+                  href="/auth/signin"
+                  className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
+                >
+                  Sign In to Get Started →
+                </Link>
+                <Link
+                  href="/insights"
+                  className="block w-full text-center bg-secondary-container text-on-secondary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
+                >
+                  Go to Research Insights →
+                </Link>
+              </div>
             ) : isWebMode && session ? (
-              <Link
-                href="/dashboard"
-                className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
-              >
-                Go to Dashboard →
-              </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Link
+                  href="/dashboard"
+                  className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
+                >
+                  Go to Dashboard →
+                </Link>
+                <Link
+                  href="/insights"
+                  className="block w-full text-center bg-secondary-container text-on-secondary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
+                >
+                  Go to Research Insights →
+                </Link>
+              </div>
             ) : (
               <TickerSearch />
             )}
@@ -356,19 +372,35 @@ export default function Home() {
               Source-grounded equity intelligence with transparent, traceable analysis.
             </p>
             {isWebMode && session ? (
-              <Link
-                href="/dashboard"
-                className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
-              >
-                Go to Dashboard →
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link
+                  href="/dashboard"
+                  className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
+                >
+                  Go to Dashboard →
+                </Link>
+                <Link
+                  href="/insights"
+                  className="bg-secondary text-on-secondary font-bold px-10 py-5 rounded shadow-xl hover:opacity-90 transition-all active:scale-95 inline-block"
+                >
+                  Go to Research Insights →
+                </Link>
+              </div>
             ) : isWebMode ? (
-              <Link
-                href="/auth/signin"
-                className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
-              >
-                Sign In to Get Started →
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link
+                  href="/auth/signin"
+                  className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
+                >
+                  Sign In to Get Started →
+                </Link>
+                <Link
+                  href="/insights"
+                  className="bg-secondary text-on-secondary font-bold px-10 py-5 rounded shadow-xl hover:opacity-90 transition-all active:scale-95 inline-block"
+                >
+                  Go to Research Insights →
+                </Link>
+              </div>
             ) : (
               <TickerSearch />
             )}
