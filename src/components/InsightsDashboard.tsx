@@ -25,7 +25,80 @@ interface InsightsData {
     string,
     { signal_positive_pct: number; avg_7d_return: number; sample_size: number }
   >;
+  // Learning-engine fields (additive — may be absent in older deployments)
+  market_state?: { open: boolean; label: string };
+  pattern_library?: PatternCellData[];
+  live_diffusion_map?: DiffusionMapEntry[];
+  engine_memory?: MemoryEntry[];
+  concept_drift?: { worst_z: number; status: 'NORMAL' | 'WARNING' | 'ALERT' };
+  null_check?: { p_value: number; real_brier: number; null_brier: number } | null;
+  logistic_epoch?: {
+    epoch: number;
+    coefficients: Record<string, { mu: number; sigma: number }>;
+    intercept: number;
+    brier_in: number;
+    brier_out: number;
+    sample_size: number;
+    recorded_at: string;
+  } | null;
 }
+
+interface PatternCellData {
+  flow_pattern: string;
+  cap_class: string;
+  alpha: number;
+  beta: number;
+  posterior_mean: number;
+  ci_low: number;
+  ci_high: number;
+  ci_30d_mean: number;
+  sample_size: number;
+  hits: number;
+  brier_in: number | null;
+  brier_out: number | null;
+  brier_null: number | null;
+  drift_z: number;
+  status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | string;
+  week_delta: number;
+  last_updated: string;
+}
+
+interface DiffusionMapEntry {
+  ticker: string;
+  cap_class: string;
+  flow_pattern: string;
+  sparkline: Array<{ niche: number; middle: number; mainstream: number; scanned_at: string }>;
+  logistic_score: number | null;
+  logistic_ci_low: number | null;
+  logistic_ci_high: number | null;
+  end_at: string;
+}
+
+interface MemoryEntry {
+  occurred_at: string;
+  event_type: string;
+  ticker: string | null;
+  flow_pattern: string | null;
+  cap_class: string | null;
+  message: string;
+}
+
+const FLOW_PATTERN_ROW_ORDER = ['niche_leads', 'simultaneous', 'mainstream_first', 'flat'];
+const CAP_CLASS_COL_ORDER = ['large_cap', 'mid_cap', 'small_cap'];
+
+const FLOW_PATTERN_LABEL: Record<string, string> = {
+  niche_leads: 'Niche Leads',
+  simultaneous: 'Simultaneous',
+  mainstream_first: 'Mainstream First',
+  flat: 'Flat',
+};
+
+const CAP_CLASS_LABEL: Record<string, string> = {
+  large_cap: 'Large Cap',
+  mid_cap: 'Mid Cap',
+  small_cap: 'Small Cap',
+  unknown: 'Unknown',
+};
 
 const SIGNAL_LABELS: Record<string, string> = {
   diffusion_gap: 'Diffusion Gap',
@@ -113,6 +186,17 @@ export function InsightsDashboard() {
             </span>
           </div>
           <div className="flex items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+            {data.market_state && (
+              <span
+                className={
+                  data.market_state.open
+                    ? 'text-secondary border border-secondary/40 bg-secondary/10 px-2 py-0.5'
+                    : 'text-outline border border-outline-variant/30 bg-surface-container-low px-2 py-0.5'
+                }
+              >
+                NYSE · {data.market_state.label}
+              </span>
+            )}
             <span>Cycle 3D · Watchlist 26</span>
             <span className="hidden sm:inline">{utcStamp}</span>
           </div>
@@ -148,7 +232,7 @@ export function InsightsDashboard() {
 
       {/* ─────────────────────── Stat strip ─────────────────────── */}
       <section
-        className="grid grid-cols-2 md:grid-cols-4 gap-px bg-outline-variant/30 border border-outline-variant/30 mb-12 overflow-hidden"
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-outline-variant/30 border border-outline-variant/30 mb-12 overflow-hidden"
         aria-label="Top-line research statistics"
       >
         <Stat
@@ -174,10 +258,36 @@ export function InsightsDashboard() {
           accent={data.thesis.pct !== null ? 'tertiary' : 'default'}
         />
         <Stat
-          label="Active Signals"
-          value={data.diffusion_signals.length.toLocaleString()}
-          sublabel="Diffusion gap > 2.5x"
-          accent={data.diffusion_signals.length > 0 ? 'secondary' : 'default'}
+          label="Concept Drift"
+          value={data.concept_drift?.status ?? '—'}
+          sublabel={
+            data.concept_drift
+              ? `worst |z| = ${data.concept_drift.worst_z.toFixed(2)}`
+              : 'Awaiting outcomes'
+          }
+          accent={
+            data.concept_drift?.status === 'ALERT'
+              ? 'error'
+              : data.concept_drift?.status === 'WARNING'
+                ? 'tertiary'
+                : 'secondary'
+          }
+        />
+        <Stat
+          label="Null Check"
+          value={
+            data.null_check
+              ? data.null_check.p_value < 0.05
+                ? `p < ${data.null_check.p_value.toFixed(2)}`
+                : 'NOISE'
+              : '—'
+          }
+          sublabel={
+            data.null_check
+              ? `real ${data.null_check.real_brier.toFixed(2)} · null ${data.null_check.null_brier.toFixed(2)}`
+              : 'No active patterns yet'
+          }
+          accent={data.null_check && data.null_check.p_value < 0.05 ? 'secondary' : 'default'}
         />
       </section>
 
@@ -210,6 +320,126 @@ export function InsightsDashboard() {
           </div>
         </div>
       </section>
+
+      {/* ─────────────────────── Pattern Library (NEW) ─────────────────────── */}
+      {data.pattern_library && data.pattern_library.length > 0 && (
+        <section className="mb-12 border border-outline-variant/30" aria-label="Pattern Library">
+          <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
+            <div>
+              <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+                Pattern Library
+              </div>
+              <h2 className="text-on-surface text-lg font-bold tracking-tight">
+                Learned probabilities · updated daily
+              </h2>
+              <p className="text-on-surface-variant text-xs mt-2 max-w-2xl leading-relaxed">
+                Each cell shows the engine&apos;s posterior probability that a given diffusion pattern
+                produces &gt;1% excess return vs SPY over 7 days, conditioned on the ticker&apos;s
+                market-cap class. Updated automatically every cycle.
+              </p>
+            </div>
+            <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+              Beta-Bernoulli · 95% CI
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-b border-outline-variant/30">
+                  <th className="text-left font-medium px-6 py-3">Pattern</th>
+                  {CAP_CLASS_COL_ORDER.map(cc => (
+                    <th key={cc} className="text-left font-medium px-3 py-3">
+                      {CAP_CLASS_LABEL[cc]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {FLOW_PATTERN_ROW_ORDER.filter(fp => fp !== 'flat').map(fp => (
+                  <tr key={fp} className="border-b border-outline-variant/10">
+                    <td className="px-6 py-4 font-bold text-on-surface tracking-tight align-top">
+                      <div>{FLOW_PATTERN_LABEL[fp]}</div>
+                      <div className="text-[10px] text-outline font-mono tracking-widest uppercase mt-0.5">
+                        {fp === 'niche_leads' && 'Smart-money first'}
+                        {fp === 'simultaneous' && 'News-driven'}
+                        {fp === 'mainstream_first' && 'Late retail'}
+                      </div>
+                    </td>
+                    {CAP_CLASS_COL_ORDER.map(cc => {
+                      const cell = data.pattern_library!.find(c => c.flow_pattern === fp && c.cap_class === cc);
+                      return (
+                        <td key={cc} className="px-3 py-4 align-top">
+                          <PatternCell cell={cell} />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* ─────────────────────── Live Diffusion Map (NEW) ─────────────────────── */}
+      {data.live_diffusion_map && data.live_diffusion_map.length > 0 && (
+        <section className="mb-12 border border-outline-variant/30" aria-label="Live Diffusion Map">
+          <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
+            <div>
+              <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+                Live Diffusion Map
+              </div>
+              <h2 className="text-on-surface text-lg font-bold tracking-tight">
+                Tickers exhibiting niche-leads pattern right now
+              </h2>
+              <p className="text-on-surface-variant text-xs mt-2 max-w-2xl leading-relaxed">
+                Each card shows engagement velocity across niche / middle / mainstream
+                communities over the last four 3-day cycles. The logistic score is the engine&apos;s
+                continuous edge estimate with 95% credible interval.
+              </p>
+            </div>
+            <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+              Showing {data.live_diffusion_map.length}
+            </span>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-outline-variant/20">
+            {data.live_diffusion_map.slice(0, 6).map((d, i) => (
+              <DiffusionMapCard key={`${d.ticker}-${i}`} entry={d} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─────────────────────── Engine Memory (NEW) ─────────────────────── */}
+      {data.engine_memory && data.engine_memory.length > 0 && (
+        <section className="mb-12 border border-outline-variant/30" aria-label="Engine Memory">
+          <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
+            <div>
+              <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+                Engine Memory
+              </div>
+              <h2 className="text-on-surface text-lg font-bold tracking-tight">
+                Auto-updating research log
+              </h2>
+              <p className="text-on-surface-variant text-xs mt-2 max-w-2xl leading-relaxed">
+                Every belief update, drift alert, and cycle summary as it happens. No human
+                writes these — the engine narrates its own learning.
+              </p>
+            </div>
+            <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+              Last {data.engine_memory.length}
+            </span>
+          </div>
+
+          <div className="divide-y divide-outline-variant/10 font-mono text-xs">
+            {data.engine_memory.map((e, i) => (
+              <MemoryFeedItem key={`${e.occurred_at}-${i}`} entry={e} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ─────────────────────── Two-col: Diffusion + Signal Quality ─────────────────────── */}
       <div className="grid lg:grid-cols-5 gap-px bg-outline-variant/30 border border-outline-variant/30 mb-12">
@@ -445,7 +675,7 @@ function Stat({
   label: string;
   value: string;
   sublabel: string;
-  accent: 'primary' | 'secondary' | 'tertiary' | 'default';
+  accent: 'primary' | 'secondary' | 'tertiary' | 'error' | 'default';
 }) {
   const accentClass =
     accent === 'primary'
@@ -454,7 +684,9 @@ function Stat({
         ? 'text-secondary'
         : accent === 'tertiary'
           ? 'text-tertiary'
-          : 'text-on-surface';
+          : accent === 'error'
+            ? 'text-error'
+            : 'text-on-surface';
 
   return (
     <div className="bg-surface px-5 py-5 md:px-6 md:py-6 group hover:bg-surface-container-low/40 transition-colors">
@@ -556,6 +788,196 @@ function EmptyState({
       </span>
       <div className="text-on-surface-variant text-sm font-medium mb-2">{title}</div>
       <p className="text-outline text-xs max-w-md leading-relaxed">{body}</p>
+    </div>
+  );
+}
+
+function PatternCell({ cell }: { cell: PatternCellData | undefined }) {
+  if (!cell || cell.sample_size === 0) {
+    return (
+      <div className="text-[10px] font-mono tracking-widest uppercase text-outline">
+        no data
+      </div>
+    );
+  }
+
+  const meanPct = (cell.posterior_mean * 100).toFixed(0);
+  const meanPctNum = cell.posterior_mean * 100;
+  const ciLowPct = (cell.ci_low * 100).toFixed(0);
+  const ciHighPct = (cell.ci_high * 100).toFixed(0);
+  const isExploratory = cell.status === 'EXPLORATORY';
+  const isDeprecated = cell.status === 'DEPRECATED';
+
+  const meanColor =
+    isDeprecated
+      ? 'text-error'
+      : isExploratory
+        ? 'text-on-surface-variant'
+        : meanPctNum >= 60
+          ? 'text-secondary'
+          : meanPctNum >= 40
+            ? 'text-on-surface'
+            : 'text-error';
+
+  const statusBadgeClass =
+    cell.status === 'ACTIVE'
+      ? 'text-secondary border-secondary/40 bg-secondary/10'
+      : cell.status === 'DEPRECATED'
+        ? 'text-error border-error/40 bg-error/10'
+        : 'text-outline border-outline-variant/40 bg-surface-container-low';
+
+  // delta arrow
+  const deltaPctPts = cell.week_delta * 100;
+  const deltaArrow = deltaPctPts > 1 ? '▲' : deltaPctPts < -1 ? '▼' : '—';
+  const deltaColor = deltaPctPts > 1 ? 'text-secondary' : deltaPctPts < -1 ? 'text-error' : 'text-outline';
+
+  return (
+    <div>
+      <div className="flex items-baseline gap-2 mb-1">
+        <span className={`font-mono font-black text-2xl tabular-nums leading-none ${meanColor}`}>
+          {meanPct}
+        </span>
+        <span className={`text-sm ${meanColor} opacity-70`}>%</span>
+        <span className={`text-[10px] font-mono tracking-widest uppercase ${deltaColor} ml-auto`}>
+          {deltaArrow} {Math.abs(deltaPctPts).toFixed(1)}
+        </span>
+      </div>
+
+      <div className="h-[3px] bg-surface-container-low overflow-hidden mb-2 relative">
+        <div
+          className={
+            cell.status === 'ACTIVE'
+              ? 'absolute h-full bg-secondary/40'
+              : cell.status === 'DEPRECATED'
+                ? 'absolute h-full bg-error/40'
+                : 'absolute h-full bg-outline/30'
+          }
+          style={{
+            left: `${Math.max(0, cell.ci_low * 100)}%`,
+            width: `${Math.max(2, (cell.ci_high - cell.ci_low) * 100)}%`,
+          }}
+        />
+        <div
+          className={
+            cell.status === 'ACTIVE'
+              ? 'absolute h-full w-[2px] bg-secondary'
+              : cell.status === 'DEPRECATED'
+                ? 'absolute h-full w-[2px] bg-error'
+                : 'absolute h-full w-[2px] bg-on-surface'
+          }
+          style={{ left: `calc(${cell.posterior_mean * 100}% - 1px)` }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] font-mono tracking-wide text-outline mb-1.5">
+        <span>{ciLowPct}–{ciHighPct}%</span>
+        <span>n={cell.sample_size}</span>
+      </div>
+
+      <span className={`text-[9px] font-mono tracking-widest uppercase px-1.5 py-0.5 border ${statusBadgeClass}`}>
+        {cell.status}
+      </span>
+    </div>
+  );
+}
+
+function DiffusionMapCard({ entry }: { entry: DiffusionMapEntry }) {
+  const { ticker, cap_class, sparkline, logistic_score, logistic_ci_low, logistic_ci_high } = entry;
+
+  // Compute max for sparkline normalization
+  const allValues = sparkline.flatMap(p => [p.niche, p.middle, p.mainstream]);
+  const maxValue = Math.max(1, ...allValues);
+  const w = 200;
+  const h = 60;
+  const xStep = sparkline.length > 1 ? w / (sparkline.length - 1) : w;
+
+  const linePath = (key: 'niche' | 'middle' | 'mainstream') =>
+    sparkline
+      .map((p, i) => {
+        const x = i * xStep;
+        const y = h - (p[key] / maxValue) * h;
+        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+      })
+      .join(' ');
+
+  const scorePct = logistic_score != null ? (logistic_score * 100).toFixed(0) : '—';
+  const scoreCI =
+    logistic_ci_low != null && logistic_ci_high != null
+      ? `${(logistic_ci_low * 100).toFixed(0)}–${(logistic_ci_high * 100).toFixed(0)}`
+      : null;
+
+  return (
+    <div className="bg-surface p-5">
+      <div className="flex items-baseline justify-between mb-3">
+        <div>
+          <div className="font-mono font-black text-on-surface tracking-tighter text-base leading-none">
+            {ticker}
+          </div>
+          <div className="text-[9px] tracking-widest uppercase text-outline font-mono mt-1">
+            {CAP_CLASS_LABEL[cap_class] ?? cap_class} · niche leads
+          </div>
+        </div>
+        {logistic_score != null && (
+          <div className="text-right">
+            <div className="text-[9px] tracking-widest uppercase text-outline font-mono">edge</div>
+            <div className="font-mono font-bold text-secondary text-lg tabular-nums leading-none">
+              {scorePct}<span className="text-xs opacity-70">%</span>
+            </div>
+            {scoreCI && (
+              <div className="text-[9px] font-mono text-outline tabular-nums">
+                CI {scoreCI}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-14 overflow-visible" preserveAspectRatio="none">
+        {/* niche — secondary */}
+        <path d={linePath('niche')} fill="none" stroke="currentColor" className="text-secondary" strokeWidth="1.5" />
+        {/* middle — tertiary */}
+        <path d={linePath('middle')} fill="none" stroke="currentColor" className="text-tertiary" strokeWidth="1.5" />
+        {/* mainstream — error */}
+        <path d={linePath('mainstream')} fill="none" stroke="currentColor" className="text-error/70" strokeWidth="1.5" />
+      </svg>
+
+      <div className="flex gap-3 mt-2 text-[9px] font-mono tracking-wide text-outline">
+        <span><span className="text-secondary">●</span> niche</span>
+        <span><span className="text-tertiary">●</span> middle</span>
+        <span><span className="text-error/80">●</span> mainstream</span>
+      </div>
+    </div>
+  );
+}
+
+function MemoryFeedItem({ entry }: { entry: MemoryEntry }) {
+  const tagClass =
+    entry.event_type === 'drift_alert'
+      ? 'text-error border-error/40 bg-error/10'
+      : entry.event_type === 'cycle_summary'
+        ? 'text-tertiary border-tertiary/40 bg-tertiary/10'
+        : 'text-secondary border-secondary/40 bg-secondary/10';
+
+  const ts = new Date(entry.occurred_at);
+  const tsLabel =
+    ts.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+
+  return (
+    <div className="px-6 py-3 hover:bg-surface-container-low/30 transition-colors flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+      <span className="text-[10px] tracking-widest text-outline tabular-nums shrink-0">
+        {tsLabel}
+      </span>
+      <span className={`text-[9px] tracking-widest uppercase px-1.5 py-0.5 border self-start shrink-0 ${tagClass}`}>
+        {entry.event_type.replace('_', ' ')}
+      </span>
+      {entry.ticker && (
+        <span className="text-on-surface font-bold tabular-nums shrink-0">
+          {entry.ticker}
+        </span>
+      )}
+      <span className="text-on-surface-variant leading-relaxed">
+        {entry.message}
+      </span>
     </div>
   );
 }
