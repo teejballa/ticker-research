@@ -7,6 +7,7 @@ import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, 
 import type { AnalysisResult, MarketSnapshot } from '@/lib/types';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
+import EngineCalibrationPanel from '@/components/EngineCalibrationPanel';
 
 interface ResearchReportProps {
   analysisResult: AnalysisResult;
@@ -99,6 +100,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     sentiment_intelligence,     // D-17
     community_highlights,   // community intelligence
     community_analysis,     // community narrative
+    engine_calibration,     // diffusion-engine prior
   } = analysisResult;
 
   function handleExportPdf() {
@@ -208,6 +210,11 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               <Md text={executive_summary} />
             </p>
           </section>
+        )}
+
+        {/* Engine Calibration — diffusion-engine prior carried by the report */}
+        {engine_calibration && (
+          <EngineCalibrationPanel calibration={engine_calibration} />
         )}
 
         {/* Business Description */}
