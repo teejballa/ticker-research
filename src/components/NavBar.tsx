@@ -63,6 +63,12 @@ export default function NavBar({
           </Link>
           <nav className="hidden md:flex items-center gap-4">
             <span className="text-sm font-bold text-primary-container tracking-tight">RESEARCH TERMINAL</span>
+            <Link
+              href="/insights"
+              className="text-sm font-bold text-on-surface/50 hover:bg-surface-container hover:text-secondary transition-colors duration-200 px-2 py-1"
+            >
+              INSIGHTS
+            </Link>
             <span className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1 cursor-default">NYSE</span>
             <span className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1 cursor-default">NASDAQ</span>
           </nav>
