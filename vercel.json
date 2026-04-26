@@ -7,6 +7,13 @@
     },
     "src/app/api/research/**/*": {
       "maxDuration": 300
+    },
+    "src/app/api/cron/**/*": {
+      "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    { "path": "/api/cron/sentiment-scan", "schedule": "0 8 */3 * *" },
+    { "path": "/api/cron/price-followup", "schedule": "0 6 * * *" }
+  ]
 }
