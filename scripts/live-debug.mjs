@@ -12,7 +12,6 @@
  *
  * Flows:
  *   setup-status        — hit /api/setup/status and dump result
- *   notebooklm-auth     — walk through NotebookLM auth setup wizard
  *   signin              — walk through the Google OAuth sign-in page
  *   full-pipeline TICKER — run the full research pipeline (slow)
  *   url URL             — open any URL and dump all captured events
@@ -27,7 +26,6 @@
  *
  * Examples:
  *   node scripts/live-debug.mjs setup-status
- *   node scripts/live-debug.mjs notebooklm-auth
  *   node scripts/live-debug.mjs signin
  *   node scripts/live-debug.mjs url http://localhost:3000/terminal
  *   node scripts/live-debug.mjs full-pipeline AAPL --slow 200
@@ -207,79 +205,6 @@ async function flowSetupStatus(page) {
 
   await dumpMonitor(page, 'after-setup-status');
   await snap(page, 'setup-status-done');
-}
-
-async function flowNotebooklmAuth(page) {
-  sep('FLOW: notebooklm-auth');
-  info('Navigating to home...');
-  await page.goto(BASE);
-  await page.waitForLoadState('networkidle');
-  await snap(page, 'home');
-  await page.waitForTimeout(1500);
-
-  // Check setup status first
-  info('Checking setup status...');
-  const statusRes = await page.evaluate(async () => {
-    const r = await fetch('/api/setup/status');
-    return { status: r.status, body: await r.text() };
-  });
-  let status = null;
-  try { status = JSON.parse(statusRes.body); } catch (_) {}
-  emit('SETUP_STATUS_CHECK', { parsed: status });
-
-  if (status?.authOk) {
-    ok('NotebookLM auth already configured (authOk=true)');
-    await snap(page, 'already-authed');
-    return;
-  }
-
-  // Scroll to find the SetupWizard or the ticker search area
-  info('Scrolling to trigger setup wizard...');
-  await page.evaluate(() => window.scrollTo(0, window.innerHeight * 2.55));
-  await page.waitForTimeout(1000);
-  await snap(page, 'scrolled-to-terminal');
-
-  // Look for setup wizard components
-  const setupWizard = page.locator('[class*="setup"], [data-testid*="setup"], text=/setup|wizard|install|connect/i').first();
-  const setupVisible = await setupWizard.isVisible().catch(() => false);
-  emit('SETUP_WIZARD_VISIBLE', { visible: setupVisible });
-
-  if (!setupVisible) {
-    warn('Setup wizard not visible — maybe setup is complete or wizard UI changed');
-    await snap(page, 'no-wizard');
-    await dumpMonitor(page, 'after-no-wizard');
-    return;
-  }
-
-  await snap(page, 'setup-wizard');
-
-  // Look for the auth/connect button
-  const connectBtn = page.locator('button').filter({ hasText: /connect|authenticate|login|google|notebooklm/i }).first();
-  const connectVisible = await connectBtn.isVisible().catch(() => false);
-  emit('CONNECT_BUTTON', { visible: connectVisible });
-
-  if (connectVisible) {
-    info('Found connect button — clicking...');
-    await connectBtn.click();
-    await page.waitForTimeout(3000);
-    await snap(page, 'after-connect-click');
-
-    // Check if a new window/browser opened for auth
-    const pages = page.context().pages();
-    emit('PAGES_AFTER_CLICK', { count: pages.length, urls: pages.map(p => p.url()) });
-
-    // Check for any progress/error messages
-    await dumpMonitor(page, 'after-connect-click');
-  } else {
-    warn('Connect button not found — checking auth API directly');
-    const authRes = await page.evaluate(async () => {
-      const r = await fetch('/api/setup/auth', { method: 'POST' });
-      return { status: r.status, body: await r.text() };
-    });
-    emit('AUTH_API_DIRECT', authRes);
-  }
-
-  await snap(page, 'auth-flow-done');
 }
 
 async function flowSignin(page) {
@@ -483,10 +408,6 @@ async function main() {
         await flowSetupStatus(page);
         break;
 
-      case 'notebooklm-auth':
-        await flowNotebooklmAuth(page);
-        break;
-
       case 'signin':
         await flowSignin(page);
         break;
@@ -503,7 +424,7 @@ async function main() {
 
       default:
         fail(`Unknown flow: ${FLOW}`, {
-          available: ['setup-status', 'notebooklm-auth', 'signin', 'url', 'full-pipeline'],
+          available: ['setup-status', 'signin', 'url', 'full-pipeline'],
         });
     }
   } catch (err) {

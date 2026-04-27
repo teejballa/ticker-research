@@ -1,7 +1,7 @@
 'use client';
 
 // src/components/ResearchProgress.tsx
-// Stitch ambient loading screen for the NotebookLM analysis pipeline.
+// Stitch ambient loading screen for the analysis pipeline.
 // ALL streaming/parsing/callback logic is unchanged — only JSX was replaced.
 
 import { useEffect, useRef, useState } from 'react';
@@ -23,8 +23,7 @@ function classifyError(message: string): 'session-expired' | 'container-unreacha
     m.includes('authentication expired') ||
     m.includes('auth') && (m.includes('expired') || m.includes('invalid')) ||
     m.includes('not connected') ||
-    m.includes('accounts.google.com') ||
-    (m.includes('notebooklm') && (m.includes('session') || m.includes('auth') || m.includes('expired')))
+    m.includes('accounts.google.com')
   ) return 'session-expired';
   if (m.includes('unreachable') || m.includes('connection') || m.includes('econnrefused') || m.includes('failed to fetch')) return 'container-unreachable';
   if (m.includes('timeout') || m.includes('taking longer')) return 'timeout';
@@ -33,7 +32,7 @@ function classifyError(message: string): 'session-expired' | 'container-unreacha
 
 const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string }> = {
   'session-expired': {
-    message: 'Research engine session expired — reconnect your NotebookLM account to continue.',
+    message: 'Research engine session expired — please sign in again to continue.',
     cta: 'RECONNECT →',
     ctaHref: '/dashboard',
   },
@@ -89,7 +88,7 @@ function matchStepIndex(message: string): number {
 // Maps the 6 internal pipeline steps to 4 visual steps
 // 0 → visual 0 (Collecting market data)
 // 1,2 → visual 1 (Gathering news & filings)
-// 3,4 → visual 2 (Synthesizing with NotebookLM)
+// 3,4 → visual 2 (Synthesizing with Gemini)
 // 5 → visual 3 (Generating report)
 function toVisualStep(pipelineStepIndex: number): number {
   if (pipelineStepIndex <= 0) return 0;

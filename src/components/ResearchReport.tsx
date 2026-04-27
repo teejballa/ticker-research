@@ -118,6 +118,14 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
   const confidencePct = confidenceToPercent(confidence_level);
   const confidenceBlocks = Math.round(confidencePct / 10);
 
+  const fs = s?.field_sources;
+  const sourceLabel = (origin: 'yahoo' | 'finnhub' | 'polygon' | null | undefined): string | null => {
+    if (origin === 'finnhub') return 'via Finnhub';
+    if (origin === 'polygon') return 'via Polygon';
+    if (origin === 'yahoo')   return 'via Yahoo';
+    return null;
+  };
+
   // Stats grid data — adapted to actual MarketSnapshot field names
   const stats = [
     {
@@ -125,6 +133,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
       value: formatPrice(s?.price ?? null),
       extra: 'USD',
       colorClass: 'text-on-surface',
+      source: sourceLabel(fs?.price),
     },
     {
       label: '24H Change',
@@ -134,36 +143,43 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
       colorClass: s?.percent_change_today != null
         ? s.percent_change_today >= 0 ? 'text-secondary' : 'text-error'
         : 'text-on-surface',
+      source: sourceLabel(fs?.percent_change_today),
     },
     {
       label: 'MKT Cap',
       value: formatMarketCapLib(s?.market_cap ?? null),
       colorClass: 'text-on-surface',
+      source: sourceLabel(fs?.market_cap),
     },
     {
       label: 'P/E Ratio',
       value: s?.pe_ratio != null ? s.pe_ratio.toFixed(2) : '—',
       colorClass: 'text-on-surface',
+      source: sourceLabel(fs?.pe_ratio),
     },
     {
       label: '52W High',
       value: formatPrice(s?.fifty_two_week_high ?? null),
       colorClass: 'text-secondary',
+      source: sourceLabel(fs?.fifty_two_week_high),
     },
     {
       label: '52W Low',
       value: formatPrice(s?.fifty_two_week_low ?? null),
       colorClass: 'text-error',
+      source: sourceLabel(fs?.fifty_two_week_low),
     },
     {
       label: 'EPS',
       value: s?.eps != null ? `$${s.eps.toFixed(2)}` : '—',
       colorClass: 'text-on-surface',
+      source: sourceLabel(fs?.eps),
     },
     {
       label: 'Revenue',
       value: formatMarketCapLib(s?.revenue ?? null),
       colorClass: 'text-on-surface',
+      source: sourceLabel(fs?.revenue),
     },
   ];
 
@@ -247,6 +263,11 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                       <span className="text-xs font-medium text-on-surface-variant ml-1">{stat.extra}</span>
                     )}
                   </div>
+                  {stat.source && stat.value !== '—' && (
+                    <span className="mt-2 inline-block text-[9px] font-medium tracking-wide text-on-surface-variant/70 uppercase">
+                      {stat.source}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
