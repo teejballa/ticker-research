@@ -26,9 +26,11 @@ describe('searchTickers', () => {
 });
 
 describe('fetchChartData', () => {
-  it('returns at least 20 data points for AAPL', async () => {
+  // 30-calendar-day window can yield as few as ~18 trading days when long
+  // weekends or holidays fall inside it; assert a floor that's safely under that.
+  it('returns at least 15 data points for AAPL', async () => {
     const points = await fetchChartData('AAPL');
-    expect(points.length).toBeGreaterThanOrEqual(20);
+    expect(points.length).toBeGreaterThanOrEqual(15);
     expect(points[0]).toHaveProperty('time');
     expect(points[0]).toHaveProperty('value');
     expect(typeof points[0].value).toBe('number');
