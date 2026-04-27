@@ -259,6 +259,17 @@ export interface MarketSnapshot {
   pe_ratio: number | null;
   eps: number | null;
   revenue: number | null;
+  // Per-field origin (yahoo/finnhub/polygon) — populated by mergeMarketData/mergeFundamentals
+  field_sources?: {
+    price?: FieldOrigin;
+    percent_change_today?: FieldOrigin;
+    market_cap?: FieldOrigin;
+    fifty_two_week_high?: FieldOrigin;
+    fifty_two_week_low?: FieldOrigin;
+    pe_ratio?: FieldOrigin;
+    eps?: FieldOrigin;
+    revenue?: FieldOrigin;
+  };
 }
 
 export interface AnalysisResult {

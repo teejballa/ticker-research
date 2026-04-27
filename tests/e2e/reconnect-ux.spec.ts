@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Tests the reconnect UX flow for stale NotebookLM sessions:
+// Tests the reconnect UX flow for stale auth sessions:
 // 1. Auth-expired error page shows RECONNECT button (not just TRY AGAIN)
 // 2. /setup page shows reconnect options when already connected
-// 3. Reconnect button clears stale credential and shows VNC flow
+// 3. Reconnect button clears stale credential and shows sign-in flow
 
 test.describe('Reconnect UX flow', () => {
 

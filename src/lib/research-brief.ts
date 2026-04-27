@@ -1,7 +1,6 @@
 // src/lib/research-brief.ts
-// Formats a SourcePackage into structured text and URL list for NotebookLM ingestion.
-// These are the canonical TypeScript implementations — the Python equivalent is
-// embedded in scripts/notebooklm_research.py (plan 02-03).
+// Formats a SourcePackage into structured text and a URL list for the Gemini analysis prompt.
+// Consumed by src/lib/gemini-analysis.ts.
 
 import type { SourcePackage } from './types';
 
@@ -71,7 +70,7 @@ function fmtNum(val: number | null | undefined): string {
 
 /**
  * Formats a SourcePackage into a structured plain-text research brief string.
- * The brief is suitable for use as a NotebookLM text source.
+ * The brief is consumed as the source-grounded context for the Gemini prompt.
  *
  * Sections: header, MARKET DATA, FUNDAMENTALS, ANALYST SENTIMENT,
  *           SEC FILINGS, SOCIAL SENTIMENT, COLLECTION NOTES

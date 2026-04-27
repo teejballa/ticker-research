@@ -480,6 +480,8 @@ export async function extractCommunityHighlights(
  * Extracts a MarketSnapshot from a SourcePackage for embedding in the AnalysisResult.
  */
 export function extractMarketSnapshot(pkg: SourcePackage) {
+  const m = pkg.market_data._field_sources;
+  const f = pkg.fundamentals._field_sources;
   return {
     price: pkg.market_data.price,
     percent_change_today: pkg.market_data.percent_change_today,
@@ -489,6 +491,16 @@ export function extractMarketSnapshot(pkg: SourcePackage) {
     pe_ratio: pkg.fundamentals.pe_ratio,
     eps: pkg.fundamentals.eps,
     revenue: pkg.fundamentals.revenue,
+    field_sources: (m || f) ? {
+      price: m?.price ?? null,
+      percent_change_today: m?.percent_change_today ?? null,
+      market_cap: m?.market_cap ?? null,
+      fifty_two_week_high: m?.fifty_two_week_high ?? null,
+      fifty_two_week_low: m?.fifty_two_week_low ?? null,
+      pe_ratio: f?.pe_ratio ?? null,
+      eps: f?.eps ?? null,
+      revenue: f?.revenue ?? null,
+    } : undefined,
   };
 }
 

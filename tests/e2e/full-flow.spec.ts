@@ -49,8 +49,7 @@ test.describe('1. Homepage', () => {
     const json = await res.json();
     console.log('Setup status:', JSON.stringify(json));
     expect(json.allOk).toBe(true);
-    expect(json.pythonOk).toBe(true);
-    expect(json.notebooklmOk).toBe(true);
+    expect(json.engineOk).toBe(true);
     expect(json.authOk).toBe(true);
   });
 
@@ -261,7 +260,7 @@ test.describe('4. Full pipeline — data collection + analysis + report', () => 
         // Rate limit / transient API errors are not code bugs — skip instead of hard fail
         const isRateLimit = errMsg?.toLowerCase().includes('rate limit') || errMsg?.toLowerCase().includes('wait a few');
         if (isRateLimit) {
-          console.log('⚠ NotebookLM API rate limited — skipping pipeline completion check');
+          console.log('⚠ Upstream API rate limited — skipping pipeline completion check');
           test.skip();
         }
         throw new Error(`Analysis pipeline failed: ${errMsg}`);

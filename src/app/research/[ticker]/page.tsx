@@ -165,11 +165,11 @@ export default function ResearchPage() {
             <h1 className="text-sm text-on-surface font-bold tracking-[0.2em] mb-2">ANALYSIS FAILED</h1>
             {isRateLimit ? (
               <p className="text-xs text-on-surface-variant leading-relaxed mb-5">
-                NotebookLM daily limit reached. Resets at midnight PST — try again tomorrow.
+                Upstream API daily limit reached. Please try again later.
               </p>
             ) : isAuthExpired ? (
               <p className="text-xs text-on-surface-variant leading-relaxed mb-5">
-                Your research engine session expired. Reconnect your NotebookLM account to continue.
+                Your session expired. Please sign in again to continue.
               </p>
             ) : (
               <p className="text-xs text-on-surface-variant leading-relaxed mb-5">

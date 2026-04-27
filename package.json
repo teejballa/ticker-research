@@ -14,7 +14,6 @@
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:debug": "playwright test --project=debug",
     "debug": "node scripts/live-debug.mjs",
-    "debug:auth": "node scripts/live-debug.mjs notebooklm-auth",
     "debug:signin": "node scripts/live-debug.mjs signin",
     "debug:setup": "node scripts/live-debug.mjs setup-status",
     "debug:pipeline": "node scripts/live-debug.mjs full-pipeline",
