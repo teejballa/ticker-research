@@ -115,7 +115,6 @@ export default function ResearchProgress({
   const [steps, setSteps]           = useState<Step[]>(INITIAL_STEPS);
   const [logLines, setLogLines]     = useState<string[]>([]);
   const [errorMessage, setErrorMsg] = useState<string | null>(null);
-  const startRef                    = useRef(Date.now());
   const onCompleteRef               = useRef(onComplete);
   const onErrorRef                  = useRef(onError);
 

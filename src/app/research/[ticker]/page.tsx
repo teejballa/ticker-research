@@ -239,7 +239,7 @@ export default function ResearchPage() {
               Please verify the symbol and try again.
             </p>
             {chartError && (
-              <p className="text-[10px] text-error/50 mt-1 mb-4">// {chartError}</p>
+              <p className="text-[10px] text-error/50 mt-1 mb-4">{`// ${chartError}`}</p>
             )}
             <Link
               href="/"

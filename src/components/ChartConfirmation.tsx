@@ -138,7 +138,7 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
       {/* ── PIPELINE ERROR ── */}
       {pipelineError && (
         <div className="mb-1.5 px-3.5 py-2 bg-surface-container border border-error/25">
-          <span className="text-[10px] text-error/70">// ERR: {pipelineError}</span>
+          <span className="text-[10px] text-error/70">{`// ERR: ${pipelineError}`}</span>
         </div>
       )}
 
