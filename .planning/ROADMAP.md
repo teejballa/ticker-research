@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 13: Deep Sentiment Intelligence** - StockTwits API, options put/call, Forward Outlook section in report (completed 2026-04-23)
 - [x] **Phase 14: Database Verification & Report Persistence QA** - Playwright e2e db-persistence spec passing (completed 2026-04-24)
 - [x] **Phase 15: Diffusion Learning Engine** - Bayesian crons + EngineCalibrationPanel + InsightsDashboard (completed 2026-04-26)
-- [ ] **Phase 16: Technical Analysis** - Planned (context only)
+- [ ] **Phase 16: Technical Analysis as a Learning Signal** - Redesigned 2026-04-26: TA becomes a parallel signal class trained by the diffusion engine; multi-horizon outcomes (3/7/14/30/60/90d); 12-d logistic; horizon table in calibration block (context only, plans pending)
 - [ ] **Phase 17: Institutional & Insider Intelligence** - Planned (context only)
 
 ## Phase Details
@@ -167,8 +167,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 13. Deep Sentiment Intelligence | 3/3 | Complete (Sentiment Intelligence card + Forward Outlook section live in ResearchReport) | 2026-04-23 |
 | 14. Database Verification & Report Persistence QA | 2/2 | Complete (Playwright e2e db-persistence spec passing) | 2026-04-24 |
 | 15. Diffusion Learning Engine | — | Complete (Bayesian crons + InsightsDashboard + EngineCalibrationPanel) | 2026-04-26 |
-| 16. Technical Analysis | 0/? | Planned (16-CONTEXT only) |  |
-| 17. Institutional & Insider Intelligence | 0/? | Planned (16-CONTEXT only) |  |
+| 16. Technical Analysis as a Learning Signal | 0/5 | Planned — redesigned 2026-04-26 (16-CONTEXT updated, plans pending) |  |
+| 17. Institutional & Insider Intelligence | 0/? | Planned (17-CONTEXT only) |  |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
@@ -362,10 +362,13 @@ Plans:
 - [x] `InsightsDashboard.tsx` (`/insights`) — Pattern Library, Live Diffusion Map, Engine Memory, cinematic editorial UI
 - [x] Playwright suite for EngineCalibrationPanel + insights flow
 
-### Phase 16: Technical Analysis (Planned — context only)
+### Phase 16: Technical Analysis as a Learning Signal (Planned — redesigned 2026-04-26)
 
-**Goal:** Add technical analysis layer (chart patterns, moving averages, momentum, support/resistance) as a structured signal feeding both the Gemini prompt and the report.
-**Status:** Planned. `16-CONTEXT.md` exists. Plans: 0/? (run `/gsd-plan-phase 16` to break down).
+**Goal:** Make technical analysis a first-class signal class in the auto-improving research engine. RSI/MACD/SMA/ATR/volume features computed at scan time, classified into 8 `TechPattern` buckets, threaded through the same `scan → outcome → posterior` loop the diffusion engine already uses. Engine learns which technical regimes produce SPY-relative alpha, surfaces both diffusion + technical priors side-by-side in the report calibration block.
+
+**Engine-wide change in this phase:** outcome horizons extend from 3/7/14d to **3/7/14/30/60/90d** so the engine learns whether sentiment effects hold or mean-revert. 30d becomes the primary horizon for the 12-d Bayesian logistic regression; other horizons surface as transparent Beta-cell evidence in a horizon table.
+
+**Status:** Planned. `16-CONTEXT.md` updated with full redesign. Plans: 0/5 (run `/gsd-plan-phase 16` to break down).
 
 ### Phase 17: Institutional & Insider Intelligence (Planned — context only)
 
