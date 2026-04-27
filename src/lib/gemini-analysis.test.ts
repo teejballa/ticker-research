@@ -27,13 +27,23 @@ describe('scrapeCommunitySentiment', () => {
   it('Test 1: returns empty result when FIRECRAWL_API_KEY is absent, without calling Firecrawl', async () => {
     vi.stubEnv('FIRECRAWL_API_KEY', '');
     const result = await scrapeCommunitySentiment('AAPL', 'Apple Inc.');
-    expect(result).toEqual({ pinnedContent: '', nicheContent: '', nicheUrls: [], pageCount: 0 });
+    expect(result).toEqual({
+      pinnedContent: '',
+      nicheContent: '',
+      nicheUrls: [],
+      pageCount: 0,
+      mainstreamPageCount: 0,
+      middlePageCount: 0,
+      nichePageCount: 0,
+    });
     expect(Firecrawl).not.toHaveBeenCalled();
   });
 
   it('Test 2: calls fc.scrape for pinned URLs and returns pinnedContent with scraped markdown', async () => {
     vi.stubEnv('FIRECRAWL_API_KEY', 'test-key');
-    const mockScrape = vi.fn().mockResolvedValue({ markdown: 'reddit post content' });
+    // scrapeUrlWithFirecrawl drops content under 200 chars — pad markdown above that threshold.
+    const longMarkdown = 'reddit post content '.repeat(20);
+    const mockScrape = vi.fn().mockResolvedValue({ markdown: longMarkdown });
     (Firecrawl as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ scrape: mockScrape });
 
     const result = await scrapeCommunitySentiment('AAPL', 'Apple Inc.');
