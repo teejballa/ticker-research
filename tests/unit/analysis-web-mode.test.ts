@@ -226,7 +226,8 @@ describe('analysis route — web mode (DEPLOYMENT_MODE=web)', () => {
 
     expect(writeReportToDb as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
       expect.objectContaining({ ticker: 'AAPL' }),
-      'test@example.com'
+      'test@example.com',
+      expect.any(Object)
     );
   });
 
