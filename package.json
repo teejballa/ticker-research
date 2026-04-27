@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:debug": "playwright test --project=debug",
     "debug": "node scripts/live-debug.mjs",

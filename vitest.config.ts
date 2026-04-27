@@ -7,7 +7,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    exclude: ['tests/e2e/**', 'node_modules/**', '.claude/**'],
+    // tests/integration/** hits a real DATABASE_URL; opt in via `npm run test:integration`.
+    exclude: ['tests/e2e/**', 'tests/integration/**', 'node_modules/**', '.claude/**'],
   },
   resolve: {
     alias: {
