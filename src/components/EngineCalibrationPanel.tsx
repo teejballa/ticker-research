@@ -255,7 +255,7 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
 
       {/* Footer note */}
       <p className="mt-4 text-[10px] text-on-surface-variant tracking-wide leading-relaxed">
-        ↳ This prediction will be auto-verified at 3, 7, and 14 days. The engine's posterior updates online — re-running this report after the next learning cycle may show different numbers.
+        ↳ This prediction will be auto-verified at 3, 7, and 14 days. The engine&apos;s posterior updates online — re-running this report after the next learning cycle may show different numbers.
       </p>
     </section>
   );

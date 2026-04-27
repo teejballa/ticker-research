@@ -9,7 +9,7 @@ describe('anthropic-search prompt branching', () => {
     const { fetchAnalystSentiment } = await import('@/lib/data/anthropic-search');
     // ETF path must return immediately with no API call — pass 'etf' as securityType
     // This test will fail until fetchAnalystSentiment accepts a securityType parameter
-    const result = await (fetchAnalystSentiment as Function)('QQQ', 'etf');
+    const result = await (fetchAnalystSentiment as (...args: unknown[]) => Promise<{ error: string; consensus: unknown }>)('QQQ', 'etf');
     expect(result.error).toBe('Not applicable — ETF');
     expect(result.consensus).toBeNull();
   });
@@ -19,7 +19,7 @@ describe('anthropic-search prompt branching', () => {
     const { fetchNews } = await import('@/lib/data/anthropic-search');
     // Just verify the function signature accepts a second parameter
     // Real behavior tested by integration
-    expect(typeof (fetchNews as Function).length).toBe('number');
+    expect(typeof (fetchNews as (...args: unknown[]) => unknown).length).toBe('number');
   });
 
   it('SourcePackage type includes security_type field', async () => {

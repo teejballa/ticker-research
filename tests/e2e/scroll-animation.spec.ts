@@ -2,7 +2,10 @@ import { test, expect } from '@playwright/test';
 
 // Helper: get computed style value for an element
 async function getStyle(locator: ReturnType<import('@playwright/test').Page['locator']>, prop: string) {
-  return locator.evaluate((el, p) => (el as HTMLElement).style[p as any] || '', prop);
+  return locator.evaluate((el, p) => {
+    const style = (el as HTMLElement).style as unknown as Record<string, string>;
+    return style[p] || '';
+  }, prop);
 }
 
 test.describe('Homepage scroll animation', () => {

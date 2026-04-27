@@ -7,7 +7,7 @@
     "build": "next build",
     "postinstall": "prisma generate",
     "start": "next build && next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=chromium",
