@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { WATCHLIST_TICKERS } from '@/lib/data/ticker-watchlist';
+import { getCurrentWatchlist } from '@/lib/data/ticker-watchlist';
 import { lightweightCommunityScan } from '@/lib/data/lightweight-community-scan';
 import YahooFinance from 'yahoo-finance2';
 
@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
 
   const results = { scanned: 0, failed: 0, skipped: 0 };
 
-  for (const ticker of WATCHLIST_TICKERS) {
+  const tickers = getCurrentWatchlist();
+  for (const ticker of tickers) {
     try {
       const recent = await prisma.sentimentSnapshot.findFirst({
         where: { ticker, scanned_at: { gte: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) } },
