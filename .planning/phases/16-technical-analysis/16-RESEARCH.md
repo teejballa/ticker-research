@@ -1058,27 +1058,27 @@ The following claims are based on training knowledge or codebase inference rathe
 
 **If this table has entries:** Items A1, A2, A4, A6, A7 are the load-bearing ones. A1 is gated by Wave 0 unit tests; A6/A7 are empirical and will be measured post-backfill.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What's the exact bucket distribution after backfill?**
    - What we know: 8 buckets exist, threshold logic in §3.3.
    - What's unclear: which bucket dominates, how heavy the long tail is.
-   - Recommendation: backfill script logs bucket-distribution histogram. If >50% in one bucket, planner adds a Wave to plan 16-05 to refine thresholds.
+   - **RESOLVED:** post-backfill empirical measurement — implemented via `scripts/check-bucket-distribution.ts`, run as part of plan 16-05 Task 4 closeout. If >50% land in one bucket, plan 16-05 closeout flags the threshold tuning follow-up.
 
 2. **How does `engine-context.ts` cold-start interact with the new technical scan?**
    - What we know: cold-start path triggers `lightweightCommunityScan` for unknown tickers.
    - What's unclear: should `computeTechnicalSnapshot` ALSO run in parallel during cold-start, or skip until next sentiment-scan cycle?
-   - Recommendation: run in parallel (`Promise.all`) — it's a yahoo-finance2 call that's already cheap, and skipping means the calibration block has technical_pattern=null for the first report on a brand-new ticker.
+   - **RESOLVED:** run in parallel — implemented via `Promise.all([lightweightCommunityScan, computeTechnicalSnapshot])` in plan 16-04 Task 1 (engine-context cold-start path).
 
 3. **Should the schema migration ship as a single or two migrations?**
    - What we know: §6 recommends single, expand-then-contract within one transaction.
    - What's unclear: project STATE.md mentions `dotenv` quirks with `prisma migrate deploy` ([CITED: Phase 6 STATE: "Prisma 7 migrate dev requires explicit env export"]).
-   - Recommendation: single migration; planner must verify `prisma migrate dev` succeeds locally before commit, and ensure DATABASE_URL is exported in the build env.
+   - **RESOLVED:** single migration — implemented in plan 16-02 Task 2 as `prisma/migrations/20260427_add_technical_signal_class/migration.sql` (expand-then-contract within one transactional file). Plan 16-02 Task 3 mandates `prisma migrate deploy` (NOT `db push`) as the application mechanism.
 
 4. **What happens to `LearningEvent.flow_pattern` and `LearningEvent.cap_class` columns?**
    - What we know: Schema (line 109-122) has `flow_pattern String?` and `cap_class String?` on `LearningEvent`. These describe which cell was updated.
    - What's unclear: should these be renamed to `pattern_key` + `signal_class` + `cap_class` + `horizon_days`?
-   - Recommendation: yes. Planner must include this in the migration. The grep audit will catch any consumers (drift_alert messages reference `${fp} × ${cc}` — must extend to include signal_class + horizon_days).
+   - **RESOLVED:** yes — renamed to `pattern_key` + `signal_class` + `horizon_days` (cap_class retained) in plan 16-02 Task 1 schema edit + Task 2 migration SQL. drift_alert message format extended to `${signal_class} × ${pattern_key} × ${cap_class} × ${horizon_days}d` in plan 16-03 Task 3.
 
 ## Sources
 
