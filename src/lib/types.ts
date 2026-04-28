@@ -313,6 +313,41 @@ export interface AnalysisResult {
   engine_calibration?: EngineCalibration;        // diffusion-engine prior at report-generation time
 }
 
+// ---- TechnicalSnapshot — Phase 16 technical-analysis sensor ----
+// Pure compute layer. No DB writes here; downstream plans (16-02 schema, 16-03 cron writer,
+// 16-04 engine-context) consume these types. The 8 TechPattern literals are LOCKED — no
+// additional values may be added without updating the classifier in src/lib/data/technical.ts
+// AND the engine-context lookup table.
+
+export type TechPattern =
+  | 'breakout_uptrend'
+  | 'overbought_uptrend'
+  | 'pullback_in_uptrend'
+  | 'consolidation'
+  | 'breakdown'
+  | 'oversold_downtrend'
+  | 'death_cross'
+  | 'golden_cross';
+
+export interface TechnicalSnapshot {
+  rsi_14: number | null;
+  macd_line: number | null;
+  macd_signal: number | null;
+  macd_histogram: number | null;
+  sma_50: number | null;
+  sma_200: number | null;
+  atr_14: number | null;
+  avg_volume_20d: number | null;
+  volume_ratio: number | null;             // today_volume / avg_volume_20d
+  trend_regime: 'uptrend' | 'downtrend' | 'sideways' | 'unknown';
+  momentum_regime: 'overbought' | 'oversold' | 'neutral' | 'unknown';
+  cross_state: 'golden_cross' | 'death_cross' | 'none';
+  tech_pattern: TechPattern | null;        // null if bar_count < 200
+  bar_count: number;
+  computed_at: string;                     // ISO 8601
+  data_source: 'yahoo';
+}
+
 // ---- StoredReport — persisted report file (Phase 5) ----
 // Wraps AnalysisResult with metadata duplicated at top level for fast list reads.
 // Written to ~/.cipher/reports/{TICKER}-{analyzed_at_sanitized}.json
