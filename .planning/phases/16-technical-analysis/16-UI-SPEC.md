@@ -62,8 +62,7 @@ Phase 16 declares **4 sizes × 2 weights** within the existing Cipher type syste
 | Role | Size | Weight | Line Height | Family | Phase 16 Usage |
 |------|------|--------|-------------|--------|----------------|
 | Eyebrow / micro-label | 10 px (`text-[10px]`) | 700 (bold), tracking-widest, uppercase | 1.0 | Inter | Section headers ("HORIZON", "DIFFUSION", "TECHNICAL", "AGREEMENT"); status badges; pattern-library cell labels |
-| Caption / data-row | 11 px (`text-[11px]`) | 400 (regular) | 1.4 | JetBrains Mono | Horizon-table cell values; RSI/MACD/MA numeric readouts; CI ranges `[0.51 – 0.73]`; sample size `n=47` |
-| Body | 12 px (`text-xs`) | 400 (regular) | 1.5 | Inter | Engine alignment / disagreement prose; tooltip text; tab content paragraphs |
+| Body / caption / data-row | 12 px (`text-xs`) | 400 (regular) | 1.4 (mono data rows) / 1.5 (prose) | Inter (prose) · JetBrains Mono (data) | Engine alignment / disagreement prose; tooltip text; tab content paragraphs; horizon-table cell values; RSI/MACD/MA numeric readouts; CI ranges `[0.51 – 0.73]`; sample size `n=47`. `font-mono` distinguishes data from prose at the same size. |
 | Heading | 16 px (`text-base`) | 700 (bold) | 1.2 | Inter | Tab headings on `/insights` ("Technical Pattern Library", "Horizon Brier"); Technical Signals card title |
 | Display (numeric) | 24 px (`text-2xl`) | 700 (bold), tabular-nums | 1.1 | JetBrains Mono | Headline metric values inside `MetricCard` (engine prior, technical posterior, RSI value) |
 
@@ -71,7 +70,7 @@ Phase 16 declares **4 sizes × 2 weights** within the existing Cipher type syste
 1. Every numeric value renders in `font-mono` with `tabular-nums`. Mixing prose and numbers in the same span is forbidden — wrap the number in `<span className="font-mono tabular-nums">`.
 2. Eyebrow micro-labels are uppercased and `tracking-widest` (`0.1em`) — this is the Cipher "research-terminal" tell and must be preserved on every new surface.
 3. Headings never go above 24 px on Phase 16 surfaces. The Cipher report layout intentionally avoids hero typography — this is a research instrument, not a marketing page.
-4. Line-height for the 11 px monospace caption is `1.4` (not 1.5) so dense horizon tables stay readable in a single screen-height.
+4. Line-height for the 12 px monospace data rows is `1.4` (not 1.5) so dense horizon tables stay readable in a single screen-height; 12 px Inter prose stays at `1.5`.
 
 ---
 
@@ -150,7 +149,7 @@ The existing panel grows in place. Backwards compat: when `horizon_calibrations`
    - 5 rows: `7d`, `14d`, `30d★`, `60d`, `90d`. (3d is omitted from the table — too noisy for thesis horizons; backend still stores it.)
    - 6 columns: `HORIZON | DIFFUSION POST. | DIFFUSION CI | TECHNICAL POST. | TECHNICAL CI | N · STATUS`
    - Header row: 10 px uppercase eyebrow, `text-on-surface-variant`, `bg-surface-container-low`
-   - Data rows: 11 px JetBrains Mono, `bg-surface-container-high`
+   - Data rows: 12 px JetBrains Mono (`text-xs font-mono`), `bg-surface-container-high`
    - The `30d★` row is the **primary horizon** — render with:
      - Star prefix (`★`) in `text-primary`
      - `border-l-2 border-primary` on the row's left edge (extends 2 px beyond row padding)
@@ -190,21 +189,21 @@ Insert this card into the existing report flow, immediately **after** the Sentim
    - Segments below 30: tinted `bg-error/30` background with the RSI position marked by a 2 px vertical line in `text-error`
    - Segments above 70: tinted `bg-secondary/30` with marker in `text-secondary`
    - Segments 30–70: neutral `bg-surface-container-highest`, marker in `text-on-surface`
-   - Subtext (11 px mono): `30 ─── 70` aligned beneath the bar (boundary annotations)
+   - Subtext (12 px mono, `text-xs font-mono`): `30 ─── 70` aligned beneath the bar (boundary annotations)
    - Tooltip: "RSI(14): 14-day Relative Strength Index. <30 = oversold, >70 = overbought."
 
 2. **MACD direction.**
    - Eyebrow: `MACD`
-   - Top line: arrow icon (`trending_up` `text-secondary` if histogram > 0; `trending_down` `text-error` if histogram < 0; `trending_flat` `text-on-surface-variant` if within ±0.05) followed by 11 px mono histogram value (signed: `+0.42` / `-0.18`)
-   - Bottom line (11 px mono, `text-on-surface-variant`): `line: {macd_line} · sig: {macd_signal}` — both 2-decimal precision
+   - Top line: arrow icon (`trending_up` `text-secondary` if histogram > 0; `trending_down` `text-error` if histogram < 0; `trending_flat` `text-on-surface-variant` if within ±0.05) followed by 12 px mono histogram value (`text-xs font-mono`) (signed: `+0.42` / `-0.18`)
+   - Bottom line (12 px mono, `text-xs font-mono text-on-surface-variant`): `line: {macd_line} · sig: {macd_signal}` — both 2-decimal precision
    - Tooltip: "MACD(12,26,9). Positive histogram = MACD line above signal line (bullish momentum). Negative = bearish momentum."
 
 3. **Moving-Average stack.**
    - Eyebrow: `MA STACK`
    - A vertical 3-row stack visualizing price relative to SMA50 and SMA200. Each row is a labeled tick on a vertical axis, ordered by value:
-     - Highest → lowest: 11 px mono labels `PRICE`, `SMA50`, `SMA200`, in their actual price order (e.g. if price > SMA50 > SMA200 — bullish stack — that's the order top-to-bottom)
+     - Highest → lowest: 12 px mono labels (`text-xs font-mono`) `PRICE`, `SMA50`, `SMA200`, in their actual price order (e.g. if price > SMA50 > SMA200 — bullish stack — that's the order top-to-bottom)
      - Each tick is a 2 px tall horizontal bar (`w-12`) colored by row identity: PRICE in `text-on-surface`, SMA50 in `text-primary`, SMA200 in `text-tertiary`
-     - To the right of each tick: the value (11 px mono, JetBrains)
+     - To the right of each tick: the value (12 px mono, JetBrains, `text-xs font-mono`)
    - Bottom subtext (10 px eyebrow): one of `BULLISH STACK`, `BEARISH STACK`, `MIXED` — derived from the row order
    - Tooltip: "Price > SMA50 > SMA200 = bullish trend regime. Reverse = bearish. Mixed = transitional."
 
@@ -230,7 +229,7 @@ A small pill-shape rendered in `EngineCalibrationPanel`'s dual-column header AND
 **Visual:**
 - Shape: rounded-full pill, `px-3 py-1`
 - Border: 1 px, color matches text
-- Text: 10 px Inter, `font-black` (900), `tracking-widest`, uppercase
+- Text: 10 px Inter, `font-bold` (700), `tracking-widest`, uppercase
 - Optional leading icon (Material Symbols, 12 px): `check_circle` for ALIGNED, `compare_arrows` for MIXED, `error` for OPPOSED, `help` for UNKNOWN
 
 **4 states:**
@@ -257,7 +256,7 @@ The existing `InsightsDashboard` becomes the "Diffusion" world. Phase 16 adds a 
 - Sticky to top (`sticky top-[44px]` — sits flush against existing 44 px navbar)
 - Background: `bg-surface-container/95 backdrop-blur` (slightly translucent for the dot-grid backdrop)
 - Tabs as horizontal flex, 32 px gap (`gap-8`), `px-6 py-3`
-- Inactive tab: 11 px Inter uppercase `tracking-widest`, `text-on-surface-variant`, hover `text-on-surface`
+- Inactive tab: 12 px Inter uppercase (`text-xs`) `tracking-widest`, `text-on-surface-variant`, hover `text-on-surface`
 - Active tab: same, but `text-on-surface` plus a 2 px `bg-primary` underline (`border-b-2 border-primary`) extending the full label width plus 4 px on each side
 - The two NEW tabs render with a small `· NEW` 9 px label in `text-primary` to their right for the first 30 days post-launch (controlled via a `data-new-until` attribute to make removal trivial)
 
@@ -272,7 +271,7 @@ Mirrors the existing diffusion Pattern Library exactly in pattern, never in pixe
 - Below the horizon selector: an **8 × 4 grid** (rows = TechPatterns, columns = cap classes). Identical visual structure to existing diffusion pattern-library cells.
 - Cell content (per cell):
   - Top-left eyebrow: `posterior_mean` as percent (e.g. `61%`), 16 px JetBrains bold
-  - Below: `[ci_low%–ci_high%]` 11 px mono `text-on-surface-variant`
+  - Below: `[ci_low%–ci_high%]` 12 px mono (`text-xs font-mono`) `text-on-surface-variant`
   - Bottom-left: `n=N` 10 px mono
   - Bottom-right: status badge (ACTIVE / EXPLORATORY / DEPRECATED / NO_DATA) reusing existing badge styles
   - **EXPLORATORY cells render with `opacity-60` AND a 1 px dashed border** — visually de-emphasized vs ACTIVE cells which use a 1 px solid `border-secondary/30` border. NO_DATA cells render at `opacity-30` with `text-outline` em-dashes.
@@ -285,8 +284,8 @@ Mirrors the existing diffusion Pattern Library exactly in pattern, never in pixe
 A single chart canvas plus a legend. Tests the multi-horizon thesis ("does prediction quality decay with horizon?").
 
 **Chart:**
-- X-axis: 6 horizon values (`3 7 14 30 60 90`), evenly spaced, JetBrains 11 px mono ticks. The `30` tick gets a `★` superscript and `text-primary` color
-- Y-axis: Brier score (`0.0` at top, `0.5` at bottom — lower is better; chart is "inverted" so a downward line means quality DECAYS with horizon, an upward line means quality IMPROVES). Y-tick labels JetBrains 11 px mono
+- X-axis: 6 horizon values (`3 7 14 30 60 90`), evenly spaced, JetBrains 12 px mono ticks (`text-xs font-mono`). The `30` tick gets a `★` superscript and `text-primary` color
+- Y-axis: Brier score (`0.0` at top, `0.5` at bottom — lower is better; chart is "inverted" so a downward line means quality DECAYS with horizon, an upward line means quality IMPROVES). Y-tick labels JetBrains 12 px mono (`text-xs font-mono`)
 - One line per ACTIVE TechPattern (max 8 lines). Each line:
   - 1.5 px stroke
   - Color: cycle through Cipher's tonal accents in this order: `secondary`, `primary`, `tertiary`, `secondary` lighter, `primary` lighter, etc. (Phase 16 launches with at most 4–5 ACTIVE patterns; the palette has headroom.)
@@ -294,7 +293,7 @@ A single chart canvas plus a legend. Tests the multi-horizon thesis ("does predi
 - Adversarial null reference: a single dashed horizontal line at `brier_null` for context, in `text-outline`, labeled `null baseline` at the right edge
 
 **Legend (right side, vertical):**
-- One row per visible TechPattern: a 12 px color swatch + the pattern label (11 px Inter, `tracking-widest`) + sample size (10 px JetBrains Mono in `text-on-surface-variant`)
+- One row per visible TechPattern: a 12 px color swatch + the pattern label (12 px Inter, `text-xs tracking-widest`) + sample size (10 px JetBrains Mono in `text-on-surface-variant`)
 - Hovering a legend row highlights its line and dims others to `opacity-30` (interaction is optional for v1; if not implemented, legend is pure read-only)
 
 **Empty state:** if no pattern has `status === 'ACTIVE'` at any horizon yet, render the chart axes plus a centered message:
@@ -432,7 +431,7 @@ Phase 16 surfaces are **read-only research displays**. There are NO destructive 
 
 ## Accessibility
 
-- Color contrast: all 11 px JetBrains text on `bg-surface-container-high` (`#262a31`) must meet WCAG AA (4.5:1) — verified against `--color-on-surface` (`#dfe2eb`, ratio ~12:1) ✓ and `--color-on-surface-variant` (`#c3c5d8`, ratio ~9:1) ✓. Status badge text colors verified at the existing `bg-{token}/20` opacity levels (existing project convention).
+- Color contrast: all 12 px JetBrains text on `bg-surface-container-high` (`#262a31`) must meet WCAG AA (4.5:1) — verified against `--color-on-surface` (`#dfe2eb`, ratio ~12:1) ✓ and `--color-on-surface-variant` (`#c3c5d8`, ratio ~9:1) ✓. Status badge text colors verified at the existing `bg-{token}/20` opacity levels (existing project convention).
 - The agreement badge state must be **redundantly encoded**: text label + color + (optional) icon. A user reading in monochrome (print) can still tell ALIGNED from OPPOSED from the word.
 - Tab strip: `role="tablist"`, each tab `role="tab"` with `aria-selected` and `aria-controls`. Tab panel `role="tabpanel"` with `aria-labelledby`.
 - Horizon table: native `<table>` with `<thead>` / `<tbody>` / scope-attributed `<th>` cells. The primary-row star is `aria-label="primary horizon"` to avoid screen-reader confusion.
