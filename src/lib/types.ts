@@ -335,6 +335,7 @@ export interface AnalysisResult {
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph
   engine_calibration?: EngineCalibration;        // diffusion-engine prior at report-generation time
+  technical_at_report?: TechnicalSnapshot | null; // Phase 16-04: live technical snapshot at report time
 }
 
 // ---- TechnicalSnapshot — Phase 16 technical-analysis sensor ----
