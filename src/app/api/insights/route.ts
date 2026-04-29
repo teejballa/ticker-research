@@ -35,7 +35,7 @@ interface SparklinePoint { niche: number; middle: number; mainstream: number; sc
 
 export async function GET() {
   try {
-    const [reports, snapshots, patterns, recentEvents, lastEpoch, recentTraces] = await Promise.all([
+    const [reports, snapshots, patterns, recentEvents, lastEpoch, recentTraces, technicalPatterns] = await Promise.all([
       prisma.report.findMany({
         where: { price_at_report: { not: null } },
         include: { outcomes: true },
@@ -47,13 +47,22 @@ export async function GET() {
         orderBy: { scanned_at: 'desc' },
         take: 1000,
       }),
-      prisma.learnedPattern.findMany({ orderBy: [{ flow_pattern: 'asc' }, { cap_class: 'asc' }] }),
+      // Phase 16-05: diffusion-only patterns (legacy callers still use flow_pattern + cap_class).
+      prisma.learnedPattern.findMany({
+        where: { signal_class: 'diffusion' },
+        orderBy: [{ pattern_key: 'asc' }, { cap_class: 'asc' }],
+      }),
       prisma.learningEvent.findMany({ orderBy: { occurred_at: 'desc' }, take: 10 }),
       prisma.logisticEpoch.findFirst({ orderBy: { epoch: 'desc' } }),
       prisma.diffusionTrace.findMany({
         where: { flow_pattern: 'niche_leads' },
         orderBy: { end_at: 'desc' },
         take: 8,
+      }),
+      // Phase 16-05: technical pattern library (8 TechPatterns × 3 cap_classes × 6 horizons = 144 cells).
+      prisma.learnedPattern.findMany({
+        where: { signal_class: 'technical' },
+        orderBy: [{ pattern_key: 'asc' }, { cap_class: 'asc' }, { horizon_days: 'asc' }],
       }),
     ]);
 
@@ -108,7 +117,9 @@ export async function GET() {
       const ci_30d = credibleInterval95({ alpha: p.alpha_30d, beta: p.beta_30d });
       const week_delta = posteriorMean({ alpha: p.alpha_30d, beta: p.beta_30d }) - posteriorMean({ alpha: p.alpha, beta: p.beta });
       return {
-        flow_pattern: p.flow_pattern,
+        // Phase 16-05: schema renamed flow_pattern → pattern_key (signal_class='diffusion').
+        // Wire shape preserved for legacy InsightsDashboard consumers.
+        flow_pattern: p.pattern_key,
         cap_class: p.cap_class,
         alpha: p.alpha,
         beta: p.beta,
@@ -196,7 +207,8 @@ export async function GET() {
       occurred_at: e.occurred_at.toISOString(),
       event_type: e.event_type,
       ticker: e.ticker,
-      flow_pattern: e.flow_pattern,
+      // Phase 16-05: schema renamed flow_pattern → pattern_key on LearningEvent.
+      flow_pattern: e.pattern_key,
       cap_class: e.cap_class,
       message: e.message,
     }));
@@ -232,6 +244,24 @@ export async function GET() {
       recorded_at: lastEpoch.recorded_at.toISOString(),
     } : null;
 
+    // ─── Phase 16-05: technical_pattern_library (8 × 3 × 6 = 144 cells) ──────
+    // Wire shape per plan 16-05 §interfaces. signal_class is always 'technical';
+    // cap_class is locked to classifyCapClass()'s union (large_cap | mid_cap | small_cap);
+    // horizon_days ∈ {3, 7, 14, 30, 60, 90}.
+    const technical_pattern_library = technicalPatterns.map(p => {
+      const ci = p.sample_size > 0 ? credibleInterval95({ alpha: p.alpha, beta: p.beta }) : null;
+      return {
+        signal_class: 'technical' as const,
+        pattern_key: p.pattern_key,
+        cap_class: p.cap_class,
+        horizon_days: p.horizon_days,
+        posterior_mean: p.sample_size > 0 ? posteriorMean({ alpha: p.alpha, beta: p.beta }) : null,
+        ci: ci ? ([ci.low, ci.high] as [number, number]) : null,
+        sample_size: p.sample_size,
+        status: p.status,
+      };
+    });
+
     return NextResponse.json({
       // Existing fields
       total_data_points: dataPoints.length,
@@ -260,6 +290,8 @@ export async function GET() {
       concept_drift: { worst_z, status: drift_status },
       null_check,
       logistic_epoch,
+      // Phase 16-05: technical pattern library (signal_class='technical')
+      technical_pattern_library,
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Insights query failed' }, { status: 500 });

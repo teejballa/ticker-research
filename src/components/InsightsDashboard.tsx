@@ -41,7 +41,73 @@ interface InsightsData {
     sample_size: number;
     recorded_at: string;
   } | null;
+  // Phase 16-05: 8 TechPatterns × 3 cap_classes × 6 horizons = 144 cells
+  technical_pattern_library?: TechnicalPatternCell[];
 }
+
+// ── Phase 16-05: Technical Pattern Library types ─────────────────────────
+interface TechnicalPatternCell {
+  signal_class: 'technical';
+  pattern_key: string; // one of the 8 TechPattern literals
+  cap_class: 'large_cap' | 'mid_cap' | 'small_cap';
+  horizon_days: number; // 3 | 7 | 14 | 30 | 60 | 90
+  posterior_mean: number | null;
+  ci: [number, number] | null;
+  sample_size: number;
+  status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+}
+
+interface HorizonBrierData {
+  series: Array<{
+    pattern_key: string;
+    points: Array<{
+      horizon_days: number;
+      brier_in_sample: number | null;
+      status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+    }>;
+  }>;
+  brier_null: number;
+}
+
+// 4-tab structure on /insights — UI-SPEC §D, locked verbatim.
+const TABS = [
+  { id: 'diffusion-library', label: 'Diffusion Library', isNew: false },
+  { id: 'live-map', label: 'Live Diffusion Map', isNew: false },
+  { id: 'technical-library', label: 'Technical Pattern Library', isNew: true },
+  { id: 'horizon-brier', label: 'Horizon Brier', isNew: true },
+] as const;
+type TabId = typeof TABS[number]['id'];
+
+// 8 TechPatterns — locked order matches plan 16-05 §interfaces.
+const TECH_PATTERNS = [
+  'breakout_uptrend',
+  'overbought_uptrend',
+  'pullback_in_uptrend',
+  'consolidation',
+  'breakdown',
+  'oversold_downtrend',
+  'death_cross',
+  'golden_cross',
+] as const;
+
+// Display labels — UI-SPEC "TechPattern labels" (verbatim).
+const TECH_PATTERN_LABEL: Record<string, string> = {
+  breakout_uptrend: 'BREAKOUT UPTREND',
+  overbought_uptrend: 'OVERBOUGHT UPTREND',
+  pullback_in_uptrend: 'PULLBACK IN UPTREND',
+  consolidation: 'CONSOLIDATION',
+  breakdown: 'BREAKDOWN',
+  oversold_downtrend: 'OVERSOLD DOWNTREND',
+  death_cross: 'DEATH CROSS',
+  golden_cross: 'GOLDEN CROSS',
+};
+
+// 3 cap_classes — locked to classifyCapClass()'s union (no mega_cap).
+const TECH_CAP_COL_ORDER = ['large_cap', 'mid_cap', 'small_cap'] as const;
+
+// 6 horizons — primary horizon is 30, marked with ★ in the segmented control.
+const HORIZONS = [3, 7, 14, 30, 60, 90] as const;
+const PRIMARY_HORIZON = 30;
 
 interface PatternCellData {
   flow_pattern: string;
@@ -131,17 +197,54 @@ export function InsightsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(new Date());
+  // Phase 16-05: 4-tab structure with hash-routing. Lazy initializer reads
+  // window.location synchronously on first render — avoids the cascading
+  // setState-in-effect anti-pattern flagged by react-hooks/set-state-in-effect.
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (typeof window === 'undefined') return 'diffusion-library';
+    const hash = window.location.hash.slice(1);
+    return TABS.some((t) => t.id === hash) ? (hash as TabId) : 'diffusion-library';
+  });
+  // Phase 16-05: Technical Pattern Library horizon selector — default 30d★.
+  const [selectedHorizon, setSelectedHorizon] = useState<number>(() => {
+    if (typeof window === 'undefined') return PRIMARY_HORIZON;
+    const params = new URLSearchParams(window.location.search);
+    const h = parseInt(params.get('h') ?? '', 10);
+    return HORIZONS.includes(h as typeof HORIZONS[number]) ? h : PRIMARY_HORIZON;
+  });
+  // Phase 16-05: Horizon Brier chart data (separate endpoint).
+  const [brierData, setBrierData] = useState<HorizonBrierData | null>(null);
 
   useEffect(() => {
     fetch('/api/insights')
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => { setError('Failed to load insights'); setLoading(false); });
+    // Fetch horizon-brier in parallel — tolerate 404 on older deployments.
+    fetch('/api/insights/horizon-brier')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: HorizonBrierData | null) => { if (d) setBrierData(d); })
+      .catch(() => { /* ignore — chart shows empty state */ });
   }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Phase 16-05: hash-change listener — keep state in sync if user uses
+  // browser back/forward across tabs. Does not setState on mount (lazy init
+  // already did that synchronously) — only on hashchange events.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (TABS.some((t) => t.id === hash)) {
+        setActiveTab(hash as TabId);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   if (loading) {
@@ -320,7 +423,60 @@ export function InsightsDashboard() {
         </div>
       </section>
 
+      {/* ─────────────────────── Phase 16-05: 4-Tab Strip ─────────────────────── */}
+      <div className="sticky top-[44px] z-10 bg-surface-container/95 backdrop-blur border-b border-outline-variant/30">
+        <div className="max-w-7xl mx-auto flex gap-8 px-6 py-3 overflow-x-auto" role="tablist" aria-label="Insights views">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={activeTab === t.id}
+              onClick={() => {
+                setActiveTab(t.id);
+                if (typeof window !== 'undefined') window.location.hash = t.id;
+              }}
+              className={`text-xs uppercase tracking-widest font-mono whitespace-nowrap transition-colors pb-1 ${
+                activeTab === t.id
+                  ? 'text-on-surface border-b-2 border-primary -mb-px'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              {t.label}
+              {t.isNew && <span className="ml-2 text-[9px] text-primary">· NEW</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-6">
+
+      {/* Tabs 1 + 2 share the existing scroll layout (Diffusion Library = stat strip
+          + thesis + tiers + diffusion tracker + outcome log; Live Diffusion Map =
+          live-map + engine memory). Tabs 3 + 4 swap in new content. */}
+
+      {/* ─────────────────────── Tab 3: Technical Pattern Library ─────────────────────── */}
+      {activeTab === 'technical-library' && (
+        <TechnicalPatternLibrarySection
+          cells={data.technical_pattern_library ?? []}
+          selectedHorizon={selectedHorizon}
+          onHorizonChange={(h) => {
+            setSelectedHorizon(h);
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href);
+              url.searchParams.set('h', String(h));
+              window.history.replaceState({}, '', url.toString());
+            }
+          }}
+        />
+      )}
+
+      {/* ─────────────────────── Tab 4: Horizon Brier ─────────────────────── */}
+      {activeTab === 'horizon-brier' && (
+        <HorizonBrierSection data={brierData} />
+      )}
+
+      {/* ─────────────────────── Tabs 1 + 2: existing scroll layout ─────────────────────── */}
+      {(activeTab === 'diffusion-library' || activeTab === 'live-map') && <>
 
       {/* ─────────────────────── Stat strip ─────────────────────── */}
       <section
@@ -847,6 +1003,8 @@ export function InsightsDashboard() {
         </p>
       </section>
 
+      </>}{/* end tabs 1 + 2 */}
+
       {/* ─────────────────────── Footer rule ─────────────────────── */}
       <footer className="mt-10 pt-6 border-t border-outline-variant/30 flex flex-wrap items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
         <span>Cipher Engine</span>
@@ -1352,6 +1510,320 @@ function MemoryFeedItem({ entry }: { entry: MemoryEntry }) {
       <span className="text-on-surface-variant leading-relaxed">
         {entry.message}
       </span>
+    </div>
+  );
+}
+
+/* ───────────────────────── Phase 16-05: Technical Pattern Library ───────────────────────── */
+
+const TECH_CAP_LABEL: Record<string, string> = {
+  large_cap: 'Large Cap',
+  mid_cap: 'Mid Cap',
+  small_cap: 'Small Cap',
+};
+
+function TechnicalPatternLibrarySection({
+  cells,
+  selectedHorizon,
+  onHorizonChange,
+}: {
+  cells: TechnicalPatternCell[];
+  selectedHorizon: number;
+  onHorizonChange: (h: number) => void;
+}) {
+  const filtered = cells.filter((c) => c.horizon_days === selectedHorizon);
+
+  return (
+    <section className="my-12 border border-outline-variant/30" aria-label="Technical Pattern Library">
+      <div className="p-6 md:p-8 border-b border-outline-variant/20">
+        <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+          Technical Pattern Library
+        </div>
+        <h2 className="text-on-surface text-base font-bold tracking-tight">
+          Technical Pattern Library — {selectedHorizon}d horizon
+        </h2>
+        <p className="text-on-surface-variant text-xs mt-2 max-w-3xl leading-relaxed">
+          Each cell shows the engine&apos;s posterior probability that a given technical pattern
+          produces &gt;1% excess return vs SPY at the selected horizon, conditioned on the ticker&apos;s
+          market-cap class. 8 TechPatterns × 3 cap_classes × 6 horizons = 144 cells.
+        </p>
+        <p className="text-on-surface-variant text-xs mt-3 max-w-3xl leading-relaxed">
+          Technical priors mature in ~30–60 days post-launch. Most cells will read EXPLORATORY until then — that is the engine learning, not a bug.
+        </p>
+
+        {/* Horizon selector — segmented control */}
+        <div className="mt-5 inline-flex gap-px bg-outline-variant/30 border border-outline-variant/30 p-px" role="tablist" aria-label="Horizon">
+          {HORIZONS.map((h) => {
+            const active = h === selectedHorizon;
+            const isPrimary = h === PRIMARY_HORIZON;
+            return (
+              <button
+                key={h}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => onHorizonChange(h)}
+                className={`text-xs font-mono tracking-widest uppercase px-3 py-1.5 transition-colors ${
+                  active
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {h}d{isPrimary ? '★' : ''}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-b border-outline-variant/30">
+              <th className="text-left font-medium px-6 py-3">Pattern</th>
+              {TECH_CAP_COL_ORDER.map((cc) => (
+                <th key={cc} className="text-left font-medium px-3 py-3">
+                  {TECH_CAP_LABEL[cc]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {TECH_PATTERNS.map((pk) => (
+              <tr
+                key={pk}
+                className={`border-b border-outline-variant/10 ${
+                  selectedHorizon === PRIMARY_HORIZON ? 'border-l-2 border-l-primary' : ''
+                }`}
+              >
+                <td className="px-6 py-4 font-bold text-on-surface tracking-tight align-top">
+                  <div>{TECH_PATTERN_LABEL[pk]}</div>
+                  <div className="text-[10px] text-outline font-mono tracking-widest uppercase mt-0.5">
+                    {pk}
+                  </div>
+                </td>
+                {TECH_CAP_COL_ORDER.map((cc) => {
+                  const cell = filtered.find((c) => c.pattern_key === pk && c.cap_class === cc);
+                  return (
+                    <td key={cc} className="px-3 py-4 align-top">
+                      <TechnicalPatternCellView cell={cell} />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function TechnicalPatternCellView({ cell }: { cell: TechnicalPatternCell | undefined }) {
+  if (!cell || cell.sample_size === 0) {
+    return (
+      <div className="text-[10px] font-mono tracking-widest uppercase text-outline opacity-30">
+        — no data —
+      </div>
+    );
+  }
+  const meanPct = cell.posterior_mean != null ? (cell.posterior_mean * 100).toFixed(0) : '—';
+  const ciLow = cell.ci != null ? (cell.ci[0] * 100).toFixed(0) : '—';
+  const ciHigh = cell.ci != null ? (cell.ci[1] * 100).toFixed(0) : '—';
+
+  const statusBadgeClass =
+    cell.status === 'ACTIVE'
+      ? 'text-secondary border-secondary/40 bg-secondary/10'
+      : cell.status === 'DEPRECATED'
+        ? 'text-error border-error/40 bg-error/10'
+        : cell.status === 'NO_DATA'
+          ? 'text-outline border-outline-variant/40 bg-surface-container-low opacity-30'
+          : 'text-outline border-outline-variant/40 bg-surface-container-low border-dashed';
+
+  const containerClass =
+    cell.status === 'EXPLORATORY'
+      ? 'opacity-60'
+      : cell.status === 'NO_DATA'
+        ? 'opacity-30'
+        : '';
+
+  return (
+    <div className={containerClass}>
+      <div className="font-mono font-black text-on-surface text-base tabular-nums leading-none mb-1">
+        {meanPct}<span className="text-xs opacity-70">%</span>
+      </div>
+      <div className="text-[11px] font-mono tracking-wide text-outline mb-1">
+        [{ciLow}–{ciHigh}%]
+      </div>
+      <div className="text-[10px] font-mono text-outline mb-1">
+        n={cell.sample_size}
+      </div>
+      <span className={`text-[9px] font-mono tracking-widest uppercase px-1.5 py-0.5 border ${statusBadgeClass}`}>
+        {cell.status}
+      </span>
+    </div>
+  );
+}
+
+/* ───────────────────────── Phase 16-05: Horizon Brier ───────────────────────── */
+
+function HorizonBrierSection({ data }: { data: HorizonBrierData | null }) {
+  // Only show ACTIVE patterns in the chart (any horizon ACTIVE qualifies the series).
+  const activeSeries = (data?.series ?? []).filter((s) =>
+    s.points.some((p) => p.status === 'ACTIVE'),
+  );
+
+  return (
+    <section className="my-12 border border-outline-variant/30" aria-label="Horizon Brier">
+      <div className="p-6 md:p-8 border-b border-outline-variant/20">
+        <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+          Horizon Brier
+        </div>
+        <h2 className="text-on-surface text-base font-bold tracking-tight">
+          Brier score per ACTIVE TechPattern across horizons
+        </h2>
+        <p className="text-on-surface-variant text-xs mt-2 max-w-3xl leading-relaxed">
+          Lower Brier = better calibrated. Dashed reference at 0.25 = chance baseline.
+          x-axis: 3d, 7d, 14d, 30d★, 60d, 90d. Each line is one ACTIVE TechPattern.
+        </p>
+      </div>
+
+      {activeSeries.length === 0 ? (
+        <div className="p-12 text-center text-on-surface-variant text-sm">
+          No ACTIVE technical patterns yet. Engine needs ~30–60 days of post-Phase-16 data to mark cells ACTIVE. Until then, the diffusion library is the primary signal.
+        </div>
+      ) : (
+        <HorizonBrierChart series={activeSeries} brierNull={data?.brier_null ?? 0.25} />
+      )}
+    </section>
+  );
+}
+
+function HorizonBrierChart({
+  series,
+  brierNull,
+}: {
+  series: HorizonBrierData['series'];
+  brierNull: number;
+}) {
+  // Pure SVG line chart — no extra deps. x = log-of-horizon for visual spacing.
+  const W = 720;
+  const H = 320;
+  const PAD_L = 56;
+  const PAD_R = 24;
+  const PAD_T = 24;
+  const PAD_B = 48;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+
+  // y range 0..0.5 inverted (0 top, 0.5 bottom).
+  const Y_MAX = 0.5;
+  const yPos = (b: number) => PAD_T + (Math.min(Math.max(b, 0), Y_MAX) / Y_MAX) * innerH;
+
+  // x positions — even spacing across the 6 horizons.
+  const xPos = (i: number) => PAD_L + (i / (HORIZONS.length - 1)) * innerW;
+
+  // Color rotation through CSS theme tokens.
+  const COLORS = [
+    'var(--color-primary, #66d9cc)',
+    'var(--color-secondary, #66d9cc)',
+    'var(--color-tertiary, #b6c4ff)',
+    'var(--color-error, #f87171)',
+    'var(--color-on-surface, #e6e6e6)',
+    '#f59e0b',
+    '#a78bfa',
+    '#34d399',
+  ];
+
+  return (
+    <div className="overflow-x-auto p-6">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" aria-label="Brier score by horizon">
+        {/* y-axis */}
+        <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={H - PAD_B} stroke="currentColor" className="text-outline-variant" strokeWidth="1" />
+        {/* x-axis */}
+        <line x1={PAD_L} y1={H - PAD_B} x2={W - PAD_R} y2={H - PAD_B} stroke="currentColor" className="text-outline-variant" strokeWidth="1" />
+
+        {/* y ticks at 0, 0.1, 0.2, 0.3, 0.4, 0.5 */}
+        {[0, 0.1, 0.2, 0.3, 0.4, 0.5].map((b) => (
+          <g key={b}>
+            <line x1={PAD_L - 4} y1={yPos(b)} x2={PAD_L} y2={yPos(b)} stroke="currentColor" className="text-outline-variant" />
+            <text x={PAD_L - 8} y={yPos(b) + 4} textAnchor="end" className="text-[10px] fill-outline font-mono">{b.toFixed(2)}</text>
+          </g>
+        ))}
+
+        {/* x ticks — 30d gets ★ */}
+        {HORIZONS.map((h, i) => (
+          <g key={h}>
+            <line x1={xPos(i)} y1={H - PAD_B} x2={xPos(i)} y2={H - PAD_B + 4} stroke="currentColor" className="text-outline-variant" />
+            <text
+              x={xPos(i)}
+              y={H - PAD_B + 18}
+              textAnchor="middle"
+              className={`text-[10px] font-mono ${h === PRIMARY_HORIZON ? 'fill-primary font-bold' : 'fill-outline'}`}
+            >
+              {h}d{h === PRIMARY_HORIZON ? '★' : ''}
+            </text>
+          </g>
+        ))}
+
+        {/* Adversarial null reference line */}
+        <line
+          x1={PAD_L}
+          y1={yPos(brierNull)}
+          x2={W - PAD_R}
+          y2={yPos(brierNull)}
+          stroke="currentColor"
+          className="text-outline"
+          strokeDasharray="4 4"
+          strokeWidth="1"
+        />
+        <text x={W - PAD_R - 4} y={yPos(brierNull) - 4} textAnchor="end" className="text-[10px] fill-outline font-mono">
+          null = {brierNull.toFixed(2)}
+        </text>
+
+        {/* Series */}
+        {series.map((s, idx) => {
+          const validPoints = s.points
+            .map((p, i) => ({ p, i }))
+            .filter(({ p }) => p.brier_in_sample != null);
+          if (validPoints.length === 0) return null;
+          const path = validPoints
+            .map(({ p, i }, j) => {
+              const x = xPos(i);
+              const y = yPos(p.brier_in_sample!);
+              return `${j === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+            })
+            .join(' ');
+          const color = COLORS[idx % COLORS.length];
+          return (
+            <g key={s.pattern_key}>
+              <path d={path} fill="none" stroke={color} strokeWidth="1.5" />
+              {validPoints.map(({ p, i }) => (
+                <circle
+                  key={`${s.pattern_key}-${i}`}
+                  cx={xPos(i)}
+                  cy={yPos(p.brier_in_sample!)}
+                  r="2.5"
+                  fill={color}
+                />
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 mt-4 text-[10px] font-mono tracking-wide text-on-surface-variant">
+        {series.map((s, idx) => {
+          const color = COLORS[idx % COLORS.length];
+          return (
+            <div key={s.pattern_key} className="flex items-center gap-1.5">
+              <span style={{ width: 10, height: 2, background: color, display: 'inline-block' }} aria-hidden />
+              <span className="uppercase tracking-widest">{TECH_PATTERN_LABEL[s.pattern_key] ?? s.pattern_key}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
