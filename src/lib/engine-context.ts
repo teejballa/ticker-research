@@ -334,10 +334,22 @@ export async function getEngineContextForTicker(
     ?? classifyCapClass(mostRecent?.market_cap ?? null);
 
   // ── 5. Compute live technical snapshot for the 12-d combined logistic forward
-  // pass and the technical-cell lookup. Reuse the cold-start techSnap if we already
-  // computed it; otherwise run it fresh (best-effort, null on fail).
-  const techSnap: TechnicalSnapshot | null =
-    coldStartTechSnap ?? (await computeTechnicalSnapshot(upperTicker).catch(() => null));
+  // pass and the technical-cell lookup. Resolution order:
+  //   1. coldStartTechSnap from §2 (if cold start fired).
+  //   2. technical_data on the most-recent snapshot (Phase 16-05: backfill writes this
+  //      so engine-context doesn't need to re-hit Yahoo for every report read; also lets
+  //      test fixtures seed technical_data without depending on yahoo-finance2).
+  //   3. Live computeTechnicalSnapshot (best-effort, null on fail).
+  let techSnap: TechnicalSnapshot | null = coldStartTechSnap;
+  if (techSnap == null) {
+    const mostRecentSnap = snapsAsc[snapsAsc.length - 1];
+    const persisted = mostRecentSnap?.technical_data;
+    if (persisted && typeof persisted === 'object') {
+      techSnap = persisted as unknown as TechnicalSnapshot;
+    } else {
+      techSnap = await computeTechnicalSnapshot(upperTicker).catch(() => null);
+    }
+  }
   const techPattern: TechPattern | null = techSnap?.tech_pattern ?? null;
 
   // ── 6. Look up diffusion LearnedPattern at the 7d primary horizon ────
