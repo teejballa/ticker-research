@@ -10,22 +10,23 @@ import { RSI, MACD, SMA, ATR } from 'technicalindicators';
 import type { TechnicalSnapshot } from '@/lib/types';
 
 // --- Mock yahoo-finance2 BEFORE the SUT is imported -------------------------------
+// yahoo-finance2 v3 exports a class default — module imports do `new YahooFinance(opts)`.
+// The mock must expose a constructor whose instances share a single `chart` spy so
+// tests can drive the return value via mockChart. vi.hoisted() lets us share the
+// spy reference with the hoisted vi.mock() factory.
+const { mockChart } = vi.hoisted(() => ({ mockChart: vi.fn() }));
 vi.mock('yahoo-finance2', () => ({
-  default: {
-    chart: vi.fn(),
-  },
+  default: vi.fn().mockImplementation(() => ({
+    chart: mockChart,
+  })),
 }));
 
-import yahooFinance from 'yahoo-finance2';
 import {
   fetchOhlcv,
   computeTechnicalSnapshot,
   classifyTechPattern,
   type OhlcvBar,
 } from '@/lib/data/technical';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockChart = (yahooFinance as any).chart as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
