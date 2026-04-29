@@ -103,14 +103,35 @@ describe('formatResearchBrief', () => {
     expect(result).toContain('Data Assembled: 2026-03-12T14:23:00Z');
   });
 
-  it('contains all 6 section headers', () => {
+  it('contains all 7 section headers', () => {
     const result = formatResearchBrief(basePackage);
     expect(result).toContain('--- MARKET DATA ---');
     expect(result).toContain('--- FUNDAMENTALS ---');
     expect(result).toContain('--- ANALYST SENTIMENT ---');
+    expect(result).toContain('--- RECENT NEWS ---');
     expect(result).toContain('--- SEC FILINGS ---');
     expect(result).toContain('--- SOCIAL SENTIMENT ---');
     expect(result).toContain('--- COLLECTION NOTES ---');
+  });
+
+  it('renders headlines from pkg.news.items in the brief, newest first', () => {
+    const result = formatResearchBrief(basePackage);
+    expect(result).toContain('Apple reports record revenue');
+    expect(result).toContain('AAPL analyst upgrade');
+    expect(result).toContain('[2026-03-11] Reuters: Apple reports record revenue');
+    const idxNewer = result.indexOf('Apple reports record revenue');
+    const idxOlder = result.indexOf('AAPL analyst upgrade');
+    expect(idxNewer).toBeLessThan(idxOlder);
+  });
+
+  it('falls back to a sentinel when no news items were collected', () => {
+    const pkg: SourcePackage = {
+      ...basePackage,
+      news: { ...basePackage.news, items: [] },
+    };
+    const result = formatResearchBrief(pkg);
+    expect(result).toContain('--- RECENT NEWS ---');
+    expect(result).toContain('No recent news headlines retrieved.');
   });
 
   it('formats market data price with $ prefix and 2 decimal places', () => {

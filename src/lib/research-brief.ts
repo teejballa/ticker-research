@@ -122,6 +122,18 @@ export function formatResearchBrief(pkg: SourcePackage): string {
   }
   lines.push('');
 
+  // Recent News — surfaces headlines so Gemini reasons over them, not just cites them.
+  lines.push('--- RECENT NEWS ---');
+  if (pkg.news.items.length > 0) {
+    const sorted = [...pkg.news.items].sort((a, b) => (b.published_date ?? '').localeCompare(a.published_date ?? ''));
+    for (const item of sorted.slice(0, 20)) {
+      lines.push(`  - [${fmt(item.published_date)}] ${fmt(item.source)}: ${fmt(item.headline)}`);
+    }
+  } else {
+    lines.push('No recent news headlines retrieved.');
+  }
+  lines.push('');
+
   // SEC Filings
   lines.push('--- SEC FILINGS ---');
   lines.push(`Most Recent 10-K: ${fmt(pkg.sec_filing_summary.most_recent_10k)}`);
