@@ -10,18 +10,19 @@ datasource db {
 }
 
 model Report {
-  id               String   @id @default(uuid())
-  user_id          String
-  ticker           String
-  company_name     String
-  analyzed_at      DateTime @db.Timestamptz
-  market_sentiment String
-  confidence_level String
-  analysis         Json
-  price_at_report  Float?
-  community_data   Json?
+  id                  String   @id @default(uuid())
+  user_id             String
+  ticker              String
+  company_name        String
+  analyzed_at         DateTime @db.Timestamptz
+  market_sentiment    String
+  confidence_level    String
+  analysis            Json
+  price_at_report     Float?
+  community_data      Json?
+  technical_at_report Json?
 
-  outcomes         PriceOutcome[]
+  outcomes            PriceOutcome[]
 
   @@index([user_id, analyzed_at(sort: Desc)])
   @@map("reports")
@@ -37,13 +38,14 @@ model UserCredential {
 }
 
 model SentimentSnapshot {
-  id            String   @id @default(uuid())
-  ticker        String
-  scanned_at    DateTime @db.Timestamptz
-  price_at_scan Float
+  id             String   @id @default(uuid())
+  ticker         String
+  scanned_at     DateTime @db.Timestamptz
+  price_at_scan  Float
   community_data Json
+  technical_data Json?
 
-  outcomes      PriceOutcome[]
+  outcomes       PriceOutcome[]
 
   @@index([ticker, scanned_at(sort: Desc)])
   @@map("sentiment_snapshots")
@@ -87,8 +89,10 @@ model DiffusionTrace {
 
 model LearnedPattern {
   id                String   @id @default(uuid())
-  flow_pattern      String
+  signal_class      String   // 'diffusion' | 'technical'
+  pattern_key       String   // FlowPattern values OR TechPattern values
   cap_class         String
+  horizon_days      Int      // 3 | 7 | 14 | 30 | 60 | 90
   alpha             Float    @default(1)
   beta              Float    @default(1)
   sample_size       Int      @default(0)
@@ -102,7 +106,7 @@ model LearnedPattern {
   status            String   @default("EXPLORATORY")
   last_updated      DateTime @updatedAt @db.Timestamptz
 
-  @@unique([flow_pattern, cap_class])
+  @@unique([signal_class, pattern_key, cap_class, horizon_days])
   @@map("learned_patterns")
 }
 
@@ -112,7 +116,9 @@ model LearningEvent {
   event_type   String
   ticker       String?
   outcome_id   String?
-  flow_pattern String?
+  signal_class String?
+  pattern_key  String?
+  horizon_days Int?
   cap_class    String?
   delta        Json
   message      String   @db.Text
