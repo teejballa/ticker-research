@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   },
   learnedPattern: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
   },
   logisticEpoch: {
     findFirst: vi.fn(),
@@ -128,6 +129,7 @@ beforeEach(() => {
     Promise.resolve({ id: 'created', ...data }),
   );
   mocks.learnedPattern.findUnique.mockResolvedValue(null);
+  mocks.learnedPattern.findFirst.mockResolvedValue(null);
   mocks.logisticEpoch.findFirst.mockResolvedValue(null);
   mocks.learningEvent.findFirst.mockResolvedValue(null);
   mocks.lightweightCommunityScan.mockResolvedValue(null);

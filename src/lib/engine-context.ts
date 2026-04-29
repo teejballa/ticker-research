@@ -354,7 +354,8 @@ export async function getEngineContextForTicker(
 
   // ── 6. Look up diffusion LearnedPattern at the 7d primary horizon ────
   // Phase 16: composite key is (signal_class, pattern_key, cap_class, horizon_days).
-  // 7d remains the diffusion primary horizon (preserves existing semantics).
+  // 7d remains the diffusion primary horizon. Fall back to highest-sample
+  // horizon during warmup so the panel surfaces something while 7d ramps up.
   let diffusionCell: LearnedCellLike | null = null;
   if (flow_pattern && flow_pattern !== 'flat') {
     diffusionCell = (await prisma.learnedPattern.findUnique({
@@ -367,6 +368,19 @@ export async function getEngineContextForTicker(
         },
       },
     })) as LearnedCellLike | null;
+
+    if (!diffusionCell || diffusionCell.sample_size === 0) {
+      const fallback = await prisma.learnedPattern.findFirst({
+        where: {
+          signal_class: 'diffusion',
+          pattern_key: flow_pattern,
+          cap_class,
+          sample_size: { gt: 0 },
+        },
+        orderBy: [{ sample_size: 'desc' }, { horizon_days: 'desc' }],
+      });
+      if (fallback) diffusionCell = fallback as LearnedCellLike;
+    }
   }
 
   let posterior_mean: number | null = null;
@@ -382,9 +396,10 @@ export async function getEngineContextForTicker(
     posterior_30d_mean = n30 > 0 ? diffusionCell.alpha_30d / n30 : null;
   }
 
-  // ── 7. Look up technical LearnedPattern at the 30d primary horizon ────
-  // 30d is the LOCKED primary horizon for the technical signal class (it's also
-  // the only horizon the 12-feature Bayesian logistic trains on).
+  // ── 7. Look up technical LearnedPattern ─────────────────────────────────
+  // 30d is the LOCKED primary horizon. If 30d has no samples yet (typical for
+  // the first ~30 days of operation), fall back to the highest-sample horizon
+  // so the report panel surfaces SOMETHING meaningful while 30d ramps up.
   let technicalCell: LearnedCellLike | null = null;
   if (techPattern) {
     technicalCell = (await prisma.learnedPattern.findUnique({
@@ -397,6 +412,21 @@ export async function getEngineContextForTicker(
         },
       },
     })) as LearnedCellLike | null;
+
+    // Fallback: pick the populated horizon with the largest sample_size.
+    // Keeps the dashboard readable during the engine's warmup period.
+    if (!technicalCell || technicalCell.sample_size === 0) {
+      const fallback = await prisma.learnedPattern.findFirst({
+        where: {
+          signal_class: 'technical',
+          pattern_key: techPattern,
+          cap_class,
+          sample_size: { gt: 0 },
+        },
+        orderBy: [{ sample_size: 'desc' }, { horizon_days: 'desc' }],
+      });
+      if (fallback) technicalCell = fallback as LearnedCellLike;
+    }
   }
 
   let technical_posterior_mean: number | null = null;
