@@ -2,6 +2,9 @@
 // Bayesian learning primitives for the diffusion engine.
 // Pure functions — no DB access. All state is passed in.
 
+import type { TechPattern, TechnicalSnapshot } from './types';
+import type { DiffusionTraceResult } from './diffusion-trace';
+
 export interface BetaPosterior {
   alpha: number;
   beta: number;
@@ -233,4 +236,91 @@ export function patternStatus(args: {
     return 'ACTIVE';
   }
   return 'EXPLORATORY';
+}
+
+// ─── Phase 16-03: 12-feature vector + reinit detection ────────────────────
+//
+// FEATURE_NAMES is the LOCKED ordering of the 12-dimensional feature vector
+// trained by the Bayesian logistic in /api/cron/learn (30d outcomes only).
+// Positions 0-5 are the original diffusion features (preserved verbatim from
+// the pre-Phase-16 6-d state); positions 6-11 are the new technical features.
+//
+// Locked spec: 16-RESEARCH.md §8 lines 666-680.
+
+export const FEATURE_NAMES = [
+  // Diffusion features (positions 0-5) — preserved verbatim from pre-Phase-16
+  'v_niche', 'v_middle', 'v_mainstream',
+  'niche_lead_cycles', 'q_z', 'qual_z',
+  // Technical features (positions 6-11) — Phase 16
+  'rsi_14',
+  'macd_histogram',
+  'sma_relative_spread',           // (sma50 - sma200) / sma200 — NEVER absolute prices
+  'atr_14',
+  'volume_ratio',
+  'tech_pattern_uptrend_flag',     // 1 if tech_pattern in uptrend bucket, else 0
+] as const;
+
+const UPTREND_PATTERNS: ReadonlySet<TechPattern> = new Set<TechPattern>([
+  'breakout_uptrend',
+  'overbought_uptrend',
+  'pullback_in_uptrend',
+  'consolidation',
+  'golden_cross',
+]);
+
+/**
+ * Build the 12-element feature vector for a single training observation.
+ *
+ * Null safety defaults (chosen so a missing feature exerts NO bias on the
+ * sigmoid output at zero weights):
+ *   - position 6  rsi_14                    null → 50  (neutral midpoint)
+ *   - position 7  macd_histogram            null → 0   (zero signal)
+ *   - position 8  sma_relative_spread       null sma → 0
+ *   - position 9  atr_14                    null → 0
+ *   - position 10 volume_ratio              null → 1   (parity with average)
+ *   - position 11 tech_pattern_uptrend_flag null pattern → 0
+ */
+export function buildFeatureVector12(
+  trace: DiffusionTraceResult,
+  techSnap: TechnicalSnapshot | null,
+  techPattern: TechPattern | null,
+): number[] {
+  const smaSpread =
+    techSnap?.sma_50 != null && techSnap?.sma_200 != null && techSnap.sma_200 !== 0
+      ? (techSnap.sma_50 - techSnap.sma_200) / techSnap.sma_200
+      : 0;
+
+  return [
+    // Diffusion features (positions 0-5) — read from trace.
+    trace.v_niche ?? 0,
+    trace.v_middle ?? 0,
+    trace.v_mainstream ?? 0,
+    trace.niche_lead_cycles ?? 0,
+    trace.q_z ?? 0,
+    trace.qual_z ?? 0,
+    // Technical features (positions 6-11) — read from techSnap.
+    techSnap?.rsi_14 ?? 50,
+    techSnap?.macd_histogram ?? 0,
+    smaSpread,
+    techSnap?.atr_14 ?? 0,
+    techSnap?.volume_ratio ?? 1,
+    techPattern && UPTREND_PATTERNS.has(techPattern) ? 1 : 0,
+  ];
+}
+
+/**
+ * Detects the "first post-Phase-16 cycle" condition (Pitfall 5 — RESEARCH §8
+ * lines 925-930). When the latest LogisticEpoch.coefficients JSON has fewer
+ * keys than FEATURE_NAMES, the legacy 6-d state must be discarded and the
+ * logistic reinitialized from scratch — DO NOT pad with zeros.
+ *
+ * Note: an `_intercept` key is allowed to live alongside the named coefficients,
+ * which is why the comparison uses `< FEATURE_NAMES.length` (not `!==`).
+ */
+export function needsLogisticReinit(
+  coefficients: Record<string, { mu: number; sigma: number }> | null | undefined,
+): boolean {
+  if (!coefficients) return true;
+  const namedKeys = Object.keys(coefficients).filter((k) => !k.startsWith('_'));
+  return namedKeys.length < FEATURE_NAMES.length;
 }
