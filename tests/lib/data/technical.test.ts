@@ -291,7 +291,16 @@ describe('insufficient-data and error paths', () => {
 
   it('Test 17c — fetchOhlcv filters out bars with null high/low/close (Pitfall: technicalindicators chokes on nulls)', async () => {
     const closes = Array.from({ length: 250 }, (_, i) => 100 + i);
-    const bars = makeBars(closes) as Array<OhlcvBar & { high: number | null; low: number | null; close: number | null }>;
+    // Yahoo can return null for any OHLC field; quotes shape is broader than OhlcvBar.
+    type RawQuote = {
+      date: Date;
+      open: number | null;
+      high: number | null;
+      low: number | null;
+      close: number | null;
+      volume: number | null;
+    };
+    const bars: RawQuote[] = makeBars(closes);
     bars[5].close = null; // null close — must be filtered
     bars[10].high = null; // null high — must be filtered
     mockChart.mockResolvedValueOnce({ quotes: bars });
