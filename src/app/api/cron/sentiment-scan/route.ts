@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getCurrentWatchlist } from '@/lib/data/ticker-watchlist';
 import { lightweightCommunityScan } from '@/lib/data/lightweight-community-scan';
+import { computeTechnicalSnapshot } from '@/lib/data/technical';
 import YahooFinance from 'yahoo-finance2';
 
 export const dynamic = 'force-dynamic';
@@ -31,11 +33,26 @@ export async function GET(request: NextRequest) {
       } catch { /* skip */ }
       if (price === null) { results.failed++; continue; }
 
-      const communityData = await lightweightCommunityScan(ticker);
-      if (!communityData) { results.failed++; continue; }
+      // Phase 16-03: parallelize community + technical sensors so the new
+      // technical fetch adds 0 wall-clock time vs the existing community scan
+      // (Pitfall 6 — RESEARCH §8 lines 932-937). Both are best-effort: each
+      // returns null on failure rather than throwing.
+      const [communityData, technicalData] = await Promise.all([
+        lightweightCommunityScan(ticker),
+        computeTechnicalSnapshot(ticker),
+      ]);
+      if (!communityData && !technicalData) { results.failed++; continue; }
 
       await prisma.sentimentSnapshot.create({
-        data: { ticker, scanned_at: new Date(), price_at_scan: price, community_data: communityData as object },
+        data: {
+          ticker,
+          scanned_at: new Date(),
+          price_at_scan: price,
+          community_data: (communityData ?? {}) as Prisma.InputJsonValue,        // Json column is non-null at the schema level; coerce a missing scan to {}
+          technical_data: technicalData
+            ? (technicalData as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,                                                    // nullable Json column on the schema
+        },
       });
       results.scanned++;
 
