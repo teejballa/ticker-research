@@ -27,6 +27,7 @@ import YahooFinance from 'yahoo-finance2';
 import { prisma } from '@/lib/db';
 import {
   computeDiffusionTrace,
+  classifyCapClass,
   type FlowPattern,
   type CapClass,
   type SnapshotInput,
@@ -572,19 +573,24 @@ async function processOneOutcome(
     const techPattern: TechPattern | null = techSnap?.tech_pattern ?? null;
     const horizon = outcome.days_after as Horizon | number;
 
-    // Resolve cap_class: prefer DiffusionTrace (computed from full window),
-    // fall back to the snapshot's own community_data.cap_class. Without this
-    // fallback, single-snapshot tickers (no trace possible) write 'unknown'
-    // and the upsert silently drops them — yielding 0 technical cells.
+    // Resolve cap_class via fallback chain so single-snapshot tickers (no trace)
+    // and older snapshots written before cap_class was persisted both populate cells.
+    //   1. trace.cap_class (full window classification)
+    //   2. snapshot.community_data.cap_class (current scan layout)
+    //   3. classifyCapClass(snapshot.community_data.market_cap) (legacy snapshots)
+    // Without all three, the upsert silently drops to 'unknown' → 0 technical cells.
     let resolvedCap: string | null = trace?.cap_class ?? null;
     if (!resolvedCap && outcome.snapshot_id) {
       const snap = await tx.sentimentSnapshot.findUnique({
         where: { id: outcome.snapshot_id },
         select: { community_data: true },
       });
-      const cd = snap?.community_data as { cap_class?: string } | null;
+      const cd = snap?.community_data as { cap_class?: string; market_cap?: number } | null;
       if (cd?.cap_class && cd.cap_class !== 'unknown') {
         resolvedCap = cd.cap_class;
+      } else if (cd?.market_cap != null) {
+        const derived = classifyCapClass(cd.market_cap);
+        if (derived !== 'unknown') resolvedCap = derived;
       }
     }
 
