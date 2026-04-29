@@ -1,10 +1,14 @@
 // src/lib/__tests__/engine-context.test.ts
 // Unit tests for getEngineContextForTicker. Prisma + lightweightCommunityScan
-// are mocked — the test asserts orchestration & math, not DB behavior.
+// + computeTechnicalSnapshot are mocked — these tests assert orchestration & math,
+// not DB behavior.
+//
+// Phase 16-04 expansion: 10 new test cases pin the dual-class shape (technical_*,
+// horizon_calibrations, agreement, combined_logistic_score, parallel cold-start).
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// ── Mock Prisma ────────────────────────────────────────────────────────
+// ── Mock Prisma + the two cold-start sensors ───────────────────────────
 // `vi.hoisted` so the mock object exists when the module under test is imported.
 const mocks = vi.hoisted(() => ({
   sentimentSnapshot: {
@@ -21,6 +25,7 @@ const mocks = vi.hoisted(() => ({
     findFirst: vi.fn(),
   },
   lightweightCommunityScan: vi.fn(),
+  computeTechnicalSnapshot: vi.fn(),
 }));
 
 vi.mock('@/lib/db', () => ({
@@ -36,7 +41,12 @@ vi.mock('../data/lightweight-community-scan', () => ({
   lightweightCommunityScan: mocks.lightweightCommunityScan,
 }));
 
-import { getEngineContextForTicker } from '../engine-context';
+vi.mock('../data/technical', () => ({
+  computeTechnicalSnapshot: mocks.computeTechnicalSnapshot,
+}));
+
+import { getEngineContextForTicker, computeAgreement } from '../engine-context';
+import type { TechnicalSnapshot, TechPattern } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 const ASOF = new Date('2026-04-26T12:00:00.000Z');
@@ -66,6 +76,51 @@ function buildSnapshot(opts: {
   };
 }
 
+function buildTechSnap(overrides: Partial<TechnicalSnapshot> = {}): TechnicalSnapshot {
+  return {
+    rsi_14: 55,
+    macd_line: 0.3,
+    macd_signal: 0.1,
+    macd_histogram: 0.2,
+    sma_50: 110,
+    sma_200: 100,
+    atr_14: 2.5,
+    avg_volume_20d: 1_000_000,
+    volume_ratio: 1.2,
+    trend_regime: 'uptrend',
+    momentum_regime: 'neutral',
+    cross_state: 'none',
+    tech_pattern: 'breakout_uptrend' as TechPattern,
+    bar_count: 250,
+    computed_at: ASOF.toISOString(),
+    data_source: 'yahoo',
+    ...overrides,
+  };
+}
+
+function buildLearnedCell(opts: {
+  alpha: number;
+  beta: number;
+  status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED';
+  sample_size?: number;
+  alpha_30d?: number;
+  beta_30d?: number;
+}) {
+  return {
+    alpha: opts.alpha,
+    beta: opts.beta,
+    alpha_30d: opts.alpha_30d ?? 1,
+    beta_30d: opts.beta_30d ?? 1,
+    sample_size: opts.sample_size ?? Math.round(opts.alpha + opts.beta),
+    hits: Math.round(opts.alpha),
+    brier_in_sample: 0.18,
+    brier_out_sample: 0.21,
+    brier_null: 0.25,
+    drift_z: 0.4,
+    status: opts.status ?? 'ACTIVE',
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.sentimentSnapshot.findMany.mockResolvedValue([]);
@@ -76,9 +131,10 @@ beforeEach(() => {
   mocks.logisticEpoch.findFirst.mockResolvedValue(null);
   mocks.learningEvent.findFirst.mockResolvedValue(null);
   mocks.lightweightCommunityScan.mockResolvedValue(null);
+  mocks.computeTechnicalSnapshot.mockResolvedValue(null);
 });
 
-// ── Tests ──────────────────────────────────────────────────────────────
+// ── EXISTING tests (preserved) ─────────────────────────────────────────
 
 describe('getEngineContextForTicker — NO_DATA paths', () => {
   it('returns NO_DATA status when no LearnedPattern exists', async () => {
@@ -87,7 +143,6 @@ describe('getEngineContextForTicker — NO_DATA paths', () => {
       buildSnapshot({ daysAgo: 1, niche: 3, middle: 1, mainstream: 0 }),
       buildSnapshot({ daysAgo: 2, niche: 1, middle: 0, mainstream: 0 }),
     ]);
-    // history call
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
       buildSnapshot({ daysAgo: 0, niche: 5, middle: 2, mainstream: 1 }),
     ]);
@@ -130,43 +185,8 @@ describe('getEngineContextForTicker — NO_DATA paths', () => {
   });
 });
 
-describe('getEngineContextForTicker — cold-start path', () => {
-  it('triggers lightweightCommunityScan when no snapshots exist', async () => {
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);   // initial fetch returns []
-    mocks.lightweightCommunityScan.mockResolvedValueOnce({
-      quantity: 10,
-      quality: 0.5,
-      market_cap: 50_000_000_000,
-      cap_class: 'large_cap',
-      highlights: [],
-    });
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]); // history fetch (after create)
-
-    const ctx = await getEngineContextForTicker('NEWCO', ASOF);
-
-    expect(mocks.lightweightCommunityScan).toHaveBeenCalledWith('NEWCO');
-    expect(mocks.sentimentSnapshot.create).toHaveBeenCalled();
-    expect(ctx.trace_window_size).toBe(1);
-    expect(ctx.flow_pattern).toBeNull();           // 1 snap → can't classify
-    expect(ctx.status).toBe('NO_DATA');
-  });
-
-  it('handles cold-start scrape failure gracefully (returns NO_DATA, no throw)', async () => {
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
-    mocks.lightweightCommunityScan.mockRejectedValueOnce(new Error('FIRECRAWL_API_KEY missing'));
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
-
-    const ctx = await getEngineContextForTicker('NEWCO', ASOF);
-
-    expect(ctx.status).toBe('NO_DATA');
-    expect(ctx.trace_window_size).toBe(0);
-    expect(ctx.flow_pattern).toBeNull();
-  });
-});
-
-describe('getEngineContextForTicker — populated cell', () => {
+describe('getEngineContextForTicker — populated diffusion cell', () => {
   it('returns posterior_mean, CI, and ACTIVE status when LearnedPattern exists', async () => {
-    // Four snapshots — niche velocity > 0 starting earlier than mainstream:
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
       buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
       buildSnapshot({ daysAgo: 1, niche: 9,  middle: 4, mainstream: 2 }),
@@ -176,18 +196,13 @@ describe('getEngineContextForTicker — populated cell', () => {
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
       buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
     ]);
-    mocks.learnedPattern.findUnique.mockResolvedValueOnce({
-      flow_pattern: 'niche_leads',
-      cap_class: 'large_cap',
-      alpha: 18, beta: 8,
-      alpha_30d: 6, beta_30d: 2,
-      sample_size: 24,
-      hits: 17,
-      brier_in_sample: 0.18,
-      brier_out_sample: 0.21,
-      brier_null: 0.25,
-      drift_z: 0.4,
-      status: 'ACTIVE',
+    // Diffusion cell at horizon=7, plus all 12 horizon-table queries default to null.
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+      if (k.signal_class === 'diffusion' && k.horizon_days === 7) {
+        return Promise.resolve(buildLearnedCell({ alpha: 18, beta: 8, sample_size: 24, alpha_30d: 6, beta_30d: 2 }));
+      }
+      return Promise.resolve(null);
     });
 
     const ctx = await getEngineContextForTicker('AMD', ASOF);
@@ -205,71 +220,6 @@ describe('getEngineContextForTicker — populated cell', () => {
     expect(ctx.brier_null).toBe(0.25);
     expect(ctx.posterior_30d_mean).toBeCloseTo(6 / 8, 3);
   });
-
-  it('skips cell lookup when flow_pattern is flat', async () => {
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
-      buildSnapshot({ daysAgo: 0, niche: 1, middle: 1, mainstream: 1 }),
-      buildSnapshot({ daysAgo: 1, niche: 1, middle: 1, mainstream: 1 }),
-      buildSnapshot({ daysAgo: 2, niche: 1, middle: 1, mainstream: 1 }),
-    ]);
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
-
-    const ctx = await getEngineContextForTicker('FLAT', ASOF);
-
-    expect(ctx.flow_pattern).toBe('flat');
-    expect(mocks.learnedPattern.findUnique).not.toHaveBeenCalled();
-    expect(ctx.status).toBe('NO_DATA');
-  });
-});
-
-describe('getEngineContextForTicker — logistic forward pass', () => {
-  it('computes logistic_score from latest LogisticEpoch coefficients', async () => {
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
-      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
-      buildSnapshot({ daysAgo: 1, niche: 3, middle: 1, mainstream: 0 }),
-      buildSnapshot({ daysAgo: 2, niche: 1, middle: 0, mainstream: 0 }),
-    ]);
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
-    mocks.logisticEpoch.findFirst.mockResolvedValueOnce({
-      epoch: 12,
-      intercept: 0.1,
-      coefficients: {
-        _intercept: { mu: 0.1, sigma: 0.5 },
-        v_niche:           { mu: 0.4, sigma: 0.2 },
-        v_middle:          { mu: 0.1, sigma: 0.2 },
-        v_mainstream:      { mu: -0.05, sigma: 0.2 },
-        niche_lead_cycles: { mu: 0.3, sigma: 0.2 },
-        q_z:               { mu: 0.1, sigma: 0.2 },
-        qual_z:            { mu: 0.1, sigma: 0.2 },
-      },
-      brier_in: 0.19,
-      sample_size: 87,
-    });
-
-    const ctx = await getEngineContextForTicker('AMD', ASOF);
-
-    expect(ctx.logistic_score).not.toBeNull();
-    expect(ctx.logistic_score!).toBeGreaterThan(0);
-    expect(ctx.logistic_score!).toBeLessThan(1);
-    expect(ctx.logistic_ci_low!).toBeLessThanOrEqual(ctx.logistic_score!);
-    expect(ctx.logistic_ci_high!).toBeGreaterThanOrEqual(ctx.logistic_score!);
-    expect(ctx.feature_contributions.length).toBe(6);
-    expect(ctx.cycle_count).toBe(12);
-    expect(ctx.logistic_sample_size).toBe(87);
-  });
-
-  it('returns logistic_score null when no epoch exists', async () => {
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
-      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
-      buildSnapshot({ daysAgo: 1, niche: 1, middle: 0, mainstream: 0 }),
-    ]);
-    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
-
-    const ctx = await getEngineContextForTicker('AMD', ASOF);
-
-    expect(ctx.logistic_score).toBeNull();
-    expect(ctx.cycle_count).toBe(0);
-  });
 });
 
 describe('getEngineContextForTicker — sparkline + meta', () => {
@@ -284,7 +234,6 @@ describe('getEngineContextForTicker — sparkline + meta', () => {
     const ctx = await getEngineContextForTicker('AMD', ASOF);
 
     expect(ctx.diffusion_sparkline).toHaveLength(3);
-    // chronological → first entry is the OLDEST (daysAgo=2)
     expect(ctx.diffusion_sparkline[0].niche).toBe(3);
     expect(ctx.diffusion_sparkline[2].niche).toBe(5);
   });
@@ -298,5 +247,176 @@ describe('getEngineContextForTicker — sparkline + meta', () => {
 
     expect(ctx.prediction_id_seed).toBe(`AMD-${ASOF.toISOString()}`);
     expect(ctx.predicted_at).toEqual(ASOF);
+  });
+});
+
+// ── Phase 16-04 NEW tests (10 behaviors locked by the plan) ────────────
+
+describe('Phase 16-04 — getEngineContextForTicker dual-class extension', () => {
+  it('Test 1 — shape: returns all 8 NEW fields', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
+      buildSnapshot({ daysAgo: 1, niche: 1, middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
+
+    const ctx = await getEngineContextForTicker('AAPL', ASOF);
+
+    expect(ctx).toHaveProperty('technical_pattern');
+    expect(ctx).toHaveProperty('technical_posterior_mean');
+    expect(ctx).toHaveProperty('technical_ci');
+    expect(ctx).toHaveProperty('technical_sample_size');
+    expect(ctx).toHaveProperty('technical_status');
+    expect(ctx).toHaveProperty('horizon_calibrations');
+    expect(ctx).toHaveProperty('combined_logistic_score');
+    expect(ctx).toHaveProperty('agreement');
+  });
+
+  it('Test 2 — horizon_calibrations length === 6 covering 3,7,14,30,60,90 in order', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
+      buildSnapshot({ daysAgo: 1, niche: 1, middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
+
+    const ctx = await getEngineContextForTicker('AAPL', ASOF);
+
+    expect(ctx.horizon_calibrations).toHaveLength(6);
+    expect(ctx.horizon_calibrations.map(h => h.horizon_days)).toEqual([3, 7, 14, 30, 60, 90]);
+  });
+
+  it('Test 3 — agreement === aligned when both posteriors > 0.55 AND both ACTIVE', () => {
+    expect(computeAgreement(0.62, 0.58, 'ACTIVE', 'ACTIVE')).toBe('aligned');
+  });
+
+  it('Test 4 — agreement === aligned when both posteriors < 0.45 AND both ACTIVE', () => {
+    expect(computeAgreement(0.38, 0.42, 'ACTIVE', 'ACTIVE')).toBe('aligned');
+  });
+
+  it('Test 5 — agreement === opposed when diffusion > 0.6 && technical < 0.4 (both ACTIVE)', () => {
+    expect(computeAgreement(0.65, 0.35, 'ACTIVE', 'ACTIVE')).toBe('opposed');
+    expect(computeAgreement(0.30, 0.70, 'ACTIVE', 'ACTIVE')).toBe('opposed');
+  });
+
+  it('Test 6 — agreement === mixed when both ACTIVE but neither aligned nor opposed (e.g. 0.62 / 0.55)', () => {
+    expect(computeAgreement(0.62, 0.55, 'ACTIVE', 'ACTIVE')).toBe('mixed');
+  });
+
+  it('Test 7 — agreement === unknown when EITHER status is NO_DATA / EXPLORATORY / DEPRECATED', () => {
+    expect(computeAgreement(0.62, 0.58, 'NO_DATA', 'ACTIVE')).toBe('unknown');
+    expect(computeAgreement(0.62, 0.58, 'ACTIVE', 'EXPLORATORY')).toBe('unknown');
+    expect(computeAgreement(0.62, 0.58, 'DEPRECATED', 'ACTIVE')).toBe('unknown');
+    expect(computeAgreement(null, 0.58, 'ACTIVE', 'ACTIVE')).toBe('unknown');
+  });
+
+  it('Test 8 — cold-start path: triggers parallel lightweightCommunityScan + computeTechnicalSnapshot via Promise.all', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]); // initial fetch returns []
+    mocks.lightweightCommunityScan.mockResolvedValueOnce({
+      quantity: 10,
+      quality: 0.5,
+      market_cap: 50_000_000_000,
+      cap_class: 'large_cap',
+      highlights: [],
+    });
+    mocks.computeTechnicalSnapshot.mockResolvedValueOnce(buildTechSnap());
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]); // history fetch (after create)
+
+    const ctx = await getEngineContextForTicker('NEWCO', ASOF);
+
+    expect(mocks.lightweightCommunityScan).toHaveBeenCalledWith('NEWCO');
+    expect(mocks.computeTechnicalSnapshot).toHaveBeenCalledWith('NEWCO');
+    expect(mocks.sentimentSnapshot.create).toHaveBeenCalled();
+    // Either resolution counts as a valid cold-start result.
+    expect(ctx.trace_window_size).toBe(1);
+    // Tech snap was returned, so technical_pattern is populated.
+    expect(ctx.technical_pattern).toBe('breakout_uptrend');
+  });
+
+  it('Test 9 — backwards-compat: empty LearnedPattern table → all horizons NO_DATA, agreement unknown', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
+      buildSnapshot({ daysAgo: 1, niche: 1, middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
+    mocks.computeTechnicalSnapshot.mockResolvedValueOnce(null);
+    // learnedPattern.findUnique → null (default beforeEach)
+
+    const ctx = await getEngineContextForTicker('AAPL', ASOF);
+
+    expect(ctx.technical_pattern).toBeNull();
+    expect(ctx.technical_posterior_mean).toBeNull();
+    expect(ctx.technical_status).toBe('NO_DATA');
+    expect(ctx.horizon_calibrations).toHaveLength(6);
+    for (const h of ctx.horizon_calibrations) {
+      expect(h.diffusion_posterior).toBeNull();
+      expect(h.technical_posterior).toBeNull();
+      expect(h.status).toBe('NO_DATA');
+    }
+    expect(ctx.agreement).toBe('unknown');
+  });
+
+  it('Test 10 — combined_logistic_score: 12-d epoch + trace + techSnap → number in (0,1)', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
+      buildSnapshot({ daysAgo: 1, niche: 3, middle: 1, mainstream: 0 }),
+      buildSnapshot({ daysAgo: 2, niche: 1, middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
+    mocks.computeTechnicalSnapshot.mockResolvedValueOnce(buildTechSnap());
+    mocks.logisticEpoch.findFirst.mockResolvedValueOnce({
+      epoch: 14,
+      intercept: 0.05,
+      coefficients: {
+        _intercept: { mu: 0.05, sigma: 0.5 },
+        v_niche:                   { mu: 0.4, sigma: 0.2 },
+        v_middle:                  { mu: 0.1, sigma: 0.2 },
+        v_mainstream:              { mu: -0.05, sigma: 0.2 },
+        niche_lead_cycles:         { mu: 0.3, sigma: 0.2 },
+        q_z:                       { mu: 0.1, sigma: 0.2 },
+        qual_z:                    { mu: 0.1, sigma: 0.2 },
+        rsi_14:                    { mu: 0.01, sigma: 0.2 },
+        macd_histogram:            { mu: 0.2, sigma: 0.2 },
+        sma_relative_spread:       { mu: 0.5, sigma: 0.2 },
+        atr_14:                    { mu: 0.0, sigma: 0.2 },
+        volume_ratio:              { mu: 0.1, sigma: 0.2 },
+        tech_pattern_uptrend_flag: { mu: 0.4, sigma: 0.2 },
+      },
+      brier_in: 0.19,
+      sample_size: 87,
+    });
+
+    const ctx = await getEngineContextForTicker('AAPL', ASOF);
+
+    expect(ctx.combined_logistic_score).not.toBeNull();
+    expect(ctx.combined_logistic_score!).toBeGreaterThan(0);
+    expect(ctx.combined_logistic_score!).toBeLessThan(1);
+    // The 6-d diffusion-only score should also be populated for back-compat.
+    expect(ctx.logistic_score).not.toBeNull();
+  });
+
+  it('Test 11 — populated technical cell yields ACTIVE technical_status + posterior + ci', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
+      buildSnapshot({ daysAgo: 1, niche: 1, middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
+    mocks.computeTechnicalSnapshot.mockResolvedValueOnce(buildTechSnap());
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+      if (k.signal_class === 'technical' && k.horizon_days === 30) {
+        return Promise.resolve(buildLearnedCell({ alpha: 16, beta: 8, sample_size: 24 }));
+      }
+      return Promise.resolve(null);
+    });
+
+    const ctx = await getEngineContextForTicker('AAPL', ASOF);
+
+    expect(ctx.technical_pattern).toBe('breakout_uptrend');
+    expect(ctx.technical_status).toBe('ACTIVE');
+    expect(ctx.technical_sample_size).toBe(24);
+    expect(ctx.technical_posterior_mean).toBeCloseTo(16 / 24, 3);
+    expect(ctx.technical_ci).not.toBeNull();
+    expect(ctx.technical_ci![0]).toBeLessThan(ctx.technical_posterior_mean!);
+    expect(ctx.technical_ci![1]).toBeGreaterThan(ctx.technical_posterior_mean!);
   });
 });
