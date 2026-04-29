@@ -218,6 +218,16 @@ export interface CommunityHighlight {
 // Numeric fields are authoritative — written by getEngineContextForTicker, never by the LLM.
 // Old persisted reports won't have this key; UI hides the panel if absent.
 
+export interface HorizonCalibration {
+  horizon_days: 3 | 7 | 14 | 30 | 60 | 90;
+  diffusion_posterior: number | null;
+  diffusion_ci: [number, number] | null;
+  technical_posterior: number | null;
+  technical_ci: [number, number] | null;
+  sample_size: number;
+  status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+}
+
 export interface EngineCalibration {
   cycle_count: number;
   flow_pattern: 'niche_leads' | 'simultaneous' | 'mainstream_first' | 'flat' | null;
@@ -246,6 +256,20 @@ export interface EngineCalibration {
 
   // Sparkline data — last 4 snapshots' tier_breakdown (so UI doesn't refetch)
   diffusion_sparkline: Array<{ niche: number; middle: number; mainstream: number; scanned_at: string }>;
+
+  // ── Phase 16 — dual-class technical signal extension ────────────────────
+  // All NEW fields are OPTIONAL — old persisted reports lacking them must
+  // still typecheck and render via graceful degraded-mode fallback in the UI.
+  technical_pattern?: TechPattern | null;
+  technical_posterior_mean?: number | null;
+  technical_ci?: [number, number] | null;
+  technical_sample_size?: number;
+  technical_status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+  horizon_calibrations?: HorizonCalibration[];
+  combined_logistic_score?: number | null;
+  agreement?: 'aligned' | 'mixed' | 'opposed' | 'unknown';
+  technical_alignment?: string | null;
+  technical_disagreement?: string | null;
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
