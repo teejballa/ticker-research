@@ -190,11 +190,7 @@ describeIfDb('technical state changes flow into report engine_calibration', () =
     // engine-context reads diffusion at horizon_days=7 (its primary horizon)
     // and technical at horizon_days=30 — seed the diffusion row at 7d so the
     // agreement classifier sees both signal classes as ACTIVE + bullish.
-    await prisma.learnedPattern.create({ data: {
-      signal_class: 'diffusion',
-      pattern_key: FLOW_PATTERN,
-      cap_class: CAP,
-      horizon_days: 7,
+    const diffusionSeed = {
       alpha: 60,
       beta: 6,
       sample_size: 66,
@@ -206,7 +202,25 @@ describeIfDb('technical state changes flow into report engine_calibration', () =
       brier_null: 0.25,
       drift_z: 0.5,
       status: 'ACTIVE',
-    }});
+    };
+    await prisma.learnedPattern.upsert({
+      where: {
+        signal_class_pattern_key_cap_class_horizon_days: {
+          signal_class: 'diffusion',
+          pattern_key: FLOW_PATTERN,
+          cap_class: CAP,
+          horizon_days: 7,
+        },
+      },
+      create: {
+        signal_class: 'diffusion',
+        pattern_key: FLOW_PATTERN,
+        cap_class: CAP,
+        horizon_days: 7,
+        ...diffusionSeed,
+      },
+      update: diffusionSeed,
+    });
 
     const { getEngineContextForTicker } = await import('@/lib/engine-context');
     const ctx = await getEngineContextForTicker(TEST_TICKER, new Date('2026-04-25T04:00:00Z'));
