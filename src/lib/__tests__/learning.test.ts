@@ -12,7 +12,12 @@ import {
   logisticCoefCI,
   adversarialNullBrier,
   patternStatus,
+  FEATURE_NAMES,
+  buildFeatureVector12,
+  needsLogisticReinit,
 } from '../learning';
+import type { TechnicalSnapshot, TechPattern } from '../types';
+import type { DiffusionTraceResult } from '../diffusion-trace';
 
 describe('updatePosterior', () => {
   it('increments alpha on hit', () => {
@@ -159,5 +164,180 @@ describe('patternStatus', () => {
   it('DEPRECATED when drift > 2σ', () => {
     expect(patternStatus({ sample_size: 30, brier_in: 0.15, brier_out: 0.18, brier_null: 0.25, drift_z: 2.5 }))
       .toBe('DEPRECATED');
+  });
+});
+
+// ─── Phase 16-03: 12-feature vector + reinit detection ─────────────────────
+
+describe('FEATURE_NAMES (Phase 16-03)', () => {
+  it('contains exactly 12 entries in the locked order', () => {
+    expect(FEATURE_NAMES).toHaveLength(12);
+    expect([...FEATURE_NAMES]).toEqual([
+      'v_niche', 'v_middle', 'v_mainstream',
+      'niche_lead_cycles', 'q_z', 'qual_z',
+      'rsi_14',
+      'macd_histogram',
+      'sma_relative_spread',
+      'atr_14',
+      'volume_ratio',
+      'tech_pattern_uptrend_flag',
+    ]);
+  });
+});
+
+function makeTrace(overrides: Partial<DiffusionTraceResult> = {}): DiffusionTraceResult {
+  return {
+    v_niche: 1.5,
+    v_middle: 0.5,
+    v_mainstream: 0,
+    niche_lead_cycles: 2,
+    flow_pattern: 'niche_leads',
+    q_z: 0.7,
+    qual_z: -0.2,
+    cap_class: 'large_cap',
+    source_count: 4,
+    ...overrides,
+  };
+}
+
+function makeTechSnap(overrides: Partial<TechnicalSnapshot> = {}): TechnicalSnapshot {
+  return {
+    rsi_14: 62,
+    macd_line: 0.4,
+    macd_signal: 0.2,
+    macd_histogram: 0.2,
+    sma_50: 110,
+    sma_200: 100,
+    atr_14: 1.5,
+    avg_volume_20d: 1_000_000,
+    volume_ratio: 1.2,
+    trend_regime: 'uptrend',
+    momentum_regime: 'neutral',
+    cross_state: 'none',
+    tech_pattern: 'breakout_uptrend',
+    bar_count: 250,
+    computed_at: '2026-04-28T00:00:00Z',
+    data_source: 'yahoo',
+    ...overrides,
+  };
+}
+
+describe('buildFeatureVector12', () => {
+  it('returns a 12-element number array', () => {
+    const v = buildFeatureVector12(makeTrace(), makeTechSnap(), 'breakout_uptrend');
+    expect(v).toHaveLength(12);
+    for (const x of v) expect(typeof x).toBe('number');
+  });
+
+  it('positions 0-5 are the diffusion features in order', () => {
+    const trace = makeTrace({ v_niche: 9, v_middle: 8, v_mainstream: 7, niche_lead_cycles: 6, q_z: 5, qual_z: 4 });
+    const v = buildFeatureVector12(trace, makeTechSnap(), 'breakout_uptrend');
+    expect(v[0]).toBe(9);
+    expect(v[1]).toBe(8);
+    expect(v[2]).toBe(7);
+    expect(v[3]).toBe(6);
+    expect(v[4]).toBe(5);
+    expect(v[5]).toBe(4);
+  });
+
+  it('position 8 (sma_relative_spread) computes (sma_50 - sma_200) / sma_200', () => {
+    const v = buildFeatureVector12(makeTrace(), makeTechSnap({ sma_50: 110, sma_200: 100 }), 'breakout_uptrend');
+    expect(v[8]).toBeCloseTo(0.1, 6);
+  });
+
+  it('position 8 returns 0 when sma_50 is null', () => {
+    const v = buildFeatureVector12(makeTrace(), makeTechSnap({ sma_50: null }), 'breakout_uptrend');
+    expect(v[8]).toBe(0);
+  });
+
+  it('position 8 returns 0 when sma_200 is null', () => {
+    const v = buildFeatureVector12(makeTrace(), makeTechSnap({ sma_200: null }), 'breakout_uptrend');
+    expect(v[8]).toBe(0);
+  });
+
+  it('position 8 returns 0 when sma_200 is exactly 0 (avoid division by zero)', () => {
+    const v = buildFeatureVector12(makeTrace(), makeTechSnap({ sma_200: 0 }), 'breakout_uptrend');
+    expect(v[8]).toBe(0);
+  });
+
+  it('position 11 (uptrend flag) is 1 for each uptrend pattern', () => {
+    const uptrend: TechPattern[] = [
+      'breakout_uptrend',
+      'overbought_uptrend',
+      'pullback_in_uptrend',
+      'consolidation',
+      'golden_cross',
+    ];
+    for (const tp of uptrend) {
+      const v = buildFeatureVector12(makeTrace(), makeTechSnap(), tp);
+      expect(v[11]).toBe(1);
+    }
+  });
+
+  it('position 11 (uptrend flag) is 0 for non-uptrend patterns', () => {
+    const downtrend: TechPattern[] = ['breakdown', 'oversold_downtrend', 'death_cross'];
+    for (const tp of downtrend) {
+      const v = buildFeatureVector12(makeTrace(), makeTechSnap(), tp);
+      expect(v[11]).toBe(0);
+    }
+  });
+
+  it('null safety: rsi_14 null → 50; macd_histogram null → 0; atr_14 null → 0; volume_ratio null → 1; techPattern null → flag 0', () => {
+    const techSnap = makeTechSnap({
+      rsi_14: null,
+      macd_histogram: null,
+      atr_14: null,
+      volume_ratio: null,
+    });
+    const v = buildFeatureVector12(makeTrace(), techSnap, null);
+    expect(v[6]).toBe(50);   // rsi_14 default
+    expect(v[7]).toBe(0);    // macd_histogram default
+    expect(v[9]).toBe(0);    // atr_14 default
+    expect(v[10]).toBe(1);   // volume_ratio default
+    expect(v[11]).toBe(0);   // null tech pattern → flag 0
+  });
+
+  it('null safety: techSnap entirely null → all technical positions use defaults', () => {
+    const v = buildFeatureVector12(makeTrace(), null, null);
+    expect(v[6]).toBe(50);
+    expect(v[7]).toBe(0);
+    expect(v[8]).toBe(0);
+    expect(v[9]).toBe(0);
+    expect(v[10]).toBe(1);
+    expect(v[11]).toBe(0);
+  });
+});
+
+describe('needsLogisticReinit', () => {
+  it('returns true when coefficients is null', () => {
+    expect(needsLogisticReinit(null)).toBe(true);
+  });
+
+  it('returns true when coefficients is undefined', () => {
+    expect(needsLogisticReinit(undefined)).toBe(true);
+  });
+
+  it('returns true when coefficients has fewer than 12 keys (legacy 6-d state)', () => {
+    const legacy = {
+      v_niche: { mu: 0, sigma: 1 },
+      v_middle: { mu: 0, sigma: 1 },
+      v_mainstream: { mu: 0, sigma: 1 },
+      niche_lead_cycles: { mu: 0, sigma: 1 },
+      q_z: { mu: 0, sigma: 1 },
+      qual_z: { mu: 0, sigma: 1 },
+    };
+    expect(needsLogisticReinit(legacy)).toBe(true);
+  });
+
+  it('returns false when coefficients has 12 keys (post-Phase-16 state)', () => {
+    const fresh: Record<string, { mu: number; sigma: number }> = {};
+    for (const name of FEATURE_NAMES) fresh[name] = { mu: 0, sigma: 1 };
+    expect(needsLogisticReinit(fresh)).toBe(false);
+  });
+
+  it('returns false when coefficients has more than 12 keys (e.g. _intercept extra key)', () => {
+    const withIntercept: Record<string, { mu: number; sigma: number }> = { _intercept: { mu: 0, sigma: 1 } };
+    for (const name of FEATURE_NAMES) withIntercept[name] = { mu: 0, sigma: 1 };
+    expect(needsLogisticReinit(withIntercept)).toBe(false);
   });
 });
