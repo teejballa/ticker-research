@@ -10,6 +10,7 @@ export default defineConfig({
     globals: true,
     include: ['tests/integration/**/*.test.ts'],
     exclude: ['node_modules/**', '.claude/**'],
+    fileParallelism: false,
   },
   resolve: {
     alias: {
