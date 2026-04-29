@@ -167,7 +167,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 13. Deep Sentiment Intelligence | 3/3 | Complete (Sentiment Intelligence card + Forward Outlook section live in ResearchReport) | 2026-04-23 |
 | 14. Database Verification & Report Persistence QA | 2/2 | Complete (Playwright e2e db-persistence spec passing) | 2026-04-24 |
 | 15. Diffusion Learning Engine | — | Complete (Bayesian crons + InsightsDashboard + EngineCalibrationPanel) | 2026-04-26 |
-| 16. Technical Analysis as a Learning Signal | 2/5 | In Progress|  |
+| 16. Technical Analysis as a Learning Signal | 3/5 | In Progress|  |
 | 17. Institutional & Insider Intelligence | 0/? | Planned (17-CONTEXT only) |  |
 
 ### Phase 7: Research Quality & Special Situation Coverage
@@ -368,12 +368,12 @@ Plans:
 
 **Engine-wide change in this phase:** outcome horizons extend from 3/7/14d to **3/7/14/30/60/90d** so the engine learns whether sentiment effects hold or mean-revert. 30d becomes the primary horizon for the 12-d Bayesian logistic regression; other horizons surface as transparent Beta-cell evidence in a horizon table.
 
-**Plans:** 2/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 - [x] 16-01-PLAN.md — Compute + types: install technicalindicators@3.1.0; src/lib/data/technical.ts (RSI/MACD/SMA/ATR/volume + 8-bucket TechPattern classifier); unit tests
 - [x] 16-02-PLAN.md — Multi-horizon schema + price-followup: Prisma migration (LearnedPattern → signal_class × pattern_key × cap_class × horizon_days; SentimentSnapshot.technical_data; Report.technical_at_report); TARGET_DAYS = [3,7,14,30,60,90]
-- [ ] 16-03-PLAN.md — Snapshot writer + dual-class learn loop: sentiment-scan writes technical_data; learn cron updates two Beta cells per horizon; 12-d logistic on 30d only; recompute over 288 cells; per-outcome `prisma.$transaction`; logistic reinit on first cycle
+- [x] 16-03-PLAN.md — Snapshot writer + dual-class learn loop: sentiment-scan writes technical_data; learn cron updates two Beta cells per horizon; 12-d logistic on 30d only; recompute over 288 cells; per-outcome `prisma.$transaction`; logistic reinit on first cycle
 - [ ] 16-04-PLAN.md — Engine context + report + prompt integration: engine-context.ts gains horizon_calibrations + agreement; gemini-analysis.ts gets TECHNICAL CALIBRATION CONTEXT block; EngineCalibrationPanel side-by-side dual-class layout + horizon table; ResearchReport Technical Signals card
 - [ ] 16-05-PLAN.md — Backfill + insights surface + integration test: scripts/backfill-technical.ts (sequential 1s throttle, dry-run default); InsightsDashboard 4-tab strip (Technical Pattern Library + Horizon Brier); /api/insights/horizon-brier; technical-affects-reports.test.ts pins AC2/AC5; AC3/AC4 gate scripts
 
