@@ -6,7 +6,9 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
-const TARGET_DAYS = [3, 7, 14] as const;
+// Phase 16: extend horizons from 3/7/14 to 3/7/14/30/60/90 to support
+// multi-horizon learning (Q1/Q2 short-term + medium-term + slow-thesis windows).
+const TARGET_DAYS = [3, 7, 14, 30, 60, 90] as const;
 
 function ageInDays(date: Date): number {
   return (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
@@ -25,7 +27,9 @@ export async function GET(request: NextRequest) {
   }
 
   const results = { outcomes_recorded: 0, skipped: 0, failed: 0 };
-  const windowMs = 15 * 24 * 60 * 60 * 1000;
+  // Phase 16: window widened from 15d to 95d so we still see snapshots/reports
+  // that are 90 days old (90d horizon + 0.6d slack + safety).
+  const windowMs = 95 * 24 * 60 * 60 * 1000;
   const minAgeMs = 2 * 24 * 60 * 60 * 1000;
 
   const reports = await prisma.report.findMany({
@@ -60,7 +64,7 @@ export async function GET(request: NextRequest) {
 
   for (const snap of snapshots) {
     const age = ageInDays(snap.scanned_at);
-    for (const day of [3, 7] as const) {
+    for (const day of TARGET_DAYS) {
       if (Math.abs(age - day) > 0.6) continue;
       if (snap.outcomes.some(o => o.days_after === day)) { results.skipped++; continue; }
       const price = await fetchPrice(snap.ticker);
