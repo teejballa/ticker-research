@@ -18,8 +18,11 @@
 //   - SMA(200) needs ≥ 200 bars; insufficient bars → sma_200 = null AND tech_pattern = null.
 
 import { RSI, MACD, SMA, ATR } from 'technicalindicators';
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 import type { TechPattern, TechnicalSnapshot } from '@/lib/types';
+
+// yahoo-finance2 v3 requires instantiation (matches src/lib/data/yahoo.ts)
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 // ---------------------------------------------------------------------------------
 // Public types
@@ -60,7 +63,10 @@ export async function fetchOhlcv(ticker: string, asOf?: Date): Promise<OhlcvBar[
       period2,
       interval: '1d',
     })) as { quotes?: Array<Record<string, unknown>> };
-  } catch {
+  } catch (err) {
+    // Real network/parse errors → log so a silent SDK regression doesn't hide
+    // itself behind a clean empty array (caller still treats [] as "no data").
+    console.warn(`[technical] fetchOhlcv(${ticker}) failed:`, (err as Error)?.message ?? err);
     return [];
   }
 
