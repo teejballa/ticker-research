@@ -91,11 +91,15 @@ export const AnalysisResultSchema = z.object({
   community_highlights: z.array(CommunityHighlightSchema).optional().default([]),
   community_analysis: z.string().optional().default(''),
   // Engine calibration block — Gemini contributes only the alignment/disagreement
-  // strings. Numeric fields are overwritten post-generation with authoritative
-  // values from getEngineContextForTicker.
+  // strings (4 of them, post-Phase-16). All numeric fields are overwritten
+  // post-generation with authoritative values from getEngineContextForTicker.
   engine_calibration: z.object({
     engine_alignment: z.string().nullable().default(null),
     engine_disagreement: z.string().nullable().default(null),
+    // Phase 16 — technical signal class prose. LLM contributes the strings;
+    // all numeric technical_* fields are written by engine-context post-process.
+    technical_alignment: z.string().nullable().default(null),
+    technical_disagreement: z.string().nullable().default(null),
   }).optional(),
 });
 
@@ -507,6 +511,72 @@ export function extractMarketSnapshot(pkg: SourcePackage) {
 // ---- Engine calibration prompt + post-process ----
 
 /**
+ * Build the TECHNICAL CALIBRATION CONTEXT block (Phase 16). Concatenated
+ * AFTER the existing ENGINE CALIBRATION CONTEXT block in the system prompt.
+ *
+ * Renders empty when the engine has no horizon_calibrations yet (backwards-compat
+ * with first-cycle reports / pre-Phase-16 state) — the LLM then sees only the
+ * diffusion block.
+ *
+ * Verbatim spec: 16-RESEARCH.md §11 lines 845-868.
+ */
+export function buildTechnicalContextBlock(ctx: EngineContext): string {
+  if (!ctx.horizon_calibrations || ctx.horizon_calibrations.length === 0) {
+    return '';
+  }
+  const pct = (n: number | null): string => (n == null ? '—' : `${(n * 100).toFixed(0)}%`);
+
+  // 3d is omitted from the prompt table (UI-SPEC §A line 150 — too noisy for
+  // thesis horizons, though the backend still stores it).
+  const horizonRows = ctx.horizon_calibrations
+    .filter((h) => h.horizon_days !== 3)
+    .map((h) => {
+      const marker = h.horizon_days === 30 ? '★' : ' ';
+      const label30 = h.horizon_days === 30 ? '  ← primary, drives logistic' : '';
+      return `    ${h.horizon_days}d${marker}  diffusion ${pct(h.diffusion_posterior).padEnd(4)}  technical ${pct(h.technical_posterior).padEnd(4)}  ${h.status}${label30}`;
+    })
+    .join('\n');
+
+  const techCi = ctx.technical_ci
+    ? `[CI ${pct(ctx.technical_ci[0])}–${pct(ctx.technical_ci[1])}]`
+    : '';
+
+  return `
+
+═══ TECHNICAL CALIBRATION CONTEXT ═══
+
+Cipher's technical learning engine has accumulated ${ctx.technical_sample_size ?? 0} resolved 30d outcomes
+for technical regimes (RSI/MACD/MA/ATR/volume → 8 buckets × 4 cap classes).
+For this ticker right now:
+
+  Technical pattern detected:    ${ctx.technical_pattern ?? '—'} × ${ctx.cap_class}
+  Technical prior (30d):         ${pct(ctx.technical_posterior_mean ?? null)} ${techCi}
+                                 n=${ctx.technical_sample_size ?? 0}, status: ${ctx.technical_status ?? 'NO_DATA'}
+  Horizon table (Beta cells):
+${horizonRows}
+  Combined 12-d logistic (30d): ${pct(ctx.combined_logistic_score ?? null)}
+  Agreement (Q1 vs Q2):  ${ctx.agreement ?? 'unknown'}
+
+INSTRUCTIONS:
+- 30d is the primary horizon. Your future_projection MUST mention 30d.
+- Cite at least one technical pattern by name in your buy_rationale or sell_rationale.
+- For technical_alignment / technical_disagreement: same rules as engine_alignment/disagreement
+  but applied to the technical_posterior. Numeric values will be overwritten post-generation.
+`;
+}
+
+/**
+ * Top-level system-prompt assembler. Composes SYSTEM_PROMPT + the engine
+ * calibration block + the technical calibration block. Exported as a NAMED
+ * function so plan 16-05's integration test can import and assert against
+ * the prompt without a Gemini call (per plan 16-04 Task 2 acceptance criterion).
+ */
+export function buildSystemPrompt(engineCtx: EngineContext | null): string {
+  if (!engineCtx) return SYSTEM_PROMPT;
+  return SYSTEM_PROMPT + buildEngineContextBlock(engineCtx) + buildTechnicalContextBlock(engineCtx);
+}
+
+/**
  * Build the ENGINE CALIBRATION CONTEXT block appended to the system prompt.
  * Numbers are formatted as percentages where appropriate. The LLM is told the
  * numbers will be overwritten post-generation, so it should focus on producing
@@ -616,9 +686,9 @@ export async function runGeminiAnalysis(
     console.error('[gemini-analysis] engine context fetch failed:', err);
   }
 
-  const systemPrompt = engineCtx
-    ? SYSTEM_PROMPT + buildEngineContextBlock(engineCtx)
-    : SYSTEM_PROMPT;
+  // Phase 16: full system prompt now composes BOTH engine + technical blocks via
+  // buildSystemPrompt (so the LLM sees the dual-class context in one message).
+  const systemPrompt = buildSystemPrompt(engineCtx);
 
   try {
     const { output } = await generateText({
@@ -631,11 +701,21 @@ export async function runGeminiAnalysis(
     });
 
     // Build the authoritative engine_calibration block. Numeric fields come
-    // from the database via engineCtx; LLM contributes only the prose.
+    // from the database via engineCtx; LLM contributes only the prose
+    // (engine_alignment / engine_disagreement / technical_alignment /
+    // technical_disagreement). Phase 16 trust-boundary expansion: ALL technical_*
+    // numeric fields + horizon_calibrations + agreement are post-process
+    // overwritten from engineCtx — the LLM cannot inject false posteriors.
     let engine_calibration: EngineCalibration | undefined;
     if (engineCtx) {
-      const llm = output.engine_calibration ?? { engine_alignment: null, engine_disagreement: null };
+      const llm = output.engine_calibration ?? {
+        engine_alignment: null,
+        engine_disagreement: null,
+        technical_alignment: null,
+        technical_disagreement: null,
+      };
       engine_calibration = {
+        // Diffusion fields (existing — unchanged semantics)
         cycle_count: engineCtx.cycle_count,
         flow_pattern: engineCtx.flow_pattern,
         cap_class: engineCtx.cap_class,
@@ -656,6 +736,19 @@ export async function runGeminiAnalysis(
         engine_alignment: llm.engine_alignment ?? null,
         engine_disagreement: llm.engine_disagreement ?? null,
         diffusion_sparkline: engineCtx.diffusion_sparkline,
+
+        // ── Phase 16 — technical signal class (numeric overwrites) ─────
+        technical_pattern: engineCtx.technical_pattern,
+        technical_posterior_mean: engineCtx.technical_posterior_mean,
+        technical_ci: engineCtx.technical_ci,
+        technical_sample_size: engineCtx.technical_sample_size,
+        technical_status: engineCtx.technical_status,
+        horizon_calibrations: engineCtx.horizon_calibrations,
+        combined_logistic_score: engineCtx.combined_logistic_score,
+        agreement: engineCtx.agreement,
+        // LLM-authored prose only (numeric values were overwritten above)
+        technical_alignment: llm.technical_alignment ?? null,
+        technical_disagreement: llm.technical_disagreement ?? null,
       };
     }
 
