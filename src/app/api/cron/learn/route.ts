@@ -572,6 +572,22 @@ async function processOneOutcome(
     const techPattern: TechPattern | null = techSnap?.tech_pattern ?? null;
     const horizon = outcome.days_after as Horizon | number;
 
+    // Resolve cap_class: prefer DiffusionTrace (computed from full window),
+    // fall back to the snapshot's own community_data.cap_class. Without this
+    // fallback, single-snapshot tickers (no trace possible) write 'unknown'
+    // and the upsert silently drops them — yielding 0 technical cells.
+    let resolvedCap: string | null = trace?.cap_class ?? null;
+    if (!resolvedCap && outcome.snapshot_id) {
+      const snap = await tx.sentimentSnapshot.findUnique({
+        where: { id: outcome.snapshot_id },
+        select: { community_data: true },
+      });
+      const cd = snap?.community_data as { cap_class?: string } | null;
+      if (cd?.cap_class && cd.cap_class !== 'unknown') {
+        resolvedCap = cd.cap_class;
+      }
+    }
+
     // Persist the diffusion trace alongside the cell update (preserves
     // pre-Phase-16 DiffusionTrace history for downstream dashboards).
     if (trace && built) {
@@ -607,16 +623,15 @@ async function processOneOutcome(
       );
     }
 
-    // 2. Technical cell update — fires when a tech_pattern was classified at
-    //    snapshot time. Cap_class falls back to trace?.cap_class then 'unknown'
-    //    (the latter is filtered out by upsertCell as a safety net).
-    if (techPattern) {
+    // 2. Technical cell update — fires when a tech_pattern was classified
+    //    at snapshot time AND cap_class is resolvable from trace or snapshot.
+    if (techPattern && resolvedCap) {
       await upsertCell(
         tx,
         {
           signal_class: 'technical',
           pattern_key: techPattern,
-          cap_class: trace?.cap_class ?? 'unknown',
+          cap_class: resolvedCap,
           horizon_days: horizon,
         },
         hit,
@@ -645,7 +660,7 @@ async function processOneOutcome(
         // attribute the event to one cell when computing per-cell Brier.
         signal_class: techPattern ? 'technical' : trace ? 'diffusion' : null,
         pattern_key: techPattern ?? trace?.flow_pattern ?? null,
-        cap_class: trace?.cap_class ?? null,
+        cap_class: resolvedCap,
         horizon_days: horizon,
         delta: {
           // Per-class hit booleans so the recompute pass can attribute to either
