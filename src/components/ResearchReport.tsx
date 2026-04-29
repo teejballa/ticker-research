@@ -8,6 +8,7 @@ import type { AnalysisResult, MarketSnapshot } from '@/lib/types';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 import EngineCalibrationPanel from '@/components/EngineCalibrationPanel';
+import TechnicalSignalsCard from '@/components/TechnicalSignalsCard';
 
 interface ResearchReportProps {
   analysisResult: AnalysisResult;
@@ -101,6 +102,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     community_highlights,   // community intelligence
     community_analysis,     // community narrative
     engine_calibration,     // diffusion-engine prior
+    technical_at_report,    // Phase 16-04 — live technical snapshot
   } = analysisResult;
 
   function handleExportPdf() {
@@ -226,6 +228,13 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               <Md text={executive_summary} />
             </p>
           </section>
+        )}
+
+        {/* Phase 16-04: Technical Signals — placed immediately BEFORE the Engine
+            Calibration panel so the reader sees raw technical readings, then the
+            engine's learned interpretation of them. UI-SPEC §B locks this position. */}
+        {technical_at_report && (
+          <TechnicalSignalsCard tech={technical_at_report} />
         )}
 
         {/* Engine Calibration — diffusion-engine prior carried by the report */}
