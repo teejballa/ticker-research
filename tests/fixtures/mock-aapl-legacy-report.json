@@ -1,0 +1,63 @@
+{
+  "ticker": "AAPL",
+  "company_name": "Apple Inc.",
+  "analyzed_at": "2026-03-20T00:00:00.000Z",
+  "market_sentiment": "bullish",
+  "confidence_level": "High",
+  "analysis": {
+    "ticker": "AAPL",
+    "company_name": "Apple Inc.",
+    "analyzed_at": "2026-03-20T00:00:00.000Z",
+    "market_sentiment": "bullish",
+    "sentiment_reasoning": "Phase 16-04 LEGACY fixture — pre-Phase-16 report shape. No horizon_calibrations, no technical_at_report. Panel must fall back gracefully to the diffusion-only single-column layout.",
+    "bullish_signals": [
+      { "signal": "Legacy fixture bullish signal one.", "source_citation": "Fixture" }
+    ],
+    "bearish_signals": [
+      { "signal": "Legacy fixture bearish signal one.", "source_citation": "Fixture" }
+    ],
+    "assessment": {
+      "buy_pct": 60, "hold_pct": 30, "sell_pct": 10,
+      "buy_rationale": "Legacy buy rationale.",
+      "hold_rationale": "Legacy hold rationale.",
+      "sell_rationale": "Legacy sell rationale."
+    },
+    "confidence_level": "High",
+    "confidence_explanation": "Legacy fixture confidence.",
+    "sources_used": [
+      { "name": "Legacy Source", "key_fact": "Pre-Phase-16 fixture for graceful-fallback testing." }
+    ],
+    "source_warnings": [],
+    "market_snapshot": {
+      "price": 248.96, "percent_change_today": -0.0039,
+      "market_cap": 3659195744256,
+      "fifty_two_week_high": 288.62, "fifty_two_week_low": 169.21,
+      "pe_ratio": 28.5, "eps": 7.9, "revenue": 435617005568
+    },
+    "engine_calibration": {
+      "cycle_count": 8,
+      "flow_pattern": "niche_leads",
+      "cap_class": "large_cap",
+      "trace_window_size": 4,
+      "posterior_mean": 0.62,
+      "ci_low": 0.52,
+      "ci_high": 0.72,
+      "sample_size": 24,
+      "status": "ACTIVE",
+      "brier_in_sample": 0.18,
+      "brier_null": 0.25,
+      "drift_z": 0.4,
+      "logistic_score": 0.6,
+      "logistic_ci_low": 0.5,
+      "logistic_ci_high": 0.7,
+      "logistic_sample_size": 87,
+      "predicted_at": "2026-03-20T00:00:00.000Z",
+      "engine_alignment": "Legacy engine alignment prose — pre-Phase-16 report.",
+      "engine_disagreement": null,
+      "diffusion_sparkline": [
+        { "niche": 3, "middle": 1, "mainstream": 0, "scanned_at": "2026-03-17T00:00:00.000Z" },
+        { "niche": 4, "middle": 2, "mainstream": 1, "scanned_at": "2026-03-18T00:00:00.000Z" }
+      ]
+    }
+  }
+}
