@@ -106,7 +106,7 @@ model LearnedPattern {
   status            String   @default("EXPLORATORY")
   last_updated      DateTime @updatedAt @db.Timestamptz
 
-  @@unique([signal_class, pattern_key, cap_class, horizon_days])
+  @@unique([signal_class, pattern_key, cap_class, horizon_days], map: "learned_patterns_lookup_key")
   @@map("learned_patterns")
 }
 
