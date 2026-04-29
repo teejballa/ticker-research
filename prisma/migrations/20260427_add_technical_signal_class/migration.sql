@@ -18,7 +18,9 @@ ALTER TABLE "learned_patterns" ALTER COLUMN "pattern_key" SET NOT NULL;
 ALTER TABLE "learned_patterns" DROP CONSTRAINT IF EXISTS "learned_patterns_flow_pattern_cap_class_key";
 ALTER TABLE "learned_patterns" DROP COLUMN "flow_pattern";
 
-CREATE UNIQUE INDEX "learned_patterns_signal_class_pattern_key_cap_class_horizon_days_key"
+-- Index name explicitly shortened: Postgres NAMEDATALEN=63 silently truncates
+-- the default Prisma name (67 chars). Use a stable explicit name instead.
+CREATE UNIQUE INDEX "learned_patterns_lookup_key"
   ON "learned_patterns"("signal_class", "pattern_key", "cap_class", "horizon_days");
 
 ALTER TABLE "learned_patterns" ALTER COLUMN "signal_class" DROP DEFAULT;
