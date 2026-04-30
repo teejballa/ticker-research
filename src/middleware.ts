@@ -20,7 +20,7 @@ export default function middleware(req: NextRequest) {
   }
   // Cron endpoints authenticate via Bearer CRON_SECRET inside the route handler — bypass NextAuth.
   // Insights API is public (anonymized aggregate data) — bypass NextAuth.
-  if (req.nextUrl.pathname.startsWith('/api/cron') || req.nextUrl.pathname === '/api/insights' || req.nextUrl.pathname === '/insights') {
+  if (req.nextUrl.pathname.startsWith('/api/cron') || req.nextUrl.pathname.startsWith('/api/insights') || req.nextUrl.pathname === '/insights') {
     return NextResponse.next();
   }
   // Web mode: delegate to NextAuth middleware
