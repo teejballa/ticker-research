@@ -137,6 +137,17 @@ export async function POST(
         // non-fatal — report saves without sentiment dims
       }
 
+      // Phase 16-04: capture the live technical snapshot at report time so the
+      // panel can render dual-class agreement and price-followup outcomes can
+      // attribute to the correct (technical) signal class. Non-fatal.
+      let technicalAtReport: import('@/lib/types').TechnicalSnapshot | null = null;
+      try {
+        const { computeTechnicalSnapshot } = await import('@/lib/data/technical');
+        technicalAtReport = await computeTechnicalSnapshot(ticker.toUpperCase());
+      } catch (techErr) {
+        console.error('[history] computeTechnicalSnapshot failed (non-fatal):', techErr);
+      }
+
       // Persist report (non-fatal) — DEPLOYMENT_MODE=web distinction is for history only, not analysis
       if (process.env.DEPLOYMENT_MODE === 'web') {
         try {
@@ -148,6 +159,7 @@ export async function POST(
             await writeReportToDb(result, sess.user.email, {
               price_at_report: priceAtReport,
               community_data: communityData,
+              technical_at_report: technicalAtReport,
             });
           }
         } catch (writeErr) {
