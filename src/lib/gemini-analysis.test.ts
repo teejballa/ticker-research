@@ -85,6 +85,19 @@ function buildEngineCtx(overrides: Partial<EngineContext> = {}): EngineContext {
     horizon_calibrations: buildHorizonCalibrations(),
     combined_logistic_score: 0.65,
     agreement: 'aligned',
+    // Phase 17-04 — institutional + insider signal classes (null defaults for Phase 16 tests)
+    institutional_pattern: null,
+    institutional_posterior_mean: null,
+    institutional_ci: null,
+    institutional_sample_size: 0,
+    institutional_status: 'NO_DATA',
+    institutional_data_age_days: null,
+    insider_pattern: null,
+    insider_posterior_mean: null,
+    insider_ci: null,
+    insider_sample_size: 0,
+    insider_status: 'NO_DATA',
+    insider_data_age_days: null,
     ...overrides,
   };
 }
