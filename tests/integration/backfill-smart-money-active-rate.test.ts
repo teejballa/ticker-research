@@ -19,29 +19,28 @@ loadDotenv({ path: '.env.local' });
 const HAS_DB = !!process.env.DATABASE_URL;
 const describeIfDb = HAS_DB ? describe : describe.skip;
 
-// 8 representative InstitutionalPattern bucket labels.
-// Final names will be tuned in §3.3 — these match the seed taxonomy in 17-05-PLAN.
+// 8 InstitutionalBucket values — must match the InstitutionalBucket union in src/lib/types.ts.
 const INSTITUTIONAL_BUCKETS = [
-  'cluster_buying',
-  'distribution_phase',
-  'accumulation_phase',
-  'institutional_outflow',
-  'fund_rotation',
-  'consensus_buy',
-  'consensus_sell',
+  'net_accumulation',
+  'net_distribution',
+  'new_initiation',
+  'complete_exit',
   'smart_money_concentration',
+  'smart_money_dispersion',
+  'contrarian_inflow',
+  'contrarian_outflow',
 ];
 
-// 8 representative InsiderPattern bucket labels.
+// 8 InsiderBucket values — must match the InsiderBucket union in src/lib/types.ts.
 const INSIDER_BUCKETS = [
-  'smart_money_concentration',
-  'insider_cluster_buy',
-  'insider_cluster_sell',
-  'c_suite_buy',
-  '10b5_1_plan',
-  'opportunistic_buy',
-  'opportunistic_sell',
-  'silent_period',
+  'cluster_buying',
+  'lone_buy',
+  'ceo_buy',
+  'cfo_buy',
+  'director_buy',
+  'cluster_selling',
+  'planned_sell_10b5_1',
+  'lone_sell',
 ];
 
 describeIfDb('AC3: ≥25% ACTIVE rate per class at large_cap × 30d horizon', () => {
