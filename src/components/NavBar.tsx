@@ -96,7 +96,7 @@ export default function NavBar({
             </Link>
           )}
           <Link
-            href="/"
+            href={userEmail ? '/terminal' : '/auth/signin'}
             className="bg-primary-container text-on-primary-container px-3 py-1 text-xs font-bold rounded hover:bg-primary transition-colors active:scale-95 duration-100"
           >
             Analyze a Ticker →
