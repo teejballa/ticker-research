@@ -52,11 +52,11 @@ async function main() {
   // fetchInstitutionalData(ticker, scanned_at) and write the result back.
   // ─────────────────────────────────────────────────────────────────────────
   const instSnaps = await prisma.sentimentSnapshot.findMany({
-    where: { institutional_data: { equals: undefined } },
+    where: { institutional_data: { equals: Prisma.JsonNull } },
     orderBy: { scanned_at: 'asc' },
   });
 
-  // Defensive secondary filter — Prisma JSON null handling varies between adapters.
+  // Belt-and-suspenders sanity assertion — also catches `undefined`/missing JSON values.
   const pendingInstSnaps = instSnaps.filter((s) => s.institutional_data == null);
   console.log(`\nStep 1: ${pendingInstSnaps.length} snapshots missing institutional_data`);
 
@@ -100,11 +100,11 @@ async function main() {
   // fetchInstitutionalData → fetchInsiderData, separate insiderHistogram.
   // ─────────────────────────────────────────────────────────────────────────
   const insiderSnaps = await prisma.sentimentSnapshot.findMany({
-    where: { insider_data: { equals: undefined } },
+    where: { insider_data: { equals: Prisma.JsonNull } },
     orderBy: { scanned_at: 'asc' },
   });
 
-  // Defensive secondary filter.
+  // Belt-and-suspenders sanity assertion — also catches `undefined`/missing JSON values.
   const pendingInsiderSnaps = insiderSnaps.filter((s) => s.insider_data == null);
   console.log(`\nStep 2: ${pendingInsiderSnaps.length} snapshots missing insider_data`);
 
