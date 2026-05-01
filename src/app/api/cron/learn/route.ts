@@ -266,10 +266,47 @@ async function readTechSnapshotForOutcome(
   return snap.technical_data as unknown as TechnicalSnapshot;
 }
 
+/**
+ * Read the InsiderSnapshot's bucket off the originating SentimentSnapshot,
+ * if any. Returns null when the outcome traces back to a Report (no
+ * snapshot_id), the snapshot has no insider_data, or the classifier did
+ * not classify a bucket. Phase 17 — D-21.
+ */
+async function readInsiderBucketForOutcome(
+  outcome: ResolvedOutcome,
+  tx: Prisma.TransactionClient,
+): Promise<InsiderBucket | null> {
+  if (!outcome.snapshot_id) return null;
+  const snap = await tx.sentimentSnapshot.findUnique({
+    where: { id: outcome.snapshot_id },
+    select: { insider_data: true },
+  });
+  const data = snap?.insider_data as { insider_bucket?: InsiderBucket | null } | null;
+  return data?.insider_bucket ?? null;
+}
+
+/**
+ * Read the InstitutionalSnapshot's bucket off the originating
+ * SentimentSnapshot, if any. Same null-handling as the insider variant.
+ * Phase 17 — D-21.
+ */
+async function readInstitutionalBucketForOutcome(
+  outcome: ResolvedOutcome,
+  tx: Prisma.TransactionClient,
+): Promise<InstitutionalBucket | null> {
+  if (!outcome.snapshot_id) return null;
+  const snap = await tx.sentimentSnapshot.findUnique({
+    where: { id: outcome.snapshot_id },
+    select: { institutional_data: true },
+  });
+  const data = snap?.institutional_data as { institutional_bucket?: InstitutionalBucket | null } | null;
+  return data?.institutional_bucket ?? null;
+}
+
 // ─── Cell upsert (composite key on the new schema) ──────────────────────────
 
 interface CellKey {
-  signal_class: 'diffusion' | 'technical';
+  signal_class: 'diffusion' | 'technical' | 'insider' | 'institutional';
   pattern_key: string;
   cap_class: string;
   horizon_days: number;
