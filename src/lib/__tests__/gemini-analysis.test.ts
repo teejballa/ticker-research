@@ -100,7 +100,7 @@ function buildEngineCtx(overrides: Partial<EngineContext> = {}): EngineContext {
     institutional_sample_size: 15,
     institutional_status: 'ACTIVE',
     institutional_data_age_days: 14,
-    insider_pattern: 'cluster_buys',
+    insider_pattern: 'cluster_buying',
     insider_posterior_mean: 0.60,
     insider_ci: [0.47, 0.73],
     insider_sample_size: 12,
