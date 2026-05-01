@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Database Verification & Report Persistence QA** - Playwright e2e db-persistence spec passing (completed 2026-04-24)
 - [x] **Phase 15: Diffusion Learning Engine** - Bayesian crons + EngineCalibrationPanel + InsightsDashboard (completed 2026-04-26)
 - [x] **Phase 16: Technical Analysis as a Learning Signal** - Redesigned 2026-04-26: TA becomes a parallel signal class trained by the diffusion engine; multi-horizon outcomes (3/7/14/30/60/90d); 12-d logistic; horizon table in calibration block (5/5 plans created 2026-04-27 — execution pending) (completed 2026-04-29)
-- [ ] **Phase 17: Institutional & Insider Intelligence** - Planned (context only)
+- [x] **Phase 17: Institutional & Insider Intelligence** - Planned (context only) (completed 2026-05-01)
 
 ## Phase Details
 
@@ -168,7 +168,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 14. Database Verification & Report Persistence QA | 2/2 | Complete (Playwright e2e db-persistence spec passing) | 2026-04-24 |
 | 15. Diffusion Learning Engine | — | Complete (Bayesian crons + InsightsDashboard + EngineCalibrationPanel) | 2026-04-26 |
 | 16. Technical Analysis as a Learning Signal | 5/5 | Complete   | 2026-04-29 |
-| 17. Institutional & Insider Intelligence | 4/5 | In Progress|  |
+| 17. Institutional & Insider Intelligence | 5/5 | Complete   | 2026-05-01 |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
