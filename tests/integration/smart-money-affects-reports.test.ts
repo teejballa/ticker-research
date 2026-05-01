@@ -292,9 +292,9 @@ describeIfDb('smart money state changes flow into report engine_calibration', ()
       /cluster_buying|distribution_phase|accumulation_phase|institutional_outflow|fund_rotation|consensus_buy|consensus_sell|smart_money_concentration|net_accumulation|net_distribution|new_initiation|complete_exit|smart_money_dispersion|contrarian_inflow|contrarian_outflow/,
     );
 
-    // (c) mentions at least one InsiderPattern label
+    // (c) mentions at least one InsiderPattern label (real InsiderBucket values from src/lib/types.ts)
     expect(prompt.toLowerCase()).toMatch(
-      /smart_money_concentration|insider_cluster_buy|insider_cluster_sell|c_suite_buy|10b5_1_plan|opportunistic_buy|opportunistic_sell|silent_period|net_buy_cluster|lone_buy|lone_sell|planned_sell_10b5_1/,
+      /cluster_buying|lone_buy|ceo_buy|cfo_buy|director_buy|cluster_selling|planned_sell_10b5_1|lone_sell/,
     );
   });
 });
