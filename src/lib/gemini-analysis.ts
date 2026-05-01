@@ -91,8 +91,8 @@ export const AnalysisResultSchema = z.object({
   community_highlights: z.array(CommunityHighlightSchema).optional().default([]),
   community_analysis: z.string().optional().default(''),
   // Engine calibration block — Gemini contributes only the alignment/disagreement
-  // strings (4 of them, post-Phase-16). All numeric fields are overwritten
-  // post-generation with authoritative values from getEngineContextForTicker.
+  // strings (4 of them, post-Phase-16; 8 total post-Phase-17). All numeric fields
+  // are overwritten post-generation with authoritative values from getEngineContextForTicker.
   engine_calibration: z.object({
     engine_alignment: z.string().nullable().default(null),
     engine_disagreement: z.string().nullable().default(null),
@@ -100,6 +100,19 @@ export const AnalysisResultSchema = z.object({
     // all numeric technical_* fields are written by engine-context post-process.
     technical_alignment: z.string().nullable().default(null),
     technical_disagreement: z.string().nullable().default(null),
+    // Phase 17-04 — institutional + insider prose (D-05: ONLY these 4 strings; numerics discarded)
+    institutional_alignment: z.string().nullable().optional(),
+    institutional_disagreement: z.string().nullable().optional(),
+    insider_alignment: z.string().nullable().optional(),
+    insider_disagreement: z.string().nullable().optional(),
+    // Accept (and immediately discard) any numeric fields the LLM might hallucinate.
+    // The post-process overwrite block replaces them with authoritative engineCtx values.
+    institutional_posterior_mean: z.number().nullable().optional(),
+    institutional_sample_size: z.number().nullable().optional(),
+    institutional_status: z.string().nullable().optional(),
+    insider_posterior_mean: z.number().nullable().optional(),
+    insider_sample_size: z.number().nullable().optional(),
+    insider_status: z.string().nullable().optional(),
   }).optional(),
 });
 
@@ -566,14 +579,77 @@ INSTRUCTIONS:
 }
 
 /**
+ * Phase 17-04: Build the smart money calibration context block for the system prompt.
+ * Renders empty when neither institutional nor insider class has data
+ * (backwards-compat with pre-Phase-17 state).
+ *
+ * D-04 trust boundary: numbers shown here are for LLM awareness only —
+ * the post-process overwrite in runGeminiAnalysis replaces all numeric
+ * institutional/insider fields regardless of what the LLM outputs.
+ *
+ * D-05: LLM may only write 4 prose strings:
+ *   institutional_alignment, institutional_disagreement,
+ *   insider_alignment, insider_disagreement.
+ *
+ * D-06: When either class is ACTIVE at 30d, the buy/sell rationale MUST
+ *   cite the calibrating bucket by exact name.
+ */
+export function buildSmartMoneyContextBlock(ctx: EngineContext): string {
+  const hasInstitutional = ctx.institutional_status !== 'NO_DATA' || ctx.institutional_pattern != null;
+  const hasInsider        = ctx.insider_status !== 'NO_DATA'        || ctx.insider_pattern != null;
+  if (!hasInstitutional && !hasInsider) return '';
+
+  const pct = (n: number | null | undefined): string => (n != null ? `${(n * 100).toFixed(0)}%` : '—');
+  const ci  = (c: [number, number] | null | undefined): string =>
+    c ? `[CI ${pct(c[0])}–${pct(c[1])}]` : '';
+
+  // 30d horizon row for the 4-class table
+  const row30 = ctx.horizon_calibrations?.find(h => h.horizon_days === 30);
+
+  return `
+
+═══ SMART MONEY CALIBRATION CONTEXT ═══
+
+INSTITUTIONAL PATTERN: ${ctx.institutional_pattern ?? 'NO PATTERN'} × ${ctx.cap_class}
+  Posterior:      ${pct(ctx.institutional_posterior_mean)} ${ci(ctx.institutional_ci)}
+  Sample size:    n=${ctx.institutional_sample_size ?? 0}
+  Status:         ${ctx.institutional_status ?? 'NO_DATA'}
+  Data age:       ${ctx.institutional_data_age_days != null ? `${ctx.institutional_data_age_days} days since latest 13F` : 'unknown'}
+
+INSIDER PATTERN: ${ctx.insider_pattern ?? 'NO PATTERN'} × ${ctx.cap_class}
+  Posterior:      ${pct(ctx.insider_posterior_mean)} ${ci(ctx.insider_ci)}
+  Sample size:    n=${ctx.insider_sample_size ?? 0}
+  Status:         ${ctx.insider_status ?? 'NO_DATA'}
+  Data age:       ${ctx.insider_data_age_days != null ? `${ctx.insider_data_age_days} days since latest Form 4` : 'unknown'}
+
+4-CLASS HORIZON TABLE AT 30d:
+  Diffusion:     ${pct(row30?.diffusion_posterior)} ${ci(row30?.diffusion_ci)}
+  Technical:     ${pct(row30?.technical_posterior)} ${ci(row30?.technical_ci)}
+  Institutional: ${pct(row30?.institutional_posterior)} ${ci(row30?.institutional_ci)}
+  Insider:       ${pct(row30?.insider_posterior)} ${ci(row30?.insider_ci)}
+
+N-WAY AGREEMENT: ${ctx.agreement?.toUpperCase() ?? 'UNKNOWN'}
+
+INSTRUCTIONS for institutional/insider fields (D-04 trust boundary):
+- When the institutional or insider class shows status=ACTIVE at 30d, your buy_rationale or sell_rationale MUST cite the calibrating bucket by its exact name (one of: cluster_buying, lone_buy, ceo_buy, cfo_buy, director_buy, cluster_selling, planned_sell_10b5_1, lone_sell, net_accumulation, net_distribution, new_initiation, complete_exit, smart_money_concentration, smart_money_dispersion, contrarian_inflow, contrarian_outflow). Do not paraphrase the bucket name.
+- You may write 4 prose strings under engine_calibration: institutional_alignment, institutional_disagreement, insider_alignment, insider_disagreement. These are the ONLY institutional/insider fields you may populate. All numeric and categorical fields under engine_calibration are written by the engine and any value you supply for them will be discarded.
+`;
+}
+
+/**
  * Top-level system-prompt assembler. Composes SYSTEM_PROMPT + the engine
- * calibration block + the technical calibration block. Exported as a NAMED
- * function so plan 16-05's integration test can import and assert against
- * the prompt without a Gemini call (per plan 16-04 Task 2 acceptance criterion).
+ * calibration block + the technical calibration block + the smart money block.
+ * Exported as a NAMED function so plan 16-05's integration test can import
+ * and assert against the prompt without a Gemini call.
  */
 export function buildSystemPrompt(engineCtx: EngineContext | null): string {
   if (!engineCtx) return SYSTEM_PROMPT;
-  return SYSTEM_PROMPT + buildEngineContextBlock(engineCtx) + buildTechnicalContextBlock(engineCtx);
+  return (
+    SYSTEM_PROMPT +
+    buildEngineContextBlock(engineCtx) +
+    buildTechnicalContextBlock(engineCtx) +
+    buildSmartMoneyContextBlock(engineCtx)
+  );
 }
 
 /**
@@ -749,6 +825,25 @@ export async function runGeminiAnalysis(
         // LLM-authored prose only (numeric values were overwritten above)
         technical_alignment: llm.technical_alignment ?? null,
         technical_disagreement: llm.technical_disagreement ?? null,
+
+        // ── Phase 17-04 — institutional + insider numeric overwrites (D-04) ──
+        // Ten numeric/categorical fields are always overwritten from engineCtx
+        // regardless of what the LLM returned. Prose strings are left as-is (D-05).
+        institutional_pattern:         engineCtx.institutional_pattern ?? null,
+        institutional_posterior_mean:  engineCtx.institutional_posterior_mean ?? null,
+        institutional_ci:              engineCtx.institutional_ci ?? null,
+        institutional_sample_size:     engineCtx.institutional_sample_size ?? null,
+        institutional_status:          engineCtx.institutional_status ?? null,
+        insider_pattern:               engineCtx.insider_pattern ?? null,
+        insider_posterior_mean:        engineCtx.insider_posterior_mean ?? null,
+        insider_ci:                    engineCtx.insider_ci ?? null,
+        insider_sample_size:           engineCtx.insider_sample_size ?? null,
+        insider_status:                engineCtx.insider_status ?? null,
+        // Prose strings — NOT overwritten (these are the LLM's sole contribution per D-05)
+        institutional_alignment:       (llm as { institutional_alignment?: string | null }).institutional_alignment ?? null,
+        institutional_disagreement:    (llm as { institutional_disagreement?: string | null }).institutional_disagreement ?? null,
+        insider_alignment:             (llm as { insider_alignment?: string | null }).insider_alignment ?? null,
+        insider_disagreement:          (llm as { insider_disagreement?: string | null }).insider_disagreement ?? null,
       };
     }
 
