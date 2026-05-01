@@ -46,7 +46,7 @@ vi.mock('../data/technical', () => ({
   computeTechnicalSnapshot: mocks.computeTechnicalSnapshot,
 }));
 
-import { getEngineContextForTicker, computeAgreement } from '../engine-context';
+import { getEngineContextForTicker, computeAgreement, computeAgreementNWay } from '../engine-context';
 import type { TechnicalSnapshot, TechPattern } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -420,6 +420,211 @@ describe('Phase 16-04 — getEngineContextForTicker dual-class extension', () =>
     expect(ctx.technical_ci).not.toBeNull();
     expect(ctx.technical_ci![0]).toBeLessThan(ctx.technical_posterior_mean!);
     expect(ctx.technical_ci![1]).toBeGreaterThan(ctx.technical_posterior_mean!);
+  });
+});
+
+// ── Phase 17-04 — computeAgreementNWay table tests ────────────────────
+
+describe('computeAgreementNWay', () => {
+  it.each([
+    // 0 ACTIVE classes → unknown
+    [
+      [{ posterior: null, status: 'NO_DATA' as const }, { posterior: null, status: 'NO_DATA' as const }],
+      'unknown',
+      '0 ACTIVE → unknown',
+    ],
+    // 1 ACTIVE class → unknown (gate requires ≥ 2)
+    [
+      [
+        { posterior: 0.65, status: 'ACTIVE' as const },
+        { posterior: null, status: 'NO_DATA' as const },
+        { posterior: null, status: 'NO_DATA' as const },
+      ],
+      'unknown',
+      '1 ACTIVE → unknown',
+    ],
+    // 4 ACTIVE all > 0.55 → aligned (bullish)
+    [
+      [
+        { posterior: 0.62, status: 'ACTIVE' as const },
+        { posterior: 0.58, status: 'ACTIVE' as const },
+        { posterior: 0.60, status: 'ACTIVE' as const },
+        { posterior: 0.57, status: 'ACTIVE' as const },
+      ],
+      'aligned',
+      '4 ACTIVE all > 0.55 → aligned (bullish)',
+    ],
+    // 4 ACTIVE all < 0.45 → aligned (bearish)
+    [
+      [
+        { posterior: 0.38, status: 'ACTIVE' as const },
+        { posterior: 0.42, status: 'ACTIVE' as const },
+        { posterior: 0.40, status: 'ACTIVE' as const },
+        { posterior: 0.35, status: 'ACTIVE' as const },
+      ],
+      'aligned',
+      '4 ACTIVE all < 0.45 → aligned (bearish)',
+    ],
+    // one > 0.6 + one < 0.4 → opposed (rest in neutral band)
+    [
+      [
+        { posterior: 0.65, status: 'ACTIVE' as const },
+        { posterior: 0.35, status: 'ACTIVE' as const },
+        { posterior: 0.50, status: 'ACTIVE' as const },
+      ],
+      'opposed',
+      '1 strong-bull + 1 strong-bear → opposed',
+    ],
+    // 4 ACTIVE in mixed band (no alignment, no strong opposition)
+    [
+      [
+        { posterior: 0.48, status: 'ACTIVE' as const },
+        { posterior: 0.52, status: 'ACTIVE' as const },
+        { posterior: 0.55, status: 'ACTIVE' as const },
+        { posterior: 0.45, status: 'ACTIVE' as const },
+      ],
+      'mixed',
+      '4 ACTIVE mixed band → mixed',
+    ],
+    // 2 ACTIVE bullish + 2 NO_DATA → aligned (gate counts only ACTIVE)
+    [
+      [
+        { posterior: 0.65, status: 'ACTIVE' as const },
+        { posterior: 0.60, status: 'ACTIVE' as const },
+        { posterior: null, status: 'NO_DATA' as const },
+        { posterior: null, status: 'NO_DATA' as const },
+      ],
+      'aligned',
+      '2 ACTIVE bullish + 2 NO_DATA → aligned (gate counts only ACTIVE)',
+    ],
+  ])('%s → %s', (classes, expected, _desc) => {
+    expect(computeAgreementNWay(classes)).toBe(expected);
+  });
+});
+
+// ── Phase 17-04 — getEngineContextForTicker institutional + insider ─────
+
+describe('Phase 17-04 — getEngineContextForTicker institutional + insider resolution', () => {
+  function buildSnapWithSmartMoney(opts: {
+    insiderBucket?: string | null;
+    institutionalBucket?: string | null;
+    dataAgeDays?: number;
+  }) {
+    const snap = buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 });
+    return {
+      ...snap,
+      insider_data: opts.insiderBucket !== null && opts.insiderBucket !== undefined
+        ? {
+            insider_bucket: opts.insiderBucket,
+            data_age_days: opts.dataAgeDays ?? 5,
+            distinct_buyers: 3,
+            distinct_sellers: 0,
+            net_buy_share_count: 10000,
+            net_sell_share_count: 0,
+            buy_value_usd: 500000,
+            sell_value_usd: null,
+            has_ceo_buy: true,
+            has_cfo_buy: false,
+            has_director_buy: false,
+            is_planned_10b5_1: false,
+            filings_count: 3,
+            earliest_filing_date: '2026-04-01',
+            latest_filing_date: '2026-04-25',
+            computed_at: '2026-04-30T00:00:00.000Z',
+            data_source: 'finnhub',
+            insider_sentiment_mspr: 0.6,
+          }
+        : null,
+      institutional_data: opts.institutionalBucket !== null && opts.institutionalBucket !== undefined
+        ? {
+            institutional_bucket: opts.institutionalBucket,
+            data_age_days: opts.dataAgeDays ?? 14,
+            total_institutional_share: 5000000,
+            total_institutional_share_prev: 4800000,
+            net_share_change: 200000,
+            net_share_change_pct: 4.2,
+            fund_count_current: 142,
+            fund_count_prev: 137,
+            fund_count_delta: 5,
+            top10_concentration_pct: 38,
+            top10_concentration_pct_prev: 36,
+            ticker_30d_return_pct: 3.5,
+            spy_30d_return_pct: 1.2,
+            report_date: '2026-03-31',
+            filing_date: '2026-04-15',
+            computed_at: '2026-04-30T00:00:00.000Z',
+            data_source: 'finnhub',
+          }
+        : null,
+    };
+  }
+
+  it('resolves insiderBucket and institutionalBucket from mostRecentSnap', async () => {
+    const snap = buildSnapWithSmartMoney({ insiderBucket: 'cluster_buys', institutionalBucket: 'accumulation' });
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
+
+    const ctx = await getEngineContextForTicker('TSLA', ASOF);
+
+    expect(ctx.insider_pattern).toBe('cluster_buys');
+    expect(ctx.institutional_pattern).toBe('accumulation');
+    expect(ctx.insider_data_age_days).toBe(5);
+    expect(ctx.institutional_data_age_days).toBe(14);
+  });
+
+  it('returns NO_DATA defaults when insider_data and institutional_data are null', async () => {
+    const snap = buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 });
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
+
+    const ctx = await getEngineContextForTicker('TSLA', ASOF);
+
+    expect(ctx.insider_pattern).toBeNull();
+    expect(ctx.insider_posterior_mean).toBeNull();
+    expect(ctx.insider_status).toBe('NO_DATA');
+    expect(ctx.insider_data_age_days).toBeNull();
+    expect(ctx.institutional_pattern).toBeNull();
+    expect(ctx.institutional_posterior_mean).toBeNull();
+    expect(ctx.institutional_status).toBe('NO_DATA');
+    expect(ctx.institutional_data_age_days).toBeNull();
+  });
+
+  it('populates institutional posterior from LearnedPattern when bucket present', async () => {
+    const snap = buildSnapWithSmartMoney({ insiderBucket: null, institutionalBucket: 'accumulation' });
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+      if (k.signal_class === 'institutional') {
+        return Promise.resolve(buildLearnedCell({ alpha: 14, beta: 6, sample_size: 20 }));
+      }
+      return Promise.resolve(null);
+    });
+
+    const ctx = await getEngineContextForTicker('MSFT', ASOF);
+
+    expect(ctx.institutional_pattern).toBe('accumulation');
+    expect(ctx.institutional_posterior_mean).toBeCloseTo(14 / 20, 3);
+    expect(ctx.institutional_status).toBe('ACTIVE');
+    expect(ctx.institutional_ci).not.toBeNull();
+  });
+
+  it('horizon_calibrations rows carry institutional_posterior and insider_posterior fields', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 }),
+      buildSnapshot({ daysAgo: 1, niche: 1, middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
+
+    const ctx = await getEngineContextForTicker('AAPL', ASOF);
+
+    expect(ctx.horizon_calibrations).toHaveLength(6);
+    for (const row of ctx.horizon_calibrations) {
+      expect(row).toHaveProperty('institutional_posterior');
+      expect(row).toHaveProperty('institutional_ci');
+      expect(row).toHaveProperty('insider_posterior');
+      expect(row).toHaveProperty('insider_ci');
+    }
   });
 });
 
