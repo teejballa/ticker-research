@@ -52,7 +52,10 @@ async function main() {
   // fetchInstitutionalData(ticker, scanned_at) and write the result back.
   // ─────────────────────────────────────────────────────────────────────────
   const instSnaps = await prisma.sentimentSnapshot.findMany({
-    where: { institutional_data: { equals: Prisma.JsonNull } },
+    // Match BOTH DB-NULL (pre-Phase-17 rows) and JSON-null (post-deploy rows
+    // where the cron explicitly wrote Prisma.JsonNull because the fetcher
+    // returned null). Backfill should touch any row that lacks real data.
+    where: { institutional_data: { equals: Prisma.AnyNull } },
     orderBy: { scanned_at: 'asc' },
   });
 
@@ -100,7 +103,8 @@ async function main() {
   // fetchInstitutionalData → fetchInsiderData, separate insiderHistogram.
   // ─────────────────────────────────────────────────────────────────────────
   const insiderSnaps = await prisma.sentimentSnapshot.findMany({
-    where: { insider_data: { equals: Prisma.JsonNull } },
+    // Same reasoning as Step 1 — match DB-NULL OR JSON-null.
+    where: { insider_data: { equals: Prisma.AnyNull } },
     orderBy: { scanned_at: 'asc' },
   });
 
