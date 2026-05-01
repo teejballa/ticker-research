@@ -7,14 +7,21 @@
 // engine_calibration is undefined (old reports) but renders even at NO_DATA so
 // the reader can see the engine is aware of the ticker but has no prior yet.
 //
-// Phase 16 (16-04) — DUAL-CLASS layout:
-//   - When `horizon_calibrations.length >= 1`: render side-by-side
-//     DIFFUSION × TECHNICAL columns + Agreement Badge + Horizon Table
+// Phase 16 (16-04) — DUAL-CLASS layout (now superseded by Phase 17-04 QuadClassPanel):
+//   - When `horizon_calibrations.length >= 1`: render QuadClassPanel (4-col grid)
 //   - Otherwise: graceful fallback to the existing diffusion-only layout
-//     (old persisted reports never partially render the dual-class shell)
-// All locked copy + classNames are verbatim per UI-SPEC §A and §C.
+//     (old persisted reports never partially render the quad-class shell)
+//
+// Phase 17 (17-04) — QUAD-CLASS layout:
+//   - QuadClassPanel: 4-column responsive grid (1 col mobile / 2 cols md / 4 cols lg)
+//   - HorizonTable: 8 numeric columns (4 posteriors + 4 CIs), CI hidden ≤xl
+//   - AgreementBadge: N-way tooltip copy (UI-SPEC §C locked)
+//   - AlignmentDisagreementBlocks: extended to 4 classes × 2 prose strings each
+//   - Pattern type mismatch resolved — InstitutionalBucket/InsiderBucket unions used throughout
+//
+// All locked copy + classNames are verbatim per 17-UI-SPEC.md §A, §B, §C, §D.
 
-import type { EngineCalibration, HorizonCalibration } from '@/lib/types';
+import type { EngineCalibration, HorizonCalibration, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 
 interface EngineCalibrationPanelProps {
   calibration: EngineCalibration;
@@ -27,7 +34,7 @@ const STATUS_BADGE: Record<EngineCalibration['status'], string> = {
   NO_DATA: 'bg-surface-container-highest text-on-surface-variant border-outline/30',
 };
 
-const STATUS_LABEL: Record<EngineCalibration['status'], string> = {
+const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'ACTIVE',
   EXPLORATORY: 'EXPLORATORY',
   DEPRECATED: 'DEPRECATED',
@@ -60,7 +67,31 @@ const TECH_PATTERN_LABEL: Record<string, string> = {
   golden_cross: 'GOLDEN CROSS',
 };
 
-// Phase 16: Agreement Badge state → classes/label/icon/tooltip (UI-SPEC §C lines 226-243)
+// Phase 17-04: InstitutionalBucket → display label (UI-SPEC §A Pattern label maps)
+const INST_PATTERN_LABEL: Record<InstitutionalBucket, string> = {
+  net_accumulation:          'NET ACCUMULATION',
+  net_distribution:          'NET DISTRIBUTION',
+  new_initiation:            'NEW INITIATION',
+  complete_exit:             'COMPLETE EXIT',
+  smart_money_concentration: 'SMART MONEY CONC.',
+  smart_money_dispersion:    'SMART MONEY DISP.',
+  contrarian_inflow:         'CONTRARIAN INFLOW',
+  contrarian_outflow:        'CONTRARIAN OUTFLOW',
+};
+
+// Phase 17-04: InsiderBucket → display label (UI-SPEC §A Pattern label maps)
+const INSIDER_PATTERN_LABEL: Record<InsiderBucket, string> = {
+  cluster_buying:       'CLUSTER BUYING',
+  lone_buy:             'LONE BUY',
+  ceo_buy:              'CEO BUY',
+  cfo_buy:              'CFO BUY',
+  director_buy:         'DIRECTOR BUY',
+  cluster_selling:      'CLUSTER SELLING',
+  planned_sell_10b5_1:  '10b5-1 PLAN SELL',
+  lone_sell:            'LONE SELL',
+};
+
+// Phase 17-04: N-way AgreementBadge (UI-SPEC §C — N-way tooltip copy locked)
 type AgreementState = 'aligned' | 'mixed' | 'opposed' | 'unknown';
 const AGREEMENT_BADGE: Record<AgreementState, {
   text: string;
@@ -72,25 +103,25 @@ const AGREEMENT_BADGE: Record<AgreementState, {
     text: 'ALIGNED',
     classes: 'text-secondary border-secondary/40 bg-secondary/10',
     icon: 'check_circle',
-    tooltip: 'Diffusion and technical priors agree on direction at 30d. Conviction compounds.',
+    tooltip: 'All ACTIVE classes point the same direction at 30d. Highest conviction state.',
   },
   mixed: {
     text: 'MIXED',
     classes: 'text-tertiary border-tertiary/40 bg-tertiary/10',
     icon: 'compare_arrows',
-    tooltip: 'Signal classes lean the same direction but differ in magnitude. Read both columns.',
+    tooltip: 'ACTIVE classes lean the same general direction but differ in magnitude. Read all 4 columns.',
   },
   opposed: {
     text: 'OPPOSED',
     classes: 'text-error border-error/40 bg-error/10',
     icon: 'error',
-    tooltip: 'Diffusion and technical priors point opposite directions at 30d. This is intentional surfacing — read engine_alignment AND technical_disagreement.',
+    tooltip: 'At least one strong-bullish class AND one strong-bearish class are ACTIVE at 30d. Read every alignment/disagreement block.',
   },
   unknown: {
     text: 'UNKNOWN',
     classes: 'text-outline border-outline-variant bg-surface-container-highest',
     icon: 'help',
-    tooltip: 'Engine has insufficient data on one or both signal classes. Treat the calibration block as exploratory.',
+    tooltip: 'Fewer than 2 classes are ACTIVE. Treat the calibration as exploratory.',
   },
 };
 
@@ -177,7 +208,7 @@ function MetricCard({
   );
 }
 
-// ── Phase 16 — Agreement Badge (UI-SPEC §C) ────────────────────────────
+// ── Agreement Badge (N-way, UI-SPEC §C) ──────────────────────────────────
 
 function AgreementBadge({ state }: { state: AgreementState }) {
   const cfg = AGREEMENT_BADGE[state];
@@ -193,7 +224,7 @@ function AgreementBadge({ state }: { state: AgreementState }) {
   );
 }
 
-// ── Phase 16 — Pattern + cap pill (per column) ─────────────────────────
+// ── Pattern + cap pill (per column) ─────────────────────────────────────
 
 function PatternCapRow({
   patternLabel,
@@ -212,28 +243,81 @@ function PatternCapRow({
       <span
         className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
       >
-        {STATUS_LABEL[status]}
+        {STATUS_LABEL[status] ?? status}
       </span>
     </div>
   );
 }
 
-// ── Phase 16 — Horizon Table (UI-SPEC §A step 5) ───────────────────────
+// ── Phase 17-04: ClassColumn — single signal class column ─────────────────
+// Used as a local sub-component inside QuadClassPanel. Encapsulates the
+// eyebrow, PatternCapRow, and 3 MetricCards for one signal class.
+
+interface ClassColumnProps {
+  kind: 'diffusion' | 'technical' | 'institutional' | 'insider';
+  eyebrowLabel: string;
+  eyebrowColorClass: string;
+  patternLabel: string;
+  capLabel: string;
+  status: EngineCalibration['status'];
+  card1: { label: string; value: string; subValue: string; tooltip: string };
+  card2: { label: string; value: string; subValue: string; tooltip: string };
+  card3: { label: string; value: string; subValue: string; tooltip: string };
+  isNoData?: boolean;
+}
+
+function ClassColumn({
+  kind,
+  eyebrowLabel,
+  eyebrowColorClass,
+  patternLabel,
+  capLabel,
+  status,
+  card1,
+  card2,
+  card3,
+  isNoData,
+}: ClassColumnProps) {
+  return (
+    <div data-column={kind} className={isNoData ? 'opacity-60' : ''}>
+      <div className="mb-3">
+        <span className={`text-[10px] tracking-widest uppercase font-bold ${eyebrowColorClass}`}>
+          {eyebrowLabel}
+        </span>
+      </div>
+      <PatternCapRow patternLabel={patternLabel} capLabel={capLabel} status={status} />
+      <div className="grid grid-cols-1 gap-3">
+        <MetricCard {...card1} />
+        <MetricCard {...card2} />
+        <MetricCard {...card3} />
+      </div>
+    </div>
+  );
+}
+
+// ── Phase 17-04: 4-class HorizonTable (UI-SPEC §B) ────────────────────────
+// 9 header columns: HORIZON + 4 posteriors + 4 CIs.
+// CI columns hidden at ≤xl (< 1280px) via `hidden xl:table-cell`.
+// Posterior columns always visible with title=CI for hover disclosure.
 
 function HorizonTable({ rows }: { rows: HorizonCalibration[] }) {
-  // 3d intentionally omitted from the table (UI-SPEC §A line 150 — too noisy for thesis horizons).
+  // 3d intentionally omitted (UI-SPEC §B — too noisy for thesis horizons).
   const visibleRows = rows.filter((r) => r.horizon_days !== 3);
 
   return (
-    <div className="pt-4 mt-4 border-t border-surface-container-high">
+    <div className="pt-4 mt-4 border-t border-surface-container-high overflow-x-auto">
       <table className="w-full text-xs font-mono" data-testid="horizon-table">
         <thead>
           <tr className="bg-surface-container-low text-[10px] tracking-widest uppercase text-on-surface-variant">
             <th scope="col" className="text-left p-2">HORIZON</th>
             <th scope="col" className="text-right p-2">DIFFUSION POST.</th>
-            <th scope="col" className="text-right p-2">DIFFUSION CI</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell">DIFFUSION CI</th>
             <th scope="col" className="text-right p-2">TECHNICAL POST.</th>
-            <th scope="col" className="text-right p-2">TECHNICAL CI</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell">TECHNICAL CI</th>
+            <th scope="col" className="text-right p-2">INST. POST.</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell">INST. CI</th>
+            <th scope="col" className="text-right p-2">INSIDER POST.</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell">INSIDER CI</th>
             <th scope="col" className="text-right p-2">N · STATUS</th>
           </tr>
         </thead>
@@ -247,7 +331,6 @@ function HorizonTable({ rows }: { rows: HorizonCalibration[] }) {
               isPrimary ? 'border-l-2 border-primary bg-primary/5' : '',
               isExploratory ? 'opacity-60' : '',
             ].filter(Boolean).join(' ');
-            const horizonLabel = isPrimary ? '30d★' : `${r.horizon_days}d`;
             return (
               <tr
                 key={r.horizon_days}
@@ -257,16 +340,49 @@ function HorizonTable({ rows }: { rows: HorizonCalibration[] }) {
                 <th scope="row" className="text-left p-2 font-mono">
                   {isPrimary
                     ? <><span className="text-primary" aria-label="primary horizon">★</span><span className="ml-1">30d</span></>
-                    : horizonLabel}
+                    : `${r.horizon_days}d`}
                 </th>
-                <td className="text-right p-2">{isNoData ? <span className="text-on-surface-variant">—</span> : formatPct(r.diffusion_posterior)}</td>
-                <td className="text-right p-2">{isNoData ? <span className="text-on-surface-variant">—</span> : formatCi(r.diffusion_ci)}</td>
-                <td className="text-right p-2">{isNoData ? <span className="text-on-surface-variant">—</span> : formatPct(r.technical_posterior)}</td>
-                <td className="text-right p-2">{isNoData ? <span className="text-on-surface-variant">—</span> : formatCi(r.technical_ci)}</td>
+                {/* Diffusion posterior — always visible; CI visible only at xl+ */}
+                <td className="text-right p-2" title={formatCi(r.diffusion_ci)}>
+                  {isNoData ? <span className="text-on-surface-variant">—</span> : formatPct(r.diffusion_posterior)}
+                </td>
+                <td className="text-right p-2 hidden xl:table-cell">
+                  {isNoData ? <span className="text-on-surface-variant">—</span> : formatCi(r.diffusion_ci)}
+                </td>
+                {/* Technical posterior */}
+                <td className="text-right p-2" title={formatCi(r.technical_ci)}>
+                  {isNoData ? <span className="text-on-surface-variant">—</span> : formatPct(r.technical_posterior)}
+                </td>
+                <td className="text-right p-2 hidden xl:table-cell">
+                  {isNoData ? <span className="text-on-surface-variant">—</span> : formatCi(r.technical_ci)}
+                </td>
+                {/* Institutional posterior */}
+                <td className="text-right p-2" title={formatCi(r.institutional_ci)}>
+                  {(isNoData || r.institutional_posterior == null)
+                    ? <span className="text-on-surface-variant">—</span>
+                    : formatPct(r.institutional_posterior)}
+                </td>
+                <td className="text-right p-2 hidden xl:table-cell">
+                  {(isNoData || r.institutional_ci == null)
+                    ? <span className="text-on-surface-variant">—</span>
+                    : formatCi(r.institutional_ci)}
+                </td>
+                {/* Insider posterior */}
+                <td className="text-right p-2" title={formatCi(r.insider_ci)}>
+                  {(isNoData || r.insider_posterior == null)
+                    ? <span className="text-on-surface-variant">—</span>
+                    : formatPct(r.insider_posterior)}
+                </td>
+                <td className="text-right p-2 hidden xl:table-cell">
+                  {(isNoData || r.insider_ci == null)
+                    ? <span className="text-on-surface-variant">—</span>
+                    : formatCi(r.insider_ci)}
+                </td>
+                {/* N · STATUS */}
                 <td className="text-right p-2">
                   {isNoData
                     ? <span className="text-on-surface-variant">n=0 · NO DATA</span>
-                    : <span className="text-on-surface-variant">n={r.sample_size} · {STATUS_LABEL[r.status]}</span>}
+                    : <span className="text-on-surface-variant">n={r.sample_size} · {STATUS_LABEL[r.status] ?? r.status}</span>}
                 </td>
               </tr>
             );
@@ -277,9 +393,11 @@ function HorizonTable({ rows }: { rows: HorizonCalibration[] }) {
   );
 }
 
-// ── Phase 16 — Dual-class side-by-side panel (UI-SPEC §A steps 2-4) ────
+// ── Phase 17-04: QuadClassPanel — 4-column grid (UI-SPEC §A) ─────────────
+// Phase 17-04 replacement for the Phase 16 dual-class panel. Responsive: 1 col (mobile) → 2 cols (md) → 4 cols (lg).
+// AgreementBadge centered above the grid (not between columns).
 
-function DualClassPanel({
+function QuadClassPanel({
   calibration,
   agreement,
 }: {
@@ -292,102 +410,192 @@ function DualClassPanel({
     brier_in_sample, brier_null,
     technical_pattern, technical_posterior_mean, technical_ci, technical_sample_size, technical_status,
     combined_logistic_score,
+    institutional_pattern, institutional_posterior_mean, institutional_ci,
+    institutional_sample_size, institutional_status,
+    insider_pattern, insider_posterior_mean, insider_ci, insider_sample_size, insider_status,
   } = calibration;
 
-  const diffusionPatternLabel = flow_pattern ? FLOW_LABEL[flow_pattern] : 'NO PATTERN';
-  const technicalPatternLabel = technical_pattern ? (TECH_PATTERN_LABEL[technical_pattern] ?? technical_pattern.toUpperCase()) : 'NO PATTERN';
   const capLabel = CAP_LABEL[cap_class];
+
+  const diffusionPatternLabel = flow_pattern ? FLOW_LABEL[flow_pattern] : 'NO PATTERN';
+  const technicalPatternLabel = technical_pattern
+    ? (TECH_PATTERN_LABEL[technical_pattern] ?? technical_pattern.toUpperCase())
+    : 'NO PATTERN';
+  const institutionalPatternLabel = institutional_pattern
+    ? (INST_PATTERN_LABEL[institutional_pattern] ?? institutional_pattern.toUpperCase())
+    : 'NO PATTERN';
+  const insiderPatternLabel = insider_pattern
+    ? (INSIDER_PATTERN_LABEL[insider_pattern] ?? insider_pattern.toUpperCase())
+    : 'NO PATTERN';
+
   const techStatus: EngineCalibration['status'] = technical_status ?? 'NO_DATA';
+  const instStatus: EngineCalibration['status'] = institutional_status ?? 'NO_DATA';
+  const insdStatus: EngineCalibration['status'] = insider_status ?? 'NO_DATA';
+
+  const instIsNoData = instStatus === 'NO_DATA';
+  const insdIsNoData = insdStatus === 'NO_DATA';
 
   return (
     <>
-      {/* Eyebrow row + agreement badge centered between columns */}
-      <div className="flex items-center mb-4">
-        <div className="flex-1">
-          <span className="text-[10px] tracking-widest text-on-surface-variant uppercase">DIFFUSION</span>
-        </div>
-        <div className="px-4">
-          <AgreementBadge state={agreement} />
-        </div>
-        <div className="flex-1 text-right">
-          <span className="text-[10px] tracking-widest text-on-surface-variant uppercase">TECHNICAL</span>
-        </div>
+      {/* AgreementBadge centered above the 4-column grid (UI-SPEC §A step 3) */}
+      <div className="flex justify-center mb-4">
+        <AgreementBadge state={agreement} />
       </div>
 
-      {/* Two-column body, 1px vertical divider */}
-      <div className="flex gap-6 items-stretch">
-        {/* Left column — DIFFUSION */}
-        <div className="flex-1">
-          <PatternCapRow patternLabel={diffusionPatternLabel} capLabel={capLabel} status={status} />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <MetricCard
-              label="Engine Prior"
-              value={formatPct(posterior_mean)}
-              subValue={posterior_mean != null ? `[${formatPct(ci_low)}–${formatPct(ci_high)}] · n=${sample_size}` : `n=${sample_size}`}
-              tooltip="Bayesian Beta-Bernoulli posterior probability that this diffusion pattern × cap class produces a 7-day return >1% above SPY."
-            />
-            <MetricCard
-              label="Logistic Score"
-              value={formatPct(logistic_score)}
-              subValue={logistic_score != null ? `[${formatPct(logistic_ci_low)}–${formatPct(logistic_ci_high)}] · n=${logistic_sample_size}` : `n=${logistic_sample_size}`}
-              tooltip="Bayesian-logistic forward pass over this report's diffusion features."
-            />
-            <MetricCard
-              label="Adversarial Null"
-              value={formatBrier(brier_in_sample)}
-              subValue={brier_null != null ? `null ${formatBrier(brier_null)} · ${brier_in_sample != null && brier_in_sample < brier_null ? 'beats' : 'loses to'} chance` : 'n/a'}
-              tooltip="Brier score (mean squared error vs outcome) of the real predictor compared with shuffled-outcome nulls. Lower is better."
-            />
-          </div>
-        </div>
+      {/* 4-column grid: 1 col mobile / 2 cols md / 4 cols lg (UI-SPEC §A step 2) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-        <div className="w-px self-stretch bg-outline-variant/30" aria-hidden="true" />
+        {/* Column 1 — DIFFUSION */}
+        <ClassColumn
+          kind="diffusion"
+          eyebrowLabel="DIFFUSION"
+          eyebrowColorClass="text-on-surface-variant"
+          patternLabel={diffusionPatternLabel}
+          capLabel={capLabel}
+          status={status}
+          card1={{
+            label: 'Engine Prior',
+            value: formatPct(posterior_mean),
+            subValue: posterior_mean != null
+              ? `[${formatPct(ci_low)}–${formatPct(ci_high)}] · n=${sample_size}`
+              : `n=${sample_size}`,
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this diffusion pattern × cap class produces a 7-day return >1% above SPY.',
+          }}
+          card2={{
+            label: 'Logistic Score',
+            value: formatPct(logistic_score),
+            subValue: logistic_score != null
+              ? `[${formatPct(logistic_ci_low)}–${formatPct(logistic_ci_high)}] · n=${logistic_sample_size}`
+              : `n=${logistic_sample_size}`,
+            tooltip: 'Bayesian-logistic forward pass over this report\'s diffusion features.',
+          }}
+          card3={{
+            label: 'Adversarial Null',
+            value: formatBrier(brier_in_sample),
+            subValue: brier_null != null
+              ? `null ${formatBrier(brier_null)} · ${brier_in_sample != null && brier_in_sample < brier_null ? 'beats' : 'loses to'} chance`
+              : 'n/a',
+            tooltip: 'Brier score (mean squared error vs outcome) of the real predictor compared with shuffled-outcome nulls. Lower is better.',
+          }}
+        />
 
-        {/* Right column — TECHNICAL */}
-        <div className="flex-1">
-          <PatternCapRow patternLabel={technicalPatternLabel} capLabel={capLabel} status={techStatus} />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <MetricCard
-              label="Tech Prior"
-              value={formatPct(technical_posterior_mean ?? null)}
-              subValue={technical_posterior_mean != null ? `${formatCi(technical_ci ?? null)} · n=${technical_sample_size ?? 0}` : `n=${technical_sample_size ?? 0}`}
-              tooltip="Bayesian Beta-Bernoulli posterior probability that this technical pattern × cap class produces a 30d return >1% above SPY."
-            />
-            <MetricCard
-              label="Combined Logistic"
-              value={combined_logistic_score != null ? formatPct(combined_logistic_score) : '—'}
-              subValue={`30d-trained, n=${logistic_sample_size}`}
-              tooltip="Bayesian-logistic forward pass over the full 12-d feature vector (6 diffusion + 6 technical), trained on 30d outcomes only."
-            />
-            <MetricCard
-              label="Tech Adversarial Null"
-              value={formatBrier(brier_in_sample)}
-              subValue={brier_null != null ? `null ${formatBrier(brier_null)} · vs chance` : 'n/a'}
-              tooltip="Adversarial null Brier score vs chance for the technical signal class."
-            />
-          </div>
-        </div>
+        {/* Column 2 — TECHNICAL */}
+        <ClassColumn
+          kind="technical"
+          eyebrowLabel="TECHNICAL"
+          eyebrowColorClass="text-on-surface-variant"
+          patternLabel={technicalPatternLabel}
+          capLabel={capLabel}
+          status={techStatus}
+          card1={{
+            label: 'Tech Prior',
+            value: formatPct(technical_posterior_mean ?? null),
+            subValue: technical_posterior_mean != null
+              ? `${formatCi(technical_ci ?? null)} · n=${technical_sample_size ?? 0}`
+              : `n=${technical_sample_size ?? 0}`,
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this technical pattern × cap class produces a 30d return >1% above SPY.',
+          }}
+          card2={{
+            label: 'Combined Logistic',
+            value: combined_logistic_score != null ? formatPct(combined_logistic_score) : '—',
+            subValue: `30d-trained, n=${logistic_sample_size}`,
+            tooltip: 'Bayesian-logistic forward pass over the full 12-d feature vector (6 diffusion + 6 technical), trained on 30d outcomes only.',
+          }}
+          card3={{
+            label: 'Tech Sample',
+            value: `n=${technical_sample_size ?? 0}`,
+            subValue: techStatus,
+            tooltip: 'Adversarial null Brier score vs chance for the technical signal class.',
+          }}
+        />
+
+        {/* Column 3 — INSTITUTIONAL (new, UI-SPEC §A — secondary/teal identity) */}
+        <ClassColumn
+          kind="institutional"
+          eyebrowLabel="INSTITUTIONAL"
+          eyebrowColorClass="text-secondary"
+          patternLabel={institutionalPatternLabel}
+          capLabel={capLabel}
+          status={instStatus}
+          isNoData={instIsNoData}
+          card1={{
+            label: 'Inst. Prior',
+            value: formatPct(institutional_posterior_mean ?? null),
+            subValue: institutional_posterior_mean != null
+              ? `${formatCi(institutional_ci ?? null)} · n=${institutional_sample_size ?? 0}`
+              : instIsNoData ? 'No recent filings' : `n=${institutional_sample_size ?? 0}`,
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this institutional pattern × cap class produces a 30d return >1% above SPY.',
+          }}
+          card2={{
+            label: 'Inst. Sample',
+            value: `n=${institutional_sample_size ?? 0}`,
+            subValue: instStatus,
+            tooltip: 'Number of resolved 30d outcome observations for this institutional bucket × cap class.',
+          }}
+          card3={{
+            label: 'Inst. Null',
+            value: formatBrier(brier_in_sample),
+            subValue: brier_null != null ? `null ${formatBrier(brier_null)}` : 'n/a',
+            tooltip: 'Brier score for the institutional signal class vs adversarial null.',
+          }}
+        />
+
+        {/* Column 4 — INSIDER (new, UI-SPEC §A — tertiary/amber identity) */}
+        <ClassColumn
+          kind="insider"
+          eyebrowLabel="INSIDER"
+          eyebrowColorClass="text-tertiary"
+          patternLabel={insiderPatternLabel}
+          capLabel={capLabel}
+          status={insdStatus}
+          isNoData={insdIsNoData}
+          card1={{
+            label: 'Insider Prior',
+            value: formatPct(insider_posterior_mean ?? null),
+            subValue: insider_posterior_mean != null
+              ? `${formatCi(insider_ci ?? null)} · n=${insider_sample_size ?? 0}`
+              : insdIsNoData ? 'No recent filings' : `n=${insider_sample_size ?? 0}`,
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this insider pattern × cap class produces a 30d return >1% above SPY.',
+          }}
+          card2={{
+            label: 'Insider Sample',
+            value: `n=${insider_sample_size ?? 0}`,
+            subValue: insdStatus,
+            tooltip: 'Number of resolved 30d outcome observations for this insider bucket × cap class.',
+          }}
+          card3={{
+            label: 'Insider Null',
+            value: formatBrier(brier_in_sample),
+            subValue: brier_null != null ? `null ${formatBrier(brier_null)}` : 'n/a',
+            tooltip: 'Brier score for the insider signal class vs adversarial null.',
+          }}
+        />
       </div>
     </>
   );
 }
 
-// ── Phase 16 — Alignment / Disagreement prose blocks (UI-SPEC §A step 7) ──
+// ── Alignment / Disagreement prose blocks (extended to 4 classes, UI-SPEC §D) ──
 
 function AlignmentPanel({
   text,
   variant,
   label,
   icon,
+  dataClass,
 }: {
   text: string;
   variant: 'aligned' | 'disagreement';
   label: string;
   icon: string;
+  dataClass: string;
 }) {
   const isAligned = variant === 'aligned';
   return (
-    <div className={`${isAligned ? 'bg-secondary/5 border-secondary' : 'bg-error/5 border-error'} border-l-2 p-4 rounded-r`}>
+    <div
+      className={`${isAligned ? 'bg-secondary/5 border-secondary' : 'bg-error/5 border-error'} border-l-2 p-4 rounded-r`}
+      data-class={dataClass}
+    >
       <h4 className={`text-[10px] font-bold tracking-widest uppercase ${isAligned ? 'text-secondary' : 'text-error'} mb-2 flex items-center gap-2`}>
         <span className="material-symbols-outlined text-sm">{icon}</span>
         {label}
@@ -402,51 +610,81 @@ function AlignmentDisagreementBlocks({
   engineDisagreement,
   technicalAlignment,
   technicalDisagreement,
+  institutionalAlignment,
+  institutionalDisagreement,
+  insiderAlignment,
+  insiderDisagreement,
   agreement,
 }: {
   engineAlignment: string | null;
   engineDisagreement: string | null;
   technicalAlignment: string | null | undefined;
   technicalDisagreement: string | null | undefined;
+  institutionalAlignment: string | null | undefined;
+  institutionalDisagreement: string | null | undefined;
+  insiderAlignment: string | null | undefined;
+  insiderDisagreement: string | null | undefined;
   agreement: AgreementState;
 }) {
-  const anyText = engineAlignment || engineDisagreement || technicalAlignment || technicalDisagreement;
+  const anyText = engineAlignment || engineDisagreement || technicalAlignment || technicalDisagreement
+    || institutionalAlignment || institutionalDisagreement || insiderAlignment || insiderDisagreement;
   if (!anyText) return null;
 
-  // When BOTH signal classes agree (aligned) AND both prose blocks exist,
-  // consolidate into ONE labeled block: "Dual-Class Engine Alignment".
+  // Consolidation rule (UI-SPEC §D): when agreement === 'aligned' AND all 4 alignment
+  // prose strings are present, consolidate into ONE "Quad-Class Engine Alignment" block.
+  // Per W5 mitigation: each paragraph MUST be wrapped in <div data-class="..."> so
+  // per-class attribution is preserved in the DOM even when visually consolidated.
   if (
     agreement === 'aligned' &&
     engineAlignment &&
-    technicalAlignment
+    technicalAlignment &&
+    institutionalAlignment &&
+    insiderAlignment
   ) {
-    const consolidated = `${engineAlignment}\n\n${technicalAlignment}`;
     return (
       <div className="space-y-3">
-        <AlignmentPanel
-          text={consolidated}
-          variant="aligned"
-          label="Dual-Class Engine Alignment"
-          icon="check_circle"
-        />
+        <div className="bg-secondary/5 border-secondary border-l-2 p-4 rounded-r">
+          <h4 className="text-[10px] font-bold tracking-widest uppercase text-secondary mb-2 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">check_circle</span>
+            Quad-Class Engine Alignment
+          </h4>
+          <div className="space-y-2">
+            <div data-class="diffusion" className="text-xs text-on-surface-variant leading-relaxed">{engineAlignment}</div>
+            <div data-class="technical" className="text-xs text-on-surface-variant leading-relaxed">{technicalAlignment}</div>
+            <div data-class="institutional" className="text-xs text-on-surface-variant leading-relaxed">{institutionalAlignment}</div>
+            <div data-class="insider" className="text-xs text-on-surface-variant leading-relaxed">{insiderAlignment}</div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Otherwise: render both halves independently.
+  // Otherwise: render each prose block independently.
   return (
     <div className="space-y-3">
       {engineAlignment && (
-        <AlignmentPanel text={engineAlignment} variant="aligned" label="Engine Alignment" icon="check_circle" />
+        <AlignmentPanel text={engineAlignment} variant="aligned" label="Engine Alignment" icon="check_circle" dataClass="diffusion" />
       )}
       {engineDisagreement && (
-        <AlignmentPanel text={engineDisagreement} variant="disagreement" label="Engine Disagreement" icon="error" />
+        <AlignmentPanel text={engineDisagreement} variant="disagreement" label="Engine Disagreement" icon="error" dataClass="diffusion" />
       )}
       {technicalAlignment && (
-        <AlignmentPanel text={technicalAlignment} variant="aligned" label="Technical Alignment" icon="check_circle" />
+        <AlignmentPanel text={technicalAlignment} variant="aligned" label="Technical Alignment" icon="check_circle" dataClass="technical" />
       )}
       {technicalDisagreement && (
-        <AlignmentPanel text={technicalDisagreement} variant="disagreement" label="Technical Disagreement" icon="error" />
+        <AlignmentPanel text={technicalDisagreement} variant="disagreement" label="Technical Disagreement" icon="error" dataClass="technical" />
+      )}
+      {institutionalAlignment && (
+        <AlignmentPanel text={institutionalAlignment} variant="aligned" label="Institutional Alignment" icon="account_balance" dataClass="institutional" />
+      )}
+      {institutionalDisagreement && (
+        <AlignmentPanel text={institutionalDisagreement} variant="disagreement" label="Institutional Disagreement" icon="error" dataClass="institutional" />
+      )}
+      {insiderAlignment && (
+        <AlignmentPanel text={insiderAlignment} variant="aligned" label="Insider Alignment" icon="person_search" dataClass="insider" />
+      )}
+      {insiderDisagreement && (
+        <AlignmentPanel text={insiderDisagreement} variant="disagreement" label="Insider Disagreement" icon="error" dataClass="insider" />
       )}
     </div>
   );
@@ -524,11 +762,15 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
     agreement,
     technical_alignment,
     technical_disagreement,
+    institutional_alignment,
+    institutional_disagreement,
+    insider_alignment,
+    insider_disagreement,
   } = calibration;
 
-  // Phase 16 gate: dual-class layout requires populated horizon_calibrations.
+  // Phase 17 gate: quad-class layout requires populated horizon_calibrations.
   // Old persisted reports (no horizon_calibrations) take the legacy single-column path.
-  const showDualClass = (horizon_calibrations?.length ?? 0) >= 1;
+  const showQuadClass = (horizon_calibrations?.length ?? 0) >= 1;
   const agreementState: AgreementState = agreement ?? 'unknown';
 
   return (
@@ -555,10 +797,10 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
         </div>
       </div>
 
-      {/* Phase 16: dual-class panel + horizon table OR legacy single-column */}
-      {showDualClass ? (
+      {/* Phase 17: quad-class panel + horizon table OR legacy single-column */}
+      {showQuadClass ? (
         <>
-          <DualClassPanel calibration={calibration} agreement={agreementState} />
+          <QuadClassPanel calibration={calibration} agreement={agreementState} />
           <HorizonTable rows={horizon_calibrations!} />
         </>
       ) : (
@@ -581,16 +823,20 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
         )}
       </div>
 
-      {/* Engine + Technical alignment / disagreement prose */}
+      {/* Engine + Technical + Institutional + Insider alignment / disagreement prose */}
       <AlignmentDisagreementBlocks
         engineAlignment={engine_alignment}
         engineDisagreement={engine_disagreement}
         technicalAlignment={technical_alignment}
         technicalDisagreement={technical_disagreement}
+        institutionalAlignment={institutional_alignment}
+        institutionalDisagreement={institutional_disagreement}
+        insiderAlignment={insider_alignment}
+        insiderDisagreement={insider_disagreement}
         agreement={agreementState}
       />
 
-      {/* Phase 16 footer note — REPLACED (UI-SPEC §A step 8 — verbatim including markdown bold) */}
+      {/* Footer note — verbatim per UI-SPEC (both phases) */}
       <p className="mt-4 text-[10px] text-on-surface-variant tracking-wide leading-relaxed">
         ↳ This prediction will be auto-verified at 3, 7, 14, 30, 60, and 90 days. The engine&apos;s posterior updates online — re-running this report after the next learning cycle may show different numbers. <strong className="text-on-surface">30 days is the primary horizon.</strong>
       </p>
