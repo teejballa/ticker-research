@@ -422,3 +422,74 @@ describe('Phase 16-04 — getEngineContextForTicker dual-class extension', () =>
     expect(ctx.technical_ci![1]).toBeGreaterThan(ctx.technical_posterior_mean!);
   });
 });
+
+// ── Phase 17-04 — types back-compat test ───────────────────────────────
+
+import type { EngineCalibration, HorizonCalibration, AnalysisResult } from '@/lib/types';
+
+describe('types — Phase 17-04 back-compat', () => {
+  it('old EngineCalibration without Phase-17 fields still satisfies the type', () => {
+    const oldCal: EngineCalibration = {
+      cycle_count: 5,
+      flow_pattern: 'niche_leads',
+      cap_class: 'large_cap',
+      trace_window_size: 4,
+      posterior_mean: 0.62,
+      ci_low: 0.50,
+      ci_high: 0.74,
+      sample_size: 20,
+      status: 'ACTIVE',
+      brier_in_sample: 0.18,
+      brier_null: 0.25,
+      drift_z: 0.3,
+      logistic_score: 0.58,
+      logistic_ci_low: 0.45,
+      logistic_ci_high: 0.71,
+      logistic_sample_size: 80,
+      predicted_at: '2026-04-30T12:00:00.000Z',
+      engine_alignment: 'Niche leads × large cap historically beats SPY by 4% over 7d.',
+      engine_disagreement: null,
+      diffusion_sparkline: [{ niche: 5, middle: 3, mainstream: 1, scanned_at: '2026-04-29T00:00:00.000Z' }],
+      // No Phase-17 fields — this is intentional: testing backward compatibility
+    } as EngineCalibration;
+    expect(oldCal).toBeDefined();
+    expect(oldCal.institutional_posterior_mean).toBeUndefined();
+    expect(oldCal.insider_posterior_mean).toBeUndefined();
+  });
+
+  it('old HorizonCalibration without Phase-17 fields still satisfies the type', () => {
+    const oldRow: HorizonCalibration = {
+      horizon_days: 30,
+      diffusion_posterior: 0.5,
+      diffusion_ci: [0.4, 0.6],
+      technical_posterior: null,
+      technical_ci: null,
+      sample_size: 12,
+      status: 'ACTIVE',
+    };
+    expect(oldRow).toBeDefined();
+    expect(oldRow.institutional_posterior).toBeUndefined();
+    expect(oldRow.insider_posterior).toBeUndefined();
+  });
+
+  it('old AnalysisResult without snapshot fields still satisfies the type', () => {
+    const oldResult: Partial<AnalysisResult> = {
+      ticker: 'AAPL',
+      company_name: 'Apple Inc.',
+      analyzed_at: '2026-04-30T12:00:00.000Z',
+      market_sentiment: 'bullish',
+      sentiment_reasoning: 'Strong fundamentals.',
+      bullish_signals: [{ signal: 'Revenue growth', source_citation: 'Yahoo Finance' }],
+      bearish_signals: [{ signal: 'Valuation stretched', source_citation: 'Finnhub' }],
+      assessment: { buy_pct: 60, hold_pct: 30, sell_pct: 10, buy_rationale: '', hold_rationale: '', sell_rationale: '' },
+      confidence_level: 'High',
+      confidence_explanation: 'Multiple data sources agree.',
+      sources_used: [{ name: 'Yahoo Finance', key_fact: 'Revenue $90B' }],
+      source_warnings: [],
+      // No insider_at_report or institutional_at_report — testing backward compatibility
+    };
+    expect(oldResult).toBeDefined();
+    expect((oldResult as AnalysisResult).insider_at_report).toBeUndefined();
+    expect((oldResult as AnalysisResult).institutional_at_report).toBeUndefined();
+  });
+});
