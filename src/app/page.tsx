@@ -103,7 +103,7 @@ export default function Home() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen pb-8">
-      <NavBar />
+      <NavBar userEmail={session?.user?.email} />
 
       {/* ── HERO: sticky scroll scene (400vh) ─── */}
       <div ref={sceneRef} style={{ height: '400vh' }}>
