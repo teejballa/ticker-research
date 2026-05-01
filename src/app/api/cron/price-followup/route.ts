@@ -63,6 +63,11 @@ export async function GET(request: NextRequest) {
   });
 
   for (const snap of snapshots) {
+    // Phase 17 WR-06 guard: cold-start snapshots may have price_at_scan === 0
+    // (engine-context.ts:479 doesn't fetch a live price). Skip them so we don't
+    // divide by zero and persist Infinity/NaN pct_change values that would
+    // corrupt the learning engine outcomes.
+    if (!snap.price_at_scan || snap.price_at_scan === 0) { results.skipped++; continue; }
     const age = ageInDays(snap.scanned_at);
     for (const day of TARGET_DAYS) {
       if (Math.abs(age - day) > 0.6) continue;
