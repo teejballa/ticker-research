@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getMarketStatus } from '@/lib/market-status';
 import { credibleInterval95, posteriorMean } from '@/lib/learning';
+import { getCurrentWatchlist } from '@/lib/data/ticker-watchlist';
 import type { SentimentDimensions } from '@/lib/sentiment-dimensions';
 
 export const dynamic = 'force-dynamic';
@@ -265,6 +266,7 @@ export async function GET() {
     return NextResponse.json({
       // Existing fields
       total_data_points: dataPoints.length,
+      watchlist_size: getCurrentWatchlist().length,
       resolved_outcomes: resolved.length,
       thesis: {
         statement: thesisPct !== null
