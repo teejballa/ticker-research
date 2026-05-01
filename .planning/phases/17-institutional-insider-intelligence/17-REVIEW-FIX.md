@@ -1,31 +1,36 @@
 ---
 phase: 17-institutional-insider-intelligence
-fixed_at: 2026-05-01T19:14:00Z
-fix_scope: critical_warning
-findings_in_scope: 6
-fixed: 6
+fixed_at: 2026-05-01T20:05:00Z
+review_path: .planning/phases/17-institutional-insider-intelligence/17-REVIEW.md
+fix_scope: all
+findings_in_scope: 11
+fixed: 11
 skipped: 0
-iteration: 1
+iteration: 2
 status: all_fixed
 ---
 
 # Phase 17: Code Review Fix Report
 
-**Fix scope:** Critical + Warning (Info findings deferred)
-**Findings in scope:** 6 (0 critical, 6 warning)
-**Fixed:** 6
+**Fix scope:** Critical + Warning + Info (full sweep)
+**Findings in scope:** 11 (0 critical, 6 warning, 5 info)
+**Fixed:** 11
 **Skipped:** 0
 **Status:** all_fixed
+**Iteration:** 2
 
 ## Summary
 
-All six Warning-severity findings from `17-REVIEW.md` are resolved. Five were fixed in this run with atomic `fix(17): WR-NN ...` commits. WR-05 (`cluster_buys` test typo) was already corrected pre-review in commit `c6d7ae0` — verified that `src/lib/__tests__/gemini-analysis.test.ts:130` now asserts `'cluster_buying'`.
+All 11 findings from `17-REVIEW.md` are resolved across two fix iterations.
 
-The five Info findings (IN-01 through IN-05) remain unaddressed per the default `critical_warning` scope. Re-run with `--all` to fix them, or address them in a follow-up commit.
+- **Iteration 1** (commit hashes from prior run) addressed all six Warning-severity findings (WR-01..WR-06).
+- **Iteration 2** (this run) addressed the five Info-severity findings (IN-01..IN-05) under `fix_scope: all`.
+
+No findings were skipped. Each fix is atomic, scoped to the file(s) named in REVIEW.md, and verified via Tier 1 re-read plus Tier 2 `tsc --noEmit` (no new errors in modified files).
 
 ---
 
-## Fixes Applied
+## Fixes Applied — Iteration 1 (Warning)
 
 ### WR-01: `mergeInstitutionalData` `||` drops legitimate zero values
 **Commit:** `0154732`
@@ -50,7 +55,7 @@ The five Info findings (IN-01 through IN-05) remain unaddressed per the default 
 ### WR-05: `gemini-analysis.test.ts` asserts misspelled `cluster_buys`
 **Commit:** `c6d7ae0` (pre-existing — landed before this fix run)
 **File:** `src/lib/__tests__/gemini-analysis.test.ts:130`
-**Fix:** `expect(block).toContain('cluster_buying')`. Verified during this run; no additional change required.
+**Fix:** `expect(block).toContain('cluster_buying')`. Verified during iteration 1; no additional change required.
 
 ### WR-06: `engine-context.ts` cold-start writes `price_at_scan: 0`
 **Commit:** `b34b51a`
@@ -59,19 +64,52 @@ The five Info findings (IN-01 through IN-05) remain unaddressed per the default 
 
 ---
 
+## Fixes Applied — Iteration 2 (Info)
+
+### IN-01: `LearnedPattern.signal_class` comment in schema is outdated after Phase 17
+**Commit:** `a899b7e`
+**File:** `prisma/schema.prisma:96`
+**Applied fix:** Updated the inline comment from `// 'diffusion' | 'technical'` to `// 'diffusion' | 'technical' | 'insider' | 'institutional'` to reflect the four signal classes Phase 17 introduced. Documentation-only change — no schema migration required (`signal_class` remains `TEXT`).
+
+### IN-02: `InsightsDashboard.tsx` hero copy hardcodes "26 tickers" and "Watchlist 26"
+**Commit:** `870cb29`
+**Files modified:** `src/app/api/insights/route.ts`, `src/components/InsightsDashboard.tsx`
+**Applied fix:**
+- Added `watchlist_size: getCurrentWatchlist().length` to the `/api/insights` JSON response (driven from the canonical rotating watchlist source).
+- Added optional `watchlist_size?: number` to the `InsightsData` interface.
+- Replaced the hardcoded `"Watchlist 26"` strapline with `Watchlist {data.watchlist_size ?? '—'}` (em-dash fallback for older deployments without the field).
+- Replaced the hero-copy hardcoded `26 tickers` with `{data.watchlist_size ?? data.total_data_points} tickers`.
+
+### IN-03: `detect10b5_1` always returns `false` — bucket will never fire
+**Commit:** `4053708`
+**File:** `scripts/backfill-smart-money.ts`
+**Applied fix:** After the InsiderPattern histogram prints, emit an explicit `⚠ data_quality:` warning when zero `planned_sell_10b5_1` buckets land across the backfill run. The warning surfaces the stub-status of `detect10b5_1` (Finnhub free tier doesn't expose the indicator), advises the bucket be excluded from §3.3 ACTIVE-threshold tuning until a real source provides the flag, and points operators at the EDGAR Form 4 XML parse path as the eventual remedy. This makes a silent data-quality gap visible.
+
+### IN-04: `fetch30dReturn` re-fetches live SPY quote per ticker
+**Commit:** `60ffc8e`
+**File:** `src/lib/data/institutional.ts`
+**Applied fix:** Added a module-level `Map`-based cache for `fetch30dReturn` results keyed by `${ticker}|${YYYY-MM-DD}` with a 60s TTL. All exit paths (success, no quotes, no best bar, no live quote, throw) write into the cache, so repeat calls for SPY (or any ticker) within a single cron sweep reuse the cached value. Cache key includes UTC day to prevent stale 30d windows leaking across cron triggers that span a day boundary. For a 200-ticker watchlist scan, this collapses 200 redundant SPY fetches into 1.
+
+### IN-05: `EngineCalibrationPanel` columns 3 and 4 brier cards mislabel diffusion values
+**Commit:** `faa4541`
+**File:** `src/components/EngineCalibrationPanel.tsx:535-540, 566-571`
+**Applied fix:** Applied the short-term fix from REVIEW.md. Renamed both card labels from `Inst. Null` / `Insider Null` to `Diffusion Null`, and updated their tooltips to make explicit that the value shown is the diffusion class Brier score (institutional/insider class Brier is not yet surfaced in this view). Pre-existing design gap (the `EngineCalibration` type does not carry per-class Brier) is documented but not addressed here — that remains for a follow-up that extends the type contract.
+
+---
+
 ## Skipped Findings
 
-None. All six Warning-severity findings are resolved.
-
-The five Info findings (IN-01 schema comment, IN-02 unused imports, IN-03 cron logging verbosity, IN-04 README outdated, IN-05 minor naming) are out of scope for the default `critical_warning` pass and were not modified.
+None. All 11 findings (6 warnings + 5 info) are resolved.
 
 ---
 
 ## Verification
 
-- `git log --oneline` confirms five `fix(17): WR-NN …` commits plus the pre-existing `fix(17-04)` for WR-05.
+- `git log --oneline` confirms 11 atomic `fix(17): {id} ...` commits across two iterations:
+  - Iteration 1 Warnings: `0154732`, `645203f`, `6f83022`, `ad05df6`, `c6d7ae0` (pre-existing for WR-05), `b34b51a`
+  - Iteration 2 Infos: `a899b7e` (IN-01), `870cb29` (IN-02), `4053708` (IN-03), `60ffc8e` (IN-04), `faa4541` (IN-05)
 - Each fix is atomic and limited to the file(s) named in the corresponding REVIEW finding.
-- No source files outside the REVIEW.md `files_reviewed_list` were touched.
+- Each iteration-2 fix verified via `npx tsc --noEmit`; no new TypeScript errors were introduced in the modified files.
 
 ## Next Steps
 
