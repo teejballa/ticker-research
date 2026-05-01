@@ -1,0 +1,333 @@
+{
+  "ticker": "AAPL",
+  "company_name": "Apple Inc.",
+  "analyzed_at": "2026-04-29T00:00:00.000Z",
+  "market_sentiment": "bullish",
+  "confidence_level": "High",
+  "analysis": {
+    "ticker": "AAPL",
+    "company_name": "Apple Inc.",
+    "analyzed_at": "2026-04-29T00:00:00.000Z",
+    "market_sentiment": "bullish",
+    "sentiment_reasoning": "Phase 16-04 dual-class fixture \u2014 engine + technical priors agree (ALIGNED).",
+    "bullish_signals": [
+      {
+        "signal": "Bullish signal one \u2014 for fixture rendering only.",
+        "source_citation": "Fixture"
+      }
+    ],
+    "bearish_signals": [
+      {
+        "signal": "Bearish signal one \u2014 for fixture rendering only.",
+        "source_citation": "Fixture"
+      }
+    ],
+    "assessment": {
+      "buy_pct": 60,
+      "hold_pct": 30,
+      "sell_pct": 10,
+      "buy_rationale": "Buy rationale fixture text.",
+      "hold_rationale": "Hold rationale fixture text.",
+      "sell_rationale": "Sell rationale fixture text."
+    },
+    "confidence_level": "High",
+    "confidence_explanation": "Phase 16-04 fixture confidence text.",
+    "sources_used": [
+      {
+        "name": "Fixture Source",
+        "key_fact": "Mock data for Playwright e2e \u2014 dual-class panel render."
+      }
+    ],
+    "source_warnings": [],
+    "market_snapshot": {
+      "price": 248.96,
+      "percent_change_today": -0.0039,
+      "market_cap": 3659195744256,
+      "fifty_two_week_high": 288.62,
+      "fifty_two_week_low": 169.21,
+      "pe_ratio": 28.5,
+      "eps": 7.9,
+      "revenue": 435617005568
+    },
+    "engine_calibration": {
+      "cycle_count": 14,
+      "flow_pattern": "niche_leads",
+      "cap_class": "large_cap",
+      "trace_window_size": 4,
+      "posterior_mean": 0.62,
+      "ci_low": 0.52,
+      "ci_high": 0.72,
+      "sample_size": 24,
+      "status": "ACTIVE",
+      "brier_in_sample": 0.18,
+      "brier_null": 0.25,
+      "drift_z": 0.4,
+      "logistic_score": 0.6,
+      "logistic_ci_low": 0.5,
+      "logistic_ci_high": 0.7,
+      "logistic_sample_size": 87,
+      "predicted_at": "2026-04-29T00:00:00.000Z",
+      "engine_alignment": "Diffusion prior aligned with bullish read at 62% (n=24).",
+      "engine_disagreement": null,
+      "diffusion_sparkline": [
+        {
+          "niche": 3,
+          "middle": 1,
+          "mainstream": 0,
+          "scanned_at": "2026-04-26T00:00:00.000Z"
+        },
+        {
+          "niche": 4,
+          "middle": 2,
+          "mainstream": 1,
+          "scanned_at": "2026-04-27T00:00:00.000Z"
+        },
+        {
+          "niche": 5,
+          "middle": 3,
+          "mainstream": 1,
+          "scanned_at": "2026-04-28T00:00:00.000Z"
+        },
+        {
+          "niche": 6,
+          "middle": 4,
+          "mainstream": 2,
+          "scanned_at": "2026-04-29T00:00:00.000Z"
+        }
+      ],
+      "technical_pattern": "breakout_uptrend",
+      "technical_posterior_mean": 0.58,
+      "technical_ci": [
+        0.48,
+        0.68
+      ],
+      "technical_sample_size": 20,
+      "technical_status": "ACTIVE",
+      "horizon_calibrations": [
+        {
+          "horizon_days": 3,
+          "diffusion_posterior": 0.55,
+          "diffusion_ci": [
+            0.45,
+            0.65
+          ],
+          "technical_posterior": 0.5,
+          "technical_ci": [
+            0.4,
+            0.6
+          ],
+          "sample_size": 12,
+          "status": "EXPLORATORY",
+          "institutional_posterior": 0.55,
+          "institutional_ci": [
+            0.42,
+            0.68
+          ],
+          "insider_posterior": 0.65,
+          "insider_ci": [
+            0.53,
+            0.77
+          ]
+        },
+        {
+          "horizon_days": 7,
+          "diffusion_posterior": 0.6,
+          "diffusion_ci": [
+            0.5,
+            0.7
+          ],
+          "technical_posterior": 0.55,
+          "technical_ci": [
+            0.45,
+            0.65
+          ],
+          "sample_size": 24,
+          "status": "ACTIVE",
+          "institutional_posterior": 0.55,
+          "institutional_ci": [
+            0.42,
+            0.68
+          ],
+          "insider_posterior": 0.65,
+          "insider_ci": [
+            0.53,
+            0.77
+          ]
+        },
+        {
+          "horizon_days": 14,
+          "diffusion_posterior": 0.61,
+          "diffusion_ci": [
+            0.51,
+            0.71
+          ],
+          "technical_posterior": 0.57,
+          "technical_ci": [
+            0.47,
+            0.67
+          ],
+          "sample_size": 22,
+          "status": "ACTIVE",
+          "institutional_posterior": 0.55,
+          "institutional_ci": [
+            0.42,
+            0.68
+          ],
+          "insider_posterior": 0.65,
+          "insider_ci": [
+            0.53,
+            0.77
+          ]
+        },
+        {
+          "horizon_days": 30,
+          "diffusion_posterior": 0.62,
+          "diffusion_ci": [
+            0.52,
+            0.72
+          ],
+          "technical_posterior": 0.58,
+          "technical_ci": [
+            0.48,
+            0.68
+          ],
+          "sample_size": 20,
+          "status": "ACTIVE",
+          "institutional_posterior": 0.55,
+          "institutional_ci": [
+            0.42,
+            0.68
+          ],
+          "insider_posterior": 0.65,
+          "insider_ci": [
+            0.53,
+            0.77
+          ]
+        },
+        {
+          "horizon_days": 60,
+          "diffusion_posterior": 0.55,
+          "diffusion_ci": [
+            0.45,
+            0.65
+          ],
+          "technical_posterior": 0.5,
+          "technical_ci": [
+            0.4,
+            0.6
+          ],
+          "sample_size": 8,
+          "status": "EXPLORATORY",
+          "institutional_posterior": 0.55,
+          "institutional_ci": [
+            0.42,
+            0.68
+          ],
+          "insider_posterior": 0.65,
+          "insider_ci": [
+            0.53,
+            0.77
+          ]
+        },
+        {
+          "horizon_days": 90,
+          "diffusion_posterior": null,
+          "diffusion_ci": null,
+          "technical_posterior": null,
+          "technical_ci": null,
+          "sample_size": 0,
+          "status": "NO_DATA",
+          "institutional_posterior": 0.55,
+          "institutional_ci": [
+            0.42,
+            0.68
+          ],
+          "insider_posterior": 0.65,
+          "insider_ci": [
+            0.53,
+            0.77
+          ]
+        }
+      ],
+      "combined_logistic_score": 0.65,
+      "agreement": "aligned",
+      "technical_alignment": "Technical prior aligns with bullish 30d read at 58% (n=20).",
+      "technical_disagreement": null,
+      "institutional_pattern": "net_accumulation",
+      "institutional_posterior_mean": 0.55,
+      "institutional_ci": [
+        0.42,
+        0.68
+      ],
+      "institutional_sample_size": 18,
+      "institutional_status": "ACTIVE",
+      "insider_pattern": "cluster_buying",
+      "insider_posterior_mean": 0.65,
+      "insider_ci": [
+        0.53,
+        0.77
+      ],
+      "insider_sample_size": 14,
+      "insider_status": "ACTIVE",
+      "institutional_alignment": "Institutional net accumulation pattern aligns with bullish read.",
+      "insider_alignment": "Cluster buying by insiders at 65% posterior (n=14) supports bull case."
+    },
+    "technical_at_report": {
+      "rsi_14": 62,
+      "macd_line": 0.42,
+      "macd_signal": 0.21,
+      "macd_histogram": 0.21,
+      "sma_50": 240.5,
+      "sma_200": 220.1,
+      "atr_14": 3.2,
+      "avg_volume_20d": 60000000,
+      "volume_ratio": 1.4,
+      "trend_regime": "uptrend",
+      "momentum_regime": "neutral",
+      "cross_state": "none",
+      "tech_pattern": "breakout_uptrend",
+      "bar_count": 252,
+      "computed_at": "2026-04-29T00:00:00.000Z",
+      "data_source": "yahoo"
+    },
+    "institutional_at_report": {
+      "institutional_bucket": "net_accumulation",
+      "total_institutional_share": 5000000,
+      "total_institutional_share_prev": 4800000,
+      "net_share_change": 200000,
+      "net_share_change_pct": 4.2,
+      "fund_count_current": 142,
+      "fund_count_prev": 137,
+      "fund_count_delta": 5,
+      "top10_concentration_pct": 0.38,
+      "top10_concentration_pct_prev": 0.36,
+      "ticker_30d_return_pct": 3.2,
+      "spy_30d_return_pct": 1.1,
+      "report_date": "2026-03-31",
+      "filing_date": "2026-04-15",
+      "data_age_days": 14,
+      "computed_at": "2026-04-29T00:00:00.000Z",
+      "data_source": "finnhub"
+    },
+    "insider_at_report": {
+      "insider_bucket": "cluster_buying",
+      "distinct_buyers": 4,
+      "distinct_sellers": 1,
+      "net_buy_share_count": 50000,
+      "net_sell_share_count": 5000,
+      "buy_value_usd": 2400000,
+      "sell_value_usd": 190000,
+      "has_ceo_buy": true,
+      "has_cfo_buy": false,
+      "has_director_buy": true,
+      "is_planned_10b5_1": false,
+      "filings_count": 5,
+      "earliest_filing_date": "2026-04-10",
+      "latest_filing_date": "2026-04-25",
+      "data_age_days": 4,
+      "computed_at": "2026-04-29T00:00:00.000Z",
+      "data_source": "finnhub",
+      "insider_sentiment_mspr": 0.8
+    }
+  }
+}
