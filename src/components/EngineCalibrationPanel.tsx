@@ -533,10 +533,10 @@ function QuadClassPanel({
             tooltip: 'Number of resolved 30d outcome observations for this institutional bucket × cap class.',
           }}
           card3={{
-            label: 'Inst. Null',
+            label: 'Diffusion Null',
             value: formatBrier(brier_in_sample),
             subValue: brier_null != null ? `null ${formatBrier(brier_null)}` : 'n/a',
-            tooltip: 'Brier score for the institutional signal class vs adversarial null.',
+            tooltip: 'Diffusion class Brier score (institutional class Brier not yet surfaced in this view).',
           }}
         />
 
@@ -564,10 +564,10 @@ function QuadClassPanel({
             tooltip: 'Number of resolved 30d outcome observations for this insider bucket × cap class.',
           }}
           card3={{
-            label: 'Insider Null',
+            label: 'Diffusion Null',
             value: formatBrier(brier_in_sample),
             subValue: brier_null != null ? `null ${formatBrier(brier_null)}` : 'n/a',
-            tooltip: 'Brier score for the insider signal class vs adversarial null.',
+            tooltip: 'Diffusion class Brier score (insider class Brier not yet surfaced in this view).',
           }}
         />
       </div>
