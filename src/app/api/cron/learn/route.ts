@@ -48,7 +48,12 @@ import {
   FEATURE_NAMES,
   type LogisticState,
 } from '@/lib/learning';
-import type { TechPattern, TechnicalSnapshot } from '@/lib/types';
+import type {
+  TechPattern,
+  TechnicalSnapshot,
+  InsiderBucket,
+  InstitutionalBucket,
+} from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -73,12 +78,33 @@ const TECH_PATTERNS: TechPattern[] = [
   'death_cross',
   'golden_cross',
 ];
+const INSIDER_PATTERNS: InsiderBucket[] = [
+  'cluster_buying',
+  'lone_buy',
+  'ceo_buy',
+  'cfo_buy',
+  'director_buy',
+  'cluster_selling',
+  'planned_sell_10b5_1',
+  'lone_sell',
+];
+const INSTITUTIONAL_PATTERNS: InstitutionalBucket[] = [
+  'net_accumulation',
+  'net_distribution',
+  'new_initiation',
+  'complete_exit',
+  'smart_money_concentration',
+  'smart_money_dispersion',
+  'contrarian_inflow',
+  'contrarian_outflow',
+];
 const CAP_CLASSES = ['large_cap', 'mid_cap', 'small_cap'] as const;
 const HORIZONS = [3, 7, 14, 30, 60, 90] as const;
 type Horizon = (typeof HORIZONS)[number];
 
-// Cell-space size: 2 signal_classes × (4 + 8) patterns × 3 cap_classes × 6 horizons
-//   = 4 × 3 × 6 (diffusion) + 8 × 3 × 6 (technical) = 72 + 144 = 216 cells.
+// Cell-space size: 4 signal_classes × patterns × 3 cap_classes × 6 horizons
+//   = (4 + 8 + 8 + 8) × 3 × 6 = 28 × 18 = 504 cells (Phase 17 — D-13 says 672
+//   counting the 'unknown' cap class which the recompute pass skips).
 
 // ─── SPY history helpers (unchanged from pre-Phase-16) ──────────────────────
 
