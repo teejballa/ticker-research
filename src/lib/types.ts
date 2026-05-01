@@ -15,7 +15,7 @@ export interface SourceSection {
 
 // Per-field provenance after the Phase-10 merge layer runs.
 // null when no source supplied a value (the field is genuinely unavailable).
-export type FieldOrigin = 'yahoo' | 'finnhub' | 'polygon' | null;
+export type FieldOrigin = 'yahoo' | 'finnhub' | 'polygon' | 'edgar' | null;
 
 export interface MarketDataFieldSources {
   price: FieldOrigin;
@@ -385,4 +385,80 @@ export interface StoredReport {
   market_sentiment: 'bullish' | 'neutral' | 'bearish';
   confidence_level: 'Low' | 'Medium' | 'High';
   analysis: AnalysisResult;
+}
+
+// ─── Phase 17: Institutional & Insider Intelligence ────────────────────────
+// Insider transactions (Form 4) and institutional ownership (13F) — two new
+// signal classes in the diffusion learning engine. Bucket sets locked by D-10
+// and D-11; classifier thresholds in src/lib/data/{insider,institutional}-classifier.ts.
+
+export type InsiderBucket =
+  | 'cluster_buying'
+  | 'lone_buy'
+  | 'ceo_buy'
+  | 'cfo_buy'
+  | 'director_buy'
+  | 'cluster_selling'
+  | 'planned_sell_10b5_1'
+  | 'lone_sell';
+
+export interface InsiderSnapshot {
+  insider_bucket: InsiderBucket | null;
+
+  // Classifier inputs (auditable — bucket can be re-derived from these)
+  distinct_buyers: number;
+  distinct_sellers: number;
+  net_buy_share_count: number;
+  net_sell_share_count: number;
+  buy_value_usd: number | null;
+  sell_value_usd: number | null;
+  has_ceo_buy: boolean;
+  has_cfo_buy: boolean;
+  has_director_buy: boolean;
+  is_planned_10b5_1: boolean;
+
+  // Provenance
+  filings_count: number;
+  earliest_filing_date: string | null;   // ISO 8601 — null when filings_count === 0
+  latest_filing_date: string | null;     // ISO 8601 — null when filings_count === 0
+  data_age_days: number | null;          // today − latest_filing_date; null when no filings
+  computed_at: string;                   // ISO 8601
+  data_source: 'finnhub' | 'edgar';
+
+  // Cross-reference (LLM prose can cite this)
+  insider_sentiment_mspr: number | null;
+}
+
+export type InstitutionalBucket =
+  | 'net_accumulation'
+  | 'net_distribution'
+  | 'new_initiation'
+  | 'complete_exit'
+  | 'smart_money_concentration'
+  | 'smart_money_dispersion'
+  | 'contrarian_inflow'
+  | 'contrarian_outflow';
+
+export interface InstitutionalSnapshot {
+  institutional_bucket: InstitutionalBucket | null;
+
+  // Classifier inputs
+  total_institutional_share: number;
+  total_institutional_share_prev: number;
+  net_share_change: number;
+  net_share_change_pct: number;
+  fund_count_current: number;
+  fund_count_prev: number;
+  fund_count_delta: number;
+  top10_concentration_pct: number;
+  top10_concentration_pct_prev: number;
+  ticker_30d_return_pct: number | null;
+  spy_30d_return_pct: number | null;
+
+  // Provenance
+  report_date: string;          // 13F quarter end (YYYY-MM-DD)
+  filing_date: string;          // SEC filing date
+  data_age_days: number;        // today − filing_date
+  computed_at: string;
+  data_source: 'finnhub' | 'edgar';
 }
