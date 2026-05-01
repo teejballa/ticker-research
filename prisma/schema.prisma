@@ -20,7 +20,9 @@ model Report {
   analysis            Json
   price_at_report     Float?
   community_data      Json?
-  technical_at_report Json?
+  technical_at_report      Json?
+  insider_at_report        Json?
+  institutional_at_report  Json?
 
   outcomes            PriceOutcome[]
 
@@ -42,8 +44,10 @@ model SentimentSnapshot {
   ticker         String
   scanned_at     DateTime @db.Timestamptz
   price_at_scan  Float
-  community_data Json
-  technical_data Json?
+  community_data     Json
+  technical_data     Json?
+  insider_data       Json?
+  institutional_data Json?
 
   outcomes       PriceOutcome[]
 
