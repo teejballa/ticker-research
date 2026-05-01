@@ -127,7 +127,7 @@ describe('buildSmartMoneyContextBlock — Phase 17-04', () => {
   it('contains INSIDER PATTERN section', () => {
     const block = buildSmartMoneyContextBlock(buildEngineCtx());
     expect(block).toContain('INSIDER PATTERN');
-    expect(block).toContain('cluster_buys');
+    expect(block).toContain('cluster_buying');
   });
 
   it('contains 4-CLASS HORIZON TABLE AT 30d section', () => {
