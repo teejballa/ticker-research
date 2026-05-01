@@ -47,7 +47,7 @@ import { lightweightCommunityScan } from './data/lightweight-community-scan';
 import { computeTechnicalSnapshot } from './data/technical';
 import { fetchInsiderData } from './data/insider';
 import { fetchInstitutionalData } from './data/institutional';
-import type { TechPattern, TechnicalSnapshot, HorizonCalibration, InsiderSnapshot, InstitutionalSnapshot } from './types';
+import type { TechPattern, TechnicalSnapshot, HorizonCalibration, InsiderSnapshot, InstitutionalSnapshot, InsiderBucket, InstitutionalBucket } from './types';
 
 // Match the order used by /api/cron/learn (FEATURE_NAMES) for the 6-d diffusion
 // logistic forward pass. Phase 16 introduces the 12-d combined logistic that uses
@@ -129,7 +129,10 @@ export interface EngineContext {
   agreement: 'aligned' | 'mixed' | 'opposed' | 'unknown';
 
   // ── Phase 17: Institutional signal class (parallel to technical fields) ─
-  institutional_pattern: string | null;
+  // Uses InstitutionalBucket (8-value union) — the canonical bucket names from
+  // the classifier. Widened from string | null to allow type-safe assignment
+  // to EngineCalibration.institutional_pattern without casts.
+  institutional_pattern: InstitutionalBucket | null;
   institutional_posterior_mean: number | null;
   institutional_ci: [number, number] | null;
   institutional_sample_size: number;
@@ -137,7 +140,8 @@ export interface EngineContext {
   institutional_data_age_days: number | null;
 
   // ── Phase 17: Insider signal class ──────────────────────────────────────
-  insider_pattern: string | null;
+  // Uses InsiderBucket (8-value union) — the canonical bucket names from the classifier.
+  insider_pattern: InsiderBucket | null;
   insider_posterior_mean: number | null;
   insider_ci: [number, number] | null;
   insider_sample_size: number;
@@ -257,10 +261,20 @@ export function computeAgreementNWay(
  * horizon for the same bucket × cap_class if 30d has no data yet (warmup).
  */
 async function resolveBucketCellAt30(
-  bucketKind: 'insider' | 'institutional',
-  bucket: string | null,
+  bucketKind: 'insider',
+  bucket: InsiderBucket | null,
   capClass: CapClass,
-): Promise<{ pattern: string | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }> {
+): Promise<{ pattern: InsiderBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }>;
+async function resolveBucketCellAt30(
+  bucketKind: 'institutional',
+  bucket: InstitutionalBucket | null,
+  capClass: CapClass,
+): Promise<{ pattern: InstitutionalBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }>;
+async function resolveBucketCellAt30(
+  bucketKind: 'insider' | 'institutional',
+  bucket: InsiderBucket | InstitutionalBucket | null,
+  capClass: CapClass,
+): Promise<{ pattern: InsiderBucket | InstitutionalBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }> {
   if (!bucket) return { pattern: null, posterior: null, ci: null, sampleSize: 0, status: 'NO_DATA' };
 
   // 1. Exact match: bucket × capClass × horizon=30
@@ -315,8 +329,8 @@ async function readHorizonCalibrations(
   flow_pattern: FlowPattern | null,
   techPattern: TechPattern | null,
   cap_class: CapClass,
-  insiderBucket: string | null,
-  institutionalBucket: string | null,
+  insiderBucket: InsiderBucket | null,
+  institutionalBucket: InstitutionalBucket | null,
 ): Promise<HorizonCalibration[]> {
   // Skip lookups for pattern_key that the engine never stores ('flat' for
   // diffusion is intentionally a no-op cell).
@@ -490,8 +504,8 @@ export async function getEngineContextForTicker(
     (mostRecentSnapForSmartMoney?.institutional_data && typeof mostRecentSnapForSmartMoney.institutional_data === 'object'
       ? (mostRecentSnapForSmartMoney.institutional_data as unknown as InstitutionalSnapshot)
       : null);
-  const insiderBucket: string | null = insiderSnap?.insider_bucket ?? null;
-  const institutionalBucket: string | null = institutionalSnap?.institutional_bucket ?? null;
+  const insiderBucket: InsiderBucket | null = insiderSnap?.insider_bucket ?? null;
+  const institutionalBucket: InstitutionalBucket | null = institutionalSnap?.institutional_bucket ?? null;
 
   // ── 3. Historical context for z-scoring (best effort) ───────────────
   const tickerHistory = await prisma.sentimentSnapshot.findMany({

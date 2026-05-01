@@ -829,17 +829,14 @@ export async function runGeminiAnalysis(
         // ── Phase 17-04 — institutional + insider numeric overwrites (D-04) ──
         // Ten numeric/categorical fields are always overwritten from engineCtx
         // regardless of what the LLM returned. Prose strings are left as-is (D-05).
-        // TODO(17-04): pattern type mismatch between engine-context (returns full
-        // InstitutionalBucket/InsiderBucket names) and EngineCalibration (declares
-        // narrower abbreviated union in types.ts). Casts unblock typecheck — next
-        // executor agent should resolve by either widening types.ts to use bucket
-        // unions, or mapping in engine-context.ts at the resolveBucketCellAt30 site.
-        institutional_pattern:         (engineCtx.institutional_pattern ?? null) as EngineCalibration['institutional_pattern'],
+        // Types now correctly use InstitutionalBucket | null and InsiderBucket | null
+        // (widened in types.ts task — no `as` casts required).
+        institutional_pattern:         engineCtx.institutional_pattern ?? null,
         institutional_posterior_mean:  engineCtx.institutional_posterior_mean ?? null,
         institutional_ci:              engineCtx.institutional_ci ?? null,
         institutional_sample_size:     engineCtx.institutional_sample_size ?? null,
         institutional_status:          engineCtx.institutional_status ?? null,
-        insider_pattern:               (engineCtx.insider_pattern ?? null) as EngineCalibration['insider_pattern'],
+        insider_pattern:               engineCtx.insider_pattern ?? null,
         insider_posterior_mean:        engineCtx.insider_posterior_mean ?? null,
         insider_ci:                    engineCtx.insider_ci ?? null,
         insider_sample_size:           engineCtx.insider_sample_size ?? null,

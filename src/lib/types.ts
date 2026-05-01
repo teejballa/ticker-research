@@ -280,12 +280,17 @@ export interface EngineCalibration {
   // All fields optional — old persisted reports lacking them must still
   // typecheck and render via graceful degraded-mode fallback in the UI.
   // Numeric/categorical group (10 fields — overwritten by post-process per D-04):
-  institutional_pattern?: 'accumulation' | 'concentration' | 'distribution' | 'rotation' | 'flat' | null;
+  // NOTE: institutional_pattern uses InstitutionalBucket (8-value union) and
+  //       insider_pattern uses InsiderBucket (8-value union) — these are the
+  //       canonical bucket names from the classifiers. The prior abbreviated
+  //       unions ('accumulation' | 'flat' | ...) were too narrow and caused
+  //       type casts at the post-process overwrite site in gemini-analysis.ts.
+  institutional_pattern?: InstitutionalBucket | null;
   institutional_posterior_mean?: number | null;
   institutional_ci?: [number, number] | null;
   institutional_sample_size?: number | null;
   institutional_status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA' | null;
-  insider_pattern?: 'cluster_buys' | 'ceo_buy' | 'sells_only' | 'none' | null;
+  insider_pattern?: InsiderBucket | null;
   insider_posterior_mean?: number | null;
   insider_ci?: [number, number] | null;
   insider_sample_size?: number | null;
