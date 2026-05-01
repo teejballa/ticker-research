@@ -634,6 +634,8 @@ async function processOneOutcome(
   await prisma.$transaction(async (tx) => {
     const techSnap = await readTechSnapshotForOutcome(outcome, tx);
     const techPattern: TechPattern | null = techSnap?.tech_pattern ?? null;
+    const insiderBucket = await readInsiderBucketForOutcome(outcome, tx);
+    const institutionalBucket = await readInstitutionalBucketForOutcome(outcome, tx);
     const horizon = outcome.days_after as Horizon | number;
 
     // Resolve cap_class via fallback chain so single-snapshot tickers (no trace)
@@ -707,6 +709,36 @@ async function processOneOutcome(
       );
     }
 
+    // 2a. Insider cell update — fires when the snapshot was classified
+    //     into one of 8 insider buckets AND cap_class is resolvable. (D-21)
+    if (insiderBucket && resolvedCap) {
+      await upsertCell(
+        tx,
+        {
+          signal_class: 'insider',
+          pattern_key: insiderBucket,
+          cap_class: resolvedCap,
+          horizon_days: horizon,
+        },
+        hit,
+      );
+    }
+
+    // 2b. Institutional cell update — fires when the snapshot was classified
+    //     into one of 8 institutional buckets AND cap_class is resolvable. (D-21)
+    if (institutionalBucket && resolvedCap) {
+      await upsertCell(
+        tx,
+        {
+          signal_class: 'institutional',
+          pattern_key: institutionalBucket,
+          cap_class: resolvedCap,
+          horizon_days: horizon,
+        },
+        hit,
+      );
+    }
+
     // 3. Logistic update — 30d-only, requires both trace AND techSnap so the
     //    12-feature vector is fully populated. Other horizons feed only the
     //    Beta posteriors above.
@@ -727,24 +759,43 @@ async function processOneOutcome(
         outcome_id: outcome.outcome_id,
         // Primary signal class for this row — used by the recompute pass to
         // attribute the event to one cell when computing per-cell Brier.
-        signal_class: techPattern ? 'technical' : trace ? 'diffusion' : null,
-        pattern_key: techPattern ?? trace?.flow_pattern ?? null,
+        // Phase 17: insider > institutional > technical > diffusion (D-21)
+        signal_class: insiderBucket
+          ? 'insider'
+          : institutionalBucket
+            ? 'institutional'
+            : techPattern
+              ? 'technical'
+              : trace
+                ? 'diffusion'
+                : null,
+        pattern_key:
+          insiderBucket
+          ?? institutionalBucket
+          ?? techPattern
+          ?? trace?.flow_pattern
+          ?? null,
         cap_class: resolvedCap,
         horizon_days: horizon,
         delta: {
-          // Per-class hit booleans so the recompute pass can attribute to either
-          // cell. Both are equal here because the same outcome drives both, but
-          // keeping the names explicit prevents future drift.
+          // Per-class hit booleans — recompute pass attributes one outcome
+          // to up to 4 cells. All four mirror the same hit because the same
+          // outcome drives them; the booleans only mark which cells WERE
+          // updated for this outcome.
           diffusion_hit: trace && trace.flow_pattern !== 'flat' ? hit : null,
           tech_hit: techPattern ? hit : null,
+          insider_hit: insiderBucket ? hit : null,
+          institutional_hit: institutionalBucket ? hit : null,
           hit, // legacy compatibility
           ticker_return_pct: outcome.ticker_return_pct,
           spy_return_pct: spyReturn,
           horizon,
           tech_pattern: techPattern,
           flow_pattern: trace?.flow_pattern ?? null,
+          insider_bucket: insiderBucket,
+          institutional_bucket: institutionalBucket,
         },
-        message: `${outcome.ticker} @${horizon}d: ${hit ? 'HIT' : 'MISS'} — ticker ${outcome.ticker_return_pct.toFixed(2)}% vs SPY ${spyReturn.toFixed(2)}% [${trace?.flow_pattern ?? '–'} / ${techPattern ?? '–'}]`,
+        message: `${outcome.ticker} @${horizon}d: ${hit ? 'HIT' : 'MISS'} — ticker ${outcome.ticker_return_pct.toFixed(2)}% vs SPY ${spyReturn.toFixed(2)}% [flow=${trace?.flow_pattern ?? '–'} / tech=${techPattern ?? '–'} / insider=${insiderBucket ?? '–'} / inst=${institutionalBucket ?? '–'}]`,
       },
     });
   });
