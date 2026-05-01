@@ -19,6 +19,7 @@
 // authoritative — Gemini cannot override them.
 
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import {
   computeDiffusionTrace,
   classifyCapClass,
@@ -37,7 +38,9 @@ import {
 } from './learning';
 import { lightweightCommunityScan } from './data/lightweight-community-scan';
 import { computeTechnicalSnapshot } from './data/technical';
-import type { TechPattern, TechnicalSnapshot, HorizonCalibration } from './types';
+import { fetchInsiderData } from './data/insider';
+import { fetchInstitutionalData } from './data/institutional';
+import type { TechPattern, TechnicalSnapshot, HorizonCalibration, InsiderSnapshot, InstitutionalSnapshot } from './types';
 
 // Match the order used by /api/cron/learn (FEATURE_NAMES) for the 6-d diffusion
 // logistic forward pass. Phase 16 introduces the 12-d combined logistic that uses
@@ -278,15 +281,24 @@ export async function getEngineContextForTicker(
   });
 
   // ── 2. Cold-start: ticker has no snapshots → trigger parallel one-shot scans ──
-  // Phase 16 (Pitfall 6 mitigation): both sensors fire in parallel via Promise.all so
-  // the first-ever-research-on-a-ticker path doesn't block on serial fetches.
+  // Phase 17-03 extends Phase 16's 2-sensor parallel cold-start to 4 sensors.
+  // All four fire concurrently so first-research-on-a-ticker latency is
+  // bounded by the slowest single sensor, not the sum. coldStartInsiderSnap
+  // and coldStartInstitutionalSnap are populated here for plan 17-04's
+  // §6.5 calibration resolution to consume.
   let coldStartTechSnap: TechnicalSnapshot | null = null;
+  let coldStartInsiderSnap: InsiderSnapshot | null = null;
+  let coldStartInstitutionalSnap: InstitutionalSnapshot | null = null;
   if (snaps.length === 0) {
-    const [communityResult, techResult] = await Promise.all([
+    const [communityResult, techResult, insiderResult, institutionalResult] = await Promise.all([
       lightweightCommunityScan(upperTicker).catch(() => null),
       computeTechnicalSnapshot(upperTicker).catch(() => null),
+      fetchInsiderData(upperTicker).catch(() => null),
+      fetchInstitutionalData(upperTicker).catch(() => null),
     ]);
     coldStartTechSnap = techResult;
+    coldStartInsiderSnap = insiderResult;
+    coldStartInstitutionalSnap = institutionalResult;
     if (communityResult) {
       const created = await prisma.sentimentSnapshot.create({
         data: {
@@ -294,11 +306,18 @@ export async function getEngineContextForTicker(
           scanned_at: asOf,
           price_at_scan: 0,
           community_data: communityResult as object,
+          technical_data: techResult ? (techResult as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+          insider_data: insiderResult ? (insiderResult as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+          institutional_data: institutionalResult ? (institutionalResult as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
         },
       });
       snaps = [created];
     }
   }
+  // coldStartInsiderSnap and coldStartInstitutionalSnap are declared but unused
+  // in this plan — plan 17-04 will consume them in the §6.5 calibration resolution.
+  void coldStartInsiderSnap;
+  void coldStartInstitutionalSnap;
 
   // snaps come back desc; reverse to chronological for trace computation.
   const snapsAsc = [...snaps].reverse();
