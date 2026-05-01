@@ -256,6 +256,7 @@ function PatternCapRow({
 interface ClassColumnProps {
   kind: 'diffusion' | 'technical' | 'institutional' | 'insider';
   eyebrowLabel: string;
+  eyebrowHint: string;
   eyebrowColorClass: string;
   patternLabel: string;
   capLabel: string;
@@ -269,6 +270,7 @@ interface ClassColumnProps {
 function ClassColumn({
   kind,
   eyebrowLabel,
+  eyebrowHint,
   eyebrowColorClass,
   patternLabel,
   capLabel,
@@ -281,9 +283,12 @@ function ClassColumn({
   return (
     <div data-column={kind} className={isNoData ? 'opacity-60' : ''}>
       <div className="mb-3">
-        <span className={`text-[10px] tracking-widest uppercase font-bold ${eyebrowColorClass}`}>
+        <div className={`text-[10px] tracking-widest uppercase font-bold ${eyebrowColorClass}`}>
           {eyebrowLabel}
-        </span>
+        </div>
+        <div className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
+          {eyebrowHint}
+        </div>
       </div>
       <PatternCapRow patternLabel={patternLabel} capLabel={capLabel} status={status} />
       <div className="grid grid-cols-1 gap-3">
@@ -438,8 +443,11 @@ function QuadClassPanel({
   return (
     <>
       {/* AgreementBadge centered above the 4-column grid (UI-SPEC §A step 3) */}
-      <div className="flex justify-center mb-4">
+      <div className="flex flex-col items-center mb-4 gap-1.5">
         <AgreementBadge state={agreement} />
+        <p className="text-[11px] text-on-surface-variant text-center max-w-2xl leading-snug px-4">
+          {AGREEMENT_BADGE[agreement].tooltip}
+        </p>
       </div>
 
       {/* 4-column grid: 1 col mobile / 2 cols md / 4 cols lg (UI-SPEC §A step 2) */}
@@ -449,6 +457,7 @@ function QuadClassPanel({
         <ClassColumn
           kind="diffusion"
           eyebrowLabel="DIFFUSION"
+          eyebrowHint="How news & social chatter is spreading."
           eyebrowColorClass="text-on-surface-variant"
           patternLabel={diffusionPatternLabel}
           capLabel={capLabel}
@@ -483,6 +492,7 @@ function QuadClassPanel({
         <ClassColumn
           kind="technical"
           eyebrowLabel="TECHNICAL"
+          eyebrowHint="What the price chart is doing — momentum, trends, volume."
           eyebrowColorClass="text-on-surface-variant"
           patternLabel={technicalPatternLabel}
           capLabel={capLabel}
@@ -513,6 +523,7 @@ function QuadClassPanel({
         <ClassColumn
           kind="institutional"
           eyebrowLabel="INSTITUTIONAL"
+          eyebrowHint="What big funds are doing — 13F filings, fund flows."
           eyebrowColorClass="text-secondary"
           patternLabel={institutionalPatternLabel}
           capLabel={capLabel}
@@ -544,6 +555,7 @@ function QuadClassPanel({
         <ClassColumn
           kind="insider"
           eyebrowLabel="INSIDER"
+          eyebrowHint="What execs & directors are doing — Form 4 buys & sells."
           eyebrowColorClass="text-tertiary"
           patternLabel={insiderPatternLabel}
           capLabel={capLabel}
@@ -780,17 +792,22 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
     >
       <div className="absolute top-0 right-0 w-48 h-48 bg-tertiary/5 blur-[100px]" aria-hidden="true" />
 
-      {/* Header row — UNCHANGED */}
-      <div className="flex items-center justify-between mb-5 relative">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-tertiary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+      {/* Header row */}
+      <div className="flex items-start justify-between mb-5 relative gap-4">
+        <div className="flex items-start gap-3">
+          <span className="material-symbols-outlined text-tertiary text-base mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>
             psychology
           </span>
-          <h3 className="text-[11px] font-bold tracking-widest uppercase text-tertiary">
-            Engine Calibration
-          </h3>
+          <div>
+            <h3 className="text-[11px] font-bold tracking-widest uppercase text-tertiary">
+              Engine Calibration
+            </h3>
+            <p className="text-[12px] text-on-surface-variant mt-0.5 leading-snug max-w-xl">
+              Four independent signal sources on this stock and how confident the engine is in each one.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-mono text-on-surface-variant tracking-widest uppercase">
+        <div className="flex items-center gap-3 text-[10px] font-mono text-on-surface-variant tracking-widest uppercase shrink-0">
           <span>Cycle {cycle_count}</span>
           <span className="opacity-50">·</span>
           <span>{timeAgo(predicted_at)}</span>
