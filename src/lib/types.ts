@@ -493,5 +493,5 @@ export interface InstitutionalSnapshot {
   filing_date: string;          // SEC filing date
   data_age_days: number;        // today − filing_date
   computed_at: string;
-  data_source: 'finnhub' | 'edgar';
+  data_source: 'finnhub' | 'edgar' | 'yahoo';
 }
