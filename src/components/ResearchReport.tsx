@@ -297,8 +297,43 @@ function SmartMoneyIntelligence({
       </div>
 
       {bothNull ? (
-        /* Both-null state: neutral placeholder */
-        <p className="text-xs text-on-surface-variant">No recent smart money activity to report.</p>
+        /* Both-null state: explain what was checked and why nothing surfaced */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            className="bg-surface-container-high p-4 rounded-lg border border-error/10"
+            data-testid="institutional-flow-placeholder"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-secondary text-sm">account_balance</span>
+              <span className="text-[10px] font-bold tracking-widest uppercase text-secondary">INSTITUTIONAL FLOW</span>
+            </div>
+            <p className="text-xs font-bold text-on-surface mb-1">No recent 13F filings</p>
+            <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+              No institutional ownership change found for this ticker in the most recent 13F window.
+              13Fs are filed quarterly and lag ~45 days, so this can mean either no change or no fund holds the position.
+            </p>
+            <p className="text-[10px] text-on-surface-variant/70 leading-relaxed">
+              Sources checked: Finnhub institutional ownership (primary) · SEC EDGAR 13F filings (fallback).
+            </p>
+          </div>
+          <div
+            className="bg-surface-container-high p-4 rounded-lg border border-error/10"
+            data-testid="insider-activity-placeholder"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-tertiary text-sm">person_search</span>
+              <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">INSIDER ACTIVITY</span>
+            </div>
+            <p className="text-xs font-bold text-on-surface mb-1">No recent Form 4 filings</p>
+            <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+              No officer or director transactions filed in the past 30 days. Form 4s must be filed within 2 business days,
+              so a clean window usually means no insiders bought or sold.
+            </p>
+            <p className="text-[10px] text-on-surface-variant/70 leading-relaxed">
+              Sources checked: Finnhub insider transactions (primary) · SEC EDGAR Form 4 filings (fallback).
+            </p>
+          </div>
+        </div>
       ) : (
         /* AC4 asymmetric grid — always 2 columns even when one is null */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -315,8 +350,11 @@ function SmartMoneyIntelligence({
                 <span className="text-[10px] font-bold tracking-widest uppercase text-secondary">INSTITUTIONAL FLOW</span>
               </div>
               <p className="text-xs font-bold text-on-surface mb-1">No recent 13F filings</p>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                This ticker has no institutional ownership data in the current filing cycle. Engine skips institutional priors for this report.
+              <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                No institutional ownership data found for this ticker in the current quarterly cycle. Engine skips institutional priors for this report.
+              </p>
+              <p className="text-[10px] text-on-surface-variant/70 leading-relaxed">
+                Sources checked: Finnhub institutional ownership · SEC EDGAR 13F.
               </p>
             </div>
           )}
@@ -334,8 +372,11 @@ function SmartMoneyIntelligence({
                 <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">INSIDER ACTIVITY</span>
               </div>
               <p className="text-xs font-bold text-on-surface mb-1">No recent Form 4 filings</p>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                No insider transactions filed in the past 30 days. Engine skips insider priors for this report.
+              <p className="text-xs text-on-surface-variant leading-relaxed mb-3">
+                No officer or director transactions filed in the past 30 days. Engine skips insider priors for this report.
+              </p>
+              <p className="text-[10px] text-on-surface-variant/70 leading-relaxed">
+                Sources checked: Finnhub insider transactions · SEC EDGAR Form 4.
               </p>
             </div>
           )}
@@ -808,6 +849,17 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           </div>
         </div>
 
+        {/* Smart Money Intelligence — Phase 17-04 (UI-SPEC §E)
+            Promoted above Community Intelligence so institutional + insider activity
+            surface before crowd sentiment. Handles all AC4 asymmetric cases:
+              - both null → section header + neutral placeholder
+              - one null → full sub-card + null placeholder side-by-side
+              - both populated → two full sub-cards */}
+        <SmartMoneyIntelligence
+          institutionalAtReport={institutional_at_report ?? null}
+          insiderAtReport={insider_at_report ?? null}
+        />
+
         {/* Community Intelligence — Full Width */}
         {community_highlights && community_highlights.length > 0 && (
           <section className="space-y-6">
@@ -931,17 +983,6 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             })()}
           </section>
         )}
-
-        {/* Smart Money Intelligence — Phase 17-04 (UI-SPEC §E)
-            Rendered after Community Intelligence, before Catalyst Watch.
-            Handles all AC4 asymmetric cases:
-              - both null → section header + neutral placeholder
-              - one null → full sub-card + null placeholder side-by-side
-              - both populated → two full sub-cards */}
-        <SmartMoneyIntelligence
-          institutionalAtReport={institutional_at_report ?? null}
-          insiderAtReport={insider_at_report ?? null}
-        />
 
         {/* Catalyst Watch */}
         {catalyst_watch && catalyst_watch.length > 0 && (
