@@ -168,7 +168,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 14. Database Verification & Report Persistence QA | 2/2 | Complete (Playwright e2e db-persistence spec passing) | 2026-04-24 |
 | 15. Diffusion Learning Engine | — | Complete (Bayesian crons + InsightsDashboard + EngineCalibrationPanel) | 2026-04-26 |
 | 16. Technical Analysis as a Learning Signal | 5/5 | Complete   | 2026-04-29 |
-| 17. Institutional & Insider Intelligence | 0/? | Planned (17-CONTEXT only) |  |
+| 17. Institutional & Insider Intelligence | 2/5 | In Progress|  |
 
 ### Phase 7: Research Quality & Special Situation Coverage
 
