@@ -141,6 +141,24 @@ async function main() {
   }
   console.log(`\nStep 2 complete: ${insiderWrites} writes, ${insiderErrors} errors`);
 
+  // Data-quality warning: detect10b5_1() in src/lib/data/insider.ts is a stub
+  // that always returns false (Finnhub free tier doesn't expose the 10b5-1
+  // flag reliably — see Pitfall 7). When zero `planned_sell_10b5_1` hits land
+  // after a full backfill, surface the gap explicitly so operators don't read
+  // "0 hits" as a bucket result. The bucket is effectively disabled until a
+  // real data source provides the flag.
+  const planned10b5Hits = insiderHistogram['planned_sell_10b5_1'] ?? 0;
+  if (planned10b5Hits === 0 && pendingInsiderSnaps.length > 0) {
+    console.warn(
+      '\n⚠ data_quality: 0 `planned_sell_10b5_1` buckets after backfill across ' +
+      `${pendingInsiderSnaps.length} insider snapshots. ` +
+      'detect10b5_1() in src/lib/data/insider.ts is currently a stub (always returns false) ' +
+      'because Finnhub free tier does not expose the 10b5-1 indicator. ' +
+      'This bucket will not fire and should be excluded from §3.3 ACTIVE-threshold tuning ' +
+      'until a data source provides the flag (e.g., EDGAR Form 4 XML parse).'
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // Post-backfill reminder
   // ─────────────────────────────────────────────────────────────────────────
