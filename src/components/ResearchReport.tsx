@@ -4,7 +4,7 @@
 // Cipher research report — Stitch 12-column layout.
 
 import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, formatPrice } from '@/lib/formatters';
-import type { AnalysisResult, MarketSnapshot } from '@/lib/types';
+import type { AnalysisResult, MarketSnapshot, InstitutionalSnapshot, InsiderSnapshot, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 import EngineCalibrationPanel from '@/components/EngineCalibrationPanel';
@@ -71,6 +71,280 @@ function confidenceToPercent(level: 'Low' | 'Medium' | 'High'): number {
   return 30;
 }
 
+// ── Phase 17-04: Smart Money Intelligence section (UI-SPEC §E) ───────────
+// Bucket → display label maps (UI-SPEC §A Pattern label maps — full bucket names)
+const INSTITUTIONAL_BUCKET_LABEL: Record<InstitutionalBucket, string> = {
+  net_accumulation:          'NET ACCUMULATION',
+  net_distribution:          'NET DISTRIBUTION',
+  new_initiation:            'NEW INITIATION',
+  complete_exit:             'COMPLETE EXIT',
+  smart_money_concentration: 'SMART MONEY CONC.',
+  smart_money_dispersion:    'SMART MONEY DISP.',
+  contrarian_inflow:         'CONTRARIAN INFLOW',
+  contrarian_outflow:        'CONTRARIAN OUTFLOW',
+};
+
+const INSIDER_BUCKET_LABEL: Record<InsiderBucket, string> = {
+  cluster_buying:      'CLUSTER BUYING',
+  lone_buy:            'LONE BUY',
+  ceo_buy:             'CEO BUY',
+  cfo_buy:             'CFO BUY',
+  director_buy:        'DIRECTOR BUY',
+  cluster_selling:     'CLUSTER SELLING',
+  planned_sell_10b5_1: '10b5-1 PLAN SELL',
+  lone_sell:           'LONE SELL',
+};
+
+function formatShareCount(n: number): string {
+  if (Math.abs(n) >= 1_000_000) return `${n > 0 ? '+' : ''}${(n / 1_000_000).toFixed(1)}M shares`;
+  if (Math.abs(n) >= 1_000)     return `${n > 0 ? '+' : ''}${(n / 1_000).toFixed(0)}K shares`;
+  return `${n > 0 ? '+' : ''}${n} shares`;
+}
+
+function formatUSD(n: number | null): string {
+  if (n == null) return '—';
+  const sign = n > 0 ? '+' : '';
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return `${sign}$${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000)     return `${sign}$${(n / 1_000).toFixed(0)}K`;
+  return `${sign}$${n.toFixed(0)}`;
+}
+
+function filingAgeDays(dateStr: string | null | undefined): number | null {
+  if (!dateStr) return null;
+  const t = new Date(dateStr).getTime();
+  if (!Number.isFinite(t)) return null;
+  return Math.floor((Date.now() - t) / (1000 * 60 * 60 * 24));
+}
+
+function FilingAgeChip({ days, label }: { days: number | null; label: string }) {
+  if (days == null) return null;
+  const colorClass = days < 30 ? 'text-on-surface-variant' : days < 60 ? 'text-tertiary' : 'text-error';
+  return (
+    <span className={`text-[10px] font-mono ${colorClass}`}>{label}: {days}d ago</span>
+  );
+}
+
+function InstitutionalFlowCard({ snap }: { snap: InstitutionalSnapshot }) {
+  const ageDays = filingAgeDays(snap.filing_date);
+  const bucketLabel = snap.institutional_bucket ? (INSTITUTIONAL_BUCKET_LABEL[snap.institutional_bucket] ?? snap.institutional_bucket.toUpperCase()) : null;
+  const badgeClass = snap.institutional_bucket && (
+    snap.institutional_bucket === 'net_accumulation' || snap.institutional_bucket === 'new_initiation' || snap.institutional_bucket === 'contrarian_inflow' || snap.institutional_bucket === 'smart_money_concentration'
+      ? 'bg-secondary/20 text-secondary border-secondary/40'
+      : snap.institutional_bucket === 'net_distribution' || snap.institutional_bucket === 'complete_exit' || snap.institutional_bucket === 'contrarian_outflow'
+        ? 'bg-error/20 text-error border-error/40'
+        : 'bg-surface-container-highest text-on-surface-variant border-outline/30'
+  ) || 'bg-surface-container-highest text-on-surface-variant border-outline/30';
+
+  return (
+    <div
+      className="bg-surface-container-high p-4 rounded-lg border border-surface-container-highest"
+      data-testid="institutional-flow-card"
+    >
+      {/* Sub-card header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-secondary text-sm">account_balance</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase text-secondary">INSTITUTIONAL FLOW</span>
+        </div>
+        <FilingAgeChip days={ageDays} label="Latest 13F" />
+      </div>
+
+      {/* Bucket pill */}
+      {bucketLabel && (
+        <div className="mb-3">
+          <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full border ${badgeClass}`}>
+            {bucketLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Key metrics */}
+      <div className="space-y-1.5 text-xs text-on-surface-variant">
+        <div className="flex justify-between">
+          <span>Share change</span>
+          <span className="font-mono font-bold text-on-surface">{formatShareCount(snap.net_share_change)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Fund count</span>
+          <span className="font-mono font-bold text-on-surface">
+            {snap.fund_count_current}
+            {snap.fund_count_prev != null && snap.fund_count_current != null
+              ? <span className={`ml-1 ${snap.fund_count_current >= snap.fund_count_prev ? 'text-secondary' : 'text-error'}`}>
+                  ({snap.fund_count_current - snap.fund_count_prev >= 0 ? '+' : ''}{snap.fund_count_current - snap.fund_count_prev})
+                </span>
+              : null}
+          </span>
+        </div>
+        {snap.top10_concentration_pct != null && (
+          <div className="flex justify-between">
+            <span>Top-10 concentration</span>
+            <span className="font-mono font-bold text-on-surface">{(snap.top10_concentration_pct * 100).toFixed(0)}%</span>
+          </div>
+        )}
+      </div>
+
+      {/* Engine bucket reference */}
+      {bucketLabel && (
+        <p className="mt-3 text-[10px] text-on-surface-variant tracking-widest uppercase">
+          Engine bucket: {bucketLabel}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function InsiderActivityCard({ snap }: { snap: InsiderSnapshot }) {
+  const ageDays = filingAgeDays(snap.latest_filing_date);
+  const bucketLabel = snap.insider_bucket ? (INSIDER_BUCKET_LABEL[snap.insider_bucket] ?? snap.insider_bucket.toUpperCase()) : null;
+  const netValue = snap.buy_value_usd != null && snap.sell_value_usd != null
+    ? snap.buy_value_usd - snap.sell_value_usd
+    : snap.buy_value_usd != null ? snap.buy_value_usd : snap.sell_value_usd != null ? -snap.sell_value_usd : null;
+  const badgeClass = snap.insider_bucket && (
+    snap.insider_bucket === 'cluster_buying' || snap.insider_bucket === 'ceo_buy' || snap.insider_bucket === 'cfo_buy' || snap.insider_bucket === 'director_buy' || snap.insider_bucket === 'lone_buy'
+      ? 'bg-secondary/20 text-secondary border-secondary/40'
+      : snap.insider_bucket === 'cluster_selling' || snap.insider_bucket === 'lone_sell' || snap.insider_bucket === 'planned_sell_10b5_1'
+        ? 'bg-error/20 text-error border-error/40'
+        : 'bg-surface-container-highest text-on-surface-variant border-outline/30'
+  ) || 'bg-surface-container-highest text-on-surface-variant border-outline/30';
+
+  return (
+    <div
+      className="bg-surface-container-high p-4 rounded-lg border border-surface-container-highest"
+      data-testid="insider-activity-card"
+    >
+      {/* Sub-card header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-tertiary text-sm">person_search</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">INSIDER ACTIVITY</span>
+        </div>
+        <FilingAgeChip days={ageDays} label="Latest Form 4" />
+      </div>
+
+      {/* Bucket pill */}
+      {bucketLabel && (
+        <div className="mb-3">
+          <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full border ${badgeClass}`}>
+            {bucketLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Key metrics */}
+      <div className="space-y-1.5 text-xs text-on-surface-variant">
+        <div className="flex justify-between">
+          <span>Distinct buyers</span>
+          <span className="font-mono font-bold text-on-surface">{snap.distinct_buyers}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Distinct sellers</span>
+          <span className="font-mono font-bold text-on-surface">{snap.distinct_sellers}</span>
+        </div>
+        {netValue != null && (
+          <div className="flex justify-between">
+            <span>Net value</span>
+            <span className={`font-mono font-bold ${netValue >= 0 ? 'text-secondary' : 'text-error'}`}>
+              {formatUSD(netValue)}
+            </span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <span className={snap.has_ceo_buy ? 'font-bold text-on-surface' : ''}>CEO buy</span>
+          <span className={`font-mono font-bold ${snap.has_ceo_buy ? 'text-secondary' : 'text-on-surface-variant'}`}>
+            {snap.has_ceo_buy ? 'yes' : 'no'}
+          </span>
+        </div>
+      </div>
+
+      {/* Engine bucket reference */}
+      {bucketLabel && (
+        <p className="mt-3 text-[10px] text-on-surface-variant tracking-widest uppercase">
+          Engine bucket: {bucketLabel}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SmartMoneyIntelligence({
+  institutionalAtReport,
+  insiderAtReport,
+}: {
+  institutionalAtReport: InstitutionalSnapshot | null;
+  insiderAtReport: InsiderSnapshot | null;
+}) {
+  const bothNull = institutionalAtReport == null && insiderAtReport == null;
+
+  return (
+    <section
+      className="bg-surface-container border border-surface-container-high p-6 rounded-lg"
+      data-testid="smart-money-intelligence"
+    >
+      {/* Section header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-secondary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+            account_balance
+          </span>
+          <h3 className="text-[11px] font-bold tracking-widest uppercase text-secondary">
+            Smart Money Intelligence
+          </h3>
+        </div>
+        <span className="text-[10px] text-on-surface-variant">
+          What institutions and insiders did with this name in the last filing window.
+        </span>
+      </div>
+
+      {bothNull ? (
+        /* Both-null state: neutral placeholder */
+        <p className="text-xs text-on-surface-variant">No recent smart money activity to report.</p>
+      ) : (
+        /* AC4 asymmetric grid — always 2 columns even when one is null */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Institutional Flow sub-card */}
+          {institutionalAtReport != null ? (
+            <InstitutionalFlowCard snap={institutionalAtReport} />
+          ) : (
+            <div
+              className="bg-surface-container-high p-4 rounded-lg border border-error/10"
+              data-testid="institutional-flow-placeholder"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-secondary text-sm">account_balance</span>
+                <span className="text-[10px] font-bold tracking-widest uppercase text-secondary">INSTITUTIONAL FLOW</span>
+              </div>
+              <p className="text-xs font-bold text-on-surface mb-1">No recent 13F filings</p>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                This ticker has no institutional ownership data in the current filing cycle. Engine skips institutional priors for this report.
+              </p>
+            </div>
+          )}
+
+          {/* Insider Activity sub-card */}
+          {insiderAtReport != null ? (
+            <InsiderActivityCard snap={insiderAtReport} />
+          ) : (
+            <div
+              className="bg-surface-container-high p-4 rounded-lg border border-error/10"
+              data-testid="insider-activity-placeholder"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-tertiary text-sm">person_search</span>
+                <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">INSIDER ACTIVITY</span>
+              </div>
+              <p className="text-xs font-bold text-on-surface mb-1">No recent Form 4 filings</p>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                No insider transactions filed in the past 30 days. Engine skips insider priors for this report.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ── Main component ────────────────────────────────────────
 
 export default function ResearchReport({ analysisResult, ticker }: ResearchReportProps) {
@@ -103,6 +377,8 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     community_analysis,     // community narrative
     engine_calibration,     // diffusion-engine prior
     technical_at_report,    // Phase 16-04 — live technical snapshot
+    institutional_at_report, // Phase 17-04 — institutional filing snapshot
+    insider_at_report,       // Phase 17-04 — insider activity snapshot
   } = analysisResult;
 
   function handleExportPdf() {
@@ -655,6 +931,17 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             })()}
           </section>
         )}
+
+        {/* Smart Money Intelligence — Phase 17-04 (UI-SPEC §E)
+            Rendered after Community Intelligence, before Catalyst Watch.
+            Handles all AC4 asymmetric cases:
+              - both null → section header + neutral placeholder
+              - one null → full sub-card + null placeholder side-by-side
+              - both populated → two full sub-cards */}
+        <SmartMoneyIntelligence
+          institutionalAtReport={institutional_at_report ?? null}
+          insiderAtReport={insider_at_report ?? null}
+        />
 
         {/* Catalyst Watch */}
         {catalyst_watch && catalyst_watch.length > 0 && (
