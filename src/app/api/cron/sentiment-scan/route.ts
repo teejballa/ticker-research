@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { getCurrentWatchlist } from '@/lib/data/ticker-watchlist';
 import { lightweightCommunityScan } from '@/lib/data/lightweight-community-scan';
 import { computeTechnicalSnapshot } from '@/lib/data/technical';
+import { fetchInsiderData } from '@/lib/data/insider';
+import { fetchInstitutionalData } from '@/lib/data/institutional';
 import YahooFinance from 'yahoo-finance2';
 
 export const dynamic = 'force-dynamic';
@@ -33,25 +35,36 @@ export async function GET(request: NextRequest) {
       } catch { /* skip */ }
       if (price === null) { results.failed++; continue; }
 
-      // Phase 16-03: parallelize community + technical sensors so the new
-      // technical fetch adds 0 wall-clock time vs the existing community scan
-      // (Pitfall 6 — RESEARCH §8 lines 932-937). Both are best-effort: each
-      // returns null on failure rather than throwing.
-      const [communityData, technicalData] = await Promise.all([
+      // Phase 17-03: extends Phase 16's parallel sensor pattern from 2 → 4.
+      // All 4 fetchers are best-effort: each returns null on failure; we
+      // only fail the snapshot if ALL 4 return null. (D-19 empty-data policy
+      // + D-20 cadence — both new fetches happen on every scan.)
+      const [communityData, technicalData, insiderData, institutionalData] = await Promise.all([
         lightweightCommunityScan(ticker),
         computeTechnicalSnapshot(ticker),
+        fetchInsiderData(ticker),
+        fetchInstitutionalData(ticker),
       ]);
-      if (!communityData && !technicalData) { results.failed++; continue; }
+      if (!communityData && !technicalData && !insiderData && !institutionalData) {
+        results.failed++;
+        continue;
+      }
 
       await prisma.sentimentSnapshot.create({
         data: {
           ticker,
           scanned_at: new Date(),
           price_at_scan: price,
-          community_data: (communityData ?? {}) as Prisma.InputJsonValue,        // Json column is non-null at the schema level; coerce a missing scan to {}
+          community_data: (communityData ?? {}) as Prisma.InputJsonValue,
           technical_data: technicalData
             ? (technicalData as unknown as Prisma.InputJsonValue)
-            : Prisma.JsonNull,                                                    // nullable Json column on the schema
+            : Prisma.JsonNull,
+          insider_data: insiderData
+            ? (insiderData as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          institutional_data: institutionalData
+            ? (institutionalData as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         },
       });
       results.scanned++;
