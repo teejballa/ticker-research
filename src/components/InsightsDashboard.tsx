@@ -69,12 +69,15 @@ interface HorizonBrierData {
   brier_null: number;
 }
 
-// 4-tab structure on /insights — UI-SPEC §D, locked verbatim.
+// 6-tab structure on /insights — Phase 17-05 adds Institutional + Insider libraries.
+// Phase 16 tabs (technical-library, horizon-brier) flipped to isNew: false.
 const TABS = [
   { id: 'diffusion-library', label: 'Diffusion Library', isNew: false },
   { id: 'live-map', label: 'Live Diffusion Map', isNew: false },
-  { id: 'technical-library', label: 'Technical Pattern Library', isNew: true },
-  { id: 'horizon-brier', label: 'Horizon Brier', isNew: true },
+  { id: 'technical-library', label: 'Technical Pattern Library', isNew: false },
+  { id: 'horizon-brier', label: 'Horizon Brier', isNew: false },
+  { id: 'institutional-library', label: 'Institutional Pattern Library', isNew: true },
+  { id: 'insider-library', label: 'Insider Pattern Library', isNew: true },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -473,6 +476,42 @@ export function InsightsDashboard() {
       {/* ─────────────────────── Tab 4: Horizon Brier ─────────────────────── */}
       {activeTab === 'horizon-brier' && (
         <HorizonBrierSection data={brierData} />
+      )}
+
+      {/* ─────────────────────── Tab 5: Institutional Pattern Library ─────────────────────── */}
+      {activeTab === 'institutional-library' && (
+        <SmartMoneyPatternLibrarySection
+          fetchUrl="/api/insights/institutional-library"
+          title="Institutional Pattern Library"
+          subtitle="13F + ownership flows. Primary horizon: 30 days."
+          selectedHorizon={selectedHorizon}
+          onHorizonChange={(h) => {
+            setSelectedHorizon(h);
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href);
+              url.searchParams.set('h', String(h));
+              window.history.replaceState({}, '', url.toString());
+            }
+          }}
+        />
+      )}
+
+      {/* ─────────────────────── Tab 6: Insider Pattern Library ─────────────────────── */}
+      {activeTab === 'insider-library' && (
+        <SmartMoneyPatternLibrarySection
+          fetchUrl="/api/insights/insider-library"
+          title="Insider Pattern Library"
+          subtitle="Form 4 transactions. Primary horizon: 30 days."
+          selectedHorizon={selectedHorizon}
+          onHorizonChange={(h) => {
+            setSelectedHorizon(h);
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href);
+              url.searchParams.set('h', String(h));
+              window.history.replaceState({}, '', url.toString());
+            }
+          }}
+        />
       )}
 
       {/* ─────────────────────── Tabs 1 + 2: existing scroll layout ─────────────────────── */}
@@ -1662,6 +1701,207 @@ function TechnicalPatternCellView({ cell }: { cell: TechnicalPatternCell | undef
         {cell.status}
       </span>
     </div>
+  );
+}
+
+/* ───────────────────────── Phase 17-05: Smart Money Pattern Library ───────────────────────── */
+
+interface SmartMoneyCell {
+  pattern_key: string;
+  cap_class: string;
+  horizon_days: number;
+  status: string;
+  posterior_mean: number | null;
+  sample_size: number;
+  brier_in_sample: number | null;
+  brier_out_sample: number | null;
+}
+
+const SMART_MONEY_CAP_COL_ORDER = ['large_cap', 'mid_cap', 'small_cap'] as const;
+
+const SMART_MONEY_CAP_LABEL: Record<string, string> = {
+  large_cap: 'Large Cap',
+  mid_cap: 'Mid Cap',
+  small_cap: 'Small Cap',
+};
+
+function SmartMoneyPatternCellView({ cell }: { cell: SmartMoneyCell | undefined }) {
+  if (!cell || cell.sample_size === 0) {
+    return (
+      <div className="text-[10px] font-mono tracking-widest uppercase text-outline opacity-30">
+        — no data —
+      </div>
+    );
+  }
+
+  const meanPct = cell.posterior_mean != null ? (cell.posterior_mean * 100).toFixed(0) : '—';
+
+  const statusBadgeClass =
+    cell.status === 'ACTIVE'
+      ? 'text-secondary border-secondary/40 bg-secondary/10'
+      : cell.status === 'DEPRECATED'
+        ? 'text-error border-error/40 bg-error/10'
+        : cell.status === 'NO_DATA'
+          ? 'text-outline border-outline-variant/40 bg-surface-container-low opacity-30'
+          : 'text-outline border-outline-variant/40 bg-surface-container-low border-dashed';
+
+  const containerClass =
+    cell.status === 'EXPLORATORY'
+      ? 'opacity-60'
+      : cell.status === 'NO_DATA'
+        ? 'opacity-30'
+        : '';
+
+  return (
+    <div className={containerClass}>
+      <div className="font-mono font-black text-on-surface text-base tabular-nums leading-none mb-1">
+        {meanPct}<span className="text-xs opacity-70">%</span>
+      </div>
+      <div className="text-[10px] font-mono text-outline mb-1">
+        n={cell.sample_size}
+      </div>
+      {cell.brier_in_sample != null && (
+        <div className="text-[10px] font-mono text-outline mb-1">
+          Brier {cell.brier_in_sample.toFixed(3)}
+        </div>
+      )}
+      <span className={`text-[9px] font-mono tracking-widest uppercase px-1.5 py-0.5 border ${statusBadgeClass}`}>
+        {cell.status}
+      </span>
+    </div>
+  );
+}
+
+function SmartMoneyPatternLibrarySection({
+  fetchUrl,
+  title,
+  subtitle,
+  selectedHorizon,
+  onHorizonChange,
+}: {
+  fetchUrl: string;
+  title: string;
+  subtitle: string;
+  selectedHorizon: number;
+  onHorizonChange: (h: number) => void;
+}) {
+  const [cells, setCells] = useState<SmartMoneyCell[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(fetchUrl)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) {
+          setCells(data.cells ?? []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [fetchUrl]);
+
+  // Derive distinct bucket keys from returned cells (sorted alphabetically for stable grid).
+  const bucketKeys = Array.from(new Set(cells.map((c) => c.pattern_key))).sort();
+  const filtered = cells.filter((c) => c.horizon_days === selectedHorizon);
+
+  return (
+    <section className="my-12 border border-outline-variant/30" aria-label={title}>
+      <div className="p-6 md:p-8 border-b border-outline-variant/20">
+        <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+          {title}
+        </div>
+        <h2 className="text-on-surface text-base font-bold tracking-tight">
+          {title} — {selectedHorizon}d horizon{selectedHorizon === PRIMARY_HORIZON && <span className="ml-1 text-primary" aria-label="Primary horizon">★</span>}
+        </h2>
+        <p className="text-on-surface-variant text-xs mt-2 max-w-3xl leading-relaxed">
+          {subtitle} Each cell shows the engine&apos;s posterior probability that the pattern
+          produces &gt;1% excess return vs SPY at the selected horizon, conditioned on market-cap class.
+          8 buckets × 3 cap_classes × 6 horizons = 144 cells.
+        </p>
+        <p className="text-on-surface-variant text-xs mt-3 max-w-3xl leading-relaxed">
+          Smart money priors mature after backfill + recompute. Most cells read EXPLORATORY until then — that is the engine learning, not a bug.
+        </p>
+
+        {/* Horizon selector — segmented control */}
+        <div className="mt-5 inline-flex gap-px bg-outline-variant/30 border border-outline-variant/30 p-px" role="tablist" aria-label="Horizon">
+          {HORIZONS.map((h) => {
+            const active = h === selectedHorizon;
+            const isPrimary = h === PRIMARY_HORIZON;
+            return (
+              <button
+                key={h}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => onHorizonChange(h)}
+                className={`text-xs font-mono tracking-widest uppercase px-3 py-1.5 transition-colors ${
+                  active
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {h}d{isPrimary ? '★' : ''}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-12 text-center text-on-surface-variant text-sm font-mono animate-pulse">
+          Loading…
+        </div>
+      ) : cells.length === 0 ? (
+        <div className="p-12 text-center text-on-surface-variant text-sm">
+          No patterns yet — backfill is still running.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" data-testid="smart-money-grid">
+            <thead>
+              <tr className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-b border-outline-variant/30">
+                <th className="text-left font-medium px-6 py-3">Pattern</th>
+                {SMART_MONEY_CAP_COL_ORDER.map((cc) => (
+                  <th key={cc} className="text-left font-medium px-3 py-3">
+                    {SMART_MONEY_CAP_LABEL[cc]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {bucketKeys.map((pk) => (
+                <tr
+                  key={pk}
+                  className={`border-b border-outline-variant/10 ${
+                    selectedHorizon === PRIMARY_HORIZON ? 'border-l-2 border-l-primary' : ''
+                  }`}
+                >
+                  <td className="px-6 py-4 font-bold text-on-surface tracking-tight align-top">
+                    <div className="uppercase">{pk.replace(/_/g, ' ')}</div>
+                    <div className="text-[10px] text-outline font-mono tracking-widest uppercase mt-0.5">
+                      {pk}
+                    </div>
+                  </td>
+                  {SMART_MONEY_CAP_COL_ORDER.map((cc) => {
+                    const cell = filtered.find((c) => c.pattern_key === pk && c.cap_class === cc);
+                    return (
+                      <td key={cc} className="px-3 py-4 align-top">
+                        <SmartMoneyPatternCellView cell={cell} />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
