@@ -114,13 +114,15 @@ test.describe('EngineCalibrationPanel — Phase 17-04 QuadClassPanel', () => {
   });
 
   test('responsive: CI columns hidden at ≤1280px, posteriors visible, hover reveals CI', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 });
+    // Tailwind xl breakpoint = min-width: 1280px — so 1280px triggers xl:table-cell.
+    // Use 1279px to be strictly below the breakpoint where CI columns are hidden.
+    await page.setViewportSize({ width: 1279, height: 720 });
     await loadReport(page, QUAD_URL);
 
     const horizonTable = page.locator('[data-testid="horizon-table"]');
     await expect(horizonTable).toBeVisible();
 
-    // CI header columns should be hidden at 1280px (below xl breakpoint)
+    // CI header columns should be hidden at 1279px (strictly below xl breakpoint)
     const diffusionCiHeader = horizonTable.locator('th:has-text("DIFFUSION CI")');
     // These are rendered with hidden xl:table-cell — check display is none
     await expect(diffusionCiHeader).toBeHidden();
