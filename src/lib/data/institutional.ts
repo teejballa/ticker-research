@@ -43,7 +43,24 @@ function topNConcentrationPct(holdings: FinnhubFundHolding[], n: number): number
   return topSum / total;
 }
 
+// Module-level cache for fetch30dReturn results, keyed by `${ticker}|${asOfDay}`.
+// IN-04: avoids 200 redundant SPY quote+chart fetches per cron cycle when
+// fetchInstitutionalData is invoked once per ticker in the watchlist scan.
+// 60s TTL is short enough to be safe across multiple cron triggers but long
+// enough to dedupe within a single sweep (which completes in <60s typically).
+const RETURN_CACHE_TTL_MS = 60_000;
+interface ReturnCacheEntry { value: number | null; cachedAt: number; }
+const returnCache = new Map<string, ReturnCacheEntry>();
+
 async function fetch30dReturn(ticker: string, asOf: Date): Promise<number | null> {
+  // Cache key includes ticker + UTC day so cross-day cron triggers don't
+  // accidentally reuse a stale 30d window.
+  const cacheKey = `${ticker}|${asOf.toISOString().slice(0, 10)}`;
+  const cached = returnCache.get(cacheKey);
+  if (cached && (Date.now() - cached.cachedAt) < RETURN_CACHE_TTL_MS) {
+    return cached.value;
+  }
+
   // Open Question 3: 32-day window centered on (asOf - 30d). Pick closest bar.
   const center = new Date(asOf.getTime() - 30 * 86_400_000);
   const period1 = new Date(center.getTime() - 16 * 86_400_000);
@@ -52,7 +69,10 @@ async function fetch30dReturn(ticker: string, asOf: Date): Promise<number | null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = await (yf as any).chart(ticker, { period1, period2, interval: '1d' }) as { quotes?: Array<{ date?: Date; close?: number | null }> };
     const quotes = raw?.quotes ?? [];
-    if (quotes.length === 0) return null;
+    if (quotes.length === 0) {
+      returnCache.set(cacheKey, { value: null, cachedAt: Date.now() });
+      return null;
+    }
     let best: { date: Date; close: number } | null = null;
     let bestDelta = Number.POSITIVE_INFINITY;
     for (const q of quotes) {
@@ -60,12 +80,21 @@ async function fetch30dReturn(ticker: string, asOf: Date): Promise<number | null
       const d = Math.abs(q.date.getTime() - center.getTime());
       if (d < bestDelta) { bestDelta = d; best = { date: q.date, close: q.close }; }
     }
-    if (!best) return null;
+    if (!best) {
+      returnCache.set(cacheKey, { value: null, cachedAt: Date.now() });
+      return null;
+    }
     const todayQuote = await yf.quote(ticker).catch(() => null);
     const today = todayQuote?.regularMarketPrice;
-    if (typeof today !== 'number' || best.close === 0) return null;
-    return ((today - best.close) / best.close) * 100;
+    if (typeof today !== 'number' || best.close === 0) {
+      returnCache.set(cacheKey, { value: null, cachedAt: Date.now() });
+      return null;
+    }
+    const value = ((today - best.close) / best.close) * 100;
+    returnCache.set(cacheKey, { value, cachedAt: Date.now() });
+    return value;
   } catch {
+    returnCache.set(cacheKey, { value: null, cachedAt: Date.now() });
     return null;
   }
 }
