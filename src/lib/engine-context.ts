@@ -15,6 +15,13 @@
 //   - Adds agreement classification (deterministic, post-process safe)
 //   - Adds combined_logistic_score from the 12-d Bayesian logistic
 //
+// Phase 17 extension (17-04):
+//   - Adds institutional_* + insider_* fields (10 numeric/categorical fields per D-04)
+//   - computeAgreementNWay: N-way agreement over 4 signal classes
+//   - readHorizonCalibrations grows from 12 cells (2×6) to 24 cells (4×6)
+//   - Institutional + insider bucket resolution from snapshot data (same pattern as technical)
+//   - D-22 preserved: 12-d logistic in learning.ts is NOT extended
+//
 // The "trust boundary" sits here: numeric fields produced by this module are
 // authoritative — Gemini cannot override them.
 
@@ -120,6 +127,22 @@ export interface EngineContext {
 
   // ── Phase 16: Q3 agreement (Q1 vs Q2) ─────────────────────────────────
   agreement: 'aligned' | 'mixed' | 'opposed' | 'unknown';
+
+  // ── Phase 17: Institutional signal class (parallel to technical fields) ─
+  institutional_pattern: string | null;
+  institutional_posterior_mean: number | null;
+  institutional_ci: [number, number] | null;
+  institutional_sample_size: number;
+  institutional_status: CellStatus;
+  institutional_data_age_days: number | null;
+
+  // ── Phase 17: Insider signal class ──────────────────────────────────────
+  insider_pattern: string | null;
+  insider_posterior_mean: number | null;
+  insider_ci: [number, number] | null;
+  insider_sample_size: number;
+  insider_status: CellStatus;
+  insider_data_age_days: number | null;
 }
 
 function sigmoid(z: number): number {
@@ -181,6 +204,8 @@ function maxStatus(a: CellStatus, b: CellStatus): CellStatus {
  *
  * Exported so unit tests can pin the deterministic boundaries without
  * spinning up the full Prisma stack.
+ *
+ * @deprecated Use computeAgreementNWay for Phase 17+ 4-class agreement.
  */
 export function computeAgreement(
   dP: number | null,
@@ -197,22 +222,110 @@ export function computeAgreement(
 }
 
 /**
- * Issue 12 findUnique queries (6 horizons × 2 signal classes) via Promise.all and
- * shape the result into the locked horizon_calibrations array.
+ * Phase 17-04: N-way agreement over up to 4 signal classes
+ * (diffusion, technical, institutional, insider).
  *
- * Each horizon row aggregates both signal classes into a single `status` (the
- * higher-conviction of the two) and a single `sample_size` (the max of the two).
+ * Rules (17-04 must_haves):
+ *   - active.length < 2 → 'unknown'
+ *   - all active posteriors > 0.55 → 'aligned' (bullish)
+ *   - all active posteriors < 0.45 → 'aligned' (bearish)
+ *   - at least one > 0.6 AND at least one < 0.4 → 'opposed'
+ *   - otherwise → 'mixed'
+ *
+ * Exported for unit tests (no Prisma dependency).
+ */
+export function computeAgreementNWay(
+  classes: Array<{ posterior: number | null; status: CellStatus }>,
+): 'aligned' | 'mixed' | 'opposed' | 'unknown' {
+  const active = classes.filter(c => c.status === 'ACTIVE' && c.posterior != null);
+  if (active.length < 2) return 'unknown';
+  const posteriors = active.map(c => c.posterior as number);
+  const bullish = posteriors.filter(p => p > 0.55).length;
+  const bearish = posteriors.filter(p => p < 0.45).length;
+  if (bullish === active.length) return 'aligned';
+  if (bearish === active.length) return 'aligned';
+  // Strong opposition: at least one > 0.6 AND at least one < 0.4
+  const strongBull = posteriors.some(p => p > 0.6);
+  const strongBear = posteriors.some(p => p < 0.4);
+  if (strongBull && strongBear) return 'opposed';
+  return 'mixed';
+}
+
+/**
+ * Private helper: look up a bucket-keyed LearnedPattern cell at horizon=30 for
+ * institutional or insider signal classes. Falls back to the highest-sample
+ * horizon for the same bucket × cap_class if 30d has no data yet (warmup).
+ */
+async function resolveBucketCellAt30(
+  bucketKind: 'insider' | 'institutional',
+  bucket: string | null,
+  capClass: CapClass,
+): Promise<{ pattern: string | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }> {
+  if (!bucket) return { pattern: null, posterior: null, ci: null, sampleSize: 0, status: 'NO_DATA' };
+
+  // 1. Exact match: bucket × capClass × horizon=30
+  let cell = (await prisma.learnedPattern.findUnique({
+    where: {
+      signal_class_pattern_key_cap_class_horizon_days: {
+        signal_class: bucketKind,
+        pattern_key: bucket,
+        cap_class: capClass,
+        horizon_days: 30,
+      },
+    },
+  })) as LearnedCellLike | null;
+
+  // 2. Fallback: bucket × any cap_class × horizon=30 (different cap tier)
+  if (!cell || cell.sample_size === 0) {
+    const fallback = await prisma.learnedPattern.findFirst({
+      where: {
+        signal_class: bucketKind,
+        pattern_key: bucket,
+        cap_class: capClass,
+        sample_size: { gt: 0 },
+      },
+      orderBy: [{ sample_size: 'desc' }, { horizon_days: 'desc' }],
+    });
+    if (fallback) cell = fallback as LearnedCellLike;
+  }
+
+  if (!cell || cell.sample_size === 0) {
+    return { pattern: bucket, posterior: null, ci: null, sampleSize: 0, status: 'NO_DATA' };
+  }
+
+  const ci = credibleInterval95({ alpha: cell.alpha, beta: cell.beta });
+  const status = deriveCellStatus(cell);
+  return {
+    pattern: bucket,
+    posterior: ci.mean,
+    ci: [ci.low, ci.high],
+    sampleSize: cell.sample_size,
+    status,
+  };
+}
+
+/**
+ * Phase 17-04: 24-cell horizon calibration table (6 horizons × 4 signal classes).
+ * Extends Phase 16's 12-cell (6×2) version to include institutional + insider classes.
+ *
+ * Each horizon row carries 4 posteriors + 4 CIs. Row.sample_size = max of 4 class
+ * sample sizes. Row.status = highest-conviction status across the 4 classes.
  */
 async function readHorizonCalibrations(
   flow_pattern: FlowPattern | null,
   techPattern: TechPattern | null,
   cap_class: CapClass,
+  insiderBucket: string | null,
+  institutionalBucket: string | null,
 ): Promise<HorizonCalibration[]> {
   // Skip lookups for pattern_key that the engine never stores ('flat' for
   // diffusion is intentionally a no-op cell).
   const queryDiffusion = flow_pattern && flow_pattern !== 'flat';
   const queryTechnical = techPattern != null;
+  const queryInsider = insiderBucket != null;
+  const queryInstitutional = institutionalBucket != null;
 
+  // 24 promises: 6 horizons × 4 classes (diffusion, technical, institutional, insider)
   const cellQueries = HORIZONS.flatMap((horizon) => {
     const diffusionPromise: Promise<LearnedCellLike | null> = queryDiffusion
       ? prisma.learnedPattern.findUnique({
@@ -238,31 +351,75 @@ async function readHorizonCalibrations(
           },
         }) as Promise<LearnedCellLike | null>
       : Promise.resolve(null);
-    return [diffusionPromise, technicalPromise];
+    const institutionalPromise: Promise<LearnedCellLike | null> = queryInstitutional
+      ? prisma.learnedPattern.findUnique({
+          where: {
+            signal_class_pattern_key_cap_class_horizon_days: {
+              signal_class: 'institutional',
+              pattern_key: institutionalBucket!,
+              cap_class,
+              horizon_days: horizon,
+            },
+          },
+        }) as Promise<LearnedCellLike | null>
+      : Promise.resolve(null);
+    const insiderPromise: Promise<LearnedCellLike | null> = queryInsider
+      ? prisma.learnedPattern.findUnique({
+          where: {
+            signal_class_pattern_key_cap_class_horizon_days: {
+              signal_class: 'insider',
+              pattern_key: insiderBucket!,
+              cap_class,
+              horizon_days: horizon,
+            },
+          },
+        }) as Promise<LearnedCellLike | null>
+      : Promise.resolve(null);
+    // Order: diffusion, technical, institutional, insider (4 per horizon)
+    return [diffusionPromise, technicalPromise, institutionalPromise, insiderPromise];
   });
 
   const cells = await Promise.all(cellQueries);
 
   return HORIZONS.map((horizon, i) => {
-    const dCell = cells[i * 2];
-    const tCell = cells[i * 2 + 1];
+    const dCell   = cells[i * 4];
+    const tCell   = cells[i * 4 + 1];
+    const instCell = cells[i * 4 + 2];
+    const insdCell = cells[i * 4 + 3];
 
-    const dPosterior = dCell ? posteriorMean({ alpha: dCell.alpha, beta: dCell.beta }) : null;
-    const dCi = dCell ? credibleInterval95({ alpha: dCell.alpha, beta: dCell.beta }) : null;
-    const tPosterior = tCell ? posteriorMean({ alpha: tCell.alpha, beta: tCell.beta }) : null;
-    const tCi = tCell ? credibleInterval95({ alpha: tCell.alpha, beta: tCell.beta }) : null;
+    const dPosterior    = dCell    ? posteriorMean({ alpha: dCell.alpha,    beta: dCell.beta    }) : null;
+    const dCi           = dCell    ? credibleInterval95({ alpha: dCell.alpha,    beta: dCell.beta    }) : null;
+    const tPosterior    = tCell    ? posteriorMean({ alpha: tCell.alpha,    beta: tCell.beta    }) : null;
+    const tCi           = tCell    ? credibleInterval95({ alpha: tCell.alpha,    beta: tCell.beta    }) : null;
+    const instPosterior = instCell ? posteriorMean({ alpha: instCell.alpha, beta: instCell.beta }) : null;
+    const instCi        = instCell ? credibleInterval95({ alpha: instCell.alpha, beta: instCell.beta }) : null;
+    const insdPosterior = insdCell ? posteriorMean({ alpha: insdCell.alpha, beta: insdCell.beta }) : null;
+    const insdCi        = insdCell ? credibleInterval95({ alpha: insdCell.alpha, beta: insdCell.beta }) : null;
 
-    const dStatus = deriveCellStatus(dCell);
-    const tStatus = deriveCellStatus(tCell);
+    const dStatus    = deriveCellStatus(dCell);
+    const tStatus    = deriveCellStatus(tCell);
+    const instStatus = deriveCellStatus(instCell);
+    const insdStatus = deriveCellStatus(insdCell);
+
+    const aggregateStatus = [dStatus, tStatus, instStatus, insdStatus].reduce(maxStatus);
 
     return {
       horizon_days: horizon,
-      diffusion_posterior: dPosterior,
-      diffusion_ci: dCi ? [dCi.low, dCi.high] : null,
-      technical_posterior: tPosterior,
-      technical_ci: tCi ? [tCi.low, tCi.high] : null,
-      sample_size: Math.max(dCell?.sample_size ?? 0, tCell?.sample_size ?? 0),
-      status: maxStatus(dStatus, tStatus),
+      diffusion_posterior:      dPosterior,
+      diffusion_ci:             dCi    ? [dCi.low,    dCi.high]    : null,
+      technical_posterior:      tPosterior,
+      technical_ci:             tCi    ? [tCi.low,    tCi.high]    : null,
+      institutional_posterior:  instPosterior,
+      institutional_ci:         instCi ? [instCi.low, instCi.high] : null,
+      insider_posterior:        insdPosterior,
+      insider_ci:               insdCi ? [insdCi.low, insdCi.high] : null,
+      sample_size: Math.max(
+        dCell?.sample_size    ?? 0,
+        tCell?.sample_size    ?? 0,
+        instCell?.sample_size ?? 0,
+        insdCell?.sample_size ?? 0,
+      ),
+      status: aggregateStatus,
     } satisfies HorizonCalibration;
   });
 }
@@ -314,13 +471,27 @@ export async function getEngineContextForTicker(
       snaps = [created];
     }
   }
-  // coldStartInsiderSnap and coldStartInstitutionalSnap are declared but unused
-  // in this plan — plan 17-04 will consume them in the §6.5 calibration resolution.
-  void coldStartInsiderSnap;
-  void coldStartInstitutionalSnap;
-
   // snaps come back desc; reverse to chronological for trace computation.
   const snapsAsc = [...snaps].reverse();
+
+  // Phase 17-04: resolve insider + institutional snapshots.
+  // Resolution order mirrors the technical_data pattern (§5 below):
+  //   1. coldStartInsiderSnap / coldStartInstitutionalSnap (if cold-start fired)
+  //   2. insider_data / institutional_data on the most-recent snapshot
+  //   3. null (no data available)
+  const mostRecentSnapForSmartMoney = snapsAsc[snapsAsc.length - 1];
+  const insiderSnap: InsiderSnapshot | null =
+    coldStartInsiderSnap ??
+    (mostRecentSnapForSmartMoney?.insider_data && typeof mostRecentSnapForSmartMoney.insider_data === 'object'
+      ? (mostRecentSnapForSmartMoney.insider_data as unknown as InsiderSnapshot)
+      : null);
+  const institutionalSnap: InstitutionalSnapshot | null =
+    coldStartInstitutionalSnap ??
+    (mostRecentSnapForSmartMoney?.institutional_data && typeof mostRecentSnapForSmartMoney.institutional_data === 'object'
+      ? (mostRecentSnapForSmartMoney.institutional_data as unknown as InstitutionalSnapshot)
+      : null);
+  const insiderBucket: string | null = insiderSnap?.insider_bucket ?? null;
+  const institutionalBucket: string | null = institutionalSnap?.institutional_bucket ?? null;
 
   // ── 3. Historical context for z-scoring (best effort) ───────────────
   const tickerHistory = await prisma.sentimentSnapshot.findMany({
@@ -515,8 +686,16 @@ export async function getEngineContextForTicker(
     }
   }
 
-  // ── 9. Horizon calibrations (12 cells: 6 horizons × 2 signal classes) ─
-  const horizon_calibrations = await readHorizonCalibrations(flow_pattern, techPattern, cap_class);
+  // ── 9. Institutional + insider cell lookup at horizon=30 (primary horizon for both classes) ─
+  const [institutionalResult, insiderResult] = await Promise.all([
+    resolveBucketCellAt30('institutional', institutionalBucket, cap_class),
+    resolveBucketCellAt30('insider', insiderBucket, cap_class),
+  ]);
+
+  // ── 9b. Horizon calibrations (24 cells: 6 horizons × 4 signal classes) ─
+  const horizon_calibrations = await readHorizonCalibrations(
+    flow_pattern, techPattern, cap_class, insiderBucket, institutionalBucket,
+  );
 
   // ── 10. Engine meta ─────────────────────────────────────────────────
   const firstEvent = await prisma.learningEvent.findFirst({ orderBy: { occurred_at: 'asc' } });
@@ -538,16 +717,16 @@ export async function getEngineContextForTicker(
     };
   });
 
-  // ── 13. Agreement (Q1 vs Q2) at the primary horizons ─────────────────
-  // The agreement uses the diffusion 7d posterior + technical 30d posterior —
-  // each signal class's *primary* horizon. computeAgreement gates on both
-  // statuses being ACTIVE; otherwise returns 'unknown'.
-  const agreement = computeAgreement(
-    posterior_mean,
-    technical_posterior_mean,
-    status,
-    technical_status,
-  );
+  // ── 13. N-way agreement across all 4 signal classes ─────────────────
+  // Phase 17-04: replace computeAgreement (2-class) with computeAgreementNWay (4-class).
+  // Each class contributes its primary-horizon posterior:
+  //   diffusion → 7d, technical → 30d, institutional → 30d, insider → 30d
+  const agreement = computeAgreementNWay([
+    { posterior: posterior_mean,                         status },
+    { posterior: technical_posterior_mean,               status: technical_status },
+    { posterior: institutionalResult.posterior,          status: institutionalResult.status },
+    { posterior: insiderResult.posterior,                status: insiderResult.status },
+  ]);
 
   return {
     flow_pattern,
@@ -598,6 +777,23 @@ export async function getEngineContextForTicker(
     horizon_calibrations,
     combined_logistic_score,
     agreement,
+
+    // ── Phase 17-04: institutional + insider signal class fields ─────────
+    // Numeric fields only — prose fields (institutional_alignment etc.) are
+    // written by the LLM in gemini-analysis.ts and NOT set here (D-04 trust boundary).
+    institutional_pattern:        institutionalResult.pattern,
+    institutional_posterior_mean: institutionalResult.posterior,
+    institutional_ci:             institutionalResult.ci,
+    institutional_sample_size:    institutionalResult.sampleSize,
+    institutional_status:         institutionalResult.status,
+    institutional_data_age_days:  institutionalSnap?.data_age_days ?? null,
+
+    insider_pattern:              insiderResult.pattern,
+    insider_posterior_mean:       insiderResult.posterior,
+    insider_ci:                   insiderResult.ci,
+    insider_sample_size:          insiderResult.sampleSize,
+    insider_status:               insiderResult.status,
+    insider_data_age_days:        insiderSnap?.data_age_days ?? null,
   };
 }
 
