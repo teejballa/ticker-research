@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 interface InsightsData {
   total_data_points: number;
+  watchlist_size?: number;
   resolved_outcomes: number;
   thesis: { statement: string; high_gap_resolved: number; pct: number | null };
   diffusion_signals: Array<{
@@ -340,7 +341,7 @@ export function InsightsDashboard() {
                   NYSE · {data.market_state.label}
                 </span>
               )}
-              <span className="hidden sm:inline">Cycle 3D · Watchlist 26</span>
+              <span className="hidden sm:inline">Cycle 3D · Watchlist {data.watchlist_size ?? '—'}</span>
               <span className="hidden md:inline">{utcStamp}</span>
             </div>
           </div>
@@ -363,7 +364,7 @@ export function InsightsDashboard() {
                 Days later they reach <span className="text-tertiary font-semibold">middle</span> communities,
                 then <span className="text-error/90 font-semibold">mainstream</span>.
                 By the time mainstream notices, the price has often already moved.
-                Cipher tracks that journey across <strong className="text-on-surface">26 tickers</strong>,
+                Cipher tracks that journey across <strong className="text-on-surface">{data.watchlist_size ?? data.total_data_points} tickers</strong>,
                 checks the price 3, 7, and 14 days later, and quietly updates its own beliefs about
                 which patterns actually predict.
               </p>
