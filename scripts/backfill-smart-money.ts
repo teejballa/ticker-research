@@ -67,7 +67,7 @@ async function main() {
   for (const snap of pendingInstSnaps) {
     try {
       const result = await fetchInstitutionalData(snap.ticker, snap.scanned_at);
-      const key = result?.institutional_pattern ?? 'null';
+      const key = result?.institutional_bucket ?? 'null';
       instHistogram[key] = (instHistogram[key] ?? 0) + 1;
 
       if (!DRY_RUN) {
@@ -80,7 +80,7 @@ async function main() {
         instWrites++;
       }
       const stamp = snap.scanned_at.toISOString().slice(0, 10);
-      console.log(`  ${DRY_RUN ? '·' : '✓'} ${snap.ticker} ${stamp} → ${result?.institutional_pattern ?? 'null'}`);
+      console.log(`  ${DRY_RUN ? '·' : '✓'} ${snap.ticker} ${stamp} → ${result?.institutional_bucket ?? 'null'}`);
     } catch (err) {
       instErrors++;
       console.error(`  ✗ ${snap.ticker}: ${(err as Error).message}`);
@@ -115,7 +115,7 @@ async function main() {
   for (const snap of pendingInsiderSnaps) {
     try {
       const result = await fetchInsiderData(snap.ticker, snap.scanned_at);
-      const key = result?.insider_pattern ?? 'null';
+      const key = result?.insider_bucket ?? 'null';
       insiderHistogram[key] = (insiderHistogram[key] ?? 0) + 1;
 
       if (!DRY_RUN) {
@@ -127,7 +127,7 @@ async function main() {
         insiderWrites++;
       }
       const stamp = snap.scanned_at.toISOString().slice(0, 10);
-      console.log(`  ${DRY_RUN ? '·' : '✓'} ${snap.ticker} ${stamp} → ${result?.insider_pattern ?? 'null'}`);
+      console.log(`  ${DRY_RUN ? '·' : '✓'} ${snap.ticker} ${stamp} → ${result?.insider_bucket ?? 'null'}`);
     } catch (err) {
       insiderErrors++;
       console.error(`  ✗ ${snap.ticker}: ${(err as Error).message}`);
