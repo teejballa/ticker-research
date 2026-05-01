@@ -4,8 +4,10 @@
 // Lookback: 30 days trailing (matches 30d primary horizon — D-10).
 //
 // Failure semantics (Pitfall 1 + Pitfall 4):
-//   - HTTP 429 / 4xx / 5xx / parse error / timeout / thrown exception → returns null.
-//   - Empty Finnhub `data: []` → falls through to fetchEdgarForm4 (currently stub → null).
+//   - HTTP 429 / 4xx / 5xx / parse error / timeout / thrown exception → falls through.
+//   - Empty Finnhub `data: []` → falls through to fetchEdgarForm4 (REAL parser as of
+//     2026-05-01: pulls Form 4 XML primary docs from data.sec.gov and aggregates).
+//   - Final null only if both Finnhub AND EDGAR yield nothing for this ticker.
 //   - 5s AbortSignal timeout per fetch.
 //   - NEVER throws.
 
