@@ -226,6 +226,11 @@ export interface HorizonCalibration {
   technical_ci: [number, number] | null;
   sample_size: number;
   status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+  // Phase 17-04 extension — all optional for back-compat with old persisted reports
+  institutional_posterior?: number | null;
+  institutional_ci?: [number, number] | null;
+  insider_posterior?: number | null;
+  insider_ci?: [number, number] | null;
 }
 
 export interface EngineCalibration {
@@ -270,6 +275,26 @@ export interface EngineCalibration {
   agreement?: 'aligned' | 'mixed' | 'opposed' | 'unknown';
   technical_alignment?: string | null;
   technical_disagreement?: string | null;
+
+  // ── Phase 17-04 — institutional + insider signal classes ────────────────
+  // All fields optional — old persisted reports lacking them must still
+  // typecheck and render via graceful degraded-mode fallback in the UI.
+  // Numeric/categorical group (10 fields — overwritten by post-process per D-04):
+  institutional_pattern?: 'accumulation' | 'concentration' | 'distribution' | 'rotation' | 'flat' | null;
+  institutional_posterior_mean?: number | null;
+  institutional_ci?: [number, number] | null;
+  institutional_sample_size?: number | null;
+  institutional_status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA' | null;
+  insider_pattern?: 'cluster_buys' | 'ceo_buy' | 'sells_only' | 'none' | null;
+  insider_posterior_mean?: number | null;
+  insider_ci?: [number, number] | null;
+  insider_sample_size?: number | null;
+  insider_status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA' | null;
+  // Prose group (4 fields — LLM-written per D-05, NOT overwritten by post-process):
+  institutional_alignment?: string | null;
+  institutional_disagreement?: string | null;
+  insider_alignment?: string | null;
+  insider_disagreement?: string | null;
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
@@ -336,6 +361,9 @@ export interface AnalysisResult {
   community_analysis?: string;                   // Gemini-written narrative paragraph
   engine_calibration?: EngineCalibration;        // diffusion-engine prior at report-generation time
   technical_at_report?: TechnicalSnapshot | null; // Phase 16-04: live technical snapshot at report time
+  // Phase 17-04: smart-money snapshots persisted at report time (written by 17-03 cron path)
+  insider_at_report?: InsiderSnapshot | null;
+  institutional_at_report?: InstitutionalSnapshot | null;
 }
 
 // ---- TechnicalSnapshot — Phase 16 technical-analysis sensor ----
