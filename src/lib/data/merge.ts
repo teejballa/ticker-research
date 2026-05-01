@@ -145,3 +145,94 @@ function yahooToFundamentals(y: FundamentalsSection): SupplementaryFundamentalsF
     profit_margin: y.profit_margin,
   };
 }
+
+// ─── Phase 17: Insider + Institutional merge functions ─────────────────────
+// Field-level cascade: finnhub → edgar (first non-null wins). The two-source
+// case is simpler than the 3-source market data merge — no tracking object
+// beyond the snapshot's existing `data_source` provenance.
+
+import type { InsiderSnapshot, InstitutionalSnapshot } from '@/lib/types';
+
+/**
+ * Merge two InsiderSnapshot candidates field-by-field. First-non-null wins
+ * per field (finnhub preferred over edgar). Returns null when both inputs are
+ * null. The merged snapshot's `data_source` is set to whichever source
+ * provided the bucket (or 'finnhub' if both did).
+ *
+ * Most snapshots flow through one source only (Finnhub). This function is
+ * the symmetry point for plan 17-05's potential EDGAR co-equal mode (D-09).
+ */
+export function mergeInsiderData(
+  finnhub: InsiderSnapshot | null,
+  edgar: InsiderSnapshot | null,
+): InsiderSnapshot | null {
+  if (!finnhub && !edgar) return null;
+  if (finnhub && !edgar) return finnhub;
+  if (!finnhub && edgar) return edgar;
+  // Both populated — take Finnhub as base, fall through to edgar field-by-field.
+  const f = finnhub!; const e = edgar!;
+  return {
+    insider_bucket: f.insider_bucket ?? e.insider_bucket,
+    distinct_buyers: Math.max(f.distinct_buyers, e.distinct_buyers),
+    distinct_sellers: Math.max(f.distinct_sellers, e.distinct_sellers),
+    net_buy_share_count: Math.max(f.net_buy_share_count, e.net_buy_share_count),
+    net_sell_share_count: Math.max(f.net_sell_share_count, e.net_sell_share_count),
+    buy_value_usd: f.buy_value_usd ?? e.buy_value_usd,
+    sell_value_usd: f.sell_value_usd ?? e.sell_value_usd,
+    has_ceo_buy: f.has_ceo_buy || e.has_ceo_buy,
+    has_cfo_buy: f.has_cfo_buy || e.has_cfo_buy,
+    has_director_buy: f.has_director_buy || e.has_director_buy,
+    is_planned_10b5_1: f.is_planned_10b5_1 || e.is_planned_10b5_1,
+    filings_count: Math.max(f.filings_count, e.filings_count),
+    earliest_filing_date: pickEarliest(f.earliest_filing_date, e.earliest_filing_date),
+    latest_filing_date: pickLatest(f.latest_filing_date, e.latest_filing_date),
+    data_age_days: f.data_age_days ?? e.data_age_days,
+    computed_at: f.computed_at,
+    data_source: f.insider_bucket ? 'finnhub' : 'edgar',
+    insider_sentiment_mspr: f.insider_sentiment_mspr ?? e.insider_sentiment_mspr,
+  };
+}
+
+/**
+ * Merge two InstitutionalSnapshot candidates. First-non-null wins per field.
+ * Same shape as mergeInsiderData.
+ */
+export function mergeInstitutionalData(
+  finnhub: InstitutionalSnapshot | null,
+  edgar: InstitutionalSnapshot | null,
+): InstitutionalSnapshot | null {
+  if (!finnhub && !edgar) return null;
+  if (finnhub && !edgar) return finnhub;
+  if (!finnhub && edgar) return edgar;
+  const f = finnhub!; const e = edgar!;
+  // Prefer Finnhub for numeric inputs; only fall back to EDGAR when the
+  // Finnhub field is genuinely missing (zero is a real value, not missing).
+  return {
+    institutional_bucket: f.institutional_bucket ?? e.institutional_bucket,
+    total_institutional_share: f.total_institutional_share || e.total_institutional_share,
+    total_institutional_share_prev: f.total_institutional_share_prev || e.total_institutional_share_prev,
+    net_share_change: f.net_share_change,
+    net_share_change_pct: f.net_share_change_pct,
+    fund_count_current: f.fund_count_current || e.fund_count_current,
+    fund_count_prev: f.fund_count_prev || e.fund_count_prev,
+    fund_count_delta: f.fund_count_delta,
+    top10_concentration_pct: f.top10_concentration_pct || e.top10_concentration_pct,
+    top10_concentration_pct_prev: f.top10_concentration_pct_prev || e.top10_concentration_pct_prev,
+    ticker_30d_return_pct: f.ticker_30d_return_pct ?? e.ticker_30d_return_pct,
+    spy_30d_return_pct: f.spy_30d_return_pct ?? e.spy_30d_return_pct,
+    report_date: f.report_date || e.report_date,
+    filing_date: f.filing_date || e.filing_date,
+    data_age_days: f.data_age_days,
+    computed_at: f.computed_at,
+    data_source: f.institutional_bucket ? 'finnhub' : 'edgar',
+  };
+}
+
+function pickEarliest(a: string | null, b: string | null): string | null {
+  if (a && b) return a < b ? a : b;
+  return a ?? b;
+}
+function pickLatest(a: string | null, b: string | null): string | null {
+  if (a && b) return a > b ? a : b;
+  return a ?? b;
+}
