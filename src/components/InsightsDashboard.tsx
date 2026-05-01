@@ -1790,7 +1790,6 @@ function SmartMoneyPatternLibrarySection({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetch(fetchUrl)
       .then((r) => r.json())
       .then((data) => {
