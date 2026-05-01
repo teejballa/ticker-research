@@ -93,7 +93,7 @@ model DiffusionTrace {
 
 model LearnedPattern {
   id                String   @id @default(uuid())
-  signal_class      String   // 'diffusion' | 'technical'
+  signal_class      String   // 'diffusion' | 'technical' | 'insider' | 'institutional'
   pattern_key       String   // FlowPattern values OR TechPattern values
   cap_class         String
   horizon_days      Int      // 3 | 7 | 14 | 30 | 60 | 90
