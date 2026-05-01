@@ -290,7 +290,7 @@ describe('D-04 trust boundary — numeric fields overwritten, prose preserved', 
     const llmProse = 'Net accumulation × large cap historically beats SPY by 4.2% at 30d horizon.';
     const persisted_prose = (llmProse != null) ? llmProse : null;
     // engineCtx has no prose fields (those come from LLM per D-05)
-    expect((engineCtx as Record<string, unknown>).institutional_alignment).toBeUndefined();
+    expect((engineCtx as unknown as Record<string, unknown>).institutional_alignment).toBeUndefined();
     expect(persisted_prose).toBe(llmProse);
   });
 
