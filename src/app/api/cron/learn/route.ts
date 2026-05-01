@@ -355,14 +355,22 @@ async function upsertCell(
 // ─── Recompute pass (per-cell metrics across all 216 cells) ─────────────────
 
 async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promise<void> {
-  const SIGNAL_CLASSES = ['diffusion', 'technical'] as const;
+  // Phase 17 — D-21: extends from dual-class (diffusion + technical)
+  // to quad-class. Cell-space across the 4 traded cap_classes is
+  // (4 + 8 + 8 + 8) patterns × 3 cap_classes × 6 horizons = 504 cells.
+  const SIGNAL_CLASSES = ['diffusion', 'technical', 'insider', 'institutional'] as const;
 
-  // Build the full cell-space then dispatch via Promise.all so the pass stays
-  // under ~14s even at 216 cells (RESEARCH §8 line 698).
   const tasks: Array<Promise<void>> = [];
-
   for (const signal_class of SIGNAL_CLASSES) {
-    const patterns = signal_class === 'diffusion' ? FLOW_PATTERNS : TECH_PATTERNS;
+    const patterns: readonly string[] =
+      signal_class === 'diffusion'
+        ? FLOW_PATTERNS
+        : signal_class === 'technical'
+          ? TECH_PATTERNS
+          : signal_class === 'insider'
+            ? INSIDER_PATTERNS
+            : INSTITUTIONAL_PATTERNS;
+
     for (const pattern_key of patterns) {
       for (const cap_class of CAP_CLASSES) {
         for (const horizon_days of HORIZONS) {
@@ -413,13 +421,23 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
   const outcomes: boolean[] = [];
 
   for (const ev of events) {
-    const d = ev.delta as { diffusion_hit?: boolean; tech_hit?: boolean; hit?: boolean } | null;
-    // Prefer the per-class hit if present (Phase 16 events carry both); fall
-    // back to the legacy `hit` field for any pre-Phase-16 surviving rows.
+    const d = ev.delta as {
+      diffusion_hit?: boolean;
+      tech_hit?: boolean;
+      insider_hit?: boolean;
+      institutional_hit?: boolean;
+      hit?: boolean;
+    } | null;
+    // Phase 17: insider/institutional do NOT fall back to legacy `hit`
+    // because pre-Phase-17 events never had those snapshots.
     const hit =
       key.signal_class === 'diffusion'
         ? d?.diffusion_hit ?? d?.hit
-        : d?.tech_hit ?? d?.hit;
+        : key.signal_class === 'technical'
+          ? d?.tech_hit ?? d?.hit
+          : key.signal_class === 'insider'
+            ? d?.insider_hit ?? null
+            : d?.institutional_hit ?? null;
     if (typeof hit !== 'boolean') continue;
     predictions.push(predMean);
     outcomes.push(hit);
@@ -438,11 +456,21 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
   let beta_30d = 1;
   for (const ev of events) {
     if (ev.occurred_at < cutoff30d) continue;
-    const d = ev.delta as { diffusion_hit?: boolean; tech_hit?: boolean; hit?: boolean } | null;
+    const d = ev.delta as {
+      diffusion_hit?: boolean;
+      tech_hit?: boolean;
+      insider_hit?: boolean;
+      institutional_hit?: boolean;
+      hit?: boolean;
+    } | null;
     const hit =
       key.signal_class === 'diffusion'
         ? d?.diffusion_hit ?? d?.hit
-        : d?.tech_hit ?? d?.hit;
+        : key.signal_class === 'technical'
+          ? d?.tech_hit ?? d?.hit
+          : key.signal_class === 'insider'
+            ? d?.insider_hit ?? null
+            : d?.institutional_hit ?? null;
     if (hit === true) alpha_30d++;
     else if (hit === false) beta_30d++;
   }
