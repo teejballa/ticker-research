@@ -121,10 +121,11 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
   const confidenceBlocks = Math.round(confidencePct / 10);
 
   const fs = s?.field_sources;
-  const sourceLabel = (origin: 'yahoo' | 'finnhub' | 'polygon' | null | undefined): string | null => {
+  const sourceLabel = (origin: 'yahoo' | 'finnhub' | 'polygon' | 'edgar' | null | undefined): string | null => {
     if (origin === 'finnhub') return 'via Finnhub';
     if (origin === 'polygon') return 'via Polygon';
     if (origin === 'yahoo')   return 'via Yahoo';
+    if (origin === 'edgar')   return 'via EDGAR';
     return null;
   };
 
