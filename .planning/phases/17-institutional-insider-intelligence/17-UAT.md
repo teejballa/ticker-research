@@ -1,18 +1,18 @@
 ---
-status: testing
+status: partial
 phase: 17-institutional-insider-intelligence
 source: [17-01-SUMMARY.md, 17-02-SUMMARY.md, 17-03-SUMMARY.md, 17-04-SUMMARY.md, 17-05-SUMMARY.md]
 started: 2026-05-01T20:30:00Z
-updated: 2026-05-01T20:35:00Z
+updated: 2026-05-01T21:25:00Z
+remaining:
+  - test_11: deferred to ~2026-05-26 (calendar gate — first 30d outcomes resolve)
+  - test_12: pending Vercel deploy + log tail (operational)
+  - test_1_issue: next-auth CLIENT_FETCH_ERROR on cold-start (open, unaddressed by phase 17 code — global auth concern)
 ---
 
 ## Current Test
 
-number: 12
-name: Production deploy — Vercel cron logs are clean
-expected: |
-  After deploying to Vercel, verify in the Functions logs: `/api/cron/sentiment-scan` runs without errors and emits a log line confirming 4-sensor parallel fetch. `/api/cron/learn` runs without errors and emits institutional + insider cell upsert counts. No null-pointer or schema-mismatch errors related to `insider_data` / `institutional_data` columns.
-awaiting: user response
+[testing complete — see frontmatter `remaining` for the 2 calendar/operational follow-ups and 1 open issue]
 
 ## Tests
 
