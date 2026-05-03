@@ -4,23 +4,63 @@
 
 - ✅ **v1.0 — MVP & Self-Calibrating Engine** (2026-03-13 → 2026-05-03)
   17 phases · 59 plan summaries · 461 commits · 19,085 LOC.
-  Full data pipeline → Gemini reasoning via Vercel AI Gateway → Diffusion Learning Engine (Bayesian feedback loop on SPY-relative outcomes) → Technical Analysis as a parallel signal class (multi-horizon 3/7/14/30/60/90d) → Institutional & Insider Intelligence (Yahoo + real EDGAR fallback). Production live at **ciphersearch.app**. Engine measurably learning: 18 cells with observations, 2 ACTIVE, 87 PriceOutcomes, 70 LearningEvents.
+  Full data pipeline → Gemini reasoning via Vercel AI Gateway → Diffusion Learning Engine → Technical Analysis as parallel signal class → Institutional & Insider Intelligence. Production live at **ciphersearch.app**.
   → See [`milestones/v1.0-ROADMAP.md`](./milestones/v1.0-ROADMAP.md) and [`milestones/v1.0-REQUIREMENTS.md`](./milestones/v1.0-REQUIREMENTS.md).
 
-## Current Milestone
+## Current Milestone — v2.0: Learning Engine Excellence
 
-**v1.1 — Learning Engine Excellence**
-*Theme: Make the Diffusion Learning Engine genuinely impressive, optimal, and infinitely improving.*
+**Goal:** Take the v1.0 self-calibrating engine to **clean, defensible, industry-standard ML** with measurable out-of-sample lift, drift defenses, hierarchical sharing, regime awareness, lift-gated promotion, composite signal synthesis, and a public model card.
 
-Phases pending — run `/gsd-new-milestone` to formalize requirements and break v1.1 into phases.
+**Status:** Defined 2026-05-03. Research complete. Ready for `/gsd-plan-phase 18`.
 
-See "Next Milestone Goals" in `.planning/PROJECT.md` for the candidate phase list and rationale.
+### Phases (10 total — continues numbering from v1.0)
+
+Phase order reconciled across all 4 research dimensions. Build dependencies: P18 → P20 → P19 → P25 → P21 → P22 → P23/P24/P26 → P27.
+
+- [ ] **Phase 18: Time-Decayed Bayesian Updates + ESS** — keystone phase. Adds `effective_sample_size` to LearnedPattern via exponential decay; Page-Hinkley drift detector; per-class λ tuning. Requirements: CORE-ML-01..05.
+- [ ] **Phase 20: Market-Regime Feature** — extends LearnedPattern composite key with regime dimension (4 buckets: bull/bear/chop × low-vol/high-vol via VIX bucketing + SPY trend); 2-step migration to manage risk. Requirements: CORE-ML-06..10.
+- [ ] **Phase 19: Hierarchical Priors / Partial Pooling** — empirical Bayes pooled posteriors per `(signal_class, pattern_key)` parent group; cell-space pruning to defeat lake-of-cells. Requirements: CORE-ML-11..14.
+- [ ] **Phase 25: Historical Backfill** — bootstrap N for lift gating: ≥100 tickers × ≥5 years of technical signals; point-in-time discipline; single feature-extraction code path. Requirements: COVERAGE-06..10.
+- [ ] **Phase 21: Lift-Gated Cell Promotion** — out-of-sample Brier-lift > threshold gate via Purged K-Fold + Embargo CV; Benjamini-Yekutieli FDR correction; Deflated Sharpe Ratio. Requirements: CORE-ML-15..19.
+- [ ] **Phase 22: Composite Signal Synthesis** — single calibrated headline probability with CI from per-class isotonic-calibrated combination; first user-visible v2.0 win. Requirements: REASON-01..05.
+- [ ] **Phase 23: Counterfactual Reasoning** — leave-one-out deltas injected as structured Zod block in Gemini prompt; "Why this thesis moved" report section. Requirements: REASON-06..09.
+- [ ] **Phase 24: Adaptive Watchlist (Thompson Sampling)** — bandit-driven scan target selection on cell undersampledness; ε-floor; A/B vs v1.0 fixed watchlist. Requirements: COVERAGE-01..05.
+- [ ] **Phase 26: Live Engine Performance Dashboard** — `/insights` "Engine Performance" tab; daily learning feed; Brier-lift over time; cell-space coverage heatmap; ESS-gated metrics. Requirements: DEMO-01..06.
+- [ ] **Phase 27: Public Per-Report Calibration Trail + Model Card** — public-readable trail page; aggregate-only public stats; Mitchell 2019 model card. **Entry gate: legal counsel engaged.** Requirements: DEMO-07..11.
+
+### Parallelization Opportunities
+
+After Phase 22 ships, Phases 23 / 24 / 26 share no files and can be planned in parallel. Phase 27 depends on Phase 26's metrics.
+
+### Definition of Done
+
+Per user direction: "industry-standard ML model and product that works perfectly for what it is supposed to do."
+
+1. Drift detector live with ESS down-weighting > 30-day-old observations
+2. Hierarchical pooling demonstrably accelerates sparse-cell learning vs no-pool control
+3. Regime feature integrated with deterministic labels for all snapshots (live + backfill)
+4. ≥1 cell with FDR-corrected, Purged-CV out-of-sample Brier-lift > 5% vs null
+5. Composite signal block in every report (headline probability + CI + per-class breakdown)
+6. Counterfactual deltas in every report
+7. Adaptive watchlist live and measurably accelerating cell saturation
+8. Backfill universe ≥100 tickers × 5 years with point-in-time correctness
+9. Performance dashboard live at `/insights` with daily learning feed
+10. Public calibration trail published with legal sign-off and aggregate-only metrics
+
+### Defensive Engineering Mandate (cross-cutting)
+
+Every phase plan must include prevention work for the pitfall(s) it owns. Specifically:
+- Every phase touching LearnedPattern must record `n_trials_attempted` (FDR denominator)
+- Every CV must use Purged K-Fold + Embargo (not random splits)
+- Every new metric must document its operational action (no vanity metrics)
+- Every posterior surface must show ESS, not raw N
+- Every phase that ships in production must run vitest + Playwright before commit
 
 ---
 
 ## Phase Numbering
 
-- Integer phases (18, 19, 20...): Planned milestone work — continue from where v1.0 left off (next phase is **18**)
+- Integer phases (18, 19, 20, ..., 27): v2.0 milestone work
 - Decimal phases (18.1, 18.2): Urgent insertions (marked with INSERTED)
 
-Decimal phases appear between their surrounding integers in numeric order.
+Continues from where v1.0 left off. v2.0 phases were sequenced by dependency, not numerically (P18 → P20 → P19 → P25 → P21 → P22 → P23/24/26 → P27).
