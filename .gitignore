@@ -53,7 +53,7 @@ build/
 *.log
 
 # ========================
-# Claude Code / NotebookLM generated files
+# Generated research artifacts
 # ========================
 *.pdf
 *.tmp
