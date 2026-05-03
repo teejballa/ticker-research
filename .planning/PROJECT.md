@@ -76,13 +76,19 @@ The system is a pure-TypeScript pipeline running entirely on Vercel:
 
 ---
 
-## Next Milestone — v1.1: Learning Engine Excellence
+## Current Milestone — v2.0: Learning Engine Excellence
 
-**Theme:** Take the v1.0 Diffusion Learning Engine from "alive and learning" to *genuinely impressive ML* — with measurable Brier lift, drift defenses, hierarchical sharing, regime awareness, and a feedback path that visibly improves report quality the longer Cipher runs.
+**Status:** Defined 2026-05-03. Research complete. Requirements + roadmap written. Ready for `/gsd-plan-phase 18`.
 
-**Goal:** Make the engine **optimal, impressive, actually working, and innovative in the ML department** — both as a research product and as a defensible technical artifact you can point to and explain end-to-end.
+**Theme:** Take the v1.0 Diffusion Learning Engine from "alive and learning" to a **clean, defensible, industry-standard ML system that works perfectly for what it is supposed to do** — measurable out-of-sample Brier lift, drift defenses, hierarchical pooling, regime awareness, FDR-corrected lift gating, composite signal synthesis, and a public model card.
 
-### Candidate v1.1 Phases (to be formalized via `/gsd-new-milestone`)
+**Goal:** Make the engine **optimal, working, and industry-standard in the ML department** — both as a research product and as a defensible technical artifact backed by published methodology (Stan partial-pooling case studies, López de Prado purged CV, Benjamini-Yekutieli FDR, Mitchell et al. 2019 model cards, Russo & Van Roy Thompson sampling).
+
+### v2.0 Phase Order (reconciled across 4 research dimensions)
+
+P18 → P20 → P19 → P25 → P21 → P22 → (P23 / P24 / P26 in parallel) → P27
+
+The phase numbers are NOT in execution order — they reflect the original capability grouping. Build dependencies determine the sequence: time-decay (keystone) → regime-key extension (risky migration first) → hierarchical pooling (uses ESS + regime) → backfill (bootstraps lift-gating data) → lift-gating → composite signal (first user-visible win) → counterfactuals + bandit + dashboard (parallel) → public calibration trail (last, needs legal sign-off).
 
 **Group A — Core ML quality (the "infinitely better" path)**
 
@@ -115,13 +121,20 @@ The system is a pure-TypeScript pipeline running entirely on Vercel:
 - **Compounding.** Each phase makes the next one easier. Hierarchical priors make sparse cells learn faster, which makes adaptive-watchlist cheaper, which makes regime-aware learning faster, which raises Brier lift across the board.
 - **Honest.** Avoids over-promising "infinite improvement" while building the actual mechanisms that get closer to it (drift defense, hierarchical pooling, regime awareness, lift-gated promotion).
 
-### v1.1 Definition of Done
+### v2.0 Definition of Done
 
-- ≥1 cell with measurable Brier-lift > 5% on out-of-sample data
-- Drift detector down-weighting > 30-day-old observations in production
-- Hierarchical pooling demonstrably accelerating sparse-cell learning (vs control)
-- Engine performance dashboard live at `/insights` with daily learning feed
-- Per-report calibration trail published
+1. Drift detector live with `effective_sample_size` down-weighting > 30-day-old observations (P18)
+2. Hierarchical pooling demonstrably accelerates sparse-cell learning vs no-pool control on out-of-sample data (P19)
+3. Regime feature integrated with deterministic regime labels for all snapshots, live + backfill (P20)
+4. ≥1 cell with FDR-corrected, Purged-CV out-of-sample Brier-lift > 5% vs null model (P21)
+5. Composite signal block in every report (headline probability + CI + per-class breakdown) (P22)
+6. Counterfactual deltas in every report explaining how each signal class moved the thesis (P23)
+7. Adaptive watchlist live and measurably accelerating cell saturation (P24)
+8. Backfill universe ≥100 tickers × 5 years with point-in-time correctness (P25)
+9. Performance dashboard live at `/insights` with daily learning feed + drift alerts (P26)
+10. Public calibration trail published with legal sign-off and aggregate-only metrics (P27)
+
+For full requirement-by-requirement breakdown see `.planning/REQUIREMENTS.md` (50 requirements). For per-dimension research findings see `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY}.md`.
 
 ---
 

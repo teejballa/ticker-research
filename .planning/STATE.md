@@ -1,219 +1,71 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Executing Phase 17
-stopped_at: Phase 17 UI-SPEC approved
-last_updated: "2026-05-01T03:22:59.851Z"
+milestone: v2.0
+milestone_name: learning-engine-excellence
+status: Defining requirements complete; ready for /gsd-plan-phase 18
+stopped_at: v2.0 milestone scoped (10 phases, 50 requirements, 4 capability groups)
+last_updated: "2026-05-03T07:35:00Z"
 progress:
-  total_phases: 17
-  completed_phases: 13
-  total_plans: 61
-  completed_plans: 54
-  percent: 89
+  total_phases: 10
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-10)
+See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
-**Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — no hallucinated conclusions, only what the data supports.
-**Current focus:** Phase 17 — institutional-insider-intelligence
+**Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — backed by an industry-standard, auditable, self-improving Bayesian learning engine.
+
+**Current focus:** v2.0 — Learning Engine Excellence (P18 → P27)
 
 ## Current Position
 
-Phase: 17 (institutional-insider-intelligence) — EXECUTING
-Plan: 1 of 5
+Milestone: v2.0
+Phase: Not started — next is **Phase 18 (Time-Decayed Bayesian Updates + ESS)**
+Plan: —
+Status: Requirements defined; roadmap created; ready for `/gsd-plan-phase 18`
+Last activity: 2026-05-03 — v2.0 milestone defined; 4 parallel research dimensions complete; SUMMARY synthesized; REQUIREMENTS + ROADMAP written
+
+## Accumulated Context (carried forward from v1.0)
+
+**Architectural commitments preserved:**
+- Pure-TypeScript on Vercel — no Python, no containers
+- `learning.ts` is "pure functions, no DB" — every v2.0 algorithm follows
+- `engine-context.ts` is the single trust boundary for authoritative numerics — composite signals + counterfactuals come from here, never from the LLM
+- Prisma schema migrations are additive — never drop columns, never change types
+- Vercel cron `maxDuration: 300` (default) suffices through Phase 21; bump to `800` for backfill (P25) and adaptive watchlist (P24) on Pro tier
+
+**v2.0 stack additions (verified May 2026):**
+- `jstat` — Beta-CDF quantiles for exact Thompson sampling + CI replacement
+- `ml-matrix` (6.12.2) — IRLS for full Bayesian logistic with proper covariance
+- `posthog-node` — optional metric collection for Phase 26 dashboard
+
+**Critical defensive mandates (cross-cutting, every phase):**
+- Record `n_trials_attempted` (FDR denominator)
+- Purged K-Fold + Embargo CV (never random splits, never simple time-split)
+- Document operational action per metric (no vanity metrics)
+- Show ESS, not raw N, on every posterior surface
+- Phase 27 entry gate is "legal counsel engaged"
+
+## v1.0 Carryover Items (calendar-gated, not blocking)
+
+- Phase 17 UAT Test 11: institutional/insider 30d posteriors materialize ~2026-05-26 once first 30d outcomes resolve naturally
+- Phase 17 UAT Test 12: dashboard cron-log audit (deploy health verified; runtime log inspection deferred)
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v1.0 baseline):**
+- Total plans completed: 54
+- Average duration: ~0.9 days/plan
+- Total execution time: 49 days
 
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: —
+**v2.0 Target Cadence:** maintain ~1 plan/day average; estimate 25-35 plans across 10 phases.
 
-**By Phase:**
+---
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: —
-- Trend: —
-
-*Updated after each plan completion*
-| Phase 01-data-pipeline P01 | 25 | 2 tasks | 8 files |
-| Phase 01-data-pipeline P04 | 5 | 1 tasks | 2 files |
-| Phase 01-data-pipeline P03 | 15 | 1 tasks | 2 files |
-| Phase 01-data-pipeline P02 | 9 | 3 tasks | 9 files |
-| Phase 01-data-pipeline P05 | 4 | 3 tasks | 6 files |
-| Phase 02-research-integration P02 | 3 | 3 tasks | 2 files |
-| Phase 02-research-integration P01 | 3 | 2 tasks | 7 files |
-| Phase 02-research-integration P03 | 3 | 2 tasks | 1 files |
-| Phase 02-research-integration P04 | 3 | 2 tasks | 7 files |
-| Phase 02-research-integration P04 | 3 | 3 tasks | 7 files |
-| Phase 03-report-output P01 | 161 | 2 tasks | 5 files |
-| Phase 03-report-output P02 | 2 | 2 tasks | 3 files |
-| Phase 03-report-output P03 | continuation | 3 tasks | 7 files |
-| Phase 04-deployment P01 | 225 | 2 tasks | 4 files |
-| Phase 04-deployment P02 | 3 | 2 tasks | 3 files |
-| Phase 04-deployment P03 | 2 | 1 tasks | 3 files |
-| Phase 05-user-identity-report-history P01 | 151 | 3 tasks | 5 files |
-| Phase 05-user-identity-report-history P02 | 103 | 2 tasks | 4 files |
-| Phase 05-user-identity-report-history P04 | 5 | 1 tasks | 1 files |
-| Phase 05-user-identity-report-history P03 | 54 | 3 tasks | 3 files |
-| Phase 05-user-identity-report-history P05 | 525892 | 1 tasks | 1 files |
-| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence PP01 | 279 | 3 tasks | 10 files |
-| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P03 | 3 | 3 tasks | 6 files |
-| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P02 | 10 | 3 tasks | 5 files |
-| Phase 06-full-web-deployment-vercel-database-auth-report-account-persistence P04 | 21 | 2 tasks | 7 files |
-| Phase 07 P01 | 8 | 3 tasks | 7 files |
-| Phase 07 P02 | 307 | 2 tasks | 3 files |
-| Phase 07 P03 | 69 | 1 tasks | 1 files |
-| Phase 07 P04 | 15 | 4 tasks | 3 files |
-| Phase 08 P01 | 5 | 2 tasks | 7 files |
-| Phase 08 P02 | 15 | 2 tasks | 2 files |
-| Phase 08 P03 | 172 | 2 tasks | 4 files |
-| Phase 08 P04 | 156 | 2 tasks | 5 files |
-| Phase 08 P05 | 6 | 2 tasks | 5 files |
-| Phase 09 P01 | 110 | 2 tasks | 3 files |
-| Phase 09 P02 | 526003 | 2 tasks | 5 files |
-| Phase 12-intelligence-pipeline-rebuild-replace-notebooklm-with-polygo P01 | 5 | 2 tasks | 4 files |
-| Phase 12 P02 | 25 | 2 tasks | 5 files |
-| Phase 12 P03 | 15 | 2 tasks | 24 files |
-| Phase 13-deep-sentiment-intelligence P01 | 9min | 5 tasks | 7 files |
-| Phase 13-deep-sentiment-intelligence P02 | 3min | 2 tasks | 1 files |
-
-## Accumulated Context
-
-### Decisions
-
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Roadmap]: 4-phase structure derived from natural requirement clusters — data pipeline → research integration → report output → deployment
-- [Roadmap]: REPT-04 (data timestamp) placed in Phase 1 scope, rendered in Phase 3 output
-- [Roadmap]: Phase 2 requires NotebookLM API verification spike as first plan before any integration work
-- [Phase 1 data sources]: yahoo-finance2 (free, no key) for structured market data; Anthropic web search for news, SEC summaries, analyst content, sentiment — Finnhub, SEC EDGAR direct, and Reddit/Stocktwits APIs removed from scope
-- [Phase 01-data-pipeline]: Next.js 16.1.6-canary (npm latest) downgraded to 15.3.9 stable — v16 missing type declarations; always pin Next.js major version
-- [Phase 01-data-pipeline]: Wave 0 TDD stubs use dynamic await import() inside it() blocks so vitest collects 13 tests before failing at runtime rather than crashing at parse time
-- [Phase 01-data-pipeline]: claude-3-5-haiku-latest for Anthropic web search functions — cost efficiency for structured data extraction
-- [Phase 01-data-pipeline]: max_uses: 3 per web_search tool call caps cost to ~/bin/zsh.04 per full research run (4 functions x 3 max searches)
-- [Phase 01-data-pipeline]: yahoo-finance2 v3: typeDisp is lowercase 'equity'; DefaultKeyStatistics index signature requires type casts for trailingPE/trailingEps/debtToEquity
-- [Phase 01-data-pipeline]: lightweight-charts v5 uses addSeries(LineSeries) not addLineSeries() — verified from typings before implementing
-- [Phase 01-data-pipeline]: yahoo-finance2 v3 typeDisp is lowercase 'equity' not 'Equity' — fixed in search route
-- [Phase 01-data-pipeline]: Confirm button routes to /research/ticker/pipeline — placeholder until plan 01-05 builds the route
-- [Phase 01-data-pipeline]: Promise.allSettled with settle() helper for parallel data collection — single-source failures recorded in collection_errors[], pipeline never aborts
-- [Phase 01-data-pipeline]: Source package temp file format: os.tmpdir()/ticker-research-XXXX/{TICKER}-{timestamp}.json — path returned via JSON response and displayed in ChartConfirmation success state for Phase 2 handoff
-- [Phase 01-data-pipeline]: collectAllData() companyName and exchange optional with defaults — Wave 0 stubs calling with single arg remain valid
-- [Phase 02-research-integration]: formatResearchBrief uses lines array joined with newline for multi-section plain-text output; fmtLargeNum uses Math.abs for threshold check; extractNewsUrls breaks at 15 during loop for single-pass efficiency
-- [Phase 02-research-integration]: storage_state.json used as auth file path (not auth.json) per RESEARCH.md critical discovery
-- [Phase 02-research-integration]: page.tsx converted to client component to support useEffect status fetch on mount
-- [Phase 02-research-integration]: Install step auto-triggers when pythonOk but not notebooklmOk; auth step is the only manual user action
-- [Phase 02-research-integration]: Graceful ImportError guard added to notebooklm_research.py so argv validation works even without notebooklm-py installed
-- [Phase 02-research-integration]: Assessment percentage normalization: clamp 0-100 first, then proportional scale, final sell_pct avoids rounding drift
-- [Phase 02-research-integration]: Research page converted from async server component to 'use client' component to support URL-driven analysis state machine
-- [Phase 02-research-integration]: ResearchProgress step matching uses lowercase substring match on PROGRESS: messages for loose coupling to Python script output format
-- [Phase 02-research-integration]: Human verification approved full Phase 2 end-to-end flow: ticker search → chart confirm → SourcePackage → SSE analysis stream → AnalysisResult rendered in research page
-- [Phase 03-report-output]: formatTimestamp uses Intl.DateTimeFormat with timeZone UTC for consistent cross-environment output
-- [Phase 03-report-output]: Wave 0 stubs use dynamic await import() inside it() blocks — ResearchReport.test.tsx fails at runtime not parse time until Plan 02 creates the component
-- [Phase 03-report-output]: window.onafterprint used to restore document.title instead of setTimeout — avoids race condition with print dialog still open
-- [Phase 03-report-output]: ResearchReport is a single self-contained component with local helpers — simpler than separate files at this scale
-- [Phase 03-report-output]: Terminal color palette applied uniformly across all components — zinc-950 backgrounds, amber-400 accents, no per-component variations
-- [Phase 03-report-output]: bg-zinc-950 on body in layout.tsx eliminates white flash between page navigations before component CSS loads
-- [Phase 03-report-output]: All rounded-xl and shadow-sm removed globally — terminal aesthetic requires flat sharp-edged surfaces throughout
-- [Phase 04-deployment]: prestart npm hook runs setup.sh before every npm start — validates Node 18+, Python 3.10+, ANTHROPIC_API_KEY
-- [Phase 04-deployment]: start script changed to 'next build && next start' — prevents 'Could not find production build' error on fresh clone
-- [Phase 04-deployment]: Use mcr.microsoft.com/devcontainers/python:3.12 (Ubuntu/glibc) not Alpine — Playwright requires glibc
-- [Phase 04-deployment]: playwright install --with-deps chromium required — installs OS-level libs (libnss3, libgbm) needed for headless Chromium on Linux
-- [Phase 04-deployment]: maxDuration=300 applied only to analysis and research routes — not globally — to preserve cold-start optimization on fast routes
-- [Phase 04-deployment]: export const dynamic = 'force-dynamic' added to analysis and research routes — required for Vercel to evaluate DEPLOYMENT_MODE at request time not build time
-- [Phase 04-deployment]: maxDuration reduced from 600 to 300 in analysis route — cloud path is a proxy only (Daytona container handles actual work), Vercel Hobby cap is 300s
-- [Phase 05-user-identity-report-history]: StoredReport duplicates top-level metadata for fast list reads without loading full analysis
-- [Phase 05-user-identity-report-history]: Filename format TICKER-YYYY-MM-DDTHH-MM-SSZ.json — colons sanitized to dashes, milliseconds stripped
-- [Phase 05-user-identity-report-history]: get_email.py FILTER_WORDS includes google.com to exclude Google-internal addresses on myaccount.google.com
-- [Phase 05-user-identity-report-history]: Module-level cachedEmail avoids repeated Playwright startup on consecutive setup/status checks
-- [Phase 05-user-identity-report-history]: IIFE async pattern in sync stdout callback enables await writeReport without changing Node.js event emitter callback signature
-- [Phase 05-user-identity-report-history]: writeReport failure is non-fatal — streaming result continues; error logged server-side only
-- [Phase 05-user-identity-report-history]: reportFile useEffect placed first for unconditional priority over filePath and chart-fetch effects
-- [Phase 05-user-identity-report-history]: Mutual exclusivity enforced with if (reportFile) return guards in all other useEffects on research page
-- [Phase 05-user-identity-report-history]: NavBar on research page fetches /api/setup/status independently — no shared context needed at this scale
-- [Phase 05]: waitForPageReady() uses waitForSelector(visible) + waitForSelector(hidden) pattern for INITIALIZING SYSTEM... — correctly sequences around async useEffect /api/setup/status fetch
-- [Phase 06]: Option C dual-login: NextAuth Google OAuth for app auth + separate notebooklm login per user — notebooklm-py uses cookies not OAuth tokens
-- [Phase 06]: Prisma 7 breaking change: url/directUrl moved from schema datasource block to prisma.config.ts
-- [Phase 06]: PrismaNeon@7 constructor takes PoolConfig not Pool instance
-- [Phase 06]: Dynamic import for @/lib/reports-db in history route ensures Prisma never loads in local mode — static import would crash local users with no DATABASE_URL
-- [Phase 06]: readReportFromDb throws on null (not found or user_id mismatch) — caller returns 404, preventing report enumeration attacks
-- [Phase 06]: Suspense wrapper required around useSearchParams in Next.js 15 App Router client components to avoid static prerendering error
-- [Phase 06]: NEXT_PUBLIC_DEPLOYMENT_MODE used for client-side SetupWizard guard — DEPLOYMENT_MODE is server-only, both env vars must be set in Vercel config
-- [Phase 06]: export const dynamic = 'force-dynamic' added to setup/status route so NextAuth session is evaluated at request time not build time
-- [Phase 06]: Prisma 7 migrate dev requires explicit env export — env() reads process.env directly, not .env.local auto-loading
-- [Phase 06]: Merged [filename]/[id] history routes into single [filename]/route.ts — Next.js 15 rejects two dynamic segments at same path level with different names
-- [Phase 06]: vitest exclude: ['tests/e2e/**'] required to prevent Playwright spec files from being collected as unit tests
-- [Phase 07]: SecurityType union has 7 values (equity/spac/etf/adr/preferred/crypto/unknown) — covers all Yahoo Finance quoteTypes plus name-derived subtypes
-- [Phase 07]: detectSecurityType() 3-tier: quoteType (free) → name heuristics (free) → Anthropic web search max_uses:1 for EQUITY with no name match
-- [Phase 07]: SourcePackage.security_type is required; AnalysisResult.security_type is optional for backward compat with persisted reports
-- [Phase 07]: fetchAnalystSentiment returns ETF sentinel without API call — ETFs have no Wall Street buy/sell ratings
-- [Phase 07]: Equity news and analyst searches use max_uses 5 (up from 3) for broader coverage on the most common instrument type
-- [Phase 07]: SPAC SEC filing prompt targets S-4 and DEF 14A — pre-merger SPACs do not file 10-K or 10-Q
-- [Phase 07]: PREAMBLES dict at module level after Q6 — reusable, extensible, zero runtime cost for equity type
-- [Phase 07]: preamble + q list comprehension replaces static QUESTIONS list — backward compat via empty string default for equity/unknown types
-- [Phase 07]: ETF analyst sentinel check uses 'not applicable' substring match — loosely coupled to TypeScript fetchAnalystSentiment sentinel wording
-- [Phase 07]: Badge suppressed for equity and unknown security types — equity is default instrument (no label needed), unknown means detection failed (preserves pre-phase appearance)
-- [Phase 07]: data-testid='security-type-badge' on badge span enables reliable Playwright targeting without fragile CSS selectors
-- [Phase 08]: AES-256-GCM over Fernet for TypeScript credential encryption — Node.js stdlib, no extra dependency
-- [Phase 08]: CREDENTIAL_ENCRYPTION_KEY validated at call time not module load — allows test env var setup before import
-- [Phase 08]: NOTEBOOKLM_AUTH_JSON env var used for per-user storage_state isolation — avoids modifying notebooklm_research.py argv interface
-- [Phase 08]: Container server under 115 lines — no business logic, only HTTP adapter over existing Python script
-- [Phase 08]: Replace DEPLOYMENT_MODE=cloud stub with DEPLOYMENT_MODE=web — cloud branch sent filePath cross-network; web branch reads content from disk and sends JSON to Daytona
-- [Phase 08]: All web-mode imports inside dynamic await import() — prevents Prisma/NextAuth from loading for local users without DATABASE_URL
-- [Phase 08]: react-vnc VncScreen used directly with scaleViewport; card width expands to max-w-xl when VNC active
-- [Phase 08]: OAuth passthrough attempt uses 5s AbortController timeout before falling through to VNC stream flow
-- [Phase 08]: Account page fetches /api/setup/status on mount for nbmSessionActive — no separate endpoint needed
-- [Phase 08]: ResearchProgress tracks errorMessage state internally, classifies via classifyError(), renders inline
-- [Phase 08]: ALLOWED_ORIGIN documented only in Daytona container section — not in Vercel checklist to prevent operator error
-- [Phase 09]: Multi-stage Dockerfile: builder installs Playwright/Chromium binary, runtime copies them — keeps final image lean
-- [Phase 09]: /vnc-ws WebSocket proxy routes VNC through Cloud Run's single port 8080; websockify stays on internal 6080
-- [Phase 09]: CONTAINER_SECRET replaces DAYTONA_SECRET throughout container_server.py — zero Daytona references remain
-- [Phase 09]: CONTAINER_URL / CONTAINER_SECRET / CONTAINER_VNC_URL replace DAYTONA_* vars across all Vercel route files
-- [Phase 09]: x-container-secret header replaces x-daytona-secret for container auth
-- [Phase 12-intelligence-pipeline-rebuild-replace-notebooklm-with-polygo]: Exact version pinning for ai@6.0.168 and @mendable/firecrawl-js@4.18.3 per threat model (no ^ prefix)
-- [Phase 12-intelligence-pipeline-rebuild-replace-notebooklm-with-polygo]: price_target typed as string | null to support analyst target ranges like $185-$200
-- [Phase 12]: google/gemini-3-flash model string used (verified live from ai-gateway.vercel.sh/v1/models)
-- [Phase 12]: realpathSync canonicalization for macOS tmpdir symlink path traversal validation
-- [Phase 12]: setup/status route simplified to session-only — no Python checks, backward-compat fields retained (pythonOk/notebooklmOk always true)
-- [Phase 12]: DEPLOYMENT_MODE=web branch retained in status route for userEmail extraction from NextAuth session
-- [Phase 13-deep-sentiment-intelligence]: null (not 0) returned for bull/bear pct when zero StockTwits messages have sentiment labels — null signals no data
-- [Phase 13-deep-sentiment-intelligence]: yahoo-finance2 default export used as object not constructor in options-sentiment.ts to enable clean vitest module mocking
-- [Phase 13-deep-sentiment-intelligence]: reddit_tone: null in SentimentIntelligenceSection — set qualitatively by Gemini in Plan 02, not fetched from API
-- [Phase 13-deep-sentiment-intelligence]: Direct Anthropic SDK for Haiku web_search_20250305 tool (not AI Gateway — tool not available there)
-- [Phase 13-deep-sentiment-intelligence]: Module-level _lastCommunityScrapePageCount to expose page count without changing scrapeCommunitySentiment() return signature
-- [Phase 14]: Used report.id ?? toFilename(report) pattern so local-mode reports (no UUID) still work unchanged in ReportHistory navigation
-- [Phase 14]: Installed @testing-library/react + jsdom as devDependencies to enable component render tests with jsdom environment pragma
-
-### Roadmap Evolution
-
-- Phase 6 added: Full Web Deployment — Vercel, Database, Auth, Report & Account Persistence
-- Phase 7 added: Full public deployment — Vercel frontend + Daytona container for notebooklm-py, fully live and accessible to anyone on the web
-- Phase 11 (GCR migration) promoted to Phase 9 (next after 8): Daytona/AWS IPs blocked by Google; GCR runs on Google infrastructure and can reach notebooklm.google.com — must happen before deployment works. Previous phases 9/10 shifted to 10/11.
-- Phase 12 added: Intelligence Pipeline Rebuild — Replace NotebookLM with Polygon + Finnhub + Firecrawl + Gemini
-
-### Pending Todos
-
-None yet.
-
-### Blockers/Concerns
-
-- [Phase 2 pre-condition]: NotebookLM programmatic API availability is unconfirmed as of August 2025. Phase 2 plan 02-01 is a verification spike. If API is unavailable, the reasoning layer must fall back to Anthropic Messages API — this changes the architecture but preserves the two-layer separation.
-- [Phase 1]: yahoo-finance2 is an unofficial API; verify npm activity and stability before committing to it for production use.
-
-## Session Continuity
-
-Last session: 2026-05-01T03:15:07.242Z
-Stopped at: Phase 17 UI-SPEC approved
-Resume file: .planning/phases/17-institutional-insider-intelligence/17-UI-SPEC.md
+*Updated after each plan completion via `/gsd-execute-phase` or `/gsd-plan-phase`*
