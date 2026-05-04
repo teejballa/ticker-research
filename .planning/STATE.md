@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: learning-engine-excellence
-status: Defining requirements complete; ready for /gsd-plan-phase 18
-stopped_at: v2.0 milestone scoped (10 phases, 50 requirements, 4 capability groups)
-last_updated: "2026-05-03T07:35:00Z"
+status: Phase 18 context gathered; ready for /gsd-plan-phase 18
+stopped_at: Phase 18 context gathered — 6 decision areas locked + 3 add-ons (Page-Hinkley tuning, min N=30 drift floor, Kish ESS formula)
+resume_file: .planning/phases/18-time-decayed-bayesian-updates-ess/18-CONTEXT.md
+last_updated: "2026-05-04T00:00:00Z"
 progress:
   total_phases: 10
   completed_phases: 0
