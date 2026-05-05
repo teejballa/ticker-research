@@ -27,6 +27,7 @@
 
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import YahooFinance from 'yahoo-finance2';
 import {
   computeDiffusionTrace,
   classifyCapClass,
@@ -34,6 +35,19 @@ import {
   type CapClass,
   type SnapshotInput,
 } from './diffusion-trace';
+
+const yfQuote = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+
+async function fetchLivePrice(ticker: string): Promise<number | null> {
+  try {
+    const q = await yfQuote.quote(ticker);
+    return typeof q.regularMarketPrice === 'number' && q.regularMarketPrice > 0
+      ? q.regularMarketPrice
+      : null;
+  } catch {
+    return null;
+  }
+}
 import {
   predictLogistic,
   credibleInterval95,
@@ -471,11 +485,17 @@ export async function getEngineContextForTicker(
     coldStartInsiderSnap = insiderResult;
     coldStartInstitutionalSnap = institutionalResult;
     if (communityResult) {
+      // Fix: cold-start used to write price_at_scan: 0, which made
+      // price-followup/route.ts permanently skip these snapshots → no PriceOutcome
+      // ever created → engine never learned from cold-start research. Fetch the
+      // live price (best-effort; null if Yahoo fails — still better than 0 because
+      // the followup guard skips !price_at_scan rather than treating null as 0).
+      const livePrice = await fetchLivePrice(upperTicker);
       const created = await prisma.sentimentSnapshot.create({
         data: {
           ticker: upperTicker,
           scanned_at: asOf,
-          price_at_scan: 0,
+          price_at_scan: livePrice ?? 0,
           community_data: communityResult as object,
           technical_data: techResult ? (techResult as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
           insider_data: insiderResult ? (insiderResult as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,

@@ -925,8 +925,10 @@ export function InsightsDashboard() {
               Every prediction, checked against price
             </h2>
             <p className="text-on-surface-variant text-xs mt-2 max-w-xl leading-relaxed">
-              Every report and scan is auto-verified at 3, 7, and 14 days. No manual curation —
-              this is the raw evidence base.
+              Every report and scan is auto-verified at 3, 7, and 14 days. The
+              &ldquo;Mood&rdquo; column is the measured community-sentiment direction at scan
+              time, not the engine&apos;s directional call — green/red %s show how that
+              measurement actually played out.
             </p>
           </div>
           <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
@@ -949,7 +951,7 @@ export function InsightsDashboard() {
                 <tr className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-b border-outline-variant/30">
                   <th className="text-left font-medium px-6 py-3">Ticker</th>
                   <th className="text-right font-medium px-3 py-3">Gap</th>
-                  <th className="text-right font-medium px-3 py-3">Direction</th>
+                  <th className="text-right font-medium px-3 py-3" title="Measured community sentiment direction at scan time — not the engine's directional call.">Mood</th>
                   <th className="text-right font-medium px-3 py-3">3d</th>
                   <th className="text-right font-medium px-3 py-3">7d</th>
                   <th className="text-right font-medium px-6 py-3">Date</th>
