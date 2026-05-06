@@ -106,6 +106,12 @@ function buildEngineCtx(overrides: Partial<EngineContext> = {}): EngineContext {
     insider_sample_size: 12,
     insider_status: 'ACTIVE',
     insider_data_age_days: 5,
+    // Phase 18-07 — ESS surfaces (default to 0 for fixtures that don't pin them).
+    effective_sample_size: 0,
+    technical_ess: 0,
+    institutional_ess: 0,
+    insider_ess: 0,
+    logistic_ess: 0,
     ...overrides,
   };
 }

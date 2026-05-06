@@ -30,6 +30,11 @@ interface EngineCalibrationPanelProps {
 const STATUS_BADGE: Record<EngineCalibration['status'], string> = {
   ACTIVE: 'bg-secondary/20 text-secondary border-secondary/40',
   EXPLORATORY: 'bg-tertiary/20 text-tertiary border-tertiary/40',
+  // Phase 18-07: 'EXPLORATORY-WATCH' — drift watch flag (CONTEXT D-09 / D-11).
+  // Visual: amber border on the same tertiary base — still calibrated (no
+  // auto-demote per D-09), but the watch state is signalled. Plan 18-08 may
+  // refine the visual treatment when it builds the user-facing watch badge.
+  'EXPLORATORY-WATCH': 'bg-tertiary/20 text-tertiary border-amber-500/60',
   DEPRECATED: 'bg-error/20 text-error border-error/40',
   NO_DATA: 'bg-surface-container-highest text-on-surface-variant border-outline/30',
 };
@@ -37,6 +42,9 @@ const STATUS_BADGE: Record<EngineCalibration['status'], string> = {
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'ACTIVE',
   EXPLORATORY: 'EXPLORATORY',
+  // Phase 18-07: rendered uppercase in the status pill — keeps the visual
+  // weight of the watch flag without a long phrase. Plan 18-08 may refine.
+  'EXPLORATORY-WATCH': 'EXPLORATORY (WATCH)',
   DEPRECATED: 'DEPRECATED',
   NO_DATA: 'NO DATA',
 };
