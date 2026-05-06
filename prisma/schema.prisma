@@ -10,46 +10,46 @@ datasource db {
 }
 
 model Report {
-  id                  String   @id @default(uuid())
-  user_id             String
-  ticker              String
-  company_name        String
-  analyzed_at         DateTime @db.Timestamptz
-  market_sentiment    String
-  confidence_level    String
-  analysis            Json
-  price_at_report     Float?
-  community_data      Json?
-  technical_at_report      Json?
-  insider_at_report        Json?
-  institutional_at_report  Json?
+  id                      String   @id @default(uuid())
+  user_id                 String
+  ticker                  String
+  company_name            String
+  analyzed_at             DateTime @db.Timestamptz
+  market_sentiment        String
+  confidence_level        String
+  analysis                Json
+  price_at_report         Float?
+  community_data          Json?
+  technical_at_report     Json?
+  insider_at_report       Json?
+  institutional_at_report Json?
 
-  outcomes            PriceOutcome[]
+  outcomes PriceOutcome[]
 
   @@index([user_id, analyzed_at(sort: Desc)])
   @@map("reports")
 }
 
 model UserCredential {
-  id               String   @id @default(uuid())
-  user_id          String   @unique
-  encrypted_state  String   @db.Text
-  updated_at       DateTime @updatedAt @db.Timestamptz
+  id              String   @id @default(uuid())
+  user_id         String   @unique
+  encrypted_state String   @db.Text
+  updated_at      DateTime @updatedAt @db.Timestamptz
 
   @@map("user_credentials")
 }
 
 model SentimentSnapshot {
-  id             String   @id @default(uuid())
-  ticker         String
-  scanned_at     DateTime @db.Timestamptz
-  price_at_scan  Float
+  id                 String   @id @default(uuid())
+  ticker             String
+  scanned_at         DateTime @db.Timestamptz
+  price_at_scan      Float
   community_data     Json
   technical_data     Json?
   insider_data       Json?
   institutional_data Json?
 
-  outcomes       PriceOutcome[]
+  outcomes PriceOutcome[]
 
   @@index([ticker, scanned_at(sort: Desc)])
   @@map("sentiment_snapshots")
@@ -64,8 +64,8 @@ model PriceOutcome {
   pct_change  Float
   recorded_at DateTime @db.Timestamptz
 
-  report      Report?            @relation(fields: [report_id], references: [id])
-  snapshot    SentimentSnapshot? @relation(fields: [snapshot_id], references: [id])
+  report   Report?            @relation(fields: [report_id], references: [id])
+  snapshot SentimentSnapshot? @relation(fields: [snapshot_id], references: [id])
 
   @@map("price_outcomes")
 }
@@ -92,25 +92,25 @@ model DiffusionTrace {
 }
 
 model LearnedPattern {
-  id                String   @id @default(uuid())
-  signal_class      String   // 'diffusion' | 'technical' | 'insider' | 'institutional'
-  pattern_key       String   // FlowPattern values OR TechPattern values
-  cap_class         String
-  horizon_days      Int      // 3 | 7 | 14 | 30 | 60 | 90
-  alpha             Float    @default(1)
-  beta              Float    @default(1)
-  sample_size       Int      @default(0)
+  id                    String   @id @default(uuid())
+  signal_class          String // 'diffusion' | 'technical' | 'insider' | 'institutional'
+  pattern_key           String // FlowPattern values OR TechPattern values
+  cap_class             String
+  horizon_days          Int // 3 | 7 | 14 | 30 | 60 | 90
+  alpha                 Float    @default(1)
+  beta                  Float    @default(1)
+  sample_size           Int      @default(0)
   effective_sample_size Float    @default(0)
   n_trials_attempted    Int      @default(0)
-  hits              Int      @default(0)
-  brier_in_sample   Float?
-  brier_out_sample  Float?
-  brier_null        Float?
-  alpha_30d         Float    @default(1)
-  beta_30d          Float    @default(1)
-  drift_z           Float    @default(0)
-  status            String   @default("EXPLORATORY")
-  last_updated      DateTime @updatedAt @db.Timestamptz
+  hits                  Int      @default(0)
+  brier_in_sample       Float?
+  brier_out_sample      Float?
+  brier_null            Float?
+  alpha_30d             Float    @default(1)
+  beta_30d              Float    @default(1)
+  drift_z               Float    @default(0)
+  status                String   @default("EXPLORATORY")
+  last_updated          DateTime @updatedAt @db.Timestamptz
 
   @@unique([signal_class, pattern_key, cap_class, horizon_days], map: "learned_patterns_lookup_key")
   @@map("learned_patterns")
@@ -135,14 +135,14 @@ model LearningEvent {
 }
 
 model LogisticEpoch {
-  id            String   @id @default(uuid())
-  epoch         Int
-  recorded_at   DateTime @default(now()) @db.Timestamptz
-  coefficients  Json
-  intercept     Float
-  brier_in      Float
-  brier_out     Float
-  sample_size   Int
+  id           String   @id @default(uuid())
+  epoch        Int
+  recorded_at  DateTime @default(now()) @db.Timestamptz
+  coefficients Json
+  intercept    Float
+  brier_in     Float
+  brier_out    Float
+  sample_size  Int
 
   @@index([epoch(sort: Desc)])
   @@map("logistic_epochs")
