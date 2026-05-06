@@ -45,3 +45,45 @@ and should be tracked for follow-up.
 - **Action:** Not fixed by this plan. Track for a dedicated `ai-gateway`
   migration plan once Vercel exposes `web_search_20250305` through the
   Gateway, or migrate Pool B to a Gemini-native search tool.
+
+## Pre-existing integration-test failures discovered during 18-10 full-suite audit
+
+Three integration tests fail on the worktree base (commit `393e1e3`) before
+any Plan 18-10 changes. Reproduced via `git stash && npm run test:integration`
+on the bare base, then restored via `git stash pop`. Plan 18-10 makes zero
+edits to any of these files (`git log 393e1e3..HEAD` on each path returns empty).
+
+### `tests/integration/learn-dual-class.test.ts` — "one 7d outcome ... no logistic update"
+- Already logged above (discovered first during Plan 18-04). Status unchanged.
+- Test ordering / isolation issue around `LogisticEpoch` snapshot. Logistic-pop
+  invariant is correct; the assertion is comparing against stale state.
+
+### `tests/integration/backfill-active-rate.test.ts` — "AC3: ≥25% ACTIVE in most-traded cap_class × horizon=7"
+- The check-active-cell-coverage.ts script computes a coverage metric that
+  depends on the live `LearnedPattern` table state (Phase 16 backfill rate).
+- Likely root cause: under Plan 18-04's stricter ESS<30 → EXPLORATORY gate,
+  many cells previously ACTIVE on raw N≥10 demoted; the AC3 threshold was
+  authored for the pre-Phase-18 promotion rule.
+- Out-of-scope here: this is a Phase 16 acceptance criterion meeting a
+  Phase 18 promotion-rule change. Belongs in a Phase 18 follow-up that
+  retunes the AC3 threshold OR a Plan 21 cross-phase reconciliation.
+
+### `tests/integration/schema-phase-16.test.ts` — "existing learned_patterns rows backfilled to diffusion / 7d / non-null pattern_key"
+- The test seeds rows with `signal_class='insider'` then expects backfill
+  to coerce them to `'diffusion'`. Phase 16 backfill no longer rewrites
+  `signal_class` for rows that already carry a non-default class — the
+  test was authored before Phase 16-03 added the dual-class persistence.
+- Out-of-scope here: legitimate Phase 16 test cleanup that should land
+  alongside the Phase 16 retrospective.
+
+**Verification that these are NOT regressions from Plan 18-10:**
+```
+$ git stash && npm run test:integration 2>&1 | grep -E "FAIL"
+ FAIL  tests/integration/backfill-active-rate.test.ts ...
+ FAIL  tests/integration/learn-dual-class.test.ts ...
+ FAIL  tests/integration/schema-phase-16.test.ts ...
+$ git stash pop
+```
+Same 3 failures, same line numbers, on the bare worktree base — Plan 18-10
+adds only a unit test (`learning.hyperparameters.test.ts`) and a single
+exported `Set` to `learning.ts`; it cannot have introduced these.
