@@ -27,9 +27,9 @@ Phase order reconciled across all 4 research dimensions. Build dependencies: P18
     - [x] 18-04-PLAN.md — Wave 2: rewire /api/cron/learn — apply decay+ESS, two-of-two confirmedDrift, EXPLORATORY-WATCH writes
     - [x] 18-05-PLAN.md — Wave 2: /api/cron/backfill-ess — env-flag + auth + idempotent single-tx replay
     - [x] 18-06-PLAN.md — Wave 2: scripts/tune-lambda.ts + scripts/tune-page-hinkley.ts (operator-driven, paste into HYPERPARAMETERS)
-    - [ ] 18-07-PLAN.md — Wave 3: engine-context.ts surfaces ESS + EXPLORATORY-WATCH; types extended back-compat
-    - [ ] 18-08-PLAN.md — Wave 3: EngineCalibrationPanel ESS column + WatchBadge "regime stability: watching"
-    - [ ] 18-09-PLAN.md — Wave 3: /insights ESS-based CI widths + drift_clear recovery counter (D-09 step 4 derived)
+    - [x] 18-07-PLAN.md — Wave 3: engine-context.ts surfaces ESS + EXPLORATORY-WATCH; types extended back-compat
+    - [x] 18-08-PLAN.md — Wave 3: EngineCalibrationPanel ESS column + WatchBadge "regime stability: watching"
+    - [x] 18-09-PLAN.md — Wave 3: /insights ESS-based CI widths + drift_clear recovery counter (D-09 step 4 derived)
     - [ ] 18-10-PLAN.md — Wave 4: full-suite verification, per-task validation map, nyquist_compliant: true sign-off
 - [ ] **Phase 20: Market-Regime Feature** — extends LearnedPattern composite key with regime dimension (4 buckets: bull/bear/chop × low-vol/high-vol via VIX bucketing + SPY trend); 2-step migration to manage risk. Requirements: CORE-ML-06..10.
 - [ ] **Phase 19: Hierarchical Priors / Partial Pooling** — empirical Bayes pooled posteriors per `(signal_class, pattern_key)` parent group; cell-space pruning to defeat lake-of-cells. Requirements: CORE-ML-11..14.
