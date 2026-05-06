@@ -767,10 +767,14 @@ async function processOneOutcome(
       );
     }
 
-    // 3. Logistic update — 30d-only, requires both trace AND techSnap so the
-    //    12-feature vector is fully populated. Other horizons feed only the
-    //    Beta posteriors above.
-    if (horizon === 30 && trace && techSnap) {
+    // 3. Logistic update — fires on any horizon ≥ 7d when both trace and techSnap
+    //    are present (full 12-feature vector). Was previously 30d-only, which
+    //    meant the logistic stayed at all-zero weights for ~30 days after first
+    //    snapshots — too long a cold-start. 7d outcomes are still informative
+    //    for forward probability of >1% excess vs SPY; we accept the modest
+    //    horizon-mixing cost in exchange for an order-of-magnitude faster
+    //    bootstrap of the model weights.
+    if (horizon >= 7 && trace && techSnap) {
       const x12 = buildFeatureVector12(trace, techSnap, techPattern);
       logisticStateRef.state = updateLogistic(logisticStateRef.state, x12, hit ? 1 : 0);
       result.used_logistic = true;

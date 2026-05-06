@@ -263,18 +263,82 @@ export async function GET() {
       };
     });
 
+    // ─── Pattern-library-derived thesis ───────────────────────────────────
+    // Replaces the previous diffusion-gap-only heuristic (which required
+    // diffusion_gap > 2 — a threshold the new StockTwits-mainstream signal
+    // rarely clears). Walks every learned cell across all 4 signal classes,
+    // ranks by sample-size-weighted posterior, and writes a thesis from the
+    // top-performing cell. This makes the thesis evolve as the engine learns.
+    const allCellsForThesis = await prisma.learnedPattern.findMany({
+      where: { sample_size: { gte: 3 } },
+    });
+    let thesisStatement: string;
+    let thesisTopCell: { signal: string; pattern: string; cap: string; horizon: number; mean: number; n: number; hits: number } | null = null;
+    if (allCellsForThesis.length === 0) {
+      thesisStatement = `Engine is observing — ${dataPoints.length} data points collected, ${resolved.length} resolved. Bayesian priors will form once any (signal × cap × horizon) cell reaches 3 outcomes.`;
+    } else {
+      const ranked = allCellsForThesis
+        .map(c => ({
+          c,
+          score: posteriorMean({ alpha: c.alpha, beta: c.beta }) * Math.log10(c.sample_size + 1),
+        }))
+        .sort((a, b) => b.score - a.score);
+      const top = ranked[0].c;
+      const mean = posteriorMean({ alpha: top.alpha, beta: top.beta });
+      thesisTopCell = {
+        signal: top.signal_class,
+        pattern: top.pattern_key,
+        cap: top.cap_class,
+        horizon: top.horizon_days,
+        mean,
+        n: top.sample_size,
+        hits: top.hits,
+      };
+      const direction = mean > 0.55 ? 'predictive of >1% excess vs SPY' : mean < 0.45 ? 'a contrarian signal (underperforms SPY)' : 'neutral';
+      thesisStatement = `The engine's strongest learned signal is ${top.signal_class}/${top.pattern_key} on ${top.cap_class} caps at ${top.horizon_days}d horizon: ${(mean * 100).toFixed(0)}% hit-rate over ${top.sample_size} outcomes — ${direction}. ${ranked.length} pattern cells active across all signal classes.`;
+    }
+
+    // ─── Engine changes feed: what the engine learned this week ───────────
+    // Surfaces the actual posterior shifts (week_delta) per cell so users can
+    // see how reports change as the engine learns. Top 5 cells with the
+    // largest |week_delta| AND meaningful sample size.
+    const allActiveCells = await prisma.learnedPattern.findMany({
+      where: { sample_size: { gte: 3 } },
+      orderBy: { last_updated: 'desc' },
+    });
+    const engineChanges = allActiveCells
+      .map(c => {
+        const all = posteriorMean({ alpha: c.alpha, beta: c.beta });
+        const recent = posteriorMean({ alpha: c.alpha_30d, beta: c.beta_30d });
+        return {
+          signal_class: c.signal_class,
+          pattern_key: c.pattern_key,
+          cap_class: c.cap_class,
+          horizon_days: c.horizon_days,
+          all_time_mean: all,
+          recent_30d_mean: recent,
+          delta: recent - all,
+          sample_size: c.sample_size,
+          status: c.status,
+          last_updated: c.last_updated.toISOString(),
+        };
+      })
+      .filter(c => Math.abs(c.delta) > 0.02)
+      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+      .slice(0, 8);
+
     return NextResponse.json({
       // Existing fields
       total_data_points: dataPoints.length,
       watchlist_size: getCurrentWatchlist().length,
       resolved_outcomes: resolved.length,
       thesis: {
-        statement: thesisPct !== null
-          ? `In ${highGap.length} resolved data points where niche activity exceeded mainstream (diffusion gap >2x), ${thesisPct}% showed >3% price gain within 7 days.`
-          : 'Accumulating data — thesis will appear once outcomes resolve (3–7 days after first scans).',
+        statement: thesisStatement,
         high_gap_resolved: highGap.length,
         pct: thesisPct,
+        top_cell: thesisTopCell,
       },
+      engine_changes: engineChanges,
       diffusion_signals: diffusionSignals,
       outcome_log: resolved.slice(0, 50),
       signal_correlation: {
