@@ -510,33 +510,39 @@ export interface ClassHyperparameters {
   cv_brier_oos: number | null;
 }
 
+// Plan 18-06 low-N escape hatch: tune-lambda + tune-page-hinkley scripts run against the
+// live PriceOutcome table produced NaN Brier / F1=0 across every grid cell. Root cause: 87
+// outcomes clustered in ~30 days, and the D-16 leakage-defended Purged K-Fold (purge=embargo=90)
+// excludes essentially every training fold. Plan 18-06 Task 2 step 5 explicitly authorizes
+// keeping bootstrap placeholders when no row clears `cv_brier_oos < 0.25` — Plan 10 verification
+// allows that path. Re-tune in Plan 21 once Plan 25 backfill grows N past the embargo window.
 export const HYPERPARAMETERS: Record<SignalClass, ClassHyperparameters> = {
   diffusion: {
     lambda_days: 60,
     ph_delta: 0.005,
     ph_lambda: 50,
-    tuned_at: 'bootstrap',
+    tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)
     cv_brier_oos: null,
   },
   technical: {
     lambda_days: 60,
     ph_delta: 0.005,
     ph_lambda: 50,
-    tuned_at: 'bootstrap',
+    tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)
     cv_brier_oos: null,
   },
   insider: {
     lambda_days: 60,
     ph_delta: 0.005,
     ph_lambda: 50,
-    tuned_at: 'bootstrap',
+    tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)
     cv_brier_oos: null,
   },
   institutional: {
     lambda_days: 60,
     ph_delta: 0.005,
     ph_lambda: 50,
-    tuned_at: 'bootstrap',
+    tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)
     cv_brier_oos: null,
   },
 };
