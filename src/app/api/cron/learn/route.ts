@@ -546,19 +546,58 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
     else if (hit === false) beta_30d++;
   }
 
-  const drift_z = driftZ({
-    rolling: { alpha: alpha_30d, beta: beta_30d },
-    allTime: { alpha: cell.alpha, beta: cell.beta },
-  });
+  // ─── Phase 18: Per-observation deltas for Page-Hinkley ────────────────────
+  // For each event in chronological order, compute residual =
+  // (hit ? 1 : 0) − running_posterior_mean_before_i. Page-Hinkley accumulates
+  // these residuals to detect sustained shifts (CONTEXT D-06).
+  const perObsDeltas: number[] = [];
+  let runningAlpha = 1;
+  let runningBeta = 1;
+  for (const obs of weightedObs) {
+    const runningMean = runningAlpha / (runningAlpha + runningBeta);
+    const obsValue = obs.hit ? 1 : 0;
+    perObsDeltas.push(obsValue - runningMean);
+    if (obs.hit) runningAlpha += 1;
+    else runningBeta += 1;
+  }
 
-  const status = patternStatus({
+  // ─── Phase 18: Two-of-two drift detection (CONTEXT D-06, D-08, D-09) ─────
+  // confirmedDrift fires iff (raw N≥30 AND |drift_z|>2 AND ph_stat>0). The
+  // weighted posterior drives the all-time leg of drift_z so concept-drift
+  // defenses operate against decay-weighted reality, not stale raw counts.
+  const phParams = HYPERPARAMETERS[key.signal_class] ?? HYPERPARAMETERS.diffusion;
+  const drift = confirmedDrift({
+    rolling: { alpha: alpha_30d, beta: beta_30d },
+    allTime: { alpha: weightedPosterior.alpha, beta: weightedPosterior.beta },
+    perObsDeltas,
+    delta: phParams.ph_delta,
+    lambdaPH: phParams.ph_lambda,
+    rawN: cell.sample_size,
+  });
+  const drift_z = drift.drift_z;
+
+  let status: LearnedStatus = patternStatus({
     sample_size: cell.sample_size,
     effective_sample_size: ess,                          // D-04 ESS<30 → EXPLORATORY supersedes raw N gate
     brier_in,
     brier_out,
     brier_null: nullResult.mean_null_brier,
     drift_z,
-  });
+  }) as LearnedStatus;
+
+  // D-09: confirmed drift → EXPLORATORY-WATCH (no auto-demote, no silencing).
+  // STATUS_VALUES validates the literal at write time (T-18-04 mitigation).
+  if (drift.fired) {
+    if (!STATUS_VALUES.includes('EXPLORATORY-WATCH' as LearnedStatus)) {
+      throw new Error('STATUS_VALUES missing EXPLORATORY-WATCH — Plan 18-01 not applied');
+    }
+    status = 'EXPLORATORY-WATCH';
+  } else if (cell.status === 'EXPLORATORY-WATCH') {
+    // Recovery counter — D-09 step 4: 14 consecutive clear days needed to
+    // flip back to ACTIVE. Plan 09 derives the count from drift_clear rows.
+    // Hold the watch state until that counter is satisfied.
+    status = 'EXPLORATORY-WATCH';
+  }
 
   const prevStatus = cell.status;
   await prisma.learnedPattern.update({
@@ -586,8 +625,11 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
     },
   });
 
-  // Drift alert
-  if (Math.abs(drift_z) > 2 && prevStatus !== status) {
+  // ─── Phase 18: drift_alert / drift_clear emission (decisions D09, T18.05)
+  // drift_alert fires only on a cell-level transition INTO drift (prev status
+  // wasn't already EXPLORATORY-WATCH from a previous fire) so the alert
+  // remains idempotent across cron retries on a stationary regime — D-09 step 3.
+  if (drift.fired && prevStatus !== 'EXPLORATORY-WATCH') {
     await prisma.learningEvent.create({
       data: {
         event_type: 'drift_alert',
@@ -595,8 +637,37 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
         pattern_key: key.pattern_key,
         cap_class: key.cap_class,
         horizon_days: key.horizon_days,
-        delta: { drift_z, prev_status: prevStatus, new_status: status },
-        message: `${key.signal_class}/${key.pattern_key} × ${key.cap_class} @${key.horizon_days}d: drift z=${drift_z.toFixed(2)}, status ${prevStatus}→${status}`,
+        // Numeric-only payload — T-18-05 mitigation. Downstream readers
+        // Zod-validate via z.object({drift_z, ph_stat, ph_threshold, raw_n, ess}).
+        delta: {
+          drift_z: drift.drift_z,
+          ph_stat: drift.ph_stat,
+          ph_threshold: drift.ph_threshold,
+          raw_n: cell.sample_size,
+          ess,
+        },
+        // D-17 operational action surfaced in message string for dashboard.
+        message: `${key.signal_class}/${key.pattern_key} × ${key.cap_class} @${key.horizon_days}d: confirmed drift (z=${drift.drift_z.toFixed(2)}, PH=${drift.ph_stat.toFixed(2)}, raw_n=${cell.sample_size}, ess=${ess.toFixed(1)}). ACTION: investigate underlying signal regime; do NOT auto-demote (D-09).`,
+      },
+    });
+  } else if (!drift.fired && cell.status === 'EXPLORATORY-WATCH') {
+    // Drift-clear marker — counted by Plan 09 recovery state machine.
+    // Emit one row per cron tick that the cell shows clear signals so the
+    // 14-consecutive-day recovery counter has rows to count.
+    await prisma.learningEvent.create({
+      data: {
+        event_type: 'drift_clear',
+        signal_class: key.signal_class,
+        pattern_key: key.pattern_key,
+        cap_class: key.cap_class,
+        horizon_days: key.horizon_days,
+        delta: {
+          drift_z: drift.drift_z,
+          ph_stat: drift.ph_stat,
+          raw_n: cell.sample_size,
+          ess,
+        },
+        message: `${key.signal_class}/${key.pattern_key}: drift clear (1 of 14 days needed for ACTIVE recovery)`,
       },
     });
   }
