@@ -6,7 +6,32 @@ interface InsightsData {
   total_data_points: number;
   watchlist_size?: number;
   resolved_outcomes: number;
-  thesis: { statement: string; high_gap_resolved: number; pct: number | null };
+  thesis: {
+    statement: string;
+    high_gap_resolved: number;
+    pct: number | null;
+    top_cell: {
+      signal: string;
+      pattern: string;
+      cap: string;
+      horizon: number;
+      mean: number;
+      n: number;
+      hits: number;
+    } | null;
+  };
+  engine_changes?: Array<{
+    signal_class: string;
+    pattern_key: string;
+    cap_class: string;
+    horizon_days: number;
+    all_time_mean: number;
+    recent_30d_mean: number;
+    delta: number;
+    sample_size: number;
+    status: string;
+    last_updated: string;
+  }>;
   diffusion_signals: Array<{
     ticker: string;
     diffusion_gap: number;
@@ -589,25 +614,93 @@ export function InsightsDashboard() {
             {data.thesis.statement}
           </p>
           <div className="mt-6 flex items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-            <span>Hypothesis Test</span>
+            <span>Strongest Cell</span>
             <span className="h-px bg-outline-variant/40 flex-1 hidden sm:block" />
-            <span>Price gain &gt; 3% in 7d when diffusion gap &gt; 2x</span>
+            <span>{data.thesis.top_cell ? `${data.thesis.top_cell.signal} / ${data.thesis.top_cell.pattern} × ${data.thesis.top_cell.cap} @ ${data.thesis.top_cell.horizon}d` : 'No cells observed yet'}</span>
           </div>
         </div>
 
         <div className="border-l-0 md:border-l md:pl-8 border-outline-variant/30 self-stretch flex flex-col justify-center min-w-[180px]">
           <div className="text-[10px] tracking-[0.4em] text-outline font-mono uppercase mb-2">
-            Confidence
+            Hit Rate
           </div>
           <div className="font-mono text-5xl font-black text-primary leading-none tabular-nums">
-            {data.thesis.pct !== null ? `${data.thesis.pct}` : '—'}
-            {data.thesis.pct !== null && <span className="text-2xl text-outline ml-0.5">%</span>}
+            {data.thesis.top_cell ? `${(data.thesis.top_cell.mean * 100).toFixed(0)}` : '—'}
+            {data.thesis.top_cell && <span className="text-2xl text-outline ml-0.5">%</span>}
           </div>
           <div className="text-xs text-on-surface-variant mt-2 font-mono">
-            n = {data.thesis.high_gap_resolved}
+            {data.thesis.top_cell ? `${data.thesis.top_cell.hits} / ${data.thesis.top_cell.n} outcomes` : 'awaiting data'}
           </div>
         </div>
       </section>
+
+      {/* ─────────────────────── Engine Changes This Week ─────────────────────── */}
+      {data.engine_changes && data.engine_changes.length > 0 && (
+        <section className="mb-12 border border-outline-variant/30" aria-label="Engine changes">
+          <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
+            <div>
+              <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
+                Engine Activity · Last 30 Days
+              </div>
+              <h2 className="text-on-surface text-lg font-bold tracking-tight">
+                How reports changed
+              </h2>
+              <p className="text-on-surface-variant text-xs mt-2 max-w-xl leading-relaxed">
+                Each row is a learned signal cell whose recent 30-day posterior
+                has shifted from its all-time baseline. Positive deltas mean the
+                engine now believes that pattern is more predictive than it used
+                to; negative means less. These deltas flow directly into the
+                Engine Calibration block of every new research report.
+              </p>
+            </div>
+            <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+              {data.engine_changes.length} cells
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-b border-outline-variant/30">
+                  <th className="text-left font-medium px-6 py-3">Signal</th>
+                  <th className="text-left font-medium px-3 py-3">Pattern</th>
+                  <th className="text-left font-medium px-3 py-3">Cap</th>
+                  <th className="text-right font-medium px-3 py-3">Horizon</th>
+                  <th className="text-right font-medium px-3 py-3">All-time</th>
+                  <th className="text-right font-medium px-3 py-3">30d</th>
+                  <th className="text-right font-medium px-3 py-3">Δ</th>
+                  <th className="text-right font-medium px-3 py-3">n</th>
+                  <th className="text-right font-medium px-6 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.engine_changes.map((c, i) => {
+                  const dpct = c.delta * 100;
+                  return (
+                    <tr key={i} className="border-b border-outline-variant/10 hover:bg-surface-container-low/40 transition-colors">
+                      <td className="px-6 py-3 font-mono text-[11px] uppercase tracking-widest text-primary/80">
+                        {c.signal_class}
+                      </td>
+                      <td className="px-3 py-3 font-mono text-on-surface">{c.pattern_key}</td>
+                      <td className="px-3 py-3 font-mono text-[11px] text-on-surface-variant uppercase tracking-wider">{c.cap_class}</td>
+                      <td className="px-3 py-3 text-right font-mono tabular-nums text-on-surface-variant">{c.horizon_days}d</td>
+                      <td className="px-3 py-3 text-right font-mono tabular-nums text-on-surface-variant">{(c.all_time_mean * 100).toFixed(0)}%</td>
+                      <td className="px-3 py-3 text-right font-mono tabular-nums font-bold text-on-surface">{(c.recent_30d_mean * 100).toFixed(0)}%</td>
+                      <td className={`px-3 py-3 text-right font-mono tabular-nums font-bold ${dpct > 0 ? 'text-secondary' : 'text-error'}`}>
+                        {dpct > 0 ? '+' : ''}{dpct.toFixed(1)}pp
+                      </td>
+                      <td className="px-3 py-3 text-right font-mono tabular-nums text-outline">{c.sample_size}</td>
+                      <td className={`px-6 py-3 text-right font-mono text-[10px] tracking-widest uppercase ${c.status === 'ACTIVE' ? 'text-secondary' : c.status === 'DEPRECATED' ? 'text-error' : 'text-on-surface-variant'}`}>
+                        {c.status}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* ─────────────────────── Three Tiers explainer ─────────────────────── */}
       <section className="mb-12" aria-label="Three community tiers">
