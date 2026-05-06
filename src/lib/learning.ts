@@ -546,3 +546,22 @@ export const HYPERPARAMETERS: Record<SignalClass, ClassHyperparameters> = {
     cv_brier_oos: null,
   },
 };
+
+// Phase 18 / Plan 06 Task 2 step 5 escape hatch: signal classes whose tuning was
+// deferred because N is too low to score meaningfully under the D-16 leakage-defended
+// Purged K-Fold protocol (purge=embargo=90d). Plan 21 will re-tune post-Plan-25 backfill.
+//
+// Plan 18-10 sanity test (`learning.hyperparameters.test.ts`) walks this set: every class
+// whose `cv_brier_oos === null` OR `cv_brier_oos >= 0.25` MUST appear here so the
+// "did not pass the Pitfall-3 Brier gate at merge time" audit trail is greppable.
+//
+// All four classes are currently deferred — Plan 18-06's tuning runs against the live
+// PriceOutcome table produced NaN Brier across every grid cell (87 outcomes clustered in
+// ~30 days, every fold's [tMin-90d, tMax+90d] window swallows essentially every other
+// observation). Per Plan 18-06 step 5 this is the authorized skip path.
+export const HYPERPARAMETERS_DEFERRED_RETUNE: ReadonlySet<SignalClass> = new Set<SignalClass>([
+  'diffusion',
+  'technical',
+  'insider',
+  'institutional',
+]);
