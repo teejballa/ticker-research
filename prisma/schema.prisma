@@ -100,6 +100,8 @@ model LearnedPattern {
   alpha             Float    @default(1)
   beta              Float    @default(1)
   sample_size       Int      @default(0)
+  effective_sample_size Float    @default(0)
+  n_trials_attempted    Int      @default(0)
   hits              Int      @default(0)
   brier_in_sample   Float?
   brier_out_sample  Float?
