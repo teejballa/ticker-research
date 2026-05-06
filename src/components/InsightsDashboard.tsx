@@ -221,6 +221,57 @@ function directionLabel(d: number): { label: string; tone: 'bull' | 'bear' | 'ne
   return { label: 'NEUTRAL', tone: 'neutral' };
 }
 
+// ── Plain-language translations ──────────────────────────────────────────
+// The engine speaks in (signal × pattern × cap × horizon) cells. Most
+// readers don't. These helpers translate one cell into a sentence.
+const PATTERN_PHRASE: Record<string, string> = {
+  niche_leads: 'a niche community catches a story before the mainstream',
+  simultaneous: 'every community picks up a story at once',
+  mainstream_first: 'the mainstream catches a story before niche communities',
+  flat: 'no community shows clear discussion lift',
+  breakout_uptrend: 'a stock breaks out during an uptrend',
+  overbought_uptrend: 'a stock looks overbought during an uptrend',
+  pullback_in_uptrend: 'a stock pulls back during an uptrend',
+  consolidation: 'a stock consolidates in a tight range',
+  breakdown: 'a stock breaks down out of a range',
+  oversold_downtrend: 'a stock looks oversold during a downtrend',
+  death_cross: 'a stock prints a death cross',
+  golden_cross: 'a stock prints a golden cross',
+};
+const CAP_PHRASE: Record<string, string> = {
+  large_cap: 'large-cap stocks',
+  mid_cap: 'mid-cap stocks',
+  small_cap: 'small-cap stocks',
+  unknown: 'stocks',
+};
+function humanizePattern(p: string): string {
+  return PATTERN_PHRASE[p] ?? p.replace(/_/g, ' ');
+}
+function humanizeCap(c: string): string {
+  return CAP_PHRASE[c] ?? c.replace(/_/g, ' ');
+}
+function humanizeHorizon(d: number): string {
+  if (d <= 3) return 'three days';
+  if (d <= 7) return 'one week';
+  if (d <= 14) return 'two weeks';
+  if (d <= 30) return 'one month';
+  if (d <= 60) return 'two months';
+  return 'three months';
+}
+type TopCell = NonNullable<InsightsData['thesis']['top_cell']>;
+type EngineChange = NonNullable<InsightsData['engine_changes']>[number];
+function buildPlainThesis(top: TopCell): string {
+  const pct = Math.round(top.mean * 100);
+  const verb = pct >= 60 ? 'beats the S&P' : pct >= 50 ? 'edges out the S&P' : 'lags the S&P';
+  return `When ${humanizePattern(top.pattern)}, the engine has watched ${humanizeCap(top.cap)} play out ${top.n} times — and the move ${verb} about ${pct}% of the time over the next ${humanizeHorizon(top.horizon)}.`;
+}
+function buildPlainChange(c: EngineChange): string {
+  const isUp = c.delta > 0;
+  const adverb = Math.abs(c.delta) >= 0.1 ? 'sharply' : 'gradually';
+  const verb = isUp ? 'gained' : 'lost';
+  return `Cipher ${adverb} ${verb} conviction that ${humanizePattern(c.pattern_key)} pays off in ${humanizeCap(c.cap_class)} over ${humanizeHorizon(c.horizon_days)}.`;
+}
+
 export function InsightsDashboard() {
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -605,99 +656,112 @@ export function InsightsDashboard() {
       </section>
 
       {/* ─────────────────────── Live Thesis ─────────────────────── */}
-      <section className="mb-12 grid md:grid-cols-[1fr_auto] gap-8 items-start border border-outline-variant/30 bg-gradient-to-br from-primary-container/[0.06] to-transparent p-6 md:p-10">
-        <div>
-          <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-3">
-            Live Research Thesis
-          </div>
-          <p className="text-on-surface text-xl md:text-2xl leading-snug font-light tracking-tight">
-            {data.thesis.statement}
-          </p>
-          <div className="mt-6 flex items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-            <span>Strongest Cell</span>
-            <span className="h-px bg-outline-variant/40 flex-1 hidden sm:block" />
-            <span>{data.thesis.top_cell ? `${data.thesis.top_cell.signal} / ${data.thesis.top_cell.pattern} × ${data.thesis.top_cell.cap} @ ${data.thesis.top_cell.horizon}d` : 'No cells observed yet'}</span>
-          </div>
+      <section className="mb-12 border border-outline-variant/30 bg-gradient-to-br from-primary-container/[0.08] to-transparent p-8 md:p-12">
+        <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-5">
+          What Cipher believes right now
         </div>
 
-        <div className="border-l-0 md:border-l md:pl-8 border-outline-variant/30 self-stretch flex flex-col justify-center min-w-[180px]">
-          <div className="text-[10px] tracking-[0.4em] text-outline font-mono uppercase mb-2">
-            Hit Rate
+        {data.thesis.top_cell ? (
+          <div className="grid md:grid-cols-[1fr_auto] gap-10 items-end">
+            <div>
+              <p className="text-on-surface text-2xl md:text-[1.7rem] leading-tight font-light tracking-tight">
+                {buildPlainThesis(data.thesis.top_cell)}
+              </p>
+              <p className="text-on-surface-variant text-sm mt-5 leading-relaxed max-w-2xl">
+                Built from <span className="text-on-surface font-medium tabular-nums">{data.resolved_outcomes}</span> resolved trades and refreshed every time a new outcome lands. No analyst picks the patterns — Cipher learns them by watching.
+              </p>
+              <div className="mt-6 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+                Strongest cell · {data.thesis.top_cell.signal} / {data.thesis.top_cell.pattern} × {data.thesis.top_cell.cap} @ {data.thesis.top_cell.horizon}d
+              </div>
+            </div>
+
+            <div className="border-l-0 md:border-l md:pl-10 border-outline-variant/30 self-stretch flex flex-col justify-end min-w-[180px]">
+              <div className="text-[10px] tracking-[0.4em] text-outline font-mono uppercase mb-2">
+                Hit rate
+              </div>
+              <div className="font-mono text-6xl md:text-7xl font-black text-primary leading-none tabular-nums">
+                {Math.round(data.thesis.top_cell.mean * 100)}
+                <span className="text-3xl text-outline ml-0.5">%</span>
+              </div>
+              <div className="text-xs text-on-surface-variant mt-3 font-mono">
+                {data.thesis.top_cell.hits} of {data.thesis.top_cell.n} trades
+              </div>
+            </div>
           </div>
-          <div className="font-mono text-5xl font-black text-primary leading-none tabular-nums">
-            {data.thesis.top_cell ? `${(data.thesis.top_cell.mean * 100).toFixed(0)}` : '—'}
-            {data.thesis.top_cell && <span className="text-2xl text-outline ml-0.5">%</span>}
-          </div>
-          <div className="text-xs text-on-surface-variant mt-2 font-mono">
-            {data.thesis.top_cell ? `${data.thesis.top_cell.hits} / ${data.thesis.top_cell.n} outcomes` : 'awaiting data'}
-          </div>
-        </div>
+        ) : (
+          <p className="text-on-surface text-2xl leading-snug font-light tracking-tight max-w-3xl">
+            Cipher is still watching. <span className="tabular-nums">{data.total_data_points.toLocaleString()}</span> data points collected, <span className="tabular-nums">{data.resolved_outcomes}</span> resolved. As soon as any pattern hits three real outcomes, the engine will start forming a view — and you&apos;ll see it here.
+          </p>
+        )}
       </section>
 
-      {/* ─────────────────────── Engine Changes This Week ─────────────────────── */}
+      {/* ─────────────────────── What changed this month ─────────────────────── */}
       {data.engine_changes && data.engine_changes.length > 0 && (
-        <section className="mb-12 border border-outline-variant/30" aria-label="Engine changes">
-          <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
-            <div>
-              <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
-                Engine Activity · Last 30 Days
-              </div>
-              <h2 className="text-on-surface text-lg font-bold tracking-tight">
-                How reports changed
-              </h2>
-              <p className="text-on-surface-variant text-xs mt-2 max-w-xl leading-relaxed">
-                Each row is a learned signal cell whose recent 30-day posterior
-                has shifted from its all-time baseline. Positive deltas mean the
-                engine now believes that pattern is more predictive than it used
-                to; negative means less. These deltas flow directly into the
-                Engine Calibration block of every new research report.
-              </p>
+        <section className="mb-14" aria-label="Engine changes this month">
+          <div className="mb-8 max-w-3xl">
+            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-2">
+              What changed this month
             </div>
-            <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-              {data.engine_changes.length} cells
-            </span>
+            <h2 className="text-on-surface text-2xl md:text-3xl font-black tracking-tight mb-3">
+              Cipher updated its mind on{' '}
+              <span className="text-primary tabular-nums">{data.engine_changes.length}</span>{' '}
+              {data.engine_changes.length === 1 ? 'pattern' : 'patterns'}
+            </h2>
+            <p className="text-on-surface-variant text-sm leading-relaxed">
+              Each card is a real shift in how the engine reads the market. Green means it grew more confident a pattern works; red means less. Every shift comes from outcomes Cipher watched play out — never from anyone tweaking it by hand.
+            </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-b border-outline-variant/30">
-                  <th className="text-left font-medium px-6 py-3">Signal</th>
-                  <th className="text-left font-medium px-3 py-3">Pattern</th>
-                  <th className="text-left font-medium px-3 py-3">Cap</th>
-                  <th className="text-right font-medium px-3 py-3">Horizon</th>
-                  <th className="text-right font-medium px-3 py-3">All-time</th>
-                  <th className="text-right font-medium px-3 py-3">30d</th>
-                  <th className="text-right font-medium px-3 py-3">Δ</th>
-                  <th className="text-right font-medium px-3 py-3">n</th>
-                  <th className="text-right font-medium px-6 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.engine_changes.map((c, i) => {
-                  const dpct = c.delta * 100;
-                  return (
-                    <tr key={i} className="border-b border-outline-variant/10 hover:bg-surface-container-low/40 transition-colors">
-                      <td className="px-6 py-3 font-mono text-[11px] uppercase tracking-widest text-primary/80">
-                        {c.signal_class}
-                      </td>
-                      <td className="px-3 py-3 font-mono text-on-surface">{c.pattern_key}</td>
-                      <td className="px-3 py-3 font-mono text-[11px] text-on-surface-variant uppercase tracking-wider">{c.cap_class}</td>
-                      <td className="px-3 py-3 text-right font-mono tabular-nums text-on-surface-variant">{c.horizon_days}d</td>
-                      <td className="px-3 py-3 text-right font-mono tabular-nums text-on-surface-variant">{(c.all_time_mean * 100).toFixed(0)}%</td>
-                      <td className="px-3 py-3 text-right font-mono tabular-nums font-bold text-on-surface">{(c.recent_30d_mean * 100).toFixed(0)}%</td>
-                      <td className={`px-3 py-3 text-right font-mono tabular-nums font-bold ${dpct > 0 ? 'text-secondary' : 'text-error'}`}>
-                        {dpct > 0 ? '+' : ''}{dpct.toFixed(1)}pp
-                      </td>
-                      <td className="px-3 py-3 text-right font-mono tabular-nums text-outline">{c.sample_size}</td>
-                      <td className={`px-6 py-3 text-right font-mono text-[10px] tracking-widest uppercase ${c.status === 'ACTIVE' ? 'text-secondary' : c.status === 'DEPRECATED' ? 'text-error' : 'text-on-surface-variant'}`}>
-                        {c.status}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-outline-variant/30 border border-outline-variant/30">
+            {data.engine_changes.map((c, i) => {
+              const dpct = c.delta * 100;
+              const isUp = dpct > 0;
+              return (
+                <article
+                  key={i}
+                  className="bg-surface p-6 hover:bg-surface-container-low/40 transition-colors flex flex-col"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-5">
+                    <div
+                      className={`text-[10px] tracking-[0.3em] font-mono uppercase ${
+                        isUp ? 'text-secondary' : 'text-error'
+                      }`}
+                    >
+                      {isUp ? '↑ More confident' : '↓ Less confident'}
+                    </div>
+                    <div
+                      className={`font-mono tabular-nums text-2xl font-black leading-none ${
+                        isUp ? 'text-secondary' : 'text-error'
+                      }`}
+                    >
+                      {isUp ? '+' : ''}
+                      {dpct.toFixed(1)}
+                      <span className="text-xs text-outline ml-0.5">pp</span>
+                    </div>
+                  </div>
+
+                  <p className="text-on-surface text-base leading-snug font-medium tracking-tight flex-1">
+                    {buildPlainChange(c)}
+                  </p>
+
+                  <div className="mt-5 pt-4 border-t border-outline-variant/20 flex items-baseline justify-between text-xs">
+                    <div className="text-on-surface-variant">
+                      Wins{' '}
+                      <span className="text-on-surface font-bold tabular-nums">
+                        {(c.recent_30d_mean * 100).toFixed(0)}%
+                      </span>{' '}
+                      now · was{' '}
+                      <span className="tabular-nums">
+                        {(c.all_time_mean * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="text-outline font-mono tabular-nums">
+                      {c.sample_size} trades
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       )}
