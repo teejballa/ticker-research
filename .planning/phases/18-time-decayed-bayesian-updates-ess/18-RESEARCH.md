@@ -250,7 +250,7 @@ Migrate to a `LearningHyperparameters` table when P21 lands automated re-tuning 
 
 ## Threat Model Inputs
 
-- **Cron auth (CRON_SECRET):** existing `learn` cron checks `Bearer ${CRON_SECRET}`; backfill route MUST do the same — copy verbatim (line 837 of `learn/route.ts`). Without this anyone can hit a public Vercel function and trigger a 504-cell mass write.
+- **Cron auth (CRON_SECRET):** existing `learn` cron checks `Bearer ${CRON_SECRET}`; backfill route MUST do the same — copy verbatim (line 841 of `learn/route.ts`). Without this anyone can hit a public Vercel function and trigger a 504-cell mass write.
 - **Partial-write recovery:** all 504 cell updates land in one `prisma.$transaction`. If Neon connection drops mid-tx, Postgres rolls back atomically. The idempotency marker (`ess_backfill_complete` LearningEvent) is written **inside** the same transaction so the marker and the data are atomically consistent.
 - **DoS via repeated tuning:** tuning scripts are local-dev only (not exposed via HTTP). No DoS surface.
 - **DoS via repeated backfill:** env-flag gate `ENABLE_BACKFILL_ESS=1` defaults off in production. Only set during the migration window. Idempotency marker prevents double-run damage if flag stays on.
