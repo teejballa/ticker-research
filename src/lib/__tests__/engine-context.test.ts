@@ -102,8 +102,9 @@ function buildTechSnap(overrides: Partial<TechnicalSnapshot> = {}): TechnicalSna
 function buildLearnedCell(opts: {
   alpha: number;
   beta: number;
-  status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED';
+  status?: 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED';
   sample_size?: number;
+  effective_sample_size?: number;
   alpha_30d?: number;
   beta_30d?: number;
 }) {
@@ -113,6 +114,9 @@ function buildLearnedCell(opts: {
     alpha_30d: opts.alpha_30d ?? 1,
     beta_30d: opts.beta_30d ?? 1,
     sample_size: opts.sample_size ?? Math.round(opts.alpha + opts.beta),
+    // Phase 18: ESS defaults to raw sample_size when not specified — matches
+    // the cron's first-tick behavior where decay weights are all close to 1.
+    effective_sample_size: opts.effective_sample_size ?? opts.sample_size ?? Math.round(opts.alpha + opts.beta),
     hits: Math.round(opts.alpha),
     brier_in_sample: 0.18,
     brier_out_sample: 0.21,
@@ -625,6 +629,145 @@ describe('Phase 17-04 — getEngineContextForTicker institutional + insider reso
       expect(row).toHaveProperty('insider_posterior');
       expect(row).toHaveProperty('insider_ci');
     }
+  });
+});
+
+// ── Phase 18-07 — ESS + 'EXPLORATORY-WATCH' surface ───────────────────
+
+describe('Phase 18-07 — getEngineContextForTicker ESS + EXPLORATORY-WATCH surface', () => {
+  it('surfaces effective_sample_size from the diffusion LearnedPattern row', async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
+      buildSnapshot({ daysAgo: 1, niche: 9,  middle: 4, mainstream: 2 }),
+      buildSnapshot({ daysAgo: 2, niche: 6,  middle: 2, mainstream: 0 }),
+      buildSnapshot({ daysAgo: 3, niche: 2,  middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
+    ]);
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+      if (k.signal_class === 'diffusion' && k.horizon_days === 7) {
+        return Promise.resolve(buildLearnedCell({
+          alpha: 18, beta: 8, sample_size: 24, effective_sample_size: 42,
+        }));
+      }
+      return Promise.resolve(null);
+    });
+
+    const ctx = await getEngineContextForTicker('AMD', ASOF);
+
+    expect(ctx.effective_sample_size).toBe(42);
+    // Per-class ESS fields exist (default 0 when no class-specific cell).
+    expect(ctx.technical_ess).toBe(0);
+    expect(ctx.institutional_ess).toBe(0);
+    expect(ctx.insider_ess).toBe(0);
+    expect(ctx.logistic_ess).toBe(0);
+  });
+
+  it("preserves 'EXPLORATORY-WATCH' status when the cell is in drift watch", async () => {
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
+      buildSnapshot({ daysAgo: 1, niche: 9,  middle: 4, mainstream: 2 }),
+      buildSnapshot({ daysAgo: 2, niche: 6,  middle: 2, mainstream: 0 }),
+      buildSnapshot({ daysAgo: 3, niche: 2,  middle: 0, mainstream: 0 }),
+    ]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
+      buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
+    ]);
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+      if (k.signal_class === 'diffusion' && k.horizon_days === 7) {
+        return Promise.resolve(buildLearnedCell({
+          alpha: 18, beta: 8, sample_size: 30, effective_sample_size: 30,
+          status: 'EXPLORATORY-WATCH',
+        }));
+      }
+      return Promise.resolve(null);
+    });
+
+    const ctx = await getEngineContextForTicker('AMD', ASOF);
+
+    expect(ctx.status).toBe('EXPLORATORY-WATCH');
+    expect(ctx.effective_sample_size).toBe(30);
+  });
+
+  it('surfaces per-class ESS for technical/institutional/insider when those cells exist', async () => {
+    const snap = buildSnapshot({ daysAgo: 0, niche: 5, middle: 3, mainstream: 1 });
+    const snapWithSmartMoney = {
+      ...snap,
+      insider_data: {
+        insider_bucket: 'cluster_buying',
+        data_age_days: 5,
+        distinct_buyers: 3,
+        distinct_sellers: 0,
+        net_buy_share_count: 10000,
+        net_sell_share_count: 0,
+        buy_value_usd: 500000,
+        sell_value_usd: null,
+        has_ceo_buy: true,
+        has_cfo_buy: false,
+        has_director_buy: false,
+        is_planned_10b5_1: false,
+        filings_count: 3,
+        earliest_filing_date: '2026-04-01',
+        latest_filing_date: '2026-04-25',
+        computed_at: '2026-04-30T00:00:00.000Z',
+        data_source: 'finnhub',
+        insider_sentiment_mspr: 0.6,
+      },
+      institutional_data: {
+        institutional_bucket: 'net_accumulation',
+        data_age_days: 14,
+        total_institutional_share: 5000000,
+        total_institutional_share_prev: 4800000,
+        net_share_change: 200000,
+        net_share_change_pct: 4.2,
+        fund_count_current: 142,
+        fund_count_prev: 137,
+        fund_count_delta: 5,
+        top10_concentration_pct: 38,
+        top10_concentration_pct_prev: 36,
+        ticker_30d_return_pct: 3.5,
+        spy_30d_return_pct: 1.2,
+        report_date: '2026-03-31',
+        filing_date: '2026-04-15',
+        computed_at: '2026-04-30T00:00:00.000Z',
+        data_source: 'finnhub',
+      },
+    };
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snapWithSmartMoney]);
+    mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snapWithSmartMoney]);
+    mocks.computeTechnicalSnapshot.mockResolvedValueOnce(buildTechSnap());
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+      if (k.signal_class === 'technical' && k.horizon_days === 30) {
+        return Promise.resolve(buildLearnedCell({
+          alpha: 16, beta: 8, sample_size: 24, effective_sample_size: 19,
+        }));
+      }
+      if (k.signal_class === 'institutional' && k.horizon_days === 30) {
+        return Promise.resolve(buildLearnedCell({
+          alpha: 14, beta: 6, sample_size: 20, effective_sample_size: 17,
+        }));
+      }
+      if (k.signal_class === 'insider' && k.horizon_days === 30) {
+        return Promise.resolve(buildLearnedCell({
+          alpha: 10, beta: 5, sample_size: 15, effective_sample_size: 12,
+        }));
+      }
+      return Promise.resolve(null);
+    });
+
+    const ctx = await getEngineContextForTicker('TSLA', ASOF);
+
+    expect(ctx.technical_ess).toBe(19);
+    expect(ctx.institutional_ess).toBe(17);
+    expect(ctx.insider_ess).toBe(12);
+    // Diffusion cell wasn't seeded here, so its ESS is 0.
+    expect(ctx.effective_sample_size).toBe(0);
+    // LogisticEpoch carries no ESS column — Plan 18-07 documents this as 0.
+    expect(ctx.logistic_ess).toBe(0);
   });
 });
 
