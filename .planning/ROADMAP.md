@@ -24,9 +24,9 @@ Phase order reconciled across all 4 research dimensions. Build dependencies: P18
     - [x] 18-01-PLAN.md — Wave 1: decay/ESS/Page-Hinkley/confirmedDrift pure functions + STATUS_VALUES const in src/lib/learning.ts
     - [x] 18-02-PLAN.md — Wave 1: src/lib/cv.ts purgedKFold (Purged K-Fold + Embargo CV per López de Prado)
     - [x] 18-03-PLAN.md — Wave 1: additive Prisma schema migration (effective_sample_size, n_trials_attempted) + [BLOCKING] db push
-    - [ ] 18-04-PLAN.md — Wave 2: rewire /api/cron/learn — apply decay+ESS, two-of-two confirmedDrift, EXPLORATORY-WATCH writes
-    - [ ] 18-05-PLAN.md — Wave 2: /api/cron/backfill-ess — env-flag + auth + idempotent single-tx replay
-    - [ ] 18-06-PLAN.md — Wave 2: scripts/tune-lambda.ts + scripts/tune-page-hinkley.ts (operator-driven, paste into HYPERPARAMETERS)
+    - [x] 18-04-PLAN.md — Wave 2: rewire /api/cron/learn — apply decay+ESS, two-of-two confirmedDrift, EXPLORATORY-WATCH writes
+    - [x] 18-05-PLAN.md — Wave 2: /api/cron/backfill-ess — env-flag + auth + idempotent single-tx replay
+    - [x] 18-06-PLAN.md — Wave 2: scripts/tune-lambda.ts + scripts/tune-page-hinkley.ts (operator-driven, paste into HYPERPARAMETERS)
     - [ ] 18-07-PLAN.md — Wave 3: engine-context.ts surfaces ESS + EXPLORATORY-WATCH; types extended back-compat
     - [ ] 18-08-PLAN.md — Wave 3: EngineCalibrationPanel ESS column + WatchBadge "regime stability: watching"
     - [ ] 18-09-PLAN.md — Wave 3: /insights ESS-based CI widths + drift_clear recovery counter (D-09 step 4 derived)
