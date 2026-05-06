@@ -33,6 +33,14 @@ export function computeSentimentDimensions(
     totalWeight += weight;
   }
 
+  // StockTwits is a retail/mainstream investor channel — count its message volume
+  // as mainstream tier engagement (capped to match Reddit-equivalent weights).
+  // Without this, partial Reddit-scrape failures collapse tier_breakdown to all
+  // zeros → diffusion trace can't compute flow_pattern → diffusion engine starves.
+  if (stocktwits && stocktwits.messageCount > 0) {
+    tierEngagement.mainstream += Math.min(Math.ceil(stocktwits.messageCount / 25), 3);
+  }
+
   let direction = 0.5;
   if (stocktwits && stocktwits.messageCount > 0) {
     const stBull = stocktwits.bull / 100;

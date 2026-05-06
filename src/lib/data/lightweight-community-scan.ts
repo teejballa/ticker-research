@@ -14,7 +14,10 @@ async function scrapeOne(fc: Firecrawl, url: string): Promise<string> {
   try {
     const doc = await fc.scrape(url, { formats: ['markdown'], onlyMainContent: true } as Parameters<typeof fc.scrape>[1]);
     const content = (doc as { markdown?: string }).markdown ?? '';
-    return content.length >= 150 ? content : '';
+    // Lowered from 150 → 30: previous gate punished partial scrapes and starved
+    // the diffusion engine of tier signal. A short scrape still resolves to "low"
+    // engagement (weight 1) which is correct — better than zeroed out entirely.
+    return content.length >= 30 ? content : '';
   } catch {
     return '';
   }
