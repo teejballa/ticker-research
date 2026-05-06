@@ -226,8 +226,14 @@ export function patternStatus(args: {
   brier_out: number | null;
   brier_null: number | null;
   drift_z: number;
+  effective_sample_size?: number;
 }): 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' {
-  if (args.sample_size < 10) return 'EXPLORATORY';
+  // CONTEXT D-04: ESS<30 supersedes raw sample_size<10 when ESS provided.
+  if (args.effective_sample_size != null) {
+    if (args.effective_sample_size < 30) return 'EXPLORATORY';
+  } else if (args.sample_size < 10) {
+    return 'EXPLORATORY';
+  }
   if (args.brier_out != null && args.brier_null != null && args.brier_out > args.brier_null) {
     return 'DEPRECATED';
   }
@@ -323,4 +329,146 @@ export function needsLogisticReinit(
   if (!coefficients) return true;
   const namedKeys = Object.keys(coefficients).filter((k) => !k.startsWith('_'));
   return namedKeys.length < FEATURE_NAMES.length;
+}
+
+// ─── Phase 18: Status enum poisoning mitigation (T-18-04) ─────────────────
+//
+// Centralized union of allowed `LearnedPattern.status` values. The status
+// column is a free-form `String` in Prisma — without this const, typos in
+// downstream code can silently write garbage into the DB. Plan 18-04 (cron
+// rewire) will type-cast through `LearnedStatus` whenever it writes status,
+// closing the tampering surface (T-18-04 mitigation).
+//
+// Note: 'EXPLORATORY-WATCH' is reachable only via the cron drift state
+// machine (CONTEXT D-09), never from the pure `patternStatus` primitive.
+
+export const STATUS_VALUES = ['ACTIVE', 'EXPLORATORY', 'EXPLORATORY-WATCH', 'DEPRECATED'] as const;
+export type LearnedStatus = typeof STATUS_VALUES[number];
+
+// ─── Phase 18: Time-decay primitives (D-03 Kish ESS, D-18 pure functions) ─
+
+export interface WeightedObservation {
+  hit: boolean;
+  recorded_at: Date;
+}
+
+/**
+ * Exponential decay weights w_i = exp(-Δt_i / λ). λ in days.
+ * Future-dated observations (Δt < 0) are clamped to weight 1.0 — they cannot
+ * be "more recent than now" so we treat them as just-recorded.
+ */
+export function decayWeights(
+  obs: WeightedObservation[],
+  lambdaDays: number,
+  now: Date = new Date(),
+): number[] {
+  const t0 = now.getTime();
+  const dayMs = 86_400_000;
+  return obs.map(o => {
+    const dtDays = Math.max(0, (t0 - o.recorded_at.getTime()) / dayMs);
+    return Math.exp(-dtDays / lambdaDays);
+  });
+}
+
+/**
+ * Kish effective sample size: ESS = (Σw)² / Σw².
+ * Returns 0 for empty / all-zero input (no NaN — keeps DB writes safe).
+ */
+export function computeESS(weights: number[]): number {
+  if (weights.length === 0) return 0;
+  let sum = 0;
+  let sumSq = 0;
+  for (const w of weights) {
+    sum += w;
+    sumSq += w * w;
+  }
+  return sumSq === 0 ? 0 : (sum * sum) / sumSq;
+}
+
+/**
+ * Weighted Beta-Bernoulli posterior: replaces +1 / +0 increments with
+ * +w_i on the hit side / +w_i on the miss side. Equivalent to integrating
+ * the prior over per-observation likelihoods scaled by w_i.
+ */
+export function updatePosteriorWeighted(
+  prior: BetaPosterior,
+  obs: WeightedObservation[],
+  weights: number[],
+): BetaPosterior {
+  if (obs.length !== weights.length) {
+    throw new Error('updatePosteriorWeighted: obs and weights must be same length');
+  }
+  let a = prior.alpha;
+  let b = prior.beta;
+  for (let i = 0; i < obs.length; i++) {
+    if (obs[i].hit) a += weights[i];
+    else b += weights[i];
+  }
+  return { alpha: a, beta: b };
+}
+
+// ─── Phase 18: Page-Hinkley + two-of-two confirmation (D-06, D-08) ────────
+
+/**
+ * Page-Hinkley accumulator over per-observation deltas (residuals from a
+ * running mean). Tracks both upward and downward shift accumulators so
+ * sustained shifts in either direction are caught. Returns
+ *   max(MUp, MDown) - λ_PH
+ * which is positive iff the worst-case accumulator has crossed the
+ * configured threshold — i.e. a candidate alert.
+ *
+ * - δ is a magnitude tolerance: per-step shift below δ does not advance
+ *   the accumulator (filters noise).
+ * - λ_PH is the alert threshold: how much accumulated shift we require
+ *   before calling drift.
+ *
+ * On a stationary stream the accumulators stay near 0 and the return
+ * value is ≤ 0 (silent). On a sustained shift larger than δ, the
+ * accumulator grows linearly until it exceeds λ_PH (positive return).
+ */
+export function pageHinkleyStatistic(
+  deltas: number[],
+  delta: number,
+  lambdaPH: number,
+): number {
+  let mUp = 0;
+  let mDown = 0;
+  let MUp = 0;
+  let MDown = 0;
+  for (const d of deltas) {
+    mUp = Math.max(0, mUp + d - delta);
+    mDown = Math.max(0, mDown - d - delta);
+    if (mUp > MUp) MUp = mUp;
+    if (mDown > MDown) MDown = mDown;
+  }
+  return Math.max(MUp, MDown) - lambdaPH;
+}
+
+/**
+ * Two-of-two drift confirmation per CONTEXT D-06:
+ *   fires iff
+ *     (raw N ≥ 30 — D-08 floor)        AND
+ *     (|drift_z| > 2 — z-test)         AND
+ *     (pageHinkleyStatistic > 0 — PH)
+ *
+ * Returns the four numeric fields the cron route persists into the
+ * `drift_alert` LearningEvent.delta payload. All numeric — no string
+ * injection surface (T-18-05 mitigation).
+ *
+ * Pure function: no DB access, no I/O, no side effects (D-18 invariant).
+ * Status flip to 'EXPLORATORY-WATCH' is intentionally NOT done here — it
+ * is a cron-level state machine decision (D-09), not a pure-primitive one.
+ */
+export function confirmedDrift(args: {
+  rolling: BetaPosterior;
+  allTime: BetaPosterior;
+  perObsDeltas: number[];
+  delta: number;
+  lambdaPH: number;
+  rawN: number;
+}): { fired: boolean; drift_z: number; ph_stat: number; ph_threshold: number } {
+  const drift_z = driftZ({ rolling: args.rolling, allTime: args.allTime });
+  const ph_stat = pageHinkleyStatistic(args.perObsDeltas, args.delta, args.lambdaPH);
+  const fired = args.rawN >= 30 && Math.abs(drift_z) > 2 && ph_stat > 0;
+  return { fired, drift_z, ph_stat, ph_threshold: args.lambdaPH };
 }
