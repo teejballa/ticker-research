@@ -472,3 +472,71 @@ export function confirmedDrift(args: {
   const fired = args.rawN >= 30 && Math.abs(drift_z) > 2 && ph_stat > 0;
   return { fired, drift_z, ph_stat, ph_threshold: args.lambdaPH };
 }
+
+// ─── Phase 18: Per-class hyperparameter config (CONTEXT D-01, D-07; RESEARCH §Q4) ─
+//
+// Per-class λ (decay half-life days) + Page-Hinkley (δ, λ_PH) parameters live
+// here as a typed config constant. Per RESEARCH §Q4 this is the recommended
+// storage shape: type-checked, version-controlled, reviewable in PR — re-tunes
+// leave a git diff. Per CONTEXT D-19 keeps schema additive-only by avoiding a
+// LearningHyperparameters table until P21.
+//
+// CURRENT VALUES are conservative bootstrap defaults pending the empirical
+// grid search in Plan 18-06 (`scripts/tune-decay.ts` + `scripts/tune-page-hinkley.ts`):
+//   - lambda_days = 60 → median of the CONTEXT D-01 grid {14,30,60,90,180,365}.
+//                        Half-life of 60d means observations from ~2 months
+//                        ago carry ~50% the weight of today's. Defensible
+//                        midpoint for thin-N (N=87) until tuning runs.
+//   - ph_delta    = 0.005 → midpoint of the D-07 grid {0.001, 0.005, 0.01}.
+//   - ph_lambda   = 50    → midpoint of the D-07 grid {30, 50, 100}.
+//   - tuned_at    = "bootstrap" → flagged so consumers know these are pre-tuning.
+//   - cv_brier_oos = null → no CV result yet; Plan 18-06 will populate.
+//
+// Plan 18-05 (this plan, backfill cron) needs `lambda_days` to compute decayWeights
+// for each cell during the one-time replay. Bootstrap defaults are reversible:
+// re-running the backfill with a different λ post-Plan-18-06 just rewrites α/β/ESS
+// from the same raw outcomes (CONTEXT D-14 — outcomes table is the source of truth).
+//
+// signal_class union locked to the four values written by the daily learn cron
+// (`processOneOutcome` writes diffusion + technical + insider + institutional posterior_update events).
+
+export type SignalClass = 'diffusion' | 'technical' | 'insider' | 'institutional';
+
+export interface ClassHyperparameters {
+  lambda_days: number;
+  ph_delta: number;
+  ph_lambda: number;
+  tuned_at: string;          // ISO-8601 timestamp OR "bootstrap" sentinel
+  cv_brier_oos: number | null;
+}
+
+export const HYPERPARAMETERS: Record<SignalClass, ClassHyperparameters> = {
+  diffusion: {
+    lambda_days: 60,
+    ph_delta: 0.005,
+    ph_lambda: 50,
+    tuned_at: 'bootstrap',
+    cv_brier_oos: null,
+  },
+  technical: {
+    lambda_days: 60,
+    ph_delta: 0.005,
+    ph_lambda: 50,
+    tuned_at: 'bootstrap',
+    cv_brier_oos: null,
+  },
+  insider: {
+    lambda_days: 60,
+    ph_delta: 0.005,
+    ph_lambda: 50,
+    tuned_at: 'bootstrap',
+    cv_brier_oos: null,
+  },
+  institutional: {
+    lambda_days: 60,
+    ph_delta: 0.005,
+    ph_lambda: 50,
+    tuned_at: 'bootstrap',
+    cv_brier_oos: null,
+  },
+};
