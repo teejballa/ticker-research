@@ -12,11 +12,15 @@ import { config as loadDotenv } from 'dotenv';
 
 loadDotenv({ path: '.env.local' });
 
-import { prisma } from '@/lib/db';
-import { POST } from '@/app/api/cron/backfill-ess/route';
-
+// Use dynamic imports for modules that read process.env at evaluation time.
+// `@/lib/db` instantiates the Prisma client at module-load and throws when
+// DATABASE_URL is not set — static import order under ESM hoists it above the
+// loadDotenv() call, so we defer to a top-level `await import()` instead.
 const HAS_DB = !!process.env.DATABASE_URL;
 const describeIfDb = HAS_DB ? describe : describe.skip;
+
+const { prisma } = HAS_DB ? await import('@/lib/db') : { prisma: null as unknown as import('@prisma/client').PrismaClient };
+const { POST } = HAS_DB ? await import('@/app/api/cron/backfill-ess/route') : { POST: null as unknown as typeof import('@/app/api/cron/backfill-ess/route').POST };
 
 const MARKER = 'ess_backfill_complete';
 const TEST_SECRET = 'test-cron-secret-phase-18-05';
