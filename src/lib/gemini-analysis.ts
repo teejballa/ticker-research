@@ -846,6 +846,17 @@ export async function runGeminiAnalysis(
         institutional_disagreement:    (llm as { institutional_disagreement?: string | null }).institutional_disagreement ?? null,
         insider_alignment:             (llm as { insider_alignment?: string | null }).insider_alignment ?? null,
         insider_disagreement:          (llm as { insider_disagreement?: string | null }).insider_disagreement ?? null,
+
+        // ── Phase 18-07 — effective sample size numeric overwrites (D-04) ────
+        // ESS values are authoritative numerics — written by the engine, NEVER
+        // by the LLM. The Zod schema accepts these from the LLM only so we can
+        // discard them here and replace with engineCtx values. Mirrors the
+        // Phase 17-04 pattern for institutional/insider numerics.
+        effective_sample_size: engineCtx.effective_sample_size,
+        technical_ess:         engineCtx.technical_ess,
+        institutional_ess:     engineCtx.institutional_ess,
+        insider_ess:           engineCtx.insider_ess,
+        logistic_ess:          engineCtx.logistic_ess,
       };
     }
 

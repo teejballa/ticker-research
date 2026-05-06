@@ -72,7 +72,10 @@ export const ENGINE_FEATURE_NAMES = [
 
 const HORIZONS = [3, 7, 14, 30, 60, 90] as const;
 type Horizon = typeof HORIZONS[number];
-type CellStatus = 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+// Phase 18-07: 'EXPLORATORY-WATCH' added to the local CellStatus union — Plan
+// 18-04 cron flips a cell to this literal when confirmedDrift fires (D-09).
+// EngineCalibration types in src/lib/types.ts mirror this union.
+type CellStatus = 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' | 'NO_DATA';
 
 export interface EngineContext {
   // ── Trace classification at this moment ───────────────────────────────
@@ -161,6 +164,19 @@ export interface EngineContext {
   insider_sample_size: number;
   insider_status: CellStatus;
   insider_data_age_days: number | null;
+
+  // ── Phase 18-07: Effective sample size (Kish — CONTEXT D-03 / D-10) ───────
+  // Authoritative numerics from LearnedPattern.effective_sample_size,
+  // populated every cron tick by /api/cron/learn (Plan 18-04). The diffusion
+  // cell's ESS is `effective_sample_size`; per-class ESS for the technical /
+  // institutional / insider buckets are surfaced parallel to their existing
+  // posterior fields. `logistic_ess` is currently 0 — LogisticEpoch carries
+  // a raw `sample_size` only; Plan 21 may revisit the logistic ESS column.
+  effective_sample_size: number;
+  technical_ess: number;
+  institutional_ess: number;
+  insider_ess: number;
+  logistic_ess: number;
 }
 
 function sigmoid(z: number): number {
@@ -184,6 +200,9 @@ interface LearnedCellLike {
   alpha_30d: number;
   beta_30d: number;
   sample_size: number;
+  // Phase 18-07: Kish effective sample size — written by Plan 18-04 cron.
+  // Required so engine-context.ts can surface it without nullable bookkeeping.
+  effective_sample_size: number;
   hits: number;
   brier_in_sample: number | null;
   brier_out_sample: number | null;
@@ -194,17 +213,24 @@ interface LearnedCellLike {
 
 function deriveCellStatus(cell: LearnedCellLike | null): CellStatus {
   if (!cell) return 'NO_DATA';
-  // Status comes from the learn cron (patternStatus); validate it's one of the known set.
+  // Status comes from the learn cron (patternStatus + drift state machine);
+  // validate it's one of the known set. Phase 18-07: 'EXPLORATORY-WATCH' is
+  // emitted by Plan 18-04 cron when confirmedDrift fires (CONTEXT D-09).
   const s = cell.status;
-  if (s === 'ACTIVE' || s === 'EXPLORATORY' || s === 'DEPRECATED') return s;
+  if (s === 'ACTIVE' || s === 'EXPLORATORY' || s === 'EXPLORATORY-WATCH' || s === 'DEPRECATED') return s;
   return 'EXPLORATORY';
 }
 
 // Promote the higher-conviction status when reporting a row that aggregates
 // both signal classes (used for the per-horizon row's overall status column).
+//
+// Phase 18-07: 'EXPLORATORY-WATCH' slots between ACTIVE and EXPLORATORY —
+// these cells are still calibrated (D-09 says no auto-demote on drift fire),
+// but the watch flag should outrank a plain EXPLORATORY in the aggregate row.
 function maxStatus(a: CellStatus, b: CellStatus): CellStatus {
   const order: Record<CellStatus, number> = {
-    ACTIVE: 3,
+    ACTIVE: 4,
+    'EXPLORATORY-WATCH': 3,
     EXPLORATORY: 2,
     DEPRECATED: 1,
     NO_DATA: 0,
@@ -278,18 +304,18 @@ async function resolveBucketCellAt30(
   bucketKind: 'insider',
   bucket: InsiderBucket | null,
   capClass: CapClass,
-): Promise<{ pattern: InsiderBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }>;
+): Promise<{ pattern: InsiderBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; ess: number; status: CellStatus }>;
 async function resolveBucketCellAt30(
   bucketKind: 'institutional',
   bucket: InstitutionalBucket | null,
   capClass: CapClass,
-): Promise<{ pattern: InstitutionalBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }>;
+): Promise<{ pattern: InstitutionalBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; ess: number; status: CellStatus }>;
 async function resolveBucketCellAt30(
   bucketKind: 'insider' | 'institutional',
   bucket: InsiderBucket | InstitutionalBucket | null,
   capClass: CapClass,
-): Promise<{ pattern: InsiderBucket | InstitutionalBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; status: CellStatus }> {
-  if (!bucket) return { pattern: null, posterior: null, ci: null, sampleSize: 0, status: 'NO_DATA' };
+): Promise<{ pattern: InsiderBucket | InstitutionalBucket | null; posterior: number | null; ci: [number, number] | null; sampleSize: number; ess: number; status: CellStatus }> {
+  if (!bucket) return { pattern: null, posterior: null, ci: null, sampleSize: 0, ess: 0, status: 'NO_DATA' };
 
   // 1. Exact match: bucket × capClass × horizon=30
   let cell = (await prisma.learnedPattern.findUnique({
@@ -318,7 +344,7 @@ async function resolveBucketCellAt30(
   }
 
   if (!cell || cell.sample_size === 0) {
-    return { pattern: bucket, posterior: null, ci: null, sampleSize: 0, status: 'NO_DATA' };
+    return { pattern: bucket, posterior: null, ci: null, sampleSize: 0, ess: 0, status: 'NO_DATA' };
   }
 
   const ci = credibleInterval95({ alpha: cell.alpha, beta: cell.beta });
@@ -328,6 +354,9 @@ async function resolveBucketCellAt30(
     posterior: ci.mean,
     ci: [ci.low, ci.high],
     sampleSize: cell.sample_size,
+    // Phase 18-07: surface ESS from the same cell — Plan 18-04 cron writes
+    // it on every recompute. Defaults to 0 if the row predates 18-04.
+    ess: cell.effective_sample_size ?? 0,
     status,
   };
 }
@@ -446,6 +475,15 @@ async function readHorizonCalibrations(
         tCell?.sample_size    ?? 0,
         instCell?.sample_size ?? 0,
         insdCell?.sample_size ?? 0,
+      ),
+      // Phase 18-07: row-level effective_sample_size — max across the four
+      // signal classes so the UI's per-horizon ESS column reflects the
+      // best-calibrated cell at this horizon (CONTEXT D-10).
+      effective_sample_size: Math.max(
+        dCell?.effective_sample_size    ?? 0,
+        tCell?.effective_sample_size    ?? 0,
+        instCell?.effective_sample_size ?? 0,
+        insdCell?.effective_sample_size ?? 0,
       ),
       status: aggregateStatus,
     } satisfies HorizonCalibration;
@@ -828,6 +866,16 @@ export async function getEngineContextForTicker(
     insider_sample_size:          insiderResult.sampleSize,
     insider_status:               insiderResult.status,
     insider_data_age_days:        insiderSnap?.data_age_days ?? null,
+
+    // ── Phase 18-07: Effective sample size (Kish — CONTEXT D-03 / D-10) ─────
+    // Authoritative read from LearnedPattern.effective_sample_size — Plan
+    // 18-04 cron writes this every tick. logistic_ess is currently 0:
+    // LogisticEpoch carries a raw sample_size only; Plan 21 may revisit.
+    effective_sample_size:        diffusionCell?.effective_sample_size ?? 0,
+    technical_ess:                technicalCell?.effective_sample_size ?? 0,
+    institutional_ess:            institutionalResult.ess,
+    insider_ess:                  insiderResult.ess,
+    logistic_ess:                 0,
   };
 }
 

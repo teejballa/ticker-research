@@ -225,12 +225,18 @@ export interface HorizonCalibration {
   technical_posterior: number | null;
   technical_ci: [number, number] | null;
   sample_size: number;
-  status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+  // Phase 18-07: 'EXPLORATORY-WATCH' added to status union — drift watch flag
+  // (CONTEXT D-09 / D-11). Old persisted rows lacking the literal still typecheck.
+  status: 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' | 'NO_DATA';
   // Phase 17-04 extension — all optional for back-compat with old persisted reports
   institutional_posterior?: number | null;
   institutional_ci?: [number, number] | null;
   insider_posterior?: number | null;
   insider_ci?: [number, number] | null;
+  // Phase 18-07 — per-row effective sample size (CONTEXT D-10). Optional for
+  // back-compat: old persisted rows lacking it must still typecheck and render
+  // gracefully (UI falls back to raw `sample_size` when undefined).
+  effective_sample_size?: number;
 }
 
 export interface EngineCalibration {
@@ -243,7 +249,9 @@ export interface EngineCalibration {
   ci_low: number | null;
   ci_high: number | null;
   sample_size: number;
-  status: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+  // Phase 18-07: 'EXPLORATORY-WATCH' added to status union (CONTEXT D-09 / D-11).
+  // Old persisted reports lacking the literal still typecheck — TS only widens.
+  status: 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' | 'NO_DATA';
   brier_in_sample: number | null;
   brier_null: number | null;
   drift_z: number;
@@ -269,7 +277,8 @@ export interface EngineCalibration {
   technical_posterior_mean?: number | null;
   technical_ci?: [number, number] | null;
   technical_sample_size?: number;
-  technical_status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA';
+  // Phase 18-07: 'EXPLORATORY-WATCH' added to per-class status union.
+  technical_status?: 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' | 'NO_DATA';
   horizon_calibrations?: HorizonCalibration[];
   combined_logistic_score?: number | null;
   agreement?: 'aligned' | 'mixed' | 'opposed' | 'unknown';
@@ -289,17 +298,30 @@ export interface EngineCalibration {
   institutional_posterior_mean?: number | null;
   institutional_ci?: [number, number] | null;
   institutional_sample_size?: number | null;
-  institutional_status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA' | null;
+  // Phase 18-07: 'EXPLORATORY-WATCH' added to per-class status union.
+  institutional_status?: 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' | 'NO_DATA' | null;
   insider_pattern?: InsiderBucket | null;
   insider_posterior_mean?: number | null;
   insider_ci?: [number, number] | null;
   insider_sample_size?: number | null;
-  insider_status?: 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' | 'NO_DATA' | null;
+  // Phase 18-07: 'EXPLORATORY-WATCH' added to per-class status union.
+  insider_status?: 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' | 'NO_DATA' | null;
   // Prose group (4 fields — LLM-written per D-05, NOT overwritten by post-process):
   institutional_alignment?: string | null;
   institutional_disagreement?: string | null;
   insider_alignment?: string | null;
   insider_disagreement?: string | null;
+
+  // ── Phase 18-07: Effective sample size (CONTEXT D-10 / D-11 / D-12) ────
+  // All fields OPTIONAL — old persisted reports lack them and must still
+  // typecheck. UI graceful-fallback: render raw `sample_size` when ESS
+  // undefined. Authoritative numerics — written by the engine-context.ts
+  // post-process overwrite in gemini-analysis.ts (D-04 trust boundary).
+  effective_sample_size?: number;
+  technical_ess?: number;
+  institutional_ess?: number;
+  insider_ess?: number;
+  logistic_ess?: number;
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
