@@ -17,7 +17,7 @@
 
 Phase order reconciled across all 4 research dimensions. Build dependencies: P18 → P20 → P19 → P25 → P21 → P22 → P23/P24/P26 → P27.
 
-- [ ] **Phase 18: Time-Decayed Bayesian Updates + ESS** — keystone phase. Adds `effective_sample_size` to LearnedPattern via exponential decay; Page-Hinkley drift detector; per-class λ tuning. Requirements: CORE-ML-01..05.
+- [x] **Phase 18: Time-Decayed Bayesian Updates + ESS** — keystone phase. Adds `effective_sample_size` to LearnedPattern via exponential decay; Page-Hinkley drift detector; per-class λ tuning. Requirements: CORE-ML-01..05. (completed 2026-05-06)
   - **Plans:** 11 plans across 5 waves
   - Plans:
     - [x] 18-00-PLAN.md — Wave 0: 10 test stub files scaffolded before any implementation (TDD red→green setup)
@@ -30,7 +30,7 @@ Phase order reconciled across all 4 research dimensions. Build dependencies: P18
     - [x] 18-07-PLAN.md — Wave 3: engine-context.ts surfaces ESS + EXPLORATORY-WATCH; types extended back-compat
     - [x] 18-08-PLAN.md — Wave 3: EngineCalibrationPanel ESS column + WatchBadge "regime stability: watching"
     - [x] 18-09-PLAN.md — Wave 3: /insights ESS-based CI widths + drift_clear recovery counter (D-09 step 4 derived)
-    - [ ] 18-10-PLAN.md — Wave 4: full-suite verification, per-task validation map, nyquist_compliant: true sign-off
+    - [x] 18-10-PLAN.md — Wave 4: full-suite verification, per-task validation map, nyquist_compliant: true sign-off
 - [ ] **Phase 20: Market-Regime Feature** — extends LearnedPattern composite key with regime dimension (4 buckets: bull/bear/chop × low-vol/high-vol via VIX bucketing + SPY trend); 2-step migration to manage risk. Requirements: CORE-ML-06..10.
 - [ ] **Phase 19: Hierarchical Priors / Partial Pooling** — empirical Bayes pooled posteriors per `(signal_class, pattern_key)` parent group; cell-space pruning to defeat lake-of-cells. Requirements: CORE-ML-11..14.
 - [ ] **Phase 25: Historical Backfill** — bootstrap N for lift gating: ≥100 tickers × ≥5 years of technical signals; point-in-time discipline; single feature-extraction code path. Requirements: COVERAGE-06..10.
