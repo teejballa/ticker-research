@@ -92,3 +92,10 @@ next-env.d.ts
 .vercel
 .claude/
 .env*.local
+
+# ========================
+# Playwright / e2e artifacts (runtime output, never commit)
+# ========================
+test-results/
+playwright-report/
+playwright/.cache/
