@@ -22,14 +22,57 @@
 // All locked copy + classNames are verbatim per 17-UI-SPEC.md §A, §B, §C, §D.
 
 import type { EngineCalibration, HorizonCalibration, InstitutionalBucket, InsiderBucket } from '@/lib/types';
+import { WatchBadge } from './WatchBadge';
 
-interface EngineCalibrationPanelProps {
-  calibration: EngineCalibration;
+// ── Phase 18 (Plan 18-08) — local type widening ────────────────────────────
+//
+// Plan 18-07 (Wave 3, parallel) extends EngineCalibration / HorizonCalibration
+// with optional ESS fields and adds 'EXPLORATORY-WATCH' to every status union.
+// This file ships in Wave 3 too — to keep tsc green BEFORE the Plan 18-07
+// worktree merges, we widen the prop type locally with the exact same fields
+// the upstream plan promises (CONTEXT D-10 / D-11 / D-12 contract). Once
+// Plan 18-07 lands these become redundant aliases of the upstream definitions
+// (the optional fields will simply collapse together).
+type WatchStatus = EngineCalibration['status'] | 'EXPLORATORY-WATCH';
+type ClassWatchStatus = WatchStatus | null | undefined;
+
+interface EngineCalibrationESSExtensions {
+  effective_sample_size?: number;
+  technical_ess?: number;
+  institutional_ess?: number;
+  insider_ess?: number;
+  logistic_ess?: number;
+  // Status unions widened to include 'EXPLORATORY-WATCH' (D-11)
+  status: WatchStatus;
+  technical_status?: WatchStatus;
+  institutional_status?: WatchStatus | null;
+  insider_status?: WatchStatus | null;
 }
 
-const STATUS_BADGE: Record<EngineCalibration['status'], string> = {
+type EngineCalibrationWithESS = Omit<
+  EngineCalibration,
+  'status' | 'technical_status' | 'institutional_status' | 'insider_status'
+> & EngineCalibrationESSExtensions;
+
+type HorizonCalibrationWithESS = Omit<HorizonCalibration, 'status'> & {
+  effective_sample_size?: number;
+  status: WatchStatus;
+};
+
+interface EngineCalibrationPanelProps {
+  calibration: EngineCalibrationWithESS;
+}
+
+// Helper: prefer ESS as the user-facing currency (D-10), fall back to raw N
+// for old persisted reports that lack the field (graceful back-compat).
+function essOrN(ess: number | undefined, n: number): string {
+  return ess != null ? `ESS=${ess.toFixed(1)}` : `n=${n}`;
+}
+
+const STATUS_BADGE: Record<WatchStatus, string> = {
   ACTIVE: 'bg-secondary/20 text-secondary border-secondary/40',
   EXPLORATORY: 'bg-tertiary/20 text-tertiary border-tertiary/40',
+  'EXPLORATORY-WATCH': 'bg-tertiary/30 text-tertiary border-tertiary/50',
   DEPRECATED: 'bg-error/20 text-error border-error/40',
   NO_DATA: 'bg-surface-container-highest text-on-surface-variant border-outline/30',
 };
@@ -37,6 +80,7 @@ const STATUS_BADGE: Record<EngineCalibration['status'], string> = {
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'ACTIVE',
   EXPLORATORY: 'EXPLORATORY',
+  'EXPLORATORY-WATCH': 'WATCHING',
   DEPRECATED: 'DEPRECATED',
   NO_DATA: 'NO DATA',
 };
@@ -233,17 +277,20 @@ function PatternCapRow({
 }: {
   patternLabel: string;
   capLabel: string;
-  status: EngineCalibration['status'];
+  status: WatchStatus;
 }) {
   return (
-    <div className="flex items-center justify-between mb-3">
+    <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
       <span className="font-mono text-xs font-bold text-on-surface tracking-wide">
         {patternLabel} <span className="text-on-surface-variant mx-1">×</span> {capLabel}
       </span>
-      <span
-        className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
-      >
-        {STATUS_LABEL[status] ?? status}
+      <span className="inline-flex items-center gap-2 flex-wrap justify-end">
+        <span
+          className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
+        >
+          {STATUS_LABEL[status] ?? status}
+        </span>
+        {status === 'EXPLORATORY-WATCH' && <WatchBadge />}
       </span>
     </div>
   );
@@ -260,7 +307,7 @@ interface ClassColumnProps {
   eyebrowColorClass: string;
   patternLabel: string;
   capLabel: string;
-  status: EngineCalibration['status'];
+  status: WatchStatus;
   card1: { label: string; value: string; subValue: string; tooltip: string };
   card2: { label: string; value: string; subValue: string; tooltip: string };
   card3: { label: string; value: string; subValue: string; tooltip: string };
@@ -305,7 +352,7 @@ function ClassColumn({
 // CI columns hidden at ≤xl (< 1280px) via `hidden xl:table-cell`.
 // Posterior columns always visible with title=CI for hover disclosure.
 
-function HorizonTable({ rows }: { rows: HorizonCalibration[] }) {
+function HorizonTable({ rows }: { rows: HorizonCalibrationWithESS[] }) {
   // 3d intentionally omitted (UI-SPEC §B — too noisy for thesis horizons).
   const visibleRows = rows.filter((r) => r.horizon_days !== 3);
 
@@ -323,18 +370,20 @@ function HorizonTable({ rows }: { rows: HorizonCalibration[] }) {
             <th scope="col" className="text-right p-2 hidden xl:table-cell">INST. CI</th>
             <th scope="col" className="text-right p-2">INSIDER POST.</th>
             <th scope="col" className="text-right p-2 hidden xl:table-cell">INSIDER CI</th>
-            <th scope="col" className="text-right p-2">N · STATUS</th>
+            <th scope="col" className="text-right p-2">ESS · STATUS</th>
           </tr>
         </thead>
         <tbody>
           {visibleRows.map((r) => {
             const isPrimary = r.horizon_days === 30;
             const isExploratory = r.status === 'EXPLORATORY';
+            const isWatch = r.status === 'EXPLORATORY-WATCH';
             const isNoData = r.status === 'NO_DATA';
             const rowClasses = [
               'bg-surface-container-high',
               isPrimary ? 'border-l-2 border-primary bg-primary/5' : '',
               isExploratory ? 'opacity-60' : '',
+              isWatch ? 'border-l-2 border-tertiary/50' : '',
             ].filter(Boolean).join(' ');
             return (
               <tr
@@ -383,11 +432,18 @@ function HorizonTable({ rows }: { rows: HorizonCalibration[] }) {
                     ? <span className="text-on-surface-variant">—</span>
                     : formatCi(r.insider_ci)}
                 </td>
-                {/* N · STATUS */}
+                {/* ESS · STATUS — Phase 18 D-10: ESS is the user-facing currency.
+                    Falls back to n=<int> when effective_sample_size is undefined
+                    (old persisted reports), preserving the legacy display verbatim. */}
                 <td className="text-right p-2">
                   {isNoData
-                    ? <span className="text-on-surface-variant">n=0 · NO DATA</span>
-                    : <span className="text-on-surface-variant">n={r.sample_size} · {STATUS_LABEL[r.status] ?? r.status}</span>}
+                    ? <span className="text-on-surface-variant">{essOrN(r.effective_sample_size, 0)} · NO DATA</span>
+                    : (
+                      <span className="text-on-surface-variant inline-flex items-center gap-1.5 justify-end flex-wrap">
+                        <span>{essOrN(r.effective_sample_size, r.sample_size)} · {STATUS_LABEL[r.status] ?? r.status}</span>
+                        {isWatch && <WatchBadge />}
+                      </span>
+                    )}
                 </td>
               </tr>
             );
@@ -406,7 +462,7 @@ function QuadClassPanel({
   calibration,
   agreement,
 }: {
-  calibration: EngineCalibration;
+  calibration: EngineCalibrationWithESS;
   agreement: AgreementState;
 }) {
   const {
@@ -418,6 +474,12 @@ function QuadClassPanel({
     institutional_pattern, institutional_posterior_mean, institutional_ci,
     institutional_sample_size, institutional_status,
     insider_pattern, insider_posterior_mean, insider_ci, insider_sample_size, insider_status,
+    // Phase 18 — ESS fields (Plan 18-07 contract; optional for back-compat with old reports)
+    effective_sample_size,
+    technical_ess,
+    institutional_ess,
+    insider_ess,
+    logistic_ess,
   } = calibration;
 
   const capLabel = CAP_LABEL[cap_class];
@@ -433,9 +495,9 @@ function QuadClassPanel({
     ? (INSIDER_PATTERN_LABEL[insider_pattern] ?? insider_pattern.toUpperCase())
     : 'NO PATTERN';
 
-  const techStatus: EngineCalibration['status'] = technical_status ?? 'NO_DATA';
-  const instStatus: EngineCalibration['status'] = institutional_status ?? 'NO_DATA';
-  const insdStatus: EngineCalibration['status'] = insider_status ?? 'NO_DATA';
+  const techStatus: WatchStatus = (technical_status as ClassWatchStatus) ?? 'NO_DATA';
+  const instStatus: WatchStatus = (institutional_status as ClassWatchStatus) ?? 'NO_DATA';
+  const insdStatus: WatchStatus = (insider_status as ClassWatchStatus) ?? 'NO_DATA';
 
   const instIsNoData = instStatus === 'NO_DATA';
   const insdIsNoData = insdStatus === 'NO_DATA';
@@ -466,16 +528,16 @@ function QuadClassPanel({
             label: 'Engine Prior',
             value: formatPct(posterior_mean),
             subValue: posterior_mean != null
-              ? `[${formatPct(ci_low)}–${formatPct(ci_high)}] · n=${sample_size}`
-              : `n=${sample_size}`,
+              ? `[${formatPct(ci_low)}–${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}`
+              : essOrN(effective_sample_size, sample_size),
             tooltip: 'Bayesian Beta-Bernoulli posterior probability that this diffusion pattern × cap class produces a 7-day return >1% above SPY.',
           }}
           card2={{
             label: 'Logistic Score',
             value: formatPct(logistic_score),
             subValue: logistic_score != null
-              ? `[${formatPct(logistic_ci_low)}–${formatPct(logistic_ci_high)}] · n=${logistic_sample_size}`
-              : `n=${logistic_sample_size}`,
+              ? `[${formatPct(logistic_ci_low)}–${formatPct(logistic_ci_high)}] · ${essOrN(logistic_ess, logistic_sample_size)}`
+              : essOrN(logistic_ess, logistic_sample_size),
             tooltip: 'Bayesian-logistic forward pass over this report\'s diffusion features.',
           }}
           card3={{
@@ -501,19 +563,19 @@ function QuadClassPanel({
             label: 'Tech Prior',
             value: formatPct(technical_posterior_mean ?? null),
             subValue: technical_posterior_mean != null
-              ? `${formatCi(technical_ci ?? null)} · n=${technical_sample_size ?? 0}`
-              : `n=${technical_sample_size ?? 0}`,
+              ? `${formatCi(technical_ci ?? null)} · ${essOrN(technical_ess, technical_sample_size ?? 0)}`
+              : essOrN(technical_ess, technical_sample_size ?? 0),
             tooltip: 'Bayesian Beta-Bernoulli posterior probability that this technical pattern × cap class produces a 30d return >1% above SPY.',
           }}
           card2={{
             label: 'Combined Logistic',
             value: combined_logistic_score != null ? formatPct(combined_logistic_score) : '—',
-            subValue: `30d-trained, n=${logistic_sample_size}`,
+            subValue: `30d-trained, ${essOrN(logistic_ess, logistic_sample_size)}`,
             tooltip: 'Bayesian-logistic forward pass over the full 12-d feature vector (6 diffusion + 6 technical), trained on 30d outcomes only.',
           }}
           card3={{
             label: 'Tech Sample',
-            value: `n=${technical_sample_size ?? 0}`,
+            value: essOrN(technical_ess, technical_sample_size ?? 0),
             subValue: techStatus,
             tooltip: 'Adversarial null Brier score vs chance for the technical signal class.',
           }}
@@ -533,13 +595,13 @@ function QuadClassPanel({
             label: 'Inst. Prior',
             value: formatPct(institutional_posterior_mean ?? null),
             subValue: institutional_posterior_mean != null
-              ? `${formatCi(institutional_ci ?? null)} · n=${institutional_sample_size ?? 0}`
-              : instIsNoData ? 'No recent filings' : `n=${institutional_sample_size ?? 0}`,
+              ? `${formatCi(institutional_ci ?? null)} · ${essOrN(institutional_ess, institutional_sample_size ?? 0)}`
+              : instIsNoData ? 'No recent filings' : essOrN(institutional_ess, institutional_sample_size ?? 0),
             tooltip: 'Bayesian Beta-Bernoulli posterior probability that this institutional pattern × cap class produces a 30d return >1% above SPY.',
           }}
           card2={{
             label: 'Inst. Sample',
-            value: `n=${institutional_sample_size ?? 0}`,
+            value: essOrN(institutional_ess, institutional_sample_size ?? 0),
             subValue: instStatus,
             tooltip: 'Number of resolved 30d outcome observations for this institutional bucket × cap class.',
           }}
@@ -565,13 +627,13 @@ function QuadClassPanel({
             label: 'Insider Prior',
             value: formatPct(insider_posterior_mean ?? null),
             subValue: insider_posterior_mean != null
-              ? `${formatCi(insider_ci ?? null)} · n=${insider_sample_size ?? 0}`
-              : insdIsNoData ? 'No recent filings' : `n=${insider_sample_size ?? 0}`,
+              ? `${formatCi(insider_ci ?? null)} · ${essOrN(insider_ess, insider_sample_size ?? 0)}`
+              : insdIsNoData ? 'No recent filings' : essOrN(insider_ess, insider_sample_size ?? 0),
             tooltip: 'Bayesian Beta-Bernoulli posterior probability that this insider pattern × cap class produces a 30d return >1% above SPY.',
           }}
           card2={{
             label: 'Insider Sample',
-            value: `n=${insider_sample_size ?? 0}`,
+            value: essOrN(insider_ess, insider_sample_size ?? 0),
             subValue: insdStatus,
             tooltip: 'Number of resolved 30d outcome observations for this insider bucket × cap class.',
           }}
@@ -704,12 +766,14 @@ function AlignmentDisagreementBlocks({
 
 // ── Legacy diffusion-only layout (graceful fallback) ───────────────────
 
-function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibration }) {
+function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibrationWithESS }) {
   const {
     flow_pattern, cap_class,
     posterior_mean, ci_low, ci_high, sample_size, status,
     logistic_score, logistic_ci_low, logistic_ci_high, logistic_sample_size,
     brier_in_sample, brier_null,
+    // Phase 18 — ESS fields (optional; falls back to n= for old reports)
+    effective_sample_size, logistic_ess,
   } = calibration;
   const patternLabel = flow_pattern ? FLOW_LABEL[flow_pattern] : 'NO PATTERN';
   const capLabel = CAP_LABEL[cap_class];
@@ -723,16 +787,20 @@ function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibration })
             {patternLabel} <span className="text-on-surface-variant mx-1">×</span> {capLabel}
           </span>
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
-          title={
-            status === 'ACTIVE'      ? 'Pattern beats the adversarial null with n ≥ 10. Engine defers to this prior.' :
-            status === 'EXPLORATORY' ? 'Pattern has fewer than 10 confirmed cases. Treat the prior as weak.' :
-            status === 'DEPRECATED'  ? 'Pattern has drifted (|z| > 2σ) or is now worse than chance. Prior is not trusted.' :
-                                       'No historical posterior available for this pattern × cap class.'
-          }
-        >
-          {STATUS_LABEL[status]}
+        <span className="inline-flex items-center gap-2">
+          <span
+            className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
+            title={
+              status === 'ACTIVE'              ? 'Pattern beats the adversarial null with n ≥ 10. Engine defers to this prior.' :
+              status === 'EXPLORATORY'         ? 'Pattern has fewer than 10 confirmed cases. Treat the prior as weak.' :
+              status === 'EXPLORATORY-WATCH'   ? 'Drift detector has confirmed unstable behavior on this cell. Calibration injection still active — read with care.' :
+              status === 'DEPRECATED'          ? 'Pattern has drifted (|z| > 2σ) or is now worse than chance. Prior is not trusted.' :
+                                                 'No historical posterior available for this pattern × cap class.'
+            }
+          >
+            {STATUS_LABEL[status]}
+          </span>
+          {status === 'EXPLORATORY-WATCH' && <WatchBadge />}
         </span>
       </div>
 
@@ -740,13 +808,13 @@ function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibration })
         <MetricCard
           label="Engine Prior"
           value={formatPct(posterior_mean)}
-          subValue={posterior_mean != null ? `[${formatPct(ci_low)} – ${formatPct(ci_high)}] · n=${sample_size}` : `n=${sample_size}`}
-          tooltip="Bayesian Beta-Bernoulli posterior probability that this pattern × cap class produces a 7-day return >1% above SPY. The 95% credible interval shows the engine's uncertainty given sample size n."
+          subValue={posterior_mean != null ? `[${formatPct(ci_low)} – ${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}` : essOrN(effective_sample_size, sample_size)}
+          tooltip="Bayesian Beta-Bernoulli posterior probability that this pattern × cap class produces a 7-day return >1% above SPY. The 95% credible interval shows the engine's uncertainty given effective sample size."
         />
         <MetricCard
           label="Logistic Score"
           value={formatPct(logistic_score)}
-          subValue={logistic_score != null ? `[${formatPct(logistic_ci_low)} – ${formatPct(logistic_ci_high)}] · n=${logistic_sample_size}` : `n=${logistic_sample_size}`}
+          subValue={logistic_score != null ? `[${formatPct(logistic_ci_low)} – ${formatPct(logistic_ci_high)}] · ${essOrN(logistic_ess, logistic_sample_size)}` : essOrN(logistic_ess, logistic_sample_size)}
           tooltip="Bayesian-logistic forward pass over this report's diffusion features (v_niche, v_middle, v_mainstream, niche_lead_cycles, q_z, qual_z). CI is the 95% interval after propagating coefficient variance through the linear predictor."
         />
         <MetricCard
@@ -818,7 +886,7 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
       {showQuadClass ? (
         <>
           <QuadClassPanel calibration={calibration} agreement={agreementState} />
-          <HorizonTable rows={horizon_calibrations!} />
+          <HorizonTable rows={horizon_calibrations as HorizonCalibrationWithESS[]} />
         </>
       ) : (
         <DiffusionOnlyPanel calibration={calibration} />
