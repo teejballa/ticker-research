@@ -46,7 +46,16 @@ import {
   buildFeatureVector12,
   needsLogisticReinit,
   FEATURE_NAMES,
+  // Phase 18 time-decay, ESS, and two-of-two drift primitives (see plan 01).
+  decayWeights,
+  computeESS,
+  updatePosteriorWeighted,
+  confirmedDrift,
+  HYPERPARAMETERS,
+  STATUS_VALUES,
   type LogisticState,
+  type WeightedObservation,
+  type LearnedStatus,
 } from '@/lib/learning';
 import type {
   TechPattern,
@@ -355,12 +364,26 @@ async function upsertCell(
 // ─── Recompute pass (per-cell metrics across all 216 cells) ─────────────────
 
 async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promise<void> {
-  // Phase 17 — D-21: extends from dual-class (diffusion + technical)
-  // to quad-class. Cell-space across the 4 traded cap_classes is
+  // Phase 17 — D-21: extends from dual-class (diffusion + technical) to
+  // quad-class. Cell-space across the 3 traded cap_classes is
   // (4 + 8 + 8 + 8) patterns × 3 cap_classes × 6 horizons = 504 cells.
+  //
+  // Phase 18 — CONTEXT D-13: the cell space evolves over time (Plan 20 will
+  // add a `regime` dimension; tests use throwaway cap_class values for
+  // isolation). Iterate the cartesian product AND any rows that already exist
+  // in the table (excluding the 'unknown' cap_class fallback) so every cell
+  // touched by a write path also gets its ESS / weighted posterior recomputed.
   const SIGNAL_CLASSES = ['diffusion', 'technical', 'insider', 'institutional'] as const;
 
   const tasks: Array<Promise<void>> = [];
+  const seen = new Set<string>();
+  const enqueue = (key: CellKey) => {
+    const k = `${key.signal_class}|${key.pattern_key}|${key.cap_class}|${key.horizon_days}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    tasks.push(recomputeOneCell(history, key));
+  };
+
   for (const signal_class of SIGNAL_CLASSES) {
     const patterns: readonly string[] =
       signal_class === 'diffusion'
@@ -374,12 +397,30 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
     for (const pattern_key of patterns) {
       for (const cap_class of CAP_CLASSES) {
         for (const horizon_days of HORIZONS) {
-          tasks.push(
-            recomputeOneCell(history, { signal_class, pattern_key, cap_class, horizon_days }),
-          );
+          enqueue({ signal_class, pattern_key, cap_class, horizon_days });
         }
       }
     }
+  }
+
+  // Discover any extant cells outside the cartesian enumeration (e.g. test
+  // fixtures, future Phase 20 regime keys) so they also get ESS recomputed.
+  const existing = await prisma.learnedPattern.findMany({
+    select: {
+      signal_class: true,
+      pattern_key: true,
+      cap_class: true,
+      horizon_days: true,
+    },
+    where: { cap_class: { not: 'unknown' } },
+  });
+  for (const row of existing) {
+    enqueue({
+      signal_class: row.signal_class as CellKey['signal_class'],
+      pattern_key: row.pattern_key,
+      cap_class: row.cap_class,
+      horizon_days: row.horizon_days,
+    });
   }
 
   await Promise.all(tasks);
@@ -445,6 +486,36 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
 
   if (predictions.length === 0) return;
 
+  // ─── Phase 18: Decay weights + ESS + weighted posterior ───────────────────
+  // CONTEXT D-03 (Kish), D-04 (ESS<30 gate via patternStatus extension),
+  // D-15 (n_trials_attempted populated). Pure primitives from Plan 18-01.
+  const lambdaDays = HYPERPARAMETERS[key.signal_class]?.lambda_days ?? 60;
+  const now = new Date();
+  const weightedObs: WeightedObservation[] = events
+    .map((ev) => {
+      const d = ev.delta as {
+        diffusion_hit?: boolean;
+        tech_hit?: boolean;
+        insider_hit?: boolean;
+        institutional_hit?: boolean;
+        hit?: boolean;
+      } | null;
+      const hitVal =
+        key.signal_class === 'diffusion'
+          ? d?.diffusion_hit ?? d?.hit
+          : key.signal_class === 'technical'
+            ? d?.tech_hit ?? d?.hit
+            : key.signal_class === 'insider'
+              ? d?.insider_hit ?? null
+              : d?.institutional_hit ?? null;
+      if (typeof hitVal !== 'boolean') return null;
+      return { hit: hitVal, recorded_at: ev.occurred_at };
+    })
+    .filter((o): o is WeightedObservation => o !== null);
+  const weights = decayWeights(weightedObs, lambdaDays, now);
+  const ess = computeESS(weights);
+  const weightedPosterior = updatePosteriorWeighted({ alpha: 1, beta: 1 }, weightedObs, weights);
+
   const brier_in = brierScore(predictions, outcomes);
   const split = Math.max(1, predictions.length - 14);
   const brier_out = brierScore(predictions.slice(split), outcomes.slice(split));
@@ -482,6 +553,7 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
 
   const status = patternStatus({
     sample_size: cell.sample_size,
+    effective_sample_size: ess,                          // D-04 ESS<30 → EXPLORATORY supersedes raw N gate
     brier_in,
     brier_out,
     brier_null: nullResult.mean_null_brier,
@@ -506,6 +578,11 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
       beta_30d,
       drift_z,
       status,
+      // Phase 18: decay-weighted posterior + ESS + n_trials_attempted (D-15).
+      effective_sample_size: ess,
+      n_trials_attempted: { increment: events.length },
+      alpha: weightedPosterior.alpha,                    // overwrites raw +1/+0 with decayed sum
+      beta: weightedPosterior.beta,
     },
   });
 
