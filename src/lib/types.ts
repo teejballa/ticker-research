@@ -322,6 +322,14 @@ export interface EngineCalibration {
   institutional_ess?: number;
   insider_ess?: number;
   logistic_ess?: number;
+
+  // ── Phase 19-A-03 (D-19): Vovk-Romano conformal prediction interval ─────
+  // ADDITIVE alongside the Bayesian ci_low / ci_high above — both render
+  // side-by-side in EngineCalibrationPanel. Optional for back-compat with
+  // old persisted reports (UI shows "Conformal CI: pending" when undefined
+  // OR null until 19-A-04 cron writes them).
+  conformal_low?: number | null;
+  conformal_high?: number | null;
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----

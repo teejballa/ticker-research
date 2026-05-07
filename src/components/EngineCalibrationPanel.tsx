@@ -21,6 +21,7 @@
 //
 // All locked copy + classNames are verbatim per 17-UI-SPEC.md §A, §B, §C, §D.
 
+import type { ReactNode } from 'react';
 import type { EngineCalibration, HorizonCalibration, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import { WatchBadge } from './WatchBadge';
 
@@ -47,6 +48,9 @@ interface EngineCalibrationESSExtensions {
   technical_status?: WatchStatus;
   institutional_status?: WatchStatus | null;
   insider_status?: WatchStatus | null;
+  // Phase 19-A-03 (D-19) — Vovk-Romano conformal CI (additive alongside Bayesian)
+  conformal_low?: number | null;
+  conformal_high?: number | null;
 }
 
 type EngineCalibrationWithESS = Omit<
@@ -252,6 +256,40 @@ function MetricCard({
   );
 }
 
+// ── Phase 19-A-03 (D-19) — Conformal CI row, rendered SIDE-BY-SIDE with the
+//    Bayesian credible interval (Engine Prior MetricCard above). ADDITIVE —
+//    Bayesian display is untouched. Row goes below the diffusion column's
+//    metric stack so the user sees both 95% intervals on the same prior.
+//
+//    Tooltip wording: explains Vovk-Romano coverage guarantee and contrasts
+//    it with the Bayesian credible interval. Per CONTEXT D-19 / RESEARCH
+//    §State-of-the-Art line 612 — distribution-free ALONGSIDE parametric.
+function ConformalCIRow({
+  conformalLow,
+  conformalHigh,
+}: {
+  conformalLow: number | null | undefined;
+  conformalHigh: number | null | undefined;
+}) {
+  const pending = conformalLow == null || conformalHigh == null;
+  return (
+    <div
+      data-testid="conformal-ci-row"
+      className="mt-3 bg-surface-container-high p-3 rounded-lg flex items-center justify-between gap-2"
+      title="Vovk-Romano split-conformal interval — distribution-free 95% coverage guarantee under exchangeability. Surfaced alongside (not replacing) the Bayesian credible interval shown in the Engine Prior card above."
+    >
+      <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+        Conformal CI (95%)
+      </span>
+      <span className="font-mono text-[11px] text-on-surface tabular-nums">
+        {pending
+          ? <span className="text-on-surface-variant">pending (n_calibration &lt; 10)</span>
+          : `[${formatPct(conformalLow)}–${formatPct(conformalHigh)}]`}
+      </span>
+    </div>
+  );
+}
+
 // ── Agreement Badge (N-way, UI-SPEC §C) ──────────────────────────────────
 
 function AgreementBadge({ state }: { state: AgreementState }) {
@@ -312,6 +350,10 @@ interface ClassColumnProps {
   card2: { label: string; value: string; subValue: string; tooltip: string };
   card3: { label: string; value: string; subValue: string; tooltip: string };
   isNoData?: boolean;
+  // Phase 19-A-03 (D-19) — optional extra content below the metric stack
+  // (Diffusion column uses this to render the Conformal CI row alongside
+  // the Bayesian Engine Prior MetricCard).
+  extraBelow?: ReactNode;
 }
 
 function ClassColumn({
@@ -326,6 +368,7 @@ function ClassColumn({
   card2,
   card3,
   isNoData,
+  extraBelow,
 }: ClassColumnProps) {
   return (
     <div data-column={kind} className={isNoData ? 'opacity-60' : ''}>
@@ -343,6 +386,7 @@ function ClassColumn({
         <MetricCard {...card2} />
         <MetricCard {...card3} />
       </div>
+      {extraBelow}
     </div>
   );
 }
@@ -480,6 +524,9 @@ function QuadClassPanel({
     institutional_ess,
     insider_ess,
     logistic_ess,
+    // Phase 19-A-03 (D-19) — Conformal CI fields (additive alongside Bayesian)
+    conformal_low,
+    conformal_high,
   } = calibration;
 
   const capLabel = CAP_LABEL[cap_class];
@@ -548,6 +595,10 @@ function QuadClassPanel({
               : 'n/a',
             tooltip: 'Brier score (mean squared error vs outcome) of the real predictor compared with shuffled-outcome nulls. Lower is better.',
           }}
+          // Phase 19-A-03 (D-19) — Conformal CI row sits below the diffusion
+          // column's metric stack, adjacent to the Bayesian Engine Prior CI
+          // shown in card1.subValue. Both 95% intervals visible together.
+          extraBelow={<ConformalCIRow conformalLow={conformal_low} conformalHigh={conformal_high} />}
         />
 
         {/* Column 2 — TECHNICAL */}
@@ -774,6 +825,8 @@ function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibrationWit
     brier_in_sample, brier_null,
     // Phase 18 — ESS fields (optional; falls back to n= for old reports)
     effective_sample_size, logistic_ess,
+    // Phase 19-A-03 (D-19) — Conformal CI fields (additive alongside Bayesian)
+    conformal_low, conformal_high,
   } = calibration;
   const patternLabel = flow_pattern ? FLOW_LABEL[flow_pattern] : 'NO PATTERN';
   const capLabel = CAP_LABEL[cap_class];
@@ -823,6 +876,12 @@ function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibrationWit
           subValue={brier_null != null ? `null ${formatBrier(brier_null)} · ${brier_in_sample != null && brier_in_sample < brier_null ? 'beats' : 'loses to'} chance` : 'n/a'}
           tooltip="Brier score (mean squared error vs outcome) of the real predictor compared with shuffled-outcome nulls. Lower is better; if real < null, the pattern carries real signal beyond chance."
         />
+      </div>
+
+      {/* Phase 19-A-03 (D-19) — Conformal CI row, sibling to Bayesian Engine
+          Prior MetricCard above. ADDITIVE — Bayesian display untouched. */}
+      <div className="mb-5">
+        <ConformalCIRow conformalLow={conformal_low} conformalHigh={conformal_high} />
       </div>
     </>
   );
