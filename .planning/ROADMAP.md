@@ -15,7 +15,7 @@
 
 ### Phases (10 total — continues numbering from v1.0)
 
-Phase order reconciled across all 4 research dimensions. Build dependencies: P18 → P20 → P19 → P25 → P21 → P22 → P23/P24/P26 → P27.
+Phase order reconciled across all 4 research dimensions. Build dependencies (post-2026-05-07 consolidation): P18 → **P19 (Cipher v2.0 Excellence)** → P20 → P25 → P21 → P22 → P23/P24/P26 → P27. The original P19 ("Hierarchical Priors / Partial Pooling") is absorbed into P19 Wave A as Plan 19-A-07.
 
 - [x] **Phase 18: Time-Decayed Bayesian Updates + ESS** — keystone phase. Adds `effective_sample_size` to LearnedPattern via exponential decay; Page-Hinkley drift detector; per-class λ tuning. Requirements: CORE-ML-01..05. (completed 2026-05-06)
   - **Plans:** 11 plans across 5 waves
@@ -32,7 +32,15 @@ Phase order reconciled across all 4 research dimensions. Build dependencies: P18
     - [x] 18-09-PLAN.md — Wave 3: /insights ESS-based CI widths + drift_clear recovery counter (D-09 step 4 derived)
     - [x] 18-10-PLAN.md — Wave 4: full-suite verification, per-task validation map, nyquist_compliant: true sign-off
 - [ ] **Phase 20: Market-Regime Feature** — extends LearnedPattern composite key with regime dimension (4 buckets: bull/bear/chop × low-vol/high-vol via VIX bucketing + SPY trend); 2-step migration to manage risk. Requirements: CORE-ML-06..10.
-- [ ] **Phase 19: Hierarchical Priors / Partial Pooling** — empirical Bayes pooled posteriors per `(signal_class, pattern_key)` parent group; cell-space pruning to defeat lake-of-cells. Requirements: CORE-ML-11..14.
+- [ ] **Phase 19: Cipher v2.0 Excellence** — consolidated post-Phase-18 push to industry-standard quant-grade quality across data, sentiment, and ML pipelines. Brownfield additive only — no functionality removed. Agent-executable end-to-end with shadow A/B → atomic cutover (zero 60-day retention). Designed 2026-05-07. Absorbs original P19 Hierarchical Priors as Plan 19-A-07. Requirements: CORE-ML-11..14 (preserved from absorbed P19) + new gap-fill from 2026-05-07 audit (CPCV, DSR, PBO, conformal, IC monitor, FinSentLLM, structured citations, model routing, CoVe, contradiction detector, data-layer modernization, caching).
+  - **Design doc:** `docs/plans/2026-05-07-cipher-v2-excellence-design.md`
+  - **Implementation plan:** `docs/plans/2026-05-07-cipher-v2-excellence-implementation-plan.md`
+  - **Plans:** 30 plans across 4 waves (Z=infra, A=ML hygiene+quant+hierarchical, B=data, C=sentiment+reasoning)
+  - **Composite Done Gate:** `npm run model-card-status` exits zero
+  - Wave Z (4 plans, 3 days): 19-Z-01 features.ts · 19-Z-02 ShadowComparison schema · 19-Z-03 shadow-runner+verdict CLI · 19-Z-04 model-card-status script
+  - Wave A (7 plans, 2-3 weeks): 19-A-01 decayWeights guard+Zod · 19-A-02 Brier OOS+lookahead · 19-A-03 Conformal · 19-A-04 DSR+PBO+CPCV · 19-A-05 Rolling IC monitor · 19-A-06 Calibration harness · 19-A-07 Hierarchical Bayesian pooling (absorbed P19)
+  - Wave B (8 plans, 2-3 weeks): 19-B-01 Upstash · 19-B-02 retry · 19-B-03 Tiingo · 19-B-04 Twelve Data · 19-B-05 Exa · 19-B-06 merge precedence · 19-B-07 Runtime Cache · 19-B-08 rollout
+  - Wave C (11 plans, 4-5 weeks): 19-C-01 FinSentLLM clients · 19-C-02 ensemble · 19-C-03 reputation StockTwits · 19-C-04 options term-structure · 19-C-05 Swaggystocks+ApeWisdom · 19-C-06 Quiver · 19-C-07 structured citations · 19-C-08 CoVe · 19-C-09 model router · 19-C-10 contradiction detector · 19-C-11 Arctic Shift backfill
 - [ ] **Phase 25: Historical Backfill** — bootstrap N for lift gating: ≥100 tickers × ≥5 years of technical signals; point-in-time discipline; single feature-extraction code path. Requirements: COVERAGE-06..10.
 - [ ] **Phase 21: Lift-Gated Cell Promotion** — out-of-sample Brier-lift > threshold gate via Purged K-Fold + Embargo CV; Benjamini-Yekutieli FDR correction; Deflated Sharpe Ratio. Requirements: CORE-ML-15..19.
 - [ ] **Phase 22: Composite Signal Synthesis** — single calibrated headline probability with CI from per-class isotonic-calibrated combination; first user-visible v2.0 win. Requirements: REASON-01..05.
