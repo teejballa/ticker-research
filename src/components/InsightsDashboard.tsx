@@ -223,12 +223,15 @@ function directionLabel(d: number): { label: string; tone: 'bull' | 'bear' | 'ne
 
 // ── Plain-language translations ──────────────────────────────────────────
 // The engine speaks in (signal × pattern × cap × horizon) cells. Most
-// readers don't. These helpers translate one cell into a sentence.
+// readers don't. Each phrase below is a clause that slots into "When ___,"
+// so sentences read naturally regardless of which signal class fires.
 const PATTERN_PHRASE: Record<string, string> = {
+  // diffusion (community-discussion patterns)
   niche_leads: 'a niche community catches a story before the mainstream',
   simultaneous: 'every community picks up a story at once',
   mainstream_first: 'the mainstream catches a story before niche communities',
   flat: 'no community shows clear discussion lift',
+  // technical (chart patterns)
   breakout_uptrend: 'a stock breaks out during an uptrend',
   overbought_uptrend: 'a stock looks overbought during an uptrend',
   pullback_in_uptrend: 'a stock pulls back during an uptrend',
@@ -237,6 +240,24 @@ const PATTERN_PHRASE: Record<string, string> = {
   oversold_downtrend: 'a stock looks oversold during a downtrend',
   death_cross: 'a stock prints a death cross',
   golden_cross: 'a stock prints a golden cross',
+  // institutional (13F flows)
+  net_accumulation: 'institutions are net buyers',
+  net_distribution: 'institutions are net sellers',
+  new_initiation: 'a brand-new institutional position opens',
+  complete_exit: 'an institution closes its entire position',
+  smart_money_concentration: 'smart-money funds pile in together',
+  smart_money_dispersion: 'smart-money funds split — some buy, some sell',
+  contrarian_inflow: 'institutions buy while the crowd sells',
+  contrarian_outflow: 'institutions sell while the crowd buys',
+  // insider (Form 4 filings)
+  cluster_buying: 'a cluster of insiders buys shares',
+  lone_buy: 'a single insider buys shares',
+  ceo_buy: 'the CEO buys shares',
+  cfo_buy: 'the CFO buys shares',
+  director_buy: 'a director buys shares',
+  cluster_selling: 'a cluster of insiders sells shares',
+  planned_sell_10b5_1: 'an insider sells under a pre-scheduled 10b5-1 plan',
+  lone_sell: 'a single insider sells shares',
 };
 const CAP_PHRASE: Record<string, string> = {
   large_cap: 'large-cap stocks',
@@ -262,14 +283,14 @@ type TopCell = NonNullable<InsightsData['thesis']['top_cell']>;
 type EngineChange = NonNullable<InsightsData['engine_changes']>[number];
 function buildPlainThesis(top: TopCell): string {
   const pct = Math.round(top.mean * 100);
-  const verb = pct >= 60 ? 'beats the S&P' : pct >= 50 ? 'edges out the S&P' : 'lags the S&P';
-  return `When ${humanizePattern(top.pattern)}, the engine has watched ${humanizeCap(top.cap)} play out ${top.n} times — and the move ${verb} about ${pct}% of the time over the next ${humanizeHorizon(top.horizon)}.`;
+  const verb = pct >= 60 ? 'beat the S&P' : pct >= 50 ? 'edge out the S&P' : 'lag the S&P';
+  return `When ${humanizePattern(top.pattern)}, ${humanizeCap(top.cap)} ${verb} about ${pct}% of the time over the next ${humanizeHorizon(top.horizon)}. The engine has watched this play out ${top.n} times.`;
 }
 function buildPlainChange(c: EngineChange): string {
   const isUp = c.delta > 0;
   const adverb = Math.abs(c.delta) >= 0.1 ? 'sharply' : 'gradually';
   const verb = isUp ? 'gained' : 'lost';
-  return `Cipher ${adverb} ${verb} conviction that ${humanizePattern(c.pattern_key)} pays off in ${humanizeCap(c.cap_class)} over ${humanizeHorizon(c.horizon_days)}.`;
+  return `When ${humanizePattern(c.pattern_key)}, Cipher ${adverb} ${verb} confidence in ${humanizeCap(c.cap_class)} over ${humanizeHorizon(c.horizon_days)}.`;
 }
 
 export function InsightsDashboard() {
