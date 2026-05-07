@@ -28,6 +28,7 @@ export default function Home() {
     heroAlpha:     1,
     letterSpacing: 0.18,
     subAlpha:      1,
+    monPhase:      0,
     progress:      0,
   });
 
@@ -61,8 +62,9 @@ export default function Home() {
       const heroAlpha        = 1 - wordmarkProgress;
       const letterSpacing    = 0.18 + wordmarkProgress * 2.62;
       const subAlpha         = Math.max(0, 1 - p * 4.0);
+      const monPhase         = p;
 
-      setAnim({ heroAlpha, letterSpacing, subAlpha, progress: p });
+      setAnim({ heroAlpha, letterSpacing, subAlpha, monPhase, progress: p });
     }
 
     function onScroll() {
@@ -81,15 +83,28 @@ export default function Home() {
   const isWebMode = process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web';
   const market    = getMarketStatus();
 
-  // Search/CTA reveal — appears once the wordmark has faded out
-  const showSearch2 = anim.progress > 0.5;
+  // ── Cinematic 3D photo reveal — lives in 20%–90% of total scroll ──
+  const animStart = 0.2;
+  const animEnd   = 0.9;
+  const rawTerminal = anim.progress > animStart
+    ? Math.min(1, Math.max(0, (anim.progress - animStart) / (animEnd - animStart)))
+    : 0;
+  // Smoothstep easing: t²(3-2t)
+  const ep = rawTerminal * rawTerminal * (3 - 2 * rawTerminal);
+
+  const monRotateX  = 20 * (1 - ep);       // 20deg → 0
+  const monRotateY  = -20 * (1 - ep);      // -20deg → 0
+  const monScale    = 0.6 + ep * 0.75;     // 0.6 → 1.35
+  const monOpacity  = Math.min(1, rawTerminal * 4);
+  const colorOpacity = ep;                 // grayscale → color crossfade
+  const showSearch2 = rawTerminal > 0.8;
 
   return (
     <div className="bg-surface text-on-surface min-h-screen pb-8">
       <NavBar userEmail={session?.user?.email} />
 
-      {/* ── HERO: sticky scroll scene ─── */}
-      <div ref={sceneRef} style={{ height: '200vh' }}>
+      {/* ── HERO: sticky scroll scene (400vh) ─── */}
+      <div ref={sceneRef} style={{ height: '400vh' }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
           <div className="absolute inset-0 dot-grid pointer-events-none" />
           <div className="absolute inset-0 glow-radial pointer-events-none" />
@@ -116,7 +131,42 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Search bar — appears once the wordmark has faded out */}
+          {/* Terminal scene — cinematic 3D reveal (bottom strip cropped to hide stale ticker tape) */}
+          <div className="absolute inset-0 flex items-center justify-center z-10"
+               style={{ perspective: '1500px' }}>
+            <div className="monitor-glow" />
+
+            {/* Frame: rotates + scales into view */}
+            <div
+              style={{
+                position: 'relative',
+                opacity: monOpacity,
+                transform: `rotateX(${monRotateX}deg) rotateY(${monRotateY}deg) scale(${monScale})`,
+                transformStyle: 'preserve-3d',
+                willChange: 'transform',
+                clipPath: 'inset(0 0 7% 0)',
+              }}
+            >
+              {/* Grayscale base layer */}
+              <img
+                src="/cipher-start.jpg"
+                alt="Cipher terminal"
+                className="preview-screenshot grayscale"
+                draggable={false}
+                style={{ opacity: 1 - colorOpacity, backfaceVisibility: 'hidden' }}
+              />
+              {/* Full-color overlay layer */}
+              <img
+                src="/cipher-end.jpg"
+                alt="Cipher terminal color"
+                className="preview-screenshot absolute inset-0"
+                draggable={false}
+                style={{ opacity: colorOpacity, backfaceVisibility: 'hidden' }}
+              />
+            </div>
+          </div>
+
+          {/* Search bar — appears once the terminal animation is ~80% done */}
           <div
             className="absolute bottom-20 left-1/2 -translate-x-1/2 w-full max-w-xl px-6 z-30 transition-opacity duration-300"
             style={{ opacity: showSearch2 ? 1 : 0, pointerEvents: showSearch2 ? 'auto' : 'none' }}
