@@ -422,6 +422,130 @@ export function updatePosteriorWeighted(
   return { alpha: a, beta: b };
 }
 
+// ─── Phase 19 Plan 19-A-02: chronological split + Brier OOS guard + embargo ─
+//
+// CONTEXT D-18 — replaces buggy `Math.max(1, n-14)` split in cron/learn route
+// (silent 0-row OOS at n<16 → Brier=0 disguise). Pure functions live here so
+// the cron route stays a thin orchestrator and the bug fix is unit-testable.
+
+/**
+ * Chronological time-based train/test split — replaces buggy `Math.max(1, n-14)`
+ * per Plan 19-A-02 / D-18.
+ *
+ * Sorts items by `recorded_at` ascending, then partitions: first `(1-testFraction)`
+ * train, last `testFraction` test. Honors chronological order — no look-ahead
+ * leakage from future rows into the in-sample fit.
+ *
+ * Edge cases:
+ *   - n=0 → `{ train: [], test: [] }`
+ *   - n=1 → `{ train: [item], test: [] }` (singleton cannot be split)
+ *   - n=2 → `{ train: 1, test: 1 }`
+ *   - n>=2 → respects `testFraction` proportion (rounded up to ensure non-empty
+ *     test); for n=14, testFraction=0.2 → 11 train, 3 test (vs. n-14 = 0 test)
+ *
+ * Pure: does not mutate the input array (clones via spread before sort).
+ */
+export function timeBasedSplit<T extends { recorded_at: Date }>(
+  items: T[],
+  testFraction: number = 0.2,
+): { train: T[]; test: T[] } {
+  if (items.length === 0) return { train: [], test: [] };
+  if (items.length === 1) return { train: [...items], test: [] };
+
+  const sorted = [...items].sort(
+    (a, b) => a.recorded_at.getTime() - b.recorded_at.getTime(),
+  );
+
+  // Ensure at least 1 test item; for n >= 2 honor testFraction proportionally.
+  const testSize = Math.max(1, Math.ceil(sorted.length * testFraction));
+  const trainEnd = sorted.length - testSize;
+
+  return {
+    train: sorted.slice(0, trainEnd),
+    test: sorted.slice(trainEnd),
+  };
+}
+
+/**
+ * Compute out-of-sample Brier with null-on-tiny-test-set guard.
+ *
+ * Plan 19-A-02 / D-18: previously the cron route ran `brierScore` on a
+ * potentially 0-row test slice (silent 0). Below 5 OOS rows the Brier is too
+ * noisy to be meaningful regardless — return `null` with a `reason` string so
+ * downstream readers can distinguish "haven't accumulated enough OOS data" from
+ * "model is perfect".
+ *
+ * The split is run internally on the `observations` array — `predictions[i]`
+ * is paired by index. Both arrays must have the same length; the OOS slice is
+ * the chronologically-newest `testFraction` portion of `observations`.
+ */
+export function computeBrierOOS(
+  predictions: number[],
+  observations: WeightedObservation[],
+  testFraction: number = 0.2,
+): { brier: number | null; reason: string | null } {
+  if (predictions.length !== observations.length) {
+    throw new Error(
+      'computeBrierOOS: predictions and observations must be same length',
+    );
+  }
+  if (observations.length === 0) {
+    return { brier: null, reason: 'n_test=0 < 5' };
+  }
+  // Index-pair the predictions with observations so when we sort by recorded_at,
+  // each prediction follows its observation into the test slice.
+  const paired = observations.map((o, i) => ({
+    recorded_at: o.recorded_at,
+    hit: o.hit,
+    pred: predictions[i],
+  }));
+  const { test } = timeBasedSplit(paired, testFraction);
+  if (test.length < 5) {
+    return { brier: null, reason: `n_test=${test.length} < 5` };
+  }
+  const testPreds = test.map((t) => t.pred);
+  const testHits = test.map((t) => t.hit);
+  return { brier: brierScore(testPreds, testHits), reason: null };
+}
+
+/**
+ * Look-ahead embargo filter — Plan 19-A-02 / D-18.
+ *
+ * Drops snapshots whose `scanned_at` is within `horizonDays` of an outcome's
+ * `recordedAt`. The reasoning: a snapshot recorded only a few days before
+ * the outcome resolves carries information that has effectively already
+ * leaked from the future (the outcome's price path is partly priced-in by
+ * the time the snapshot is taken). Filtering them out at trace-build time
+ * eliminates the look-ahead bias.
+ *
+ * Comparison is strict `<`: snapshots EXACTLY `horizonDays` before the
+ * outcome are rejected (conservative — leakage defense errs on caution).
+ * `horizonDays=0` degenerates to "accept everything ≤ outcome time" (also
+ * preserves existing behavior for callers that opt out of the embargo).
+ *
+ * Pure: does not mutate the input array.
+ */
+export function filterSnapshotsForEmbargo<T extends { scanned_at: Date }>(
+  snapshots: T[],
+  outcomeRecordedAt: Date,
+  horizonDays: number,
+): T[] {
+  const horizonMs = horizonDays * 86_400_000;
+  const cutoff = outcomeRecordedAt.getTime();
+  return snapshots.filter((s) => {
+    const gap = cutoff - s.scanned_at.getTime();
+    // gap <= horizonMs → reject (within embargo, conservative strict <
+    // boundary handling — exactly-at-boundary is rejected). gap > horizonMs →
+    // accept. gap < 0 (snapshot scanned after outcome) is also rejected —
+    // future-dated snapshots cannot inform a past-resolved outcome.
+    if (horizonDays === 0) {
+      // Degenerate case: embargo disabled. Only reject future-dated snapshots.
+      return gap >= 0;
+    }
+    return gap > horizonMs;
+  });
+}
+
 // ─── Phase 18: Page-Hinkley + two-of-two confirmation (D-06, D-08) ────────
 
 /**
