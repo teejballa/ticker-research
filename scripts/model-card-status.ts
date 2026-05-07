@@ -475,7 +475,6 @@ async function main(): Promise<void> {
 const isEntry = (() => {
   try {
     // CJS path
-    // @ts-expect-error — require may not exist in pure ESM
     if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
       return true;
     }
