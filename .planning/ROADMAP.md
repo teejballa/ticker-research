@@ -109,7 +109,7 @@ Plans:
 - [x] 19-Z-03: shadow-runner + shadow-verdict CLI (PASS/FAIL/HOLD verdicts)
 - [x] 19-Z-04: model-card-status script (composite Phase 19 done gate)
 - [x] 19-A-01: decayWeights lambda guard + HYPERPARAMETERS Zod schema (Phase 18 silent bug fix)
-- [ ] 19-A-02: Brier OOS split bug fix + look-ahead audit on buildTraceForOutcome
+- [x] 19-A-02: Brier OOS split bug fix + look-ahead audit on buildTraceForOutcome
 - [ ] 19-A-03: Conformal prediction primitive (Vovk-Romano) + EngineCalibrationPanel surface
 - [ ] 19-A-04: DSR + PBO + CPCV primitives (Lopez de Prado) — unblocks v2.0 P21
 - [ ] 19-A-05: Rolling 20d rank-IC monitor + alpha-decay-watch cron
