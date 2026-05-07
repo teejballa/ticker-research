@@ -36,7 +36,7 @@ export default function ReportHistory() {
       .catch(() => setStatus('error'));
   }, []);
 
-  const GRID_COLS = 'grid-cols-[80px_1fr_110px_90px_80px_48px_56px]';
+  const GRID_COLS = 'grid-cols-[72px_minmax(0,1fr)_110px_104px_96px_60px_72px]';
 
   return (
     <section className="mt-8 fade-in">
@@ -48,22 +48,22 @@ export default function ReportHistory() {
 
       <div className="panel">
         {/* Column headers */}
-        <div className={`grid ${GRID_COLS} px-4 py-2 border-b border-[#1a2d42]`}>
+        <div className={`grid ${GRID_COLS} gap-x-4 px-4 py-2 border-b border-[#1a2d42]`}>
           {['SYMBOL', 'COMPANY', 'DATE', 'SENTIMENT', 'CONFIDENCE', '', ''].map((h, i) => (
-            <span key={i} className="text-[#2a4560] text-[10px] tracking-[0.35em] select-none">{h}</span>
+            <span key={i} className="text-[#2a4560] text-[10px] tracking-[0.25em] select-none">{h}</span>
           ))}
         </div>
 
         {/* Loading */}
         {status === 'loading' && (
           <div className="px-4 py-3">
-            <div className={`grid ${GRID_COLS} items-center opacity-30`} style={{ height: '40px' }}>
+            <div className={`grid ${GRID_COLS} gap-x-4 items-center opacity-30`} style={{ height: '40px' }}>
               <span className="text-[#2a4560] text-[10px] tracking-[0.3em] col-span-7">LOADING HISTORY...</span>
             </div>
-            <div className={`grid ${GRID_COLS} items-center opacity-30`} style={{ height: '40px' }}>
+            <div className={`grid ${GRID_COLS} gap-x-4 items-center opacity-30`} style={{ height: '40px' }}>
               <span className="col-span-7 h-px bg-[#1a2d42]" />
             </div>
-            <div className={`grid ${GRID_COLS} items-center opacity-30`} style={{ height: '40px' }}>
+            <div className={`grid ${GRID_COLS} gap-x-4 items-center opacity-30`} style={{ height: '40px' }}>
               <span className="col-span-7 h-px bg-[#1a2d42]" />
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function ReportHistory() {
             <div
               key={navKey}
               data-testid="history-row"
-              className={`grid ${GRID_COLS} px-4 items-center border-b border-[#0f1a27] last:border-b-0`}
+              className={`grid ${GRID_COLS} gap-x-4 px-4 items-center border-b border-[#0f1a27] last:border-b-0`}
               style={{ height: '40px', transition: 'background 0.12s', cursor: 'default' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#0d1420')}
               onMouseLeave={e => (e.currentTarget.style.background = '')}
@@ -102,12 +102,12 @@ export default function ReportHistory() {
               <span className="text-[#4a6a8a] text-[11px] overflow-hidden text-ellipsis whitespace-nowrap pr-2">{report.company_name}</span>
               <span className="text-[#3d5e7a] text-[10px] tabular-nums">{formatReportDate(report.analyzed_at)}</span>
               <span
-                className="text-[8px] uppercase font-bold px-[6px] py-[2px] inline-block"
+                className="text-[9px] uppercase font-bold tracking-[0.1em] px-2 py-[3px] justify-self-start"
                 style={{ color: sentStyle.color, background: sentStyle.bg }}
               >
                 {report.market_sentiment}
               </span>
-              <span className="text-[#3d5e7a] text-[8px] uppercase tracking-[0.1em]">{report.confidence_level}</span>
+              <span className="text-[#3d5e7a] text-[9px] uppercase tracking-[0.15em]">{report.confidence_level}</span>
               <button
                 data-testid="history-open-btn"
                 className="text-[#f59e0b] text-[9px] tracking-[0.1em] bg-transparent border-none cursor-pointer hover:text-[#fbbf24] transition-colors"
