@@ -1,0 +1,15 @@
+{
+  "_source": "pypbo reference — github.com/esvhd/pypbo",
+  "_url": "https://github.com/esvhd/pypbo",
+  "_test_invocation": "pypbo.pbo(rtns_df, S=16, metric_func=sharpe, threshold=1)",
+  "input": {
+    "inSampleStrategies": null,
+    "outOfSampleStrategies": null,
+    "S": 16,
+    "_note": "EXECUTOR MUST POPULATE in Task 4 before commit. Either `git clone https://github.com/esvhd/pypbo` and run their test fixture; copy returns matrix + expected PBO into this file, OR generate a deterministic synthetic returns matrix and cross-validate against an independent CSCV implementation. Task 4 acceptance gate FAILS if expected.pbo remains null."
+  },
+  "expected": {
+    "pbo": null,
+    "_tolerance": "1e-6"
+  }
+}
