@@ -1,0 +1,17 @@
+{
+  "_source": "Bailey & Lopez de Prado 2014 — The Deflated Sharpe Ratio §4 worked example",
+  "_url": "https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf",
+  "_ssrn_fallback": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551",
+  "input": {
+    "estimatedSR": 0.15748,
+    "numTrials": 100,
+    "backtestHorizonT": 1250,
+    "variance": 0.001984,
+    "skewness": -3,
+    "kurtosis": 10
+  },
+  "expected": {
+    "dsr": null,
+    "_note": "EXECUTOR MUST POPULATE in Task 4 before commit. Open paper §4 Table 1, compute DSR by hand against the formula in 19-RESEARCH.md lines 671-673, paste 6-decimal value here. Falls back to SSRN paper https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551 OR pypbo cross-validation if paper unrecoverable. Task 4 acceptance gate FAILS if expected.dsr remains null."
+  }
+}
