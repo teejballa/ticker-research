@@ -49,7 +49,7 @@ decisions:
   - "Pending state copy — 'pending (n_calibration < 10)' — uses the same threshold as the implementation so user-visible message and code path are bit-for-bit aligned"
   - "Test harness uses recoverQ helper to extract q from the public API rather than calling private internal functions — ensures coverage tests exercise the same code path that production code does, including the n<10 edge case and boundary clamping"
   - "Synthetic data uses Bernoulli outcomes + Normal-noise predictions — matches Cipher's actual use case (Beta-Bernoulli posterior predicts probability; ŷ_i comes from posterior mean ± noise; y_i is binary hit/miss); coverage tests validate against the true generative process"
-  - "SKIPPED Playwright e2e (tests/e2e/engine-calibration-conformal.spec.ts) per user direction 2026-05-07 — file remains UNTRACKED in working tree as deferred artifact; not committed; vitest unit tests are the only test layer for this plan; manual visual verification of the panel rendering deferred to in-product check"
+  - "Playwright e2e (tests/e2e/engine-calibration-conformal.spec.ts) was authored but DEFERRED per user direction 2026-05-07 ('SKIP Playwright tests for this plan'); during the metadata-commit step an external auto-commit hook ('exec ph 19 in middle' / commit ebf058f) swept the untracked spec file into tree along with the SUMMARY/STATE/ROADMAP — the file is now committed but is NOT executed in CI for this plan; the deferral applies to test EXECUTION (vitest unit tests are the only test layer that gates plan completion), not to physical presence of the file"
 metrics:
   duration: ~ all 4 implementation tasks pre-committed before plan-execute spawn (tasks 1-4 completed in commits f42828a, 9cdfc5e, 0ab42fa, 7d3a398); this run = verification + documentation only (~5min)
   completed_date: 2026-05-07
@@ -144,9 +144,19 @@ None — plan executed exactly as written for Tasks 1-4 (tests, primitive, engin
 
 **Task 5 — Playwright e2e test (`tests/e2e/engine-calibration-conformal.spec.ts`)**
 - **Reason:** User direction 2026-05-07 — "SKIP Playwright tests for this plan… Vitest unit tests are the only test layer for this plan."
-- **Status:** File exists in working tree (created during pre-execute work) but remains UNTRACKED — NOT committed.
+- **Status (file authoring):** File was authored during pre-execute work but was intentionally left UNTRACKED to honor the deferral.
+- **Status (commit):** During the metadata-commit step at `~10:46 PDT`, an external auto-commit hook fired and swept the untracked spec file into commit `ebf058f` ("exec ph 19 in middle") alongside the SUMMARY/STATE/ROADMAP. The hook is outside this executor agent's control. The spec file is now physically in tree.
+- **Effective deferral:** The deferral applies to test EXECUTION. The spec file is NOT being run as part of this plan's gate. Plan completion is gated entirely on vitest unit tests + tsc + grep contracts — all PASS.
 - **Verification fallback:** TypeScript compile (`npx tsc --noEmit` clean) + existing `EngineCalibrationPanel.test.tsx` component tests (9/9 passing) + manual in-product visual check on `/research/[ticker]` after deployment.
-- **Recovery path:** If conformal CI rendering breaks visually post-deploy, the existing `tests/e2e/engine-calibration-panel.spec.ts` already exercises the panel surface; the deferred conformal-specific spec can be added later by `git add tests/e2e/engine-calibration-conformal.spec.ts` (file is intact in working tree).
+- **Cleanup option (deferred to user):** if the user wants the spec file removed from tree, that's a destructive op (`git rm tests/e2e/engine-calibration-conformal.spec.ts && git commit`) requiring explicit user direction — not done here per safety protocol.
+
+### Auto-commit hook deviation
+
+**Issue:** Metadata commit step was preempted by an external auto-commit hook ("exec ph 19 in middle" / commit ebf058f).
+- **Expected behavior:** This executor would create a final `docs(19-a-03): complete conformal prediction primitive plan summary` commit covering only `.planning/phases/19-cipher-v2-0-excellence/19-A-03-SUMMARY.md` + `.planning/STATE.md` + `.planning/ROADMAP.md`.
+- **Actual behavior:** Auto-commit hook fired between the `git add` and `git commit` steps and committed all working-tree changes (including the deferred Playwright spec and stale `test-results/*` deletions) under a non-conforming commit message.
+- **Impact:** Plan deliverables are committed (good) but the commit message doesn't follow the `docs(19-a-03):` convention and includes more files than intended.
+- **Recovery:** Not reverting (would be destructive on a commit that contains the canonical SUMMARY); this deviation is documented here and in the SUMMARY commits table below for traceability.
 
 ## Files Changed
 
@@ -166,9 +176,9 @@ None — plan executed exactly as written for Tasks 1-4 (tests, primitive, engin
 | 2 | 9cdfc5e | feat(19-a-03): implement conformalInterval (Vovk-Romano split-conformal) |
 | 3 | 0ab42fa | feat(19-a-03): surface conformal_low/high in engine-context (D-19) |
 | 4 | 7d3a398 | feat(19-a-03): render Conformal CI in EngineCalibrationPanel (D-19) |
-| 6 | (this commit) | docs(19-a-03): complete conformal prediction primitive plan summary |
+| 6 | ebf058f | exec ph 19 in middle (auto-commit hook — covers SUMMARY + STATE + ROADMAP + the deferred Playwright spec which got swept up; see "Auto-commit hook deviation" section above) |
 
-Task 5 (Playwright e2e) deferred per user direction — see "Deferred" section above.
+Task 5 (Playwright e2e EXECUTION) deferred per user direction — see "Deferred" section above. The spec file is in tree due to an external auto-commit hook but is NOT executed by this plan's gate.
 
 ## Verification Evidence
 
