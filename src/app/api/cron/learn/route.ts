@@ -53,6 +53,10 @@ import {
   confirmedDrift,
   HYPERPARAMETERS,
   STATUS_VALUES,
+  // Phase 19 Plan 19-A-02 — D-18 chronological split + look-ahead embargo.
+  timeBasedSplit,
+  computeBrierOOS,
+  filterSnapshotsForEmbargo,
   type LogisticState,
   type WeightedObservation,
   type LearnedStatus,
@@ -231,6 +235,21 @@ async function buildTraceForOutcome(
   });
   if (snaps.length < 2) return null;
 
+  // Plan 19-A-02 / D-18: enforce look-ahead embargo. Reject any snapshot whose
+  // scanned_at falls within `prediction_horizon_days` of the outcome's
+  // recorded_at — those snapshots carry information that has effectively
+  // already leaked from the future (the outcome's price path is partly priced
+  // into the snapshot at scan time). The natural query filter `scanned_at <=
+  // outcome.scanned_at` enforces this implicitly when scanned_at + days_after
+  // = recorded_at, but if a re-scan or clock skew produced a snapshot inside
+  // the window, this strict-< filter catches it. Pure helper from learning.ts.
+  const embargoed = filterSnapshotsForEmbargo(
+    snaps,
+    outcome.recorded_at,
+    outcome.days_after,
+  );
+  if (embargoed.length < 2) return null;
+
   // Historical context for z-scoring.
   const allTickerSnaps = await prisma.sentimentSnapshot.findMany({
     where: { ticker: outcome.ticker },
@@ -246,13 +265,13 @@ async function buildTraceForOutcome(
     if (cd && typeof cd.quality === 'number') histQuality.push(cd.quality);
   }
 
-  const inputs: SnapshotInput[] = snaps.map((s) => ({
+  const inputs: SnapshotInput[] = embargoed.map((s) => ({
     scanned_at: s.scanned_at,
     community_data: (s.community_data ?? {}) as SnapshotInput['community_data'],
   }));
 
   const trace = computeDiffusionTrace(inputs, histQuantity, histQuality);
-  return trace ? { trace, snapshotIds: snaps.map((s) => s.id) } : null;
+  return trace ? { trace, snapshotIds: embargoed.map((s) => s.id) } : null;
 }
 
 /**
@@ -517,8 +536,15 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
   const weightedPosterior = updatePosteriorWeighted({ alpha: 1, beta: 1 }, weightedObs, weights);
 
   const brier_in = brierScore(predictions, outcomes);
-  const split = Math.max(1, predictions.length - 14);
-  const brier_out = brierScore(predictions.slice(split), outcomes.slice(split));
+  // Plan 19-A-02 / D-18: replace buggy max(1, n-14) split (silent 0-row OOS
+  // at n<16 → trivial Brier=0 disguise) with chronological 80/20 split via
+  // computeBrierOOS. Returns { brier: null, reason } when n_test<5 instead of
+  // a meaningless number. We persist `null` to brier_out_sample in that case.
+  // Pair predictions with the chronological event ordering — `events` and
+  // `weightedObs` are both populated in `events.orderBy: { occurred_at: 'asc' }`
+  // order above, so weightedObs is the canonical recorded_at carrier.
+  const oosResult = computeBrierOOS(predictions, weightedObs, 0.2);
+  const brier_out = oosResult.brier;
   const nullResult = adversarialNullBrier(predictions, outcomes, 100);
 
   // 30d rolling
@@ -1043,8 +1069,28 @@ export async function GET(request: NextRequest) {
       const preds = trainingX.map((x) => predictLogistic(logisticStateRef.state, x));
       const outs = trainingY.map((y) => y === 1);
       const brier_in = brierScore(preds, outs);
-      const split = Math.max(1, preds.length - 14);
-      const brier_out = brierScore(preds.slice(split), outs.slice(split));
+      // Plan 19-A-02 / D-18: chronological 80/20 split. The training arrays
+      // are populated in `outcomes` iteration order, which is
+      // `recorded_at: 'asc'` from loadUnprocessedOutcomes — i.e. already
+      // chronological. Synthesize an index-based recorded_at so timeBasedSplit
+      // can do the partition (guarantees ≥1 test row when len ≥ 2; replaces
+      // the n-14 silent 0-row OOS bug).
+      const indexed = preds.map((p, i) => ({
+        recorded_at: new Date(i),
+        pred: p,
+        out: outs[i],
+      }));
+      const { test } = timeBasedSplit(indexed, 0.2);
+      // Logistic Brier persistence schema requires Float (non-null) — record 0
+      // as a sentinel "insufficient OOS rows" when test set is too small.
+      // Subsequent cycles with more data will overwrite this in a new epoch.
+      const brier_out =
+        test.length >= 5
+          ? brierScore(
+              test.map((t) => t.pred),
+              test.map((t) => t.out),
+            )
+          : 0;
       await persistLogisticEpoch(logisticStateRef.state, brier_in, brier_out, trainingX.length);
     } else {
       // Pitfall 5 second half: if the latest persisted epoch is still legacy
