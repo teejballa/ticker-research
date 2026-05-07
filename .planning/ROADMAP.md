@@ -105,7 +105,7 @@ Every phase plan must include prevention work for the pitfall(s) it owns. Specif
 
 Plans:
 - [x] 19-Z-01: features.ts flag matrix + env wiring (3-mode flags: off/shadow/on)
-- [ ] 19-Z-02: ShadowComparison + RollbackLog Prisma schema (additive, nullable)
+- [x] 19-Z-02: ShadowComparison + RollbackLog Prisma schema (additive, nullable)
 - [ ] 19-Z-03: shadow-runner + shadow-verdict CLI (PASS/FAIL/HOLD verdicts)
 - [ ] 19-Z-04: model-card-status script (composite Phase 19 done gate)
 - [ ] 19-A-01: decayWeights lambda guard + HYPERPARAMETERS Zod schema (Phase 18 silent bug fix)
