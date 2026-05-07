@@ -99,3 +99,8 @@ next-env.d.ts
 test-results/
 playwright-report/
 playwright/.cache/
+
+# ========================
+# Phase 19 shadow A/B verdict artifacts (runtime output, never commit)
+# ========================
+shadow-reports/
