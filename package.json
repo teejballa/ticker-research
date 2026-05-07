@@ -17,7 +17,8 @@
     "debug:signin": "node scripts/live-debug.mjs signin",
     "debug:setup": "node scripts/live-debug.mjs setup-status",
     "debug:pipeline": "node scripts/live-debug.mjs full-pipeline",
-    "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500"
+    "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500",
+    "shadow-verdict": "npx tsx scripts/shadow-verdict.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
