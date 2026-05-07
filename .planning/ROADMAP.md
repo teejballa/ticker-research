@@ -79,6 +79,64 @@ Every phase plan must include prevention work for the pitfall(s) it owns. Specif
 
 ---
 
+## Phase Details
+
+### Phase 19: Cipher v2.0 Excellence
+**Goal**: Aggressively improve Cipher's data, sentiment, and ML pipelines to industry-standard quant-grade quality — additive only (no functionality removed), agent-executable end-to-end with shadow A/B → atomic cutover. Absorbs the original v2.0 P19 (Hierarchical Priors / Partial Pooling) into Wave A as Plan 19-A-07.
+**Depends on**: Phase 18 (post-Phase-18 baseline at commit `ef52789`)
+**Requirements**: CORE-ML-11, CORE-ML-12, CORE-ML-13, CORE-ML-14
+**Success Criteria** (what must be TRUE):
+  1. `npm run model-card-status` exits zero — engine reports as "industry-standard ML"
+  2. Hierarchical Bayesian pooling demonstrably accelerates sparse-cell learning ≥30% vs no-pool control (preserved from absorbed P19)
+  3. CPCV + DSR + PBO primitives available in `learning.ts` and gating alpha claims
+  4. Conformal prediction CI bands surfaced in EngineCalibrationPanel alongside Bayesian CI
+  5. Rolling 20d rank-IC monitor live for all 4 signal classes with `ic_decay_flag` populated
+  6. FinSentLLM ensemble (FinGPT + Mistral + FinBERT) live, scoring ≥95% of community chatter
+  7. Structured citations with mandatory URLs for ≥90% of analyst/news claims
+  8. Model cascade router live (Haiku draft → Gemini Pro on high-stakes)
+  9. Cross-class contradiction detector live and flagging at least one historical case
+  10. Source-package median latency drops by ≥40% (Tiingo + Twelve Data + Upstash Redis caching)
+  11. Anthropic-search hot-path call count drops by ≥80% (Exa primary)
+  12. Firecrawl remains primary community ingestion (per user direction); Swaggystocks + ApeWisdom + Quiver supplemental
+  13. Yahoo / Finnhub / Polygon / Anthropic-search remain wired up as fallbacks (no functionality removed)
+  14. All shadow A/B verdicts PASS; old code paths deleted; zero feature flags from this effort remain in `features.ts`
+  15. Full test suite (vitest + integration + Playwright) green on `main` post-cleanup
+**Plans**: 30 plans across 4 waves (Z=infra, A=ML hygiene + quant + hierarchical, B=data, C=sentiment+reasoning)
+
+Plans:
+- [ ] 19-Z-01: features.ts flag matrix + env wiring (3-mode flags: off/shadow/on)
+- [ ] 19-Z-02: ShadowComparison + RollbackLog Prisma schema (additive, nullable)
+- [ ] 19-Z-03: shadow-runner + shadow-verdict CLI (PASS/FAIL/HOLD verdicts)
+- [ ] 19-Z-04: model-card-status script (composite Phase 19 done gate)
+- [ ] 19-A-01: decayWeights lambda guard + HYPERPARAMETERS Zod schema (Phase 18 silent bug fix)
+- [ ] 19-A-02: Brier OOS split bug fix + look-ahead audit on buildTraceForOutcome
+- [ ] 19-A-03: Conformal prediction primitive (Vovk-Romano) + EngineCalibrationPanel surface
+- [ ] 19-A-04: DSR + PBO + CPCV primitives (Lopez de Prado) — unblocks v2.0 P21
+- [ ] 19-A-05: Rolling 20d rank-IC monitor + alpha-decay-watch cron
+- [ ] 19-A-06: Calibration validation harness (reliability diagram + Hosmer-Lemeshow)
+- [ ] 19-A-07: Hierarchical Bayesian pooling — empirical Bayes priors (absorbed from original v2.0 P19)
+- [ ] 19-B-01: Upstash Redis client + cache-keys + TTL config (graceful degrade)
+- [ ] 19-B-02: Retry + exponential backoff wrapper (5xx + network only)
+- [ ] 19-B-03: Tiingo adapter (point-in-time fundamentals + EOD)
+- [ ] 19-B-04: Twelve Data adapter (fundamentals)
+- [ ] 19-B-05: Exa 2.0 adapter + Anthropic-search fallback wiring
+- [ ] 19-B-06: source-package.ts merge precedence reorder + shadow A/B + cutover
+- [ ] 19-B-07: Vercel Runtime Cache integration (10min SourcePackage idempotency)
+- [ ] 19-B-08: Feature flag rollout + dual-write verification (driving plan)
+- [ ] 19-C-01: HF Inference Endpoint + FinSentLLM client (FinGPT v3 + Mistral + FinBERT)
+- [ ] 19-C-02: Ensemble meta-classifier (weighted avg by confidence + agreement metric)
+- [ ] 19-C-03: Reputation-weighted StockTwits aggregation (replaces naive count)
+- [ ] 19-C-04: Options term-structure 30/60/90d + IV regime gate
+- [ ] 19-C-05: Swaggystocks + ApeWisdom adapters (supplemental, Firecrawl stays primary)
+- [ ] 19-C-06: Quiver adapter (insider + congressional, optional flag)
+- [ ] 19-C-07: Structured citation schema { source, url, confidence, date_retrieved }
+- [ ] 19-C-08: CoVe two-pass wrapper (Gemini draft → NLI verification)
+- [ ] 19-C-09: Model cascade router + cost telemetry (Haiku/Flash/Pro)
+- [ ] 19-C-10: Cross-class contradiction detector (NLI on class posteriors)
+- [ ] 19-C-11: Arctic Shift one-time historical Reddit backfill (training corpus)
+
+---
+
 ## Phase Numbering
 
 - Integer phases (18, 19, 20, ..., 27): v2.0 milestone work
