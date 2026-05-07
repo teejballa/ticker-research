@@ -40,14 +40,19 @@ model UserCredential {
 }
 
 model SentimentSnapshot {
-  id                 String   @id @default(uuid())
-  ticker             String
-  scanned_at         DateTime @db.Timestamptz
-  price_at_scan      Float
-  community_data     Json
-  technical_data     Json?
-  insider_data       Json?
-  institutional_data Json?
+  id                   String   @id @default(uuid())
+  ticker               String
+  scanned_at           DateTime @db.Timestamptz
+  price_at_scan        Float
+  community_data       Json
+  technical_data       Json?
+  insider_data         Json?
+  institutional_data   Json?
+  // Phase 19-Z-02 (D-47) — additive nullable columns
+  community_aggregated Json?
+  citations_v2         Json?
+  finsentllm_score     Float?
+  model_agreement      Float?
 
   outcomes PriceOutcome[]
 
@@ -111,6 +116,16 @@ model LearnedPattern {
   drift_z               Float    @default(0)
   status                String   @default("EXPLORATORY")
   last_updated          DateTime @updatedAt @db.Timestamptz
+  // Phase 19-Z-02 (D-46) — additive nullable columns
+  rolling_ic_20d        Float?
+  ic_decay_flag         Boolean? @default(false)
+  dsr                   Float?
+  pbo                   Float?
+  conformal_low         Float?
+  conformal_high        Float?
+  parent_alpha          Float?
+  parent_beta           Float?
+  shrinkage_strength    Float?
 
   @@unique([signal_class, pattern_key, cap_class, horizon_days], map: "learned_patterns_lookup_key")
   @@map("learned_patterns")
@@ -146,4 +161,44 @@ model LogisticEpoch {
 
   @@index([epoch(sort: Desc)])
   @@map("logistic_epochs")
+}
+
+// ─── Phase 19-Z-02 (D-48) — new tables for shadow A/B + community chatter ───
+
+model CommunityChatter {
+  id                String   @id @default(cuid())
+  ticker            String
+  source            String
+  url               String?
+  raw_text          String?
+  finsentllm_score  Float?
+  reputation_weight Float?   @default(1.0)
+  scraped_at        DateTime @default(now())
+
+  @@unique([ticker, source, url, scraped_at], name: "chatter_ticker_idx")
+  @@index([ticker, scraped_at(sort: Desc)])
+}
+
+model ShadowComparison {
+  id              String   @id @default(cuid())
+  path_name       String
+  ticker          String?
+  old_output_json Json?
+  new_output_json Json?
+  old_latency_ms  Int?
+  new_latency_ms  Int?
+  old_cost_usd    Float?
+  new_cost_usd    Float?
+  created_at      DateTime @default(now())
+
+  @@index([path_name, created_at(sort: Desc)])
+}
+
+model RollbackLog {
+  id           String   @id @default(cuid())
+  feature_flag String
+  reason       String?
+  created_at   DateTime @default(now())
+
+  @@index([feature_flag, created_at(sort: Desc)])
 }
