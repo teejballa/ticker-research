@@ -754,3 +754,75 @@ export function validateHyperparameters(input: unknown): asserts input is typeof
 // the trade-off is that future-phase additions must update the schema in the
 // same PR — the TODO above flags that contract.
 validateHyperparameters(HYPERPARAMETERS);
+
+// ─── Phase 19 Plan 19-A-03: Vovk-Romano split-conformal interval (D-19) ───
+//
+// Distribution-free prediction interval primitive. ADDITIVE — does not
+// modify the existing Bayesian credibleInterval95 path; engine-context.ts
+// surfaces both side-by-side and EngineCalibrationPanel renders both.
+//
+// Source: Vovk, Gammerman, Shafer 2005 (split-conformal); Tibshirani's
+// Berkeley lecture notes for the zero-indexed `⌈(1-α)(n+1)⌉ - 1` quantile
+// formula. Coverage validated synthetic n=10000 within ±2% of nominal 1-α
+// across α ∈ {0.01, 0.05, 0.10, 0.20} (tests/learning.conformal.test.ts).
+//
+// Edge cases (T-19-A-03-01 mitigation — pin the off-by-one defense):
+//   - n < 10 calibration → return widest possible interval [0, 1] rather
+//     than throwing. Caller can detect via the n_calibration field and
+//     show a "pending" UI state. Threshold matches the n<10 Bayesian
+//     EXPLORATORY gate so the two CI surfaces light up together.
+//   - prediction near 0 / 1 → interval is clipped to [0, 1] (probabilities,
+//     not raw scores). Symmetry around pointPrediction is preserved when
+//     no clamp fires.
+
+/**
+ * Output of `conformalInterval` — a distribution-free prediction band at
+ * miscoverage level α (default 0.05 = 95% nominal coverage).
+ */
+export interface ConformalInterval {
+  low: number;
+  high: number;
+  alpha: number;          // miscoverage level (0.05 → 95% nominal)
+  n_calibration: number;  // size of the calibration set used for the quantile
+}
+
+/**
+ * Vovk-Romano split-conformal prediction interval.
+ *
+ * @param pointPrediction      - model's prediction at a new point in [0, 1]
+ * @param calibrationResiduals - |y_i − ŷ_i| over a held-out calibration set
+ * @param alpha                - miscoverage level (default 0.05 → 95% nominal)
+ * @returns interval with empirical coverage ≥ 1 − α (distribution-free
+ *          guarantee under exchangeability)
+ *
+ * Implementation: sort the calibration residuals ascending, take the value
+ * at zero-indexed position `⌈(1-α)(n+1)⌉ - 1` (clamped to n-1), and use it
+ * as the half-width. Interval is clamped to [0, 1] since the Cipher use
+ * case is probability prediction.
+ *
+ * Edge: n < 10 returns the widest possible interval [0, 1] with the actual
+ * `n_calibration` reported. Caller is responsible for surfacing the
+ * "pending" state to the user.
+ */
+export function conformalInterval(
+  pointPrediction: number,
+  calibrationResiduals: number[],
+  alpha: number = 0.05,
+): ConformalInterval {
+  const n = calibrationResiduals.length;
+  if (n < 10) {
+    return { low: 0, high: 1, alpha, n_calibration: n };
+  }
+  const sorted = [...calibrationResiduals].sort((a, b) => a - b);
+  // Vovk-Romano: quantile at zero-indexed position ⌈(1-α)(n+1)⌉ - 1.
+  // The Math.min clamp covers the α=0 / α very small edge where the
+  // computed index would otherwise overflow past the end of the sorted array.
+  const idx = Math.min(n - 1, Math.ceil((1 - alpha) * (n + 1)) - 1);
+  const q = sorted[idx];
+  return {
+    low: Math.max(0, pointPrediction - q),
+    high: Math.min(1, pointPrediction + q),
+    alpha,
+    n_calibration: n,
+  };
+}
