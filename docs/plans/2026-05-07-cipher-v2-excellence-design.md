@@ -1,29 +1,33 @@
 # Cipher v2.0 Excellence — Design Document
 
+**Phase:** 19 (Cipher v2.0 Excellence)
 **Status:** Approved · 2026-05-07
 **Author:** brainstormed with Claude (Opus 4.7, 1M ctx)
 **Baseline:** post-Phase-18 (commit `ef52789`, "phase 18 — 11/11 plans, nyquist_compliant: true")
-**Scope:** Brownfield additive overhaul. No functionality removed. Existing v2.0 ML sequence (P19-P27) unblocked, not delayed.
+**Scope:** Brownfield additive overhaul. No functionality removed. Existing v2.0 ML sequence (P20-P27) unblocked, not delayed.
+
+> **Note 2026-05-07:** Per user direction, this effort is consolidated as **Phase 19** with three parallel waves (A/B/C) plus a prerequisite infra wave (Z). The original v2.0 Phase 19 ("Hierarchical Priors / Partial Pooling") is absorbed into **Wave A as Plan 19-A-07** — hierarchical pooling fits the quant-grade ML hygiene theme and stays within the same phase boundary.
 
 ---
 
 ## 1 — Executive Summary
 
-The just-shipped Phase 18 (time-decay + ESS + Page-Hinkley + confirmedDrift) is the keystone of the v2.0 milestone. The remaining v2.0 phases (P19-P27) cover hierarchical pooling, regime, lift-gated CV, isotonic calibration, composite signals, counterfactuals, bandits, dashboard, and model card.
+The just-shipped Phase 18 (time-decay + ESS + Page-Hinkley + confirmedDrift) is the keystone of the v2.0 milestone. The remaining v2.0 phases (P20-P27) cover regime, lift-gated CV, isotonic calibration, composite signals, counterfactuals, bandits, dashboard, and model card.
 
-A focused audit of the current codebase and 2026 industry SOTA exposed three gap classes that the v2.0 sequence does **not** address:
+A focused audit of the current codebase and 2026 industry SOTA exposed three gap classes that the v2.0 sequence did not address (plus the original P19 Hierarchical Pooling work, now absorbed):
 
-1. **ML Hygiene + Quant-Grade Validation** — silent bugs in Phase-18 primitives and missing techniques (CPCV, DSR, PBO, conformal prediction, rolling-IC alpha-decay monitor) that every serious quant fund uses
+1. **ML Hygiene + Quant-Grade Validation** — silent bugs in Phase-18 primitives and missing techniques (CPCV, DSR, PBO, conformal prediction, rolling-IC alpha-decay monitor, hierarchical Bayesian pooling) that every serious quant fund uses
 2. **Data Layer Modernization** — single-source dependence (Yahoo / Finnhub / Polygon / Anthropic-search) with no caching, no retries, ~$200/mo of avoidable spend
 3. **Sentiment + Reasoning Excellence** — naive sentiment (no FinBERT-class models), fabricated citations, no model routing, no contradiction detection
 
-This design proposes three **parallel tracks** that ship alongside (not in place of) the v2.0 ML sequence:
+This design proposes a single consolidated **Phase 19** comprising three parallel waves plus prerequisite infra, all shipping alongside (not in place of) the remaining v2.0 ML sequence (P20-P27):
 
-| Track | Phase ID | Theme | Duration |
-|---|---|---|---|
-| A | 18.1 | ML Hygiene + Quant-Grade Validation | 1-2 weeks |
-| B | 28 | Data Layer Modernization | 2-3 weeks |
-| C | 29 | Sentiment + Reasoning Excellence | 4-5 weeks |
+| Wave | Theme | Duration |
+|---|---|---|
+| Z | Shadow + Cutover Infrastructure (prereq) | 3 days |
+| A | ML Hygiene + Quant-Grade Validation (incl. Hierarchical Pooling) | 2-3 weeks |
+| B | Data Layer Modernization | 2-3 weeks |
+| C | Sentiment + Reasoning Excellence | 4-5 weeks |
 
 Total monthly infra cost after rollout: **≤ $135/mo** (replaces ~$200/mo of Anthropic-search burn).
 
@@ -31,14 +35,14 @@ The effort is **agent-executable end-to-end** (shadow testing, verdict, cutover,
 
 ---
 
-## 2 — Architecture (the three parallel tracks)
+## 2 — Architecture (single phase, four waves)
 
-### 2.1 — Track A: ML Hygiene + Quant-Grade Validation (Phase 18.1)
+### 2.1 — Wave A: ML Hygiene + Quant-Grade Validation
 
 Additive primitives in `src/lib/learning.ts`. No edits to existing pure-function logic.
 
 ```
-Track A deliverables:
+Wave A deliverables:
 ├ decayWeights lambda guard + Zod schema validation for HYPERPARAMETERS
 ├ Brier out-of-sample split bug fix (n<16 edge case)
 ├ Look-ahead bias audit on buildTraceForOutcome
@@ -46,17 +50,20 @@ Track A deliverables:
 ├ Deflated Sharpe Ratio (DSR) primitive (Bailey-Lopez de Prado)
 ├ Probability of Backtest Overfitting (PBO) primitive
 ├ Combinatorial Purged K-Fold CV (CPCV) primitive
+├ Hierarchical Bayesian pooling (NEW Plan 19-A-07 — empirical Bayes pooled
+│    posteriors per (signal_class, pattern_key) parent group; cell-space
+│    pruning to defeat lake-of-cells; absorbed from original v2.0 P19)
 ├ Rolling 20d rank-IC monitor + cron + ic_decay_flag column
 ├ Calibration validation harness (reliability diagram + Hosmer-Lemeshow)
 └ scripts/dsr-pbo-audit.ts — gates alpha claims with quant-grade tests
 ```
 
-### 2.2 — Track B: Data Layer Modernization (Phase 28)
+### 2.2 — Wave B: Data Layer Modernization
 
 Adapters in new directory `src/lib/data/adapters/`. Existing fetchers (`yahoo.ts`, `finnhub.ts`, `polygon.ts`, `anthropic-search.ts`) **stay in place** as fallbacks. Merge precedence reordered to put new adapters first.
 
 ```
-Track B deliverables:
+Wave B deliverables:
 ├ Tiingo adapter ($30/mo, point-in-time fundamentals + EOD)
 ├ Twelve Data adapter ($29/mo, fundamentals)
 ├ Exa 2.0 adapter (news/analyst, replaces Anthropic-search hot path)
@@ -66,12 +73,12 @@ Track B deliverables:
 └ Merge precedence: tiingo → twelvedata → yahoo → finnhub → polygon
 ```
 
-**Firecrawl is NOT touched in Track B.** Community intelligence stays Firecrawl-primary; community supplemental sources are scoped to Track C.
+**Firecrawl is NOT touched in Wave B.** Community intelligence stays Firecrawl-primary; community supplemental sources are scoped to Wave C.
 
-### 2.3 — Track C: Sentiment + Reasoning Excellence (Phase 29)
+### 2.3 — Wave C: Sentiment + Reasoning Excellence
 
 ```
-Track C deliverables:
+Wave C deliverables:
 ├ Community ingestion overhaul:
 │   ├ Firecrawl (PRIMARY — current implementation, unchanged, "very reliable")
 │   ├ Swaggystocks adapter (SUPPLEMENTAL — real-time r/WSB chatter)
@@ -101,54 +108,54 @@ Track C deliverables:
 ```
 src/lib/
 ├ data/
-│  ├ adapters/                          NEW — Track B
+│  ├ adapters/                          NEW — Wave B
 │  │  ├ tiingo.ts
 │  │  ├ twelve-data.ts
 │  │  ├ exa-search.ts
-│  │  ├ swaggystocks.ts                 (Track C)
-│  │  ├ apewisdom.ts                    (Track C)
-│  │  ├ quiver.ts                       (Track C)
-│  │  └ unusual-whales.ts               (Track C)
-│  ├ cache/                             NEW — Track B
+│  │  ├ swaggystocks.ts                 (Wave C)
+│  │  ├ apewisdom.ts                    (Wave C)
+│  │  ├ quiver.ts                       (Wave C)
+│  │  └ unusual-whales.ts               (Wave C)
+│  ├ cache/                             NEW — Wave B
 │  │  ├ upstash.ts
 │  │  ├ runtime-cache.ts
 │  │  └ cache-keys.ts
-│  ├ retry.ts                           NEW — Track B
+│  ├ retry.ts                           NEW — Wave B
 │  ├ source-package.ts                  EDIT — merge precedence + cache hooks
 │  ├ merge.ts                           EDIT — extend FieldOrigin union
-│  ├ stocktwits.ts                      EDIT — add reputation-weighted mode (Track C)
-│  ├ options-sentiment.ts               EDIT — term-structure 30/60/90d (Track C)
+│  ├ stocktwits.ts                      EDIT — add reputation-weighted mode (Wave C)
+│  ├ options-sentiment.ts               EDIT — term-structure 30/60/90d (Wave C)
 │  ├ yahoo.ts / finnhub.ts / polygon.ts UNCHANGED — kept as fallbacks
 │  └ anthropic-search.ts                UNCHANGED — kept as fallback for Exa
-├ sentiment/                            NEW — Track C
+├ sentiment/                            NEW — Wave C
 │  ├ finsentllm.ts
 │  ├ ensemble.ts
 │  ├ contradiction-detector.ts
 │  └ citation-schema.ts
-├ reasoning/                            NEW — Track C
+├ reasoning/                            NEW — Wave C
 │  ├ cove.ts
 │  ├ router.ts
-│  └ alpha-decay-monitor.ts             (also Track A)
-├ shadow/                               NEW — autonomous cutover infra
+│  └ alpha-decay-monitor.ts             (also Wave A)
+├ shadow/                               NEW — Wave Z (autonomous cutover infra)
 │  ├ shadow-runner.ts
 │  ├ shadow-comparison.ts
 │  └ verdict.ts
-├ features.ts                           NEW — feature flag matrix
-├ learning.ts                           EDIT (Track A — additive primitives only)
+├ features.ts                           NEW — Wave Z (feature flag matrix)
+├ learning.ts                           EDIT (Wave A — additive primitives only)
 ├ engine-context.ts                     EDIT — consume conformal CI + ic_decay_flag
 ├ gemini-analysis.ts                    EDIT — citation schema + CoVe + router
 └ research-brief.ts                     EDIT — structured citations in prompt
 
 src/app/api/cron/
-├ learn/route.ts                        EDIT (Track A — log DSR/PBO/IC)
-├ alpha-decay-watch/route.ts            NEW (Track A — daily IC computation)
-└ ic-recompute/route.ts                 NEW (Track A — recompute rolling IC per class)
+├ learn/route.ts                        EDIT (Wave A — log DSR/PBO/IC + hierarchical priors)
+├ alpha-decay-watch/route.ts            NEW (Wave A — daily IC computation)
+└ ic-recompute/route.ts                 NEW (Wave A — recompute rolling IC per class)
 
 scripts/
-├ calibration-report.ts                 NEW (Track A)
-├ dsr-pbo-audit.ts                      NEW (Track A)
-├ shadow-verdict.ts                     NEW (autonomous cutover infra)
-├ arctic-shift-backfill.ts              NEW (Track C, one-time)
+├ calibration-report.ts                 NEW (Wave A)
+├ dsr-pbo-audit.ts                      NEW (Wave A)
+├ shadow-verdict.ts                     NEW (Wave Z)
+├ arctic-shift-backfill.ts              NEW (Wave C, one-time)
 └ model-card-status.ts                  NEW — gates "industry-standard ML" claim
 ```
 
@@ -190,7 +197,7 @@ User → POST /api/research/[ticker]
 [5] POST /api/analysis/[ticker]
   ↓
 [6] runGeminiAnalysis(pkg)
-    a. engine-context lookup (now includes conformal CI + ic_decay_flag)
+    a. engine-context lookup (now includes conformal CI + ic_decay_flag + hierarchical posterior)
     b. research-brief assembles prompt with structured citations
     c. Router decision:
         - Low-stakes ticker → Haiku draft only
@@ -214,22 +221,26 @@ User → POST /api/research/[ticker]
 ## 5 — Sequencing
 
 ```
-Week 1-2  Track A (Phase 18.1) ── ships first ── unblocks v2.0 P21
-Week 1-3  Track B (Phase 28)   ── parallel    ── independent of A & C
-Week 2-5  Track C (Phase 29)   ── parallel    ── depends on Track A flag infra only
+Day 1-3   Wave Z (shadow + cutover infra) ── prerequisite for all other waves
 
-Week 6+   v2.0 P19, P20 unaffected — start as scheduled
-          v2.0 P21 now uses CPCV/DSR/PBO from Track A
+Week 1-3  Wave A (ML Hygiene + Quant + Hierarchical) ── ships first ── unblocks v2.0 P21
+Week 1-3  Wave B (Data Layer)              ── parallel    ── independent of A & C
+Week 2-5  Wave C (Sentiment + Reasoning)   ── parallel    ── depends on Wave Z flag infra only
+
+Week 6+   v2.0 P20 unaffected — starts as scheduled
+          v2.0 P21 now uses CPCV/DSR/PBO from Wave A
           v2.0 P22 now uses conformal + isotonic together
-          v2.0 P27 model card consumes Track A + C deliverables
+          v2.0 P27 model card consumes Wave A + C deliverables
 ```
 
 Constraints:
-- Track A 18.1-04 (DSR/PBO/CPCV primitives) blocks v2.0 P21 (lift-gated CV)
-- Track B 28-01 (cache infra) blocks 28-03/04/05 (adapters use cache)
-- Track C 29-01 (HF client) blocks 29-02 (ensemble)
-- Track C 29-02 (ensemble) blocks 29-08 (CoVe — uses ensemble for verification)
-- All three tracks gated by feature flags
+- Wave Z (Z-01..Z-04) blocks A/B/C — flag matrix + shadow infra required first
+- Wave A 19-A-04 (DSR/PBO/CPCV primitives) blocks v2.0 P21 (lift-gated CV)
+- Wave A 19-A-07 (hierarchical pooling) is internally sequenced after 19-A-04 (uses CPCV for validation)
+- Wave B 19-B-01 (cache infra) blocks 19-B-03/04/05 (adapters use cache)
+- Wave C 19-C-01 (HF client) blocks 19-C-02 (ensemble)
+- Wave C 19-C-02 (ensemble) blocks 19-C-08 (CoVe — uses ensemble for verification)
+- All waves gated by feature flags
 
 ---
 
@@ -242,7 +253,10 @@ ALTER TABLE "LearnedPattern"
   ADD COLUMN "dsr"              DOUBLE PRECISION,
   ADD COLUMN "pbo"              DOUBLE PRECISION,
   ADD COLUMN "conformal_low"    DOUBLE PRECISION,
-  ADD COLUMN "conformal_high"   DOUBLE PRECISION;
+  ADD COLUMN "conformal_high"   DOUBLE PRECISION,
+  ADD COLUMN "parent_alpha"     DOUBLE PRECISION,    -- 19-A-07 hierarchical
+  ADD COLUMN "parent_beta"      DOUBLE PRECISION,    -- 19-A-07 hierarchical
+  ADD COLUMN "shrinkage_strength" DOUBLE PRECISION;  -- 19-A-07 hierarchical
 
 ALTER TABLE "SentimentSnapshot"
   ADD COLUMN "community_aggregated" JSONB,
@@ -294,16 +308,17 @@ All ADDs are nullable with sensible defaults. Existing rows untouched. No backfi
 ```ts
 // src/lib/features.ts
 export const FEATURES = {
-  // Track A
+  // Wave A
   conformal_intervals_enabled:     env('FEATURE_CONFORMAL', 'false') === 'true',
   cpcv_enabled:                     env('FEATURE_CPCV', 'false') === 'true',
   ic_decay_monitor:                 env('FEATURE_IC_MONITOR', 'false') === 'true',
-  // Track B
+  hierarchical_pooling:             env('FEATURE_HIERARCHICAL_POOLING', 'false') === 'true',
+  // Wave B
   data_cache_enabled:               env('FEATURE_DATA_CACHE', 'false') === 'true',
   tiingo_primary:                   env('FEATURE_TIINGO_PRIMARY', 'false') === 'true',
   twelvedata_primary:               env('FEATURE_TWELVEDATA_PRIMARY', 'false') === 'true',
   exa_primary:                      env('FEATURE_EXA_PRIMARY', 'false') === 'true',
-  // Track C
+  // Wave C
   finsentllm_ensemble:              env('FEATURE_FINSENTLLM', 'false') === 'true',
   community_supplemental:           env('FEATURE_COMMUNITY_SUPP', 'false') === 'true',
   cove_two_pass:                    env('FEATURE_COVE', 'false') === 'true',
@@ -321,7 +336,7 @@ Every flag defaults `false` on first deploy. Lifecycle: `false` → `shadow` →
 
 ---
 
-## 8 — Shadow A/B → atomic cutover protocol (REPLACES 60-day retention)
+## 8 — Shadow A/B → atomic cutover protocol
 
 ### 8.1 — Per-path lifecycle
 
@@ -330,7 +345,7 @@ Every flag defaults `false` on first deploy. Lifecycle: `false` → `shadow` →
 [2] Flip env flag to "shadow" via Vercel CLI/API
     Both paths run; old returns to user; new logged to ShadowComparison
 [3] Shadow window: 3-7 days OR N≥200 requests, whichever sooner
-[4] npm run shadow-verdict <path> reads ShadowComparison rows, computes:
+[4] npm run shadow-verdict <plan-id> reads ShadowComparison rows, computes:
     - latency_delta_p50, latency_delta_p95
     - cost_delta_per_request
     - output_disagreement_rate (Jaccard over fields)
@@ -365,12 +380,12 @@ ShadowComparison rows older than 30 days are garbage-collected by daily cron.
 
 ## 9 — Autonomous Execution Clause
 
-> **Every plan in this effort is agent-executable end-to-end. The agent (Claude) is responsible for:**
+> **Every plan in Phase 19 is agent-executable end-to-end. The agent (Claude) is responsible for:**
 >
-> 1. Landing new code behind the flag (via `/gsd-execute-phase`)
+> 1. Landing new code behind the flag (via `/gsd-execute-phase 19`)
 > 2. Flipping the flag to `shadow` in Vercel env (via Vercel CLI / API)
 > 3. Running shadow workload — for crons, this is automatic on schedule; for on-demand routes, the agent triggers N≥200 synthetic requests
-> 4. Running `npm run shadow-verdict <path>` and reading the report
+> 4. Running `npm run shadow-verdict <plan-id>` and reading the report
 > 5. If PASS: opening the cutover PR with old code deleted in same commit, merging, deploying
 > 6. If FAIL: opening a follow-up plan that addresses the failures, re-running shadow
 > 7. Monitoring the 7-day rollback hatch — checking error rates daily; if clean, opening the final flag-removal PR
@@ -393,53 +408,55 @@ ShadowComparison rows older than 30 days are garbage-collected by daily cron.
 
 ---
 
-## 11 — Composite Definition of Done (THIS EFFORT IS NOT SHIPPED UNTIL...)
+## 11 — Composite Definition of Done (PHASE 19 IS NOT DONE UNTIL...)
 
 This section is the user's hard contract. Per user direction 2026-05-07:
 
 > *"This phase is not done until we have deleted old code and have a new industry standard, amazing, good, ML model."*
 
-The v2.0 Excellence effort is **not done** until ALL of the following are true:
+Phase 19 is **not done** until ALL of the following are true:
 
-1. All three tracks (A/B/C) have every plan satisfying the Hard Cleanup Gate (§10)
+1. Every plan in Waves Z/A/B/C satisfies the Hard Cleanup Gate (§10)
 2. **Zero feature-flag toggles remain** in `features.ts` from this effort
 3. **Zero references to the old code paths** exist in the codebase (verified by grep post-cleanup, run as part of CI)
 4. The model card draft (referenced in v2.0 P27) is updated to reflect:
    - FinSentLLM ensemble live
    - Conformal CIs surfaced in EngineCalibrationPanel
    - CPCV + DSR + PBO computed and gating alpha claims
+   - Hierarchical pooling live (parent_alpha/parent_beta populated for ≥80% of cells)
    - Alpha-decay monitor live
    - Structured citations (≥90% of analyst/news claims have populated URLs)
 5. **`npm run model-card-status`** reports the engine as **"industry-standard ML"**
-   - This script is itself part of Track A
-   - It asserts: conformal coverage validated, DSR > threshold, PBO < threshold, IC monitor live, ensemble live, structured citations live
-   - Any missing component → script exits non-zero → effort blocked from being marked done
+   - This script is itself part of Wave A
+   - It asserts: conformal coverage validated, DSR > threshold, PBO < threshold, IC monitor live, hierarchical pooling live, ensemble live, structured citations live
+   - Any missing component → script exits non-zero → Phase 19 blocked from being marked done
 
 ---
 
-## 12 — Per-track success criteria
+## 12 — Per-wave success criteria
 
-### 12.1 — Track A (Phase 18.1)
+### 12.1 — Wave A (ML Hygiene + Quant-Grade Validation)
 
 - decayWeights rejects `lambdaDays ≤ 0` with descriptive error
 - Brier OOS split bug regression test green
 - Conformal primitive: empirical coverage on synthetic data within ±2% of nominal 95%
 - DSR + PBO golden-master tests pass against Lopez de Prado published examples
 - CPCV: combinatorial fold counts match Lopez de Prado tables
+- Hierarchical pooling: shrinkage demonstrably accelerates sparse-cell learning vs no-pool control (per original P19 acceptance: ≥30% faster convergence on cells with n<10)
 - Rolling 20d rank-IC computed daily for all 4 signal classes
 - ic_decay_flag fires for at least one class within 30 days of deployment (validates monitor)
-- v2.0 P21 unblocked (can import CPCV/DSR/PBO from `learning.ts`)
+- v2.0 P21 unblocked (can import CPCV/DSR/PBO/hierarchical pooling from `learning.ts`)
 
-### 12.2 — Track B (Phase 28)
+### 12.2 — Wave B (Data Layer Modernization)
 
 - Source-package median latency drops by ≥40% (caching + Tiingo)
 - Anthropic-search hot-path call count drops by ≥80% (Exa primary)
 - Yahoo / Finnhub / Polygon / Anthropic-search remain wired up as fallbacks
 - All adapters retried 3× with exponential backoff
 - Cache miss rate <30% on warm production traffic
-- Total Track B infra cost ≤ $65/mo (Twelve Data + Tiingo + Exa + Upstash)
+- Total Wave B infra cost ≤ $65/mo (Twelve Data + Tiingo + Exa + Upstash)
 
-### 12.3 — Track C (Phase 29)
+### 12.3 — Wave C (Sentiment + Reasoning Excellence)
 
 - FinSentLLM ensemble score logged for ≥95% of community chatter rows
 - Reputation-weighted StockTwits replaces naive count (verified in DB rows)
@@ -449,7 +466,7 @@ The v2.0 Excellence effort is **not done** until ALL of the following are true:
 - Model router decisions logged + cost telemetry visible in `/insights`
 - Cross-class contradiction detector flags ≥1 historical case in backfill (validates detector)
 - Subreddit expansion live: Firecrawl scrapes r/WSB + r/stocks + r/SecurityAnalysis + r/algotrading
-- Total Track C infra cost ≤ $85/mo (HF Inference + Quiver Hobbyist + Unusual Whales)
+- Total Wave C infra cost ≤ $85/mo (HF Inference + Quiver Hobbyist + Unusual Whales)
 
 ---
 
@@ -461,11 +478,12 @@ The v2.0 Excellence effort is **not done** until ALL of the following are true:
 | Exa returns lower-quality news than Anthropic-search for niche tickers | Medium | Dual-source for first 30 days; A/B Brier compare; auto-fallback if Exa null |
 | Upstash Redis outage breaks fetches | High | Cache layer wrapper-only — miss path is "fetch as today" |
 | CPCV/DSR/PBO off-by-one vs Lopez de Prado golden | High | Golden-master tests pinned to published numerical examples |
+| Hierarchical pooling fits poorly on cold-start cells | Medium | Empirical Bayes shrinkage strength learned from data; falls back to flat prior when group n<5 |
 | Quiver/Swaggystocks rate-limited on production spike | Low | Both supplemental; Firecrawl+Stocktwits sufficient if these fail |
 | Schema migration locks LearnedPattern table | Low | All ADDs nullable + default; Postgres skips full table rewrite |
 | CoVe doubles Gemini cost | Medium | Router gates CoVe to high-stakes only; budget cap in env |
-| Existing Phase 18 confirmedDrift logic affected | High | Track A is additive — confirmedDrift, decayWeights internals untouched |
-| v2.0 P19-P27 blocked by these tracks | Critical | Track A finishes first (1-2 weeks); P19/P20 start immediately after |
+| Existing Phase 18 confirmedDrift logic affected | High | Wave A is additive — confirmedDrift, decayWeights internals untouched |
+| v2.0 P20-P27 blocked by Phase 19 | Critical | Wave A finishes ahead of Wave C; P20 can start as soon as Wave A's hierarchical pooling lands |
 | Shadow mode doubles request latency | Medium | New path runs in setImmediate() background; old returns first |
 | ShadowComparison table grows unbounded | Low | TTL: rows older than 30 days cleaned by daily cron |
 | Verdict gate too lenient → bad cutover | High | PASS requires non-regression on EVERY metric, not average |
@@ -486,29 +504,47 @@ The v2.0 Excellence effort is **not done** until ALL of the following are true:
 | Unusual Whales (options flow, optional) | Unusual Whales | $50 |
 | **Total full stack** | | **≤ $135 / month** |
 
-Replaces ~$200/mo of Anthropic-search burn → net **savings ~$65/mo** while gaining caching, retries, ensemble sentiment, structured citations, conformal CIs, alpha-decay monitor, and quant-grade validation.
+Replaces ~$200/mo of Anthropic-search burn → net **savings ~$65/mo** while gaining caching, retries, ensemble sentiment, structured citations, conformal CIs, hierarchical pooling, alpha-decay monitor, and quant-grade validation.
 
 ---
 
 ## 15 — Implementation handoff
 
-This design hands off to `superpowers:writing-plans` to generate three phase plans:
+This design hands off to the GSD pipeline:
 
-- `.planning/phases/18.1-ml-hygiene-quant-validation/` — Track A (~6 plans)
-- `.planning/phases/28-data-layer-modernization/` — Track B (~8 plans)
-- `.planning/phases/29-sentiment-reasoning-excellence/` — Track C (~11 plans)
+```bash
+/gsd-plan-phase 19   # spawns researcher + planner agents to expand all 30 plan stubs
+/gsd-execute-phase 19  # autonomous wave-based execution with code review per plan
+```
+
+Resulting artifacts:
+
+- `.planning/phases/19-cipher-v2-excellence/` — phase directory
+  - `19-Z-01-PLAN.md` … `19-Z-04-PLAN.md` — Wave Z (4 plans)
+  - `19-A-01-PLAN.md` … `19-A-07-PLAN.md` — Wave A (7 plans, incl. hierarchical pooling)
+  - `19-B-01-PLAN.md` … `19-B-08-PLAN.md` — Wave B (8 plans)
+  - `19-C-01-PLAN.md` … `19-C-11-PLAN.md` — Wave C (11 plans)
+  - **Total: 30 plans**
 
 Each generated plan **must** include:
 - The Autonomous Execution Clause (§9) verbatim in its preamble
 - The Hard Cleanup Gate (§10) verbatim in its Definition of Done
 - A reference back to this design doc
 
-The Composite Definition of Done (§11) is a milestone-level gate enforced by `npm run model-card-status` — added to CI as a required check on the v2.0 milestone close.
+The Composite Definition of Done (§11) is enforced by `npm run model-card-status` — a CI required check before Phase 19 is marked complete in ROADMAP.md.
+
+Execution discipline: superpowers skills (`superpowers:executing-plans`, `superpowers:subagent-driven-development`, `superpowers:test-driven-development`, `superpowers:verification-before-completion`) are used inside each GSD-spawned executor agent.
 
 ---
 
 ## 16 — Sign-off
 
 - **Designed:** 2026-05-07
-- **Approved by user:** 2026-05-07 (verbatim: "yes, but we are building on current, not restarting a new project" + "i think we do one big test then take out old code, not wait 60 days" + "make sure you can do it all yourself, the testing and deleting" + "This phase is not done until we have deleted old code and have a new industry standard, amazing, good, ML model.")
-- **Next action:** invoke `superpowers:writing-plans` to generate phase plans for 18.1, 28, 29
+- **Approved by user:** 2026-05-07
+- **User direction quotes:**
+  - *"yes, but we are building on current, not restarting a new project"*
+  - *"i think we do one big test then take out old code, not wait 60 days"*
+  - *"make sure you can do it all yourself, the testing and deleting"*
+  - *"This phase is not done until we have deleted old code and have a new industry standard, amazing, good, ML model."*
+  - *"yeah do third gsd, use the superpowers skills but use all gsd workflow things, this is phase 19, remember that and update all."*
+- **Next action:** run `/gsd-plan-phase 19` to expand the 30 plan stubs into full GSD-format `<plan-id>-PLAN.md` files.

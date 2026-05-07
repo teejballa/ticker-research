@@ -1,18 +1,20 @@
-# Cipher v2.0 Excellence Implementation Plan
+# Cipher v2.0 Excellence Implementation Plan — Phase 19
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Inside each plan, use superpowers:test-driven-development and superpowers:verification-before-completion. Phase-level orchestration runs through `/gsd-plan-phase 19` and `/gsd-execute-phase 19`.
+
+**Phase:** 19 (Cipher v2.0 Excellence)
 
 **Goal:** Aggressively improve Cipher's data, sentiment, and ML pipelines to industry-standard quant-grade quality — additive only, autonomous from build through old-code deletion.
 
-**Architecture:** Three parallel tracks (Phase 18.1 ML Hygiene + Quant Validation, Phase 28 Data Layer Modernization, Phase 29 Sentiment + Reasoning Excellence) shipped alongside the existing v2.0 ML sequence (P19-P27). Every new path lands behind a feature flag, runs in shadow A/B vs the existing path, auto-cuts over on PASS verdict, and deletes old code in the same commit.
+**Architecture:** Single phase (Phase 19) split into four parallel waves: Wave Z (shadow + cutover infra), Wave A (ML hygiene + quant-grade validation, including hierarchical pooling absorbed from original v2.0 P19), Wave B (data layer modernization), Wave C (sentiment + reasoning excellence). Every new path lands behind a feature flag, runs in shadow A/B vs the existing path, auto-cuts over on PASS verdict, and deletes old code in the same commit.
 
 **Tech Stack:** TypeScript / Next.js 16 / Prisma + Neon Postgres / Vercel Functions + Crons / Vercel AI Gateway (Gemini, Anthropic) / Upstash Redis / HuggingFace Inference Endpoints / Vitest / Playwright.
 
-**Reference design doc:** `docs/plans/2026-05-07-cipher-v2-excellence-design.md` (committed `cb88ce8`).
+**Reference design doc:** `docs/plans/2026-05-07-cipher-v2-excellence-design.md`.
 
 ---
 
-## Universal Preamble — applies to every plan in this effort
+## Universal Preamble — applies to every plan in Phase 19
 
 ### Autonomous Execution Clause
 
@@ -37,12 +39,13 @@ A plan is **NOT complete** until ALL of the following are true:
 
 `/gsd-execute-phase` MUST refuse to mark a plan complete until all five conditions hold.
 
-### Composite Effort Done Gate
+### Composite Phase 19 Done Gate
 
-The full v2.0 Excellence effort is not done until `npm run model-card-status` exits zero — asserting:
+Phase 19 is not done until `npm run model-card-status` exits zero — asserting:
 - Conformal coverage validated
 - DSR > threshold, PBO < threshold
 - IC monitor live for all 4 signal classes
+- Hierarchical pooling live (parent_alpha/parent_beta populated for ≥80% of cells)
 - FinSentLLM ensemble live
 - Structured citations live (≥90% URL coverage on analyst/news claims)
 - Zero references to old code paths in tree (post-cleanup grep)
@@ -52,62 +55,63 @@ The full v2.0 Excellence effort is not done until `npm run model-card-status` ex
 
 ## Plan Inventory
 
-### Track A — Phase 18.1 (ML Hygiene + Quant-Grade Validation) — 1-2 weeks
+### Wave Z — Shadow + Cutover Infrastructure (prerequisite for all) — 3 days
 
 | ID | Title | Complexity | Detail level in this doc |
 |---|---|---|---|
-| 18.1-01 | decayWeights lambda guard + HYPERPARAMETERS Zod schema | Small | **Full TDD** |
-| 18.1-02 | Brier OOS split bug fix + look-ahead audit | Small | Stub |
-| 18.1-03 | Conformal prediction primitive | Medium | Stub |
-| 18.1-04 | DSR + PBO + CPCV primitives | Large | Stub |
-| 18.1-05 | Rolling 20d rank-IC monitor + alpha-decay cron | Medium | Stub |
-| 18.1-06 | Calibration validation harness + reliability diagram | Medium | Stub |
+| 19-Z-01 | features.ts flag matrix + env wiring | Small | **Full TDD** |
+| 19-Z-02 | ShadowComparison + RollbackLog Prisma schema | Small | Stub |
+| 19-Z-03 | shadow-runner + shadow-verdict CLI | Medium | Stub |
+| 19-Z-04 | model-card-status script (composite gate) | Medium | Stub |
 
-### Track B — Phase 28 (Data Layer Modernization) — 2-3 weeks
+### Wave A — ML Hygiene + Quant-Grade Validation — 2-3 weeks
 
 | ID | Title | Complexity | Detail level in this doc |
 |---|---|---|---|
-| 28-01 | Upstash Redis client + cache-keys + TTL config | Small | **Full TDD** |
-| 28-02 | Retry + exponential backoff wrapper | Small | Stub |
-| 28-03 | Tiingo adapter + tests | Medium | Stub |
-| 28-04 | Twelve Data adapter + tests | Medium | Stub |
-| 28-05 | Exa 2.0 adapter + Anthropic-search fallback wiring | Medium | Stub |
-| 28-06 | source-package.ts merge precedence reorder | Medium | Stub |
-| 28-07 | Vercel Runtime Cache integration | Small | Stub |
-| 28-08 | Feature flag rollout + dual-write verification | Small | Stub |
+| 19-A-01 | decayWeights lambda guard + HYPERPARAMETERS Zod schema | Small | **Full TDD** |
+| 19-A-02 | Brier OOS split bug fix + look-ahead audit | Small | Stub |
+| 19-A-03 | Conformal prediction primitive | Medium | Stub |
+| 19-A-04 | DSR + PBO + CPCV primitives | Large | Stub |
+| 19-A-05 | Rolling 20d rank-IC monitor + alpha-decay cron | Medium | Stub |
+| 19-A-06 | Calibration validation harness + reliability diagram | Medium | Stub |
+| 19-A-07 | Hierarchical Bayesian pooling (absorbed from original v2.0 P19) | Large | Stub |
 
-### Track C — Phase 29 (Sentiment + Reasoning Excellence) — 4-5 weeks
-
-| ID | Title | Complexity | Detail level in this doc |
-|---|---|---|---|
-| 29-01 | HF Inference Endpoint + FinSentLLM client | Medium | **Full TDD** |
-| 29-02 | Ensemble meta-classifier (FinGPT + Mistral + FinBERT) | Large | Stub |
-| 29-03 | Reputation-weighted StockTwits aggregation | Small | Stub |
-| 29-04 | Options term-structure 30/60/90d + IV regime gate | Medium | Stub |
-| 29-05 | Swaggystocks + ApeWisdom adapters (supplemental) | Medium | Stub |
-| 29-06 | Quiver adapter (optional flag) | Small | Stub |
-| 29-07 | Structured citation schema + research-brief edits | Medium | Stub |
-| 29-08 | CoVe two-pass wrapper + tests | Large | Stub |
-| 29-09 | Model cascade router + cost telemetry | Medium | Stub |
-| 29-10 | Cross-class contradiction detector | Medium | Stub |
-| 29-11 | Arctic Shift one-time historical backfill | Medium | Stub |
-
-### Track Z — Shadow + Cutover Infrastructure (prerequisite for all) — 3 days
+### Wave B — Data Layer Modernization — 2-3 weeks
 
 | ID | Title | Complexity | Detail level in this doc |
 |---|---|---|---|
-| Z-01 | features.ts flag matrix + env wiring | Small | **Full TDD** |
-| Z-02 | ShadowComparison + RollbackLog Prisma schema | Small | Stub |
-| Z-03 | shadow-runner + shadow-verdict CLI | Medium | Stub |
-| Z-04 | model-card-status script (composite gate) | Medium | Stub |
+| 19-B-01 | Upstash Redis client + cache-keys + TTL config | Small | **Full TDD** |
+| 19-B-02 | Retry + exponential backoff wrapper | Small | Stub |
+| 19-B-03 | Tiingo adapter + tests | Medium | Stub |
+| 19-B-04 | Twelve Data adapter + tests | Medium | Stub |
+| 19-B-05 | Exa 2.0 adapter + Anthropic-search fallback wiring | Medium | Stub |
+| 19-B-06 | source-package.ts merge precedence reorder | Medium | Stub |
+| 19-B-07 | Vercel Runtime Cache integration | Small | Stub |
+| 19-B-08 | Feature flag rollout + dual-write verification | Small | Stub |
 
-**Total: 4 + 6 + 8 + 11 = 29 plans across 4 tracks. Track Z ships first (3 days). Tracks A/B/C run in parallel after Z.**
+### Wave C — Sentiment + Reasoning Excellence — 4-5 weeks
+
+| ID | Title | Complexity | Detail level in this doc |
+|---|---|---|---|
+| 19-C-01 | HF Inference Endpoint + FinSentLLM client | Medium | **Full TDD** |
+| 19-C-02 | Ensemble meta-classifier (FinGPT + Mistral + FinBERT) | Large | Stub |
+| 19-C-03 | Reputation-weighted StockTwits aggregation | Small | Stub |
+| 19-C-04 | Options term-structure 30/60/90d + IV regime gate | Medium | Stub |
+| 19-C-05 | Swaggystocks + ApeWisdom adapters (supplemental) | Medium | Stub |
+| 19-C-06 | Quiver adapter (optional flag) | Small | Stub |
+| 19-C-07 | Structured citation schema + research-brief edits | Medium | Stub |
+| 19-C-08 | CoVe two-pass wrapper + tests | Large | Stub |
+| 19-C-09 | Model cascade router + cost telemetry | Medium | Stub |
+| 19-C-10 | Cross-class contradiction detector | Medium | Stub |
+| 19-C-11 | Arctic Shift one-time historical backfill | Medium | Stub |
+
+**Total: 4 + 7 + 8 + 11 = 30 plans across 4 waves. Wave Z ships first (3 days). Waves A/B/C run in parallel after Z.**
 
 ---
 
-# Track Z — Shadow + Cutover Infrastructure
+# Wave Z — Shadow + Cutover Infrastructure
 
-## Plan Z-01: features.ts flag matrix + env wiring
+## Plan 19-Z-01: features.ts flag matrix + env wiring
 
 **Files:**
 - Create: `src/lib/features.ts`
@@ -146,10 +150,10 @@ describe('features', () => {
     expect(() => resolveFeatures()).toThrow(/FEATURE_CONFORMAL/);
   });
 
-  it('exposes all 14 v2.0 Excellence flags', () => {
+  it('exposes all 15 Phase 19 flags', () => {
     const f = resolveFeatures();
     const expected = [
-      'conformal_intervals', 'cpcv', 'ic_decay_monitor',
+      'conformal_intervals', 'cpcv', 'ic_decay_monitor', 'hierarchical_pooling',
       'data_cache', 'tiingo_primary', 'twelvedata_primary', 'exa_primary',
       'finsentllm_ensemble', 'community_supplemental', 'cove_two_pass',
       'model_router', 'contradiction_detector', 'options_term_structure',
@@ -178,6 +182,7 @@ const FLAG_NAMES = [
   'conformal_intervals',
   'cpcv',
   'ic_decay_monitor',
+  'hierarchical_pooling',
   'data_cache',
   'tiingo_primary',
   'twelvedata_primary',
@@ -227,13 +232,14 @@ Expected: PASS — 5 tests
 
 **Step 5: Add env vars to .env.example**
 
-Modify `.env.example` (create if absent) — append:
+Append to `.env.example`:
 
 ```
-# v2.0 Excellence — feature flags (off | shadow | true)
+# Phase 19 — feature flags (off | shadow | true)
 FEATURE_CONFORMAL=off
 FEATURE_CPCV=off
 FEATURE_IC_DECAY_MONITOR=off
+FEATURE_HIERARCHICAL_POOLING=off
 FEATURE_DATA_CACHE=off
 FEATURE_TIINGO_PRIMARY=off
 FEATURE_TWELVEDATA_PRIMARY=off
@@ -251,19 +257,19 @@ FEATURE_REPUTATION_WEIGHTED_STOCKTWITS=off
 
 ```bash
 git add src/lib/features.ts tests/lib/features.test.ts .env.example
-git commit -m "feat(z-01): feature flag matrix for v2.0 Excellence tracks
+git commit -m "feat(19-z-01): feature flag matrix for Phase 19
 
 Three-mode flag (off | shadow | on) with descriptive parse errors.
-Defaults all 14 flags to off — every new path opt-in until verified.
+Defaults all 15 flags to off — every new path opt-in until verified.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
-**Done gate (Z-01 has no shadow phase — it IS the infra):** plan complete when tests green and committed.
+**Done gate (19-Z-01 has no shadow phase — it IS the infra):** plan complete when tests green and committed.
 
 ---
 
-## Plan Z-02: ShadowComparison + RollbackLog Prisma schema
+## Plan 19-Z-02: ShadowComparison + RollbackLog Prisma schema
 
 **Files:**
 - Modify: `prisma/schema.prisma`
@@ -279,7 +285,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Plan Z-03: shadow-runner + shadow-verdict CLI
+## Plan 19-Z-03: shadow-runner + shadow-verdict CLI
 
 **Files:**
 - Create: `src/lib/shadow/shadow-runner.ts` — `runWithShadow<T>(name, oldFn, newFn, mode)`
@@ -300,7 +306,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Plan Z-04: model-card-status script (composite gate)
+## Plan 19-Z-04: model-card-status script (composite gate)
 
 **Files:**
 - Create: `scripts/model-card-status.ts`
@@ -312,15 +318,15 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Script asserts each composite-DoD condition (§11 of design)
 - Exits 0 only when ALL conditions met
 - Exits non-zero with a punch list of unmet conditions
-- Conditions check live DB (LearnedPattern.rolling_ic_20d populated, DSR/PBO not null, etc.) + grep tree (no old-path references) + git log (flag-removal PRs merged)
+- Conditions check live DB (LearnedPattern.rolling_ic_20d populated, DSR/PBO not null, parent_alpha/beta populated, etc.) + grep tree (no old-path references) + git log (flag-removal PRs merged)
 
 **Done gate:** mocked-DB unit tests pass; manual run against current state shows clear unmet-conditions list (expected — nothing built yet).
 
 ---
 
-# Track A — Phase 18.1 (ML Hygiene + Quant-Grade Validation)
+# Wave A — ML Hygiene + Quant-Grade Validation
 
-## Plan 18.1-01: decayWeights lambda guard + HYPERPARAMETERS Zod schema
+## Plan 19-A-01: decayWeights lambda guard + HYPERPARAMETERS Zod schema
 
 **Files:**
 - Modify: `src/lib/learning.ts:360-371` (decayWeights) and `:519-548` (HYPERPARAMETERS)
@@ -335,7 +341,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 import { describe, it, expect } from 'vitest';
 import { decayWeights, HYPERPARAMETERS, validateHyperparameters } from '../src/lib/learning';
 
-describe('decayWeights — Phase 18.1 guard (Plan 18.1-01)', () => {
+describe('decayWeights — Phase 19 guard (Plan 19-A-01)', () => {
   const obs = [{ hit: true, recorded_at: new Date('2026-04-01') }];
 
   it('rejects lambdaDays = 0 with descriptive error', () => {
@@ -357,7 +363,7 @@ describe('decayWeights — Phase 18.1 guard (Plan 18.1-01)', () => {
   });
 });
 
-describe('HYPERPARAMETERS — Zod schema (Plan 18.1-01)', () => {
+describe('HYPERPARAMETERS — Zod schema (Plan 19-A-01)', () => {
   it('validates current bootstrap config', () => {
     expect(() => validateHyperparameters(HYPERPARAMETERS)).not.toThrow();
   });
@@ -455,7 +461,7 @@ Expected: all green; specifically `tests/learning.hyperparameters.test.ts` (Plan
 
 ```bash
 git add src/lib/learning.ts tests/learning.unit.bugs.test.ts
-git commit -m "fix(18.1-01): guard decayWeights against lambda<=0 + Zod-validate HYPERPARAMETERS
+git commit -m "fix(19-a-01): guard decayWeights against lambda<=0 + Zod-validate HYPERPARAMETERS
 
 decayWeights threw exp(-Δt/0) = Infinity on misconfig (silent ESS corruption).
 Now throws descriptive error. HYPERPARAMETERS validated at module load via Zod —
@@ -466,11 +472,11 @@ Plan 18-10 hyperparameter sanity test still green.
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
-**Done gate (Plan 18.1-01 — pure-function fix, no shadow needed):** tests green + committed. No flag, no cutover, no rollback hatch — additive guard on existing pure function, defensible by failing-fast contract.
+**Done gate (Plan 19-A-01 — pure-function fix, no shadow needed):** tests green + committed. No flag, no cutover, no rollback hatch — additive guard on existing pure function, defensible by failing-fast contract.
 
 ---
 
-## Plan 18.1-02: Brier OOS split bug fix + look-ahead audit (stub)
+## Plan 19-A-02: Brier OOS split bug fix + look-ahead audit (stub)
 
 **Files:**
 - Modify: `src/app/api/cron/learn/route.ts:519-522` (Brier split logic)
@@ -489,7 +495,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Plan 18.1-03: Conformal prediction primitive (stub)
+## Plan 19-A-03: Conformal prediction primitive (stub)
 
 **Files:**
 - Modify: `src/lib/learning.ts` — add `conformalInterval(predictions, outcomes, alpha)` export
@@ -506,7 +512,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Plan 18.1-04: DSR + PBO + CPCV primitives (stub)
+## Plan 19-A-04: DSR + PBO + CPCV primitives (stub)
 
 **Files:**
 - Modify: `src/lib/learning.ts` — add `deflatedSharpeRatio(returns, trials, skew, kurt)`, `probBacktestOverfitting(in_sample, oos_sample)`, `combinatorialPurgedKFold({ n, k, embargo })`
@@ -524,7 +530,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Plan 18.1-05: Rolling 20d rank-IC monitor + alpha-decay cron (stub)
+## Plan 19-A-05: Rolling 20d rank-IC monitor + alpha-decay cron (stub)
 
 **Files:**
 - Create: `src/lib/reasoning/alpha-decay-monitor.ts`
@@ -539,14 +545,14 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 3. Per-class IC: diffusion / technical / insider / institutional
 4. Cron route persists `LearnedPattern.rolling_ic_20d`
 5. Set `ic_decay_flag = true` when `rolling_ic_20d < 0.02` for 5 consecutive days
-6. Cron `npm run shadow-verdict 18.1-05` not needed — additive metric column, no replacement
+6. No shadow — additive metric column, no replacement
 7. Commit
 
 **Done gate:** integration test shows IC computed correctly on seeded outcomes; flag fires on synthetic decay scenario.
 
 ---
 
-## Plan 18.1-06: Calibration validation harness + reliability diagram (stub)
+## Plan 19-A-06: Calibration validation harness + reliability diagram (stub)
 
 **Files:**
 - Create: `scripts/calibration-report.ts`
@@ -564,9 +570,34 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Track B — Phase 28 (Data Layer Modernization)
+## Plan 19-A-07: Hierarchical Bayesian pooling — empirical Bayes priors (stub)
 
-## Plan 28-01: Upstash Redis client + cache-keys + TTL config
+**Files:**
+- Modify: `src/lib/learning.ts` — add `hierarchicalPooledPosterior({ cell_obs, group_alpha, group_beta, shrinkage })` export
+- Modify: `src/app/api/cron/learn/route.ts` — wire pooled posterior into `recomputeOneCell`
+- Modify: `prisma/schema.prisma` — add `parent_alpha`, `parent_beta`, `shrinkage_strength` columns to LearnedPattern (already in design §6 schema block)
+- Create: `tests/learning.hierarchical.test.ts`
+- Create: `tests/integration/hierarchical-pooling.live.test.ts`
+
+**Source:** Absorbed from original v2.0 Phase 19 (Hierarchical Priors / Partial Pooling). Acceptance criterion preserved: hierarchical pooling demonstrably accelerates sparse-cell learning vs no-pool control.
+
+**Tasks:**
+1. Implement empirical Bayes parent estimation: pool α/β across cells in same `(signal_class, cap_class)` group; estimate group hyperprior via marginal likelihood maximization (EM or Newton step)
+2. Per-cell shrinkage: `α_pooled = (n_local × α_local + λ × α_group) / (n_local + λ)`; same for β
+3. λ (shrinkage_strength) is itself learned per group via EB; bounded [0.5, 50]
+4. Falls back to flat prior when group n<5 (cold-start safety)
+5. **Shadow A/B:** with-pooling vs flat-prior — verdict on **convergence speed** (number of outcomes for cell to leave EXPLORATORY) AND **OOS Brier** AND **calibration**
+6. Wire into `engine-context.ts` so pooled posterior is what Gemini sees (existing flat-prior surface kept as fallback for `FEATURE_HIERARCHICAL_POOLING=off`)
+7. Cutover + cleanup per universal preamble
+8. Commit
+
+**Done gate:** Wave A standard + the original v2.0 P19 acceptance: ≥30% faster convergence on cells with n<10 vs no-pool control, demonstrated via Plan 19-A-04 CPCV + Plan 19-A-06 calibration harness.
+
+---
+
+# Wave B — Data Layer Modernization
+
+## Plan 19-B-01: Upstash Redis client + cache-keys + TTL config
 
 **Files:**
 - Create: `src/lib/data/cache/upstash.ts`
@@ -575,7 +606,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Modify: `package.json` (add `@upstash/redis`)
 - Modify: `.env.example` — add `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
 
-**Why first in Track B:** every adapter (Tiingo, Twelve Data, Exa) depends on this cache layer.
+**Why first in Wave B:** every adapter (Tiingo, Twelve Data, Exa) depends on this cache layer.
 
 **Step 1: Write the failing test**
 
@@ -612,7 +643,6 @@ describe('upstash cache wrapper', () => {
   });
 
   it('falls through to fetcher on Redis outage (graceful degrade)', async () => {
-    // simulated outage — set env var to point at unreachable URL
     process.env.UPSTASH_REDIS_REST_URL = 'http://127.0.0.1:1';
     const fetcher = vi.fn().mockResolvedValue({ price: 150 });
     const result = await cached(CACHE_KEYS.quote('AAPL'), fetcher, { ttlSeconds: 300 });
@@ -651,12 +681,12 @@ export const CACHE_KEYS = {
 } as const;
 
 export const TTL_SECONDS = {
-  quote: 300,        // 5 min
-  fundamentals: 86_400, // 24h
-  options: 900,      // 15 min
-  community: 600,    // 10 min
-  news: 1_800,       // 30 min
-  source_pkg: 600,   // 10 min idempotency
+  quote: 300,
+  fundamentals: 86_400,
+  options: 900,
+  community: 600,
+  news: 1_800,
+  source_pkg: 600,
 } as const;
 ```
 
@@ -692,7 +722,6 @@ export async function cached<T>(
     const hit = await r.get<T>(key);
     if (hit !== null && hit !== undefined) return hit;
   } catch {
-    // graceful degrade on Redis outage
     return fetcher();
   }
   const value = await fetcher();
@@ -721,74 +750,74 @@ Expected: PASS — 5 tests
 
 ```bash
 git add src/lib/data/cache/ tests/lib/data/cache/ package.json package-lock.json .env.example
-git commit -m "feat(28-01): Upstash Redis cache layer with graceful degrade
+git commit -m "feat(19-b-01): Upstash Redis cache layer with graceful degrade
 
 cached(key, fetcher, opts) wraps any fetcher with TTL caching.
 Redis outage falls through to fetcher — no hard dependency.
 Centralized cache-keys + TTL config in cache-keys.ts.
 
-Foundation for Track B adapters (Tiingo, Twelve Data, Exa).
+Foundation for Wave B adapters (Tiingo, Twelve Data, Exa).
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
-**Done gate (Plan 28-01):** tests green; manual smoke test against real Upstash sandbox confirms cache hit/miss; committed. No shadow needed — wrapper is opt-in (callers must invoke `cached()`); existing fetchers untouched.
+**Done gate (Plan 19-B-01):** tests green; manual smoke test against real Upstash sandbox confirms cache hit/miss; committed. No shadow needed — wrapper is opt-in (callers must invoke `cached()`); existing fetchers untouched.
 
 ---
 
-## Plans 28-02 through 28-08 (stubs)
+## Plans 19-B-02 through 19-B-08 (stubs)
 
-### 28-02: Retry + exponential backoff wrapper
+### 19-B-02: Retry + exponential backoff wrapper
 - Create: `src/lib/data/retry.ts` — `withRetry(fn, { maxAttempts, baseDelayMs })`
 - Tests: backoff timing, max attempts, retries only on retryable errors (5xx, network, not 4xx)
 - Commit
 
-### 28-03: Tiingo adapter
+### 19-B-03: Tiingo adapter
 - Create: `src/lib/data/adapters/tiingo.ts` — `fetchTiingoQuote`, `fetchTiingoFundamentals`
 - Wraps fetch with `cached()` + `withRetry()`
 - Mocked HTTP tests + 1 live integration test (skipped by default, runs with `RUN_LIVE_INTEGRATION=true`)
 - Commit
 
-### 28-04: Twelve Data adapter
+### 19-B-04: Twelve Data adapter
 - Create: `src/lib/data/adapters/twelve-data.ts` — `fetchTwelveDataFundamentals`
 - Same pattern as Tiingo
 - Commit
 
-### 28-05: Exa 2.0 adapter
+### 19-B-05: Exa 2.0 adapter
 - Create: `src/lib/data/adapters/exa-search.ts` — `fetchExaNews`, `fetchExaAnalystSentiment`
 - Replaces hot-path Anthropic-search calls when `FEATURE_EXA_PRIMARY` enabled
 - `anthropic-search.ts` unchanged — kept as fallback
 - Commit
 
-### 28-06: source-package.ts merge precedence reorder
+### 19-B-06: source-package.ts merge precedence reorder
 - Modify: `src/lib/data/source-package.ts` + `src/lib/data/merge.ts`
 - New ladder when flags on: tiingo → twelvedata → yahoo → finnhub → polygon
 - Old ladder when flags off (no behavior change for current users)
 - **Shadow A/B starts here** — `runWithShadow('source-package', oldFn, newFn, mode)`
 - Verdict: SourcePackage Jaccard similarity ≥ 95% AND latency ≤ old AND no field nulls introduced
 - Commit landing code; flip flag to shadow in next deploy
-- After 3-7 days: run `shadow-verdict 28-06` → if PASS → cutover PR with old merge ladder code DELETED
+- After 3-7 days: run `npm run shadow-verdict 19-b-06` → if PASS → cutover PR with old merge ladder code DELETED
 - 7-day rollback hatch
 - Final flag-removal PR
 - Commit
 
-### 28-07: Vercel Runtime Cache integration
+### 19-B-07: Vercel Runtime Cache integration
 - Modify: `src/app/api/research/[ticker]/route.ts` — wrap SourcePackage assembly with Runtime Cache 10min idempotency
 - Reference: Next.js cache components (`use cache` directive) for App Router 16
 - Commit
 
-### 28-08: Feature flag rollout + dual-write verification
-- Run shadow rollout for 28-06, 28-07 in production (1% traffic gate)
+### 19-B-08: Feature flag rollout + dual-write verification
+- Run shadow rollout for 19-B-06, 19-B-07 in production (1% traffic gate)
 - Capture verdict, cutover, cleanup per universal preamble
 - This plan is 100% process — no new code, just driving the cutover
 
-**Track B done gate:** all 8 plans satisfy Hard Cleanup Gate; old anthropic-search/yahoo/finnhub/polygon code paths still in tree as fallbacks (NOT deleted — they're the safety net), but their direct call from `source-package.ts` is removed from primary path.
+**Wave B done gate:** all 8 plans satisfy Hard Cleanup Gate; Yahoo/Finnhub/Polygon/Anthropic-search code paths still in tree as fallbacks (NOT deleted — they're the safety net), but their direct call from `source-package.ts` primary path is removed.
 
 ---
 
-# Track C — Phase 29 (Sentiment + Reasoning Excellence)
+# Wave C — Sentiment + Reasoning Excellence
 
-## Plan 29-01: HF Inference Endpoint + FinSentLLM client
+## Plan 19-C-01: HF Inference Endpoint + FinSentLLM client
 
 **Files:**
 - Create: `src/lib/sentiment/finsentllm.ts`
@@ -796,7 +825,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Modify: `package.json` (add `@huggingface/inference`)
 - Modify: `.env.example` — add `HF_INFERENCE_TOKEN`, `HF_FINGPT_ENDPOINT`, `HF_MISTRAL_FIN_ENDPOINT`, `HF_FINBERT_ENDPOINT`
 
-**Why first in Track C:** the ensemble (29-02) and CoVe (29-08) both depend on this client being ready.
+**Why first in Wave C:** the ensemble (19-C-02) and CoVe (19-C-08) both depend on this client being ready.
 
 **Step 1: Write the failing test**
 
@@ -844,7 +873,6 @@ describe('finsentllm clients', () => {
         textClassification: vi.fn(async () => { throw new Error('rate limited'); }),
       })),
     }));
-    // re-import after re-mock
     const mod = await import('../../../src/lib/sentiment/finsentllm');
     const r = await mod.classifyFinGPT('test');
     expect(r).toEqual({ score: null, confidence: null, model: 'fingpt-v3', error: 'rate limited' });
@@ -864,8 +892,8 @@ Expected: FAIL — module missing.
 import { HfInference } from '@huggingface/inference';
 
 export interface SentimentScore {
-  score: number | null;        // -1 (very bearish) to +1 (very bullish), null on error
-  confidence: number | null;   // 0..1, null on error
+  score: number | null;
+  confidence: number | null;
   model: 'fingpt-v3' | 'mistral-fin-7b' | 'finbert';
   error?: string;
 }
@@ -877,8 +905,6 @@ function getClient(): HfInference {
 }
 
 function reduceLabels(out: Array<{ label: string; score: number }>): { score: number; confidence: number } {
-  // Convention: label "positive" → +score, "negative" → -score, "neutral" → 0.
-  // Final score = positive_prob - negative_prob; confidence = max prob.
   let pos = 0, neg = 0, max = 0;
   for (const r of out) {
     const l = r.label.toLowerCase();
@@ -918,28 +944,28 @@ Expected: PASS — 4 tests
 
 ```bash
 git add src/lib/sentiment/finsentllm.ts tests/lib/sentiment/ package.json package-lock.json .env.example
-git commit -m "feat(29-01): FinSentLLM clients (FinGPT v3 + Mistral-Fin 7B + FinBERT)
+git commit -m "feat(19-c-01): FinSentLLM clients (FinGPT v3 + Mistral-Fin 7B + FinBERT)
 
 Three independent HuggingFace Inference Endpoint clients, each returning
 a uniform SentimentScore. Errors return null sentinels (do not throw).
-Foundation for Plan 29-02 (ensemble meta-classifier) and 29-08 (CoVe verifier).
+Foundation for Plan 19-C-02 (ensemble meta-classifier) and 19-C-08 (CoVe verifier).
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
-**Done gate (Plan 29-01):** tests green; smoke test against staging HF endpoints returns sane scores for known bullish + bearish snippets; committed. No shadow needed — primitive client only, not yet wired into hot path.
+**Done gate (Plan 19-C-01):** tests green; smoke test against staging HF endpoints returns sane scores for known bullish + bearish snippets; committed. No shadow needed — primitive client only, not yet wired into hot path.
 
 ---
 
-## Plans 29-02 through 29-11 (stubs)
+## Plans 19-C-02 through 19-C-11 (stubs)
 
-### 29-02: Ensemble meta-classifier (FinGPT + Mistral + FinBERT)
+### 19-C-02: Ensemble meta-classifier (FinGPT + Mistral + FinBERT)
 - Create: `src/lib/sentiment/ensemble.ts` — `ensembleSentiment(text)` returns `{ score, confidence, model_agreement, per_model: SentimentScore[] }`
 - Strategy: weighted average of non-null scores, weight = confidence; agreement = 1 - std(scores)
 - Edge: if 2+ models null, fall back to single available; if all null, return null sentinel
 - Commit
 
-### 29-03: Reputation-weighted StockTwits aggregation
+### 19-C-03: Reputation-weighted StockTwits aggregation
 - Modify: `src/lib/data/stocktwits.ts` — add reputation weighting mode behind `FEATURE_REPUTATION_WEIGHTED_STOCKTWITS`
 - Score = Σ(message_sentiment × user_reputation) / Σ(user_reputation)
 - Reputation derived from follower count + post history (cached per user 24h)
@@ -947,14 +973,14 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Cutover + cleanup per universal preamble
 - Commit
 
-### 29-04: Options term-structure 30/60/90d + IV regime gate
+### 19-C-04: Options term-structure 30/60/90d + IV regime gate
 - Modify: `src/lib/data/options-sentiment.ts` — fetch chains for 30/60/90d expiries, OI-weighted P/C, compare realized vs implied vol
 - New IV regime classifier: high-IV regime flips put/call interpretation
 - **Shadow A/B**: term-structure vs nearest-expiry-only on resolved tickers
 - Cutover + cleanup
 - Commit
 
-### 29-05: Swaggystocks + ApeWisdom adapters (supplemental)
+### 19-C-05: Swaggystocks + ApeWisdom adapters (supplemental)
 - Create: `src/lib/data/adapters/swaggystocks.ts`, `src/lib/data/adapters/apewisdom.ts`
 - Both supplemental; merged into `community_aggregated` JSONB column on SentimentSnapshot
 - Firecrawl remains primary (per user direction 2026-05-07)
@@ -962,14 +988,14 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Cutover + cleanup
 - Commit
 
-### 29-06: Quiver adapter (optional flag)
+### 19-C-06: Quiver adapter (optional flag)
 - Create: `src/lib/data/adapters/quiver.ts` — insider trades + congressional trades
 - Optional flag — only activates if `QUIVER_API_KEY` set
 - Merged into `community_aggregated`
 - No shadow — purely additive new column population
 - Commit
 
-### 29-07: Structured citation schema + research-brief edits
+### 19-C-07: Structured citation schema + research-brief edits
 - Create: `src/lib/sentiment/citation-schema.ts` — Zod schema for `{ source, url, confidence, date_retrieved }`
 - Modify: `src/lib/research-brief.ts` — assembles structured citations in prompt
 - Modify: `src/lib/gemini-analysis.ts` — replace `source_citation: string` with `citations_v2: Citation[]` in `AnalysisResultSchema`
@@ -977,7 +1003,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Cutover + cleanup
 - Commit
 
-### 29-08: CoVe two-pass wrapper + tests
+### 19-C-08: CoVe two-pass wrapper + tests
 - Create: `src/lib/reasoning/cove.ts`
 - Pass 1: Gemini emits AnalysisResult + 3 verification claims
 - Pass 2: NLI check (via FinBERT classifier or distilbert-mnli) on each claim vs SourcePackage
@@ -986,7 +1012,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Cutover + cleanup
 - Commit
 
-### 29-09: Model cascade router + cost telemetry
+### 19-C-09: Model cascade router + cost telemetry
 - Create: `src/lib/reasoning/router.ts` — `routeModel({ ticker, controversy, ic_decay_flag })` returns `'haiku' | 'gemini-flash' | 'gemini-pro'`
 - Decision tree in design §4 step 6c
 - Cost telemetry written to LearningEvent table for `/insights` dashboard consumption
@@ -994,7 +1020,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Cutover + cleanup
 - Commit
 
-### 29-10: Cross-class contradiction detector
+### 19-C-10: Cross-class contradiction detector
 - Create: `src/lib/sentiment/contradiction-detector.ts`
 - NLI on pairs of class posteriors (technical bullish AND insider distribution = contradiction flag)
 - Severity threshold → flagged in EngineCalibrationPanel
@@ -1002,30 +1028,30 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Cutover + cleanup
 - Commit
 
-### 29-11: Arctic Shift one-time historical backfill
+### 19-C-11: Arctic Shift one-time historical backfill
 - Create: `scripts/arctic-shift-backfill.ts`
 - One-shot script — pulls 5y of Reddit chatter for v1.0 ticker universe from Arctic Shift
 - Populates `CommunityChatter` historical rows for FinSentLLM training data
-- Scoring run produces baseline corpus for downstream ensemble training (29-02)
+- Scoring run produces baseline corpus for downstream ensemble training (19-C-02)
 - No shadow — one-time historical ingest
 - Commit
 
-**Track C done gate:** all 11 plans satisfy Hard Cleanup Gate; Firecrawl remains primary community ingestion; structured citations live; FinSentLLM ensemble live; CoVe + router live for high-stakes tickers.
+**Wave C done gate:** all 11 plans satisfy Hard Cleanup Gate; Firecrawl remains primary community ingestion; structured citations live; FinSentLLM ensemble live; CoVe + router live for high-stakes tickers.
 
 ---
 
-## Cross-track verification
+## Cross-wave verification
 
-After all three tracks complete:
+After all four waves complete:
 
 1. Run `npm run model-card-status` — expect exit 0 with green report
 2. Verify zero `FEATURE_*` references in `features.ts` from this effort (grep)
 3. Verify zero references to deleted code paths in tree (grep against pre-cutover patterns documented per plan)
-4. Verify all crons running and logging IC + DSR/PBO + ensemble scores
+4. Verify all crons running and logging IC + DSR/PBO + ensemble scores + hierarchical posteriors
 5. Run full test suite: `npm test && npm run test:integration && npm run test:e2e`
 6. Manual smoke: produce one research report end-to-end, verify EngineCalibrationPanel shows conformal CI + ESS + IC monitor + WatchBadge as appropriate
 
-When all six pass → mark milestone v2.0 Excellence as **DONE** in ROADMAP.md and tag the commit.
+When all six pass → mark Phase 19 as **DONE** in `.planning/ROADMAP.md` and tag the commit.
 
 ---
 
@@ -1040,22 +1066,21 @@ When all six pass → mark milestone v2.0 Excellence as **DONE** in ROADMAP.md a
 
 ## Implementation handoff
 
-This master plan covers 4 + 6 + 8 + 11 = **29 plans total**. The first plan of each track is given in full TDD detail. The remaining 22 plans are stubs with file paths, tasks, and Done gates.
+This master plan covers 4 + 7 + 8 + 11 = **30 plans total** across Phase 19. The first plan of each wave is given in full TDD detail. The remaining 26 plans are stubs with file paths, tasks, and Done gates.
 
 For per-plan TDD expansion, run Cipher's GSD planning pipeline:
 
 ```bash
-# Track Z (do first — infra)
-/gsd-plan-phase Z   # if your /gsd-plan-phase supports synthetic phase IDs; else inline Z plans here
-
-# Track A
-/gsd-plan-phase 18.1
-
-# Track B
-/gsd-plan-phase 28
-
-# Track C
-/gsd-plan-phase 29
+# Single command — handles all 30 plans across the 4 waves
+/gsd-plan-phase 19
 ```
 
-Each `/gsd-plan-phase` invocation will spawn `gsd-phase-researcher` + `gsd-planner` + `gsd-plan-checker` subagents to expand each stub into a full GSD-format `<plan-id>-PLAN.md` under `.planning/phases/<phase>/`.
+This invocation spawns `gsd-phase-researcher` + `gsd-planner` + `gsd-plan-checker` subagents to expand each stub into a full GSD-format `19-<wave>-<id>-PLAN.md` under `.planning/phases/19-cipher-v2-excellence/`.
+
+Then for execution:
+
+```bash
+/gsd-execute-phase 19
+```
+
+Each spawned executor agent runs `superpowers:executing-plans`, `superpowers:test-driven-development`, and `superpowers:verification-before-completion` internally, while the GSD pipeline handles wave-based parallelization, intel files, and per-plan code review.
