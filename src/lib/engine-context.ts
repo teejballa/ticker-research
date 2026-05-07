@@ -93,6 +93,12 @@ export interface EngineContext {
   posterior_mean: number | null;
   ci_low: number | null;
   ci_high: number | null;
+  // Phase 19 Plan 19-A-03 (D-19) — Vovk-Romano conformal interval surfaced
+  // alongside (NOT replacing) the Bayesian credible interval above.
+  // ADDITIVE only — both render side-by-side in EngineCalibrationPanel.
+  // Populated by 19-A-04+ DSR/PBO/CPCV cron path; null until that ships.
+  conformal_low: number | null;
+  conformal_high: number | null;
   posterior_30d_mean: number | null;
   sample_size: number;
   hits: number;
@@ -209,6 +215,12 @@ interface LearnedCellLike {
   brier_null: number | null;
   drift_z: number;
   status: string;
+  // Phase 19 Plan 19-A-03 (D-19) — Vovk-Romano conformal interval columns.
+  // Nullable until 19-A-04+ DSR/PBO/CPCV cron writes them. Reading from the
+  // row directly so engine-context surfaces both conformal AND Bayesian CIs
+  // — the UI panel chooses which to render (additive, no replacement).
+  conformal_low: number | null;
+  conformal_high: number | null;
 }
 
 function deriveCellStatus(cell: LearnedCellLike | null): CellStatus {
@@ -814,6 +826,12 @@ export async function getEngineContextForTicker(
     posterior_mean,
     ci_low,
     ci_high,
+    // Phase 19 Plan 19-A-03 (D-19): Conformal CI from the same diffusion 7d
+    // LearnedPattern row. Surfaced ALONGSIDE the Bayesian (ci_low, ci_high)
+    // pair above — never instead of. Null when the DSR/PBO/CPCV cron
+    // (19-A-04) hasn't yet computed conformal residuals for this cell.
+    conformal_low: diffusionCell?.conformal_low ?? null,
+    conformal_high: diffusionCell?.conformal_high ?? null,
     posterior_30d_mean,
     sample_size: diffusionCell?.sample_size ?? 0,
     hits: diffusionCell?.hits ?? 0,

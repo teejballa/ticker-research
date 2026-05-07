@@ -104,6 +104,9 @@ function buildEngineCtx(overrides: Partial<EngineContext> = {}): EngineContext {
     institutional_ess: 0,
     insider_ess: 0,
     logistic_ess: 0,
+    // Phase 19-A-03 (D-19) — Conformal CI surface (null until 19-A-04 cron writes them).
+    conformal_low: null,
+    conformal_high: null,
     ...overrides,
   };
 }
