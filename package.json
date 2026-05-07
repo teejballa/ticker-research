@@ -18,7 +18,8 @@
     "debug:setup": "node scripts/live-debug.mjs setup-status",
     "debug:pipeline": "node scripts/live-debug.mjs full-pipeline",
     "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500",
-    "shadow-verdict": "npx tsx scripts/shadow-verdict.ts"
+    "shadow-verdict": "npx tsx scripts/shadow-verdict.ts",
+    "model-card-status": "npx tsx scripts/model-card-status.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
