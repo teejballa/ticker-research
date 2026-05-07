@@ -2,6 +2,7 @@
 // Bayesian learning primitives for the diffusion engine.
 // Pure functions — no DB access. All state is passed in.
 
+import { z } from 'zod';
 import type { TechPattern, TechnicalSnapshot } from './types';
 import type { DiffusionTraceResult } from './diffusion-trace';
 
@@ -356,12 +357,26 @@ export interface WeightedObservation {
  * Exponential decay weights w_i = exp(-Δt_i / λ). λ in days.
  * Future-dated observations (Δt < 0) are clamped to weight 1.0 — they cannot
  * be "more recent than now" so we treat them as just-recorded.
+ *
+ * Plan 19-A-01 (D-17) — guard against lambdaDays <= 0 / NaN / ±Infinity:
+ * exp(-Δt / 0) = Infinity silently corrupted ESS downstream when any caller
+ * passed 0. The empty-input contract (`decayWeights([], λ)` returns `[]`) is
+ * preserved naturally by the obs.map() — we throw only when there is work to
+ * do AND lambda is invalid. Existing call sites (cron/learn:515,
+ * cron/backfill-ess:155) all pass HYPERPARAMETERS-derived positives, so the
+ * guard is no-op for the production happy path.
  */
 export function decayWeights(
   obs: WeightedObservation[],
   lambdaDays: number,
   now: Date = new Date(),
 ): number[] {
+  if (!Number.isFinite(lambdaDays) || lambdaDays <= 0) {
+    throw new Error(
+      `decayWeights: lambdaDays must be > 0 and finite (got: ${lambdaDays}). ` +
+      `If you need decay disabled, omit the call rather than passing 0.`
+    );
+  }
   const t0 = now.getTime();
   const dayMs = 86_400_000;
   return obs.map(o => {
@@ -565,3 +580,53 @@ export const HYPERPARAMETERS_DEFERRED_RETUNE: ReadonlySet<SignalClass> = new Set
   'insider',
   'institutional',
 ]);
+
+// ─── Phase 19 Plan 19-A-01: HYPERPARAMETERS Zod schema (T-19-A-01-02) ─────
+//
+// Validate HYPERPARAMETERS at module load — typos in signal class names or
+// out-of-range params now fail fast at import (and CI), not deep inside the
+// cron route at use time. Per CONTEXT D-17.
+
+const ClassHyperparametersSchema = z.object({
+  lambda_days: z.number().positive().finite(),
+  ph_delta: z.number().positive().finite(),
+  ph_lambda: z.number().positive().finite(),
+  tuned_at: z.string().min(1),
+  cv_brier_oos: z.number().nullable(),
+});
+
+// TODO(Phase 20+): adding regime hyperparams here will require either updating this
+// schema or removing .strict(). Currently the schema is .strict() to catch typos in
+// signal class names at module load — but this means any new field added to
+// HYPERPARAMETERS will throw at import time until the schema catches up.
+// (Per RESEARCH Pitfall 2 — 19-RESEARCH.md lines 381-392.)
+const HyperparametersSchema = z.object({
+  diffusion: ClassHyperparametersSchema,
+  technical: ClassHyperparametersSchema,
+  insider: ClassHyperparametersSchema,
+  institutional: ClassHyperparametersSchema,
+}).strict();
+
+export function validateHyperparameters(input: unknown): asserts input is typeof HYPERPARAMETERS {
+  const result = HyperparametersSchema.safeParse(input);
+  if (!result.success) {
+    const first = result.error.issues[0];
+    if (first && first.code === 'unrecognized_keys') {
+      throw new Error(`HYPERPARAMETERS: unknown signal class — ${first.keys?.join(', ')}`);
+    }
+    throw new Error(
+      `HYPERPARAMETERS validation failed: ${result.error.issues
+        .map((i) => i.path.join('.') + ': ' + i.message)
+        .join('; ')}`,
+    );
+  }
+}
+
+// Module-load assertion (Plan 19-A-01 — T-19-A-01-02 mitigation).
+// If the bootstrap config above ever drifts away from the schema (e.g.
+// someone adds a signal class without updating HyperparametersSchema), this
+// throws at import time and every importer of `src/lib/learning.ts` fails
+// loudly in CI rather than silently in production. Per RESEARCH Pitfall 2,
+// the trade-off is that future-phase additions must update the schema in the
+// same PR — the TODO above flags that contract.
+validateHyperparameters(HYPERPARAMETERS);
