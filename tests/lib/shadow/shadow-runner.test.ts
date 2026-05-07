@@ -16,7 +16,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the prisma client BEFORE importing the unit under test.
-const mockCreate = vi.fn().mockResolvedValue({});
+// `vi.hoisted()` ensures `mockCreate` is created before vi.mock factory runs
+// (vi.mock is hoisted to the top of the file by Vitest's transform).
+const { mockCreate } = vi.hoisted(() => ({
+  mockCreate: vi.fn().mockResolvedValue({}),
+}));
 vi.mock('@/lib/db', () => ({
   prisma: {
     shadowComparison: {
