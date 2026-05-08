@@ -1,14 +1,22 @@
 # Phase 19 Resume Checkpoint
 
 **Created:** 2026-05-07 (post-crash recovery)
-**Last completed plan:** 19-A-04 (DSR + PBO + CPCV primitives)
-**Last commit on `main`:** `b342f6b` (docs(19-a-04): finalize SUMMARY + roadmap tick)
+**Last updated:** 2026-05-08 (paused for the night after 19-A-06 — resume on user "go")
+**Last completed plan:** 19-A-06 (Calibration validation harness — reliability diagram + Hosmer-Lemeshow)
+**Last commit on `main`:** `c8b953a` (docs(19-a-06): complete calibration validation harness plan)
 
-## Crash Context
+## Resume Status (2026-05-08)
+
+Working tree is clean. User paused execution to continue tomorrow. On user "go":
+1. Resume with **19-A-07** (hierarchical Bayesian pooling — 10 tasks, the largest plan in the phase)
+2. **Important:** Two prior subagent attempts at 19-A-07 hit `Stream idle timeout` with 0 commits landing. Plan: execute 19-A-07 **inline** (read PLAN, edit files, run vitest, commit per task) instead of via a single mega-subagent. Each task → atomic commit prevents another timeout from losing all progress.
+3. After 19-A-07: continue with 19-B-01 → 19-C-11 (19 plans remaining after 19-A-07).
+
+## Crash Context (original 2026-05-07 entry — kept for history)
 
 The previous execution session crashed mid-way after committing the 19-A-04 GREEN code (`df0efcf`) and audit scripts (`bf691d5`), but before committing the SUMMARY.md and the ROADMAP.md `[x]` tick for 19-A-04. Both were recovered and committed in `b342f6b`.
 
-No code is in an inconsistent state. The vitest suite passes (496 / 51 files green) and the working tree is clean as of `b342f6b`.
+The 2026-05-07 evening resumption then ran 19-A-05 (commit `6ee3557`) and 19-A-06 (commit `c8b953a`) cleanly via sequential subagents. Two attempts at 19-A-07 timed out at the API stream-idle limit before any commit landed — working tree is clean, no partial state to recover.
 
 ## Completed (do not re-run)
 
@@ -22,13 +30,13 @@ No code is in an inconsistent state. The vitest suite passes (496 / 51 files gre
 | A | 19-A-02 Brier OOS + look-ahead embargo | done (SUMMARY exists) | `80a679f` |
 | A | 19-A-03 Conformal CI in EngineCalibrationPanel | done (SUMMARY exists) | `4f1ffe6` |
 | A | 19-A-04 DSR + PBO + CPCV primitives | done (SUMMARY exists) | `b342f6b` |
+| A | 19-A-05 Rolling 20d rank-IC monitor + alpha-decay-watch cron | done (SUMMARY exists) | `6ee3557` |
+| A | 19-A-06 Calibration validation harness | done (SUMMARY exists) | `c8b953a` |
 
-## Remaining (22 plans)
+## Remaining (20 plans)
 
-### Wave A — 3 plans
-- 19-A-05 — Rolling 20d rank-IC monitor + alpha-decay-watch cron
-- 19-A-06 — Calibration validation harness (reliability diagram + Hosmer-Lemeshow)
-- 19-A-07 — Hierarchical Bayesian pooling (absorbed P19)
+### Wave A — 1 plan
+- 19-A-07 — Hierarchical Bayesian pooling (absorbed P19, 10 tasks; **execute inline** — prior subagent attempts timed out)
 
 ### Wave B — 8 plans (data-layer modernization)
 - 19-B-01 — Upstash Redis client
