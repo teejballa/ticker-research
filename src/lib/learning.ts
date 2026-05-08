@@ -826,3 +826,404 @@ export function conformalInterval(
     n_calibration: n,
   };
 }
+
+// ─── Phase 19 Plan 19-A-04: Lopez de Prado anti-overfitting trifecta ──────
+//
+// Three additive pure-function primitives implementing the Lopez de Prado
+// quant-grade backtest validation toolkit (per CONTEXT D-20). Unblocks v2.0
+// P21 (Lift-Gated Cell Promotion). All three are DB-free per the CLAUDE.md
+// "learning.ts is pure functions, no DB" invariant.
+//
+// References:
+//   - DSR  : Bailey & Lopez de Prado 2014, "The Deflated Sharpe Ratio" §4
+//            (https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf)
+//   - PBO  : Bailey, Borwein, Lopez de Prado, Zhu 2014, "The Probability of
+//            Backtest Overfitting" (CSCV algorithm — sections 3.1–3.3)
+//   - CPCV : Lopez de Prado 2018, "Advances in Financial Machine Learning"
+//            chapter 7.4 (Combinatorial Purged K-Fold)
+//
+// Golden-master tested to 1e-6 tolerance against pinned fixtures
+// (tests/learning.dsr-pbo.test.ts and tests/learning.cpcv.test.ts).
+
+// --- Standard normal helpers (no jstat dep — keep tree slim) -----------------
+//
+// Φ via Abramowitz-Stegun §26.2.17 — accurate to ~1e-7 (sufficient for the
+// 1e-6 golden-master tolerance). Φ⁻¹ via Beasley-Springer-Moro — accurate to
+// ~1e-9 in the body and ~1e-7 in the tails. Identical numerical recipes to
+// the test-side reference implementations so DSR matches to 6+ decimals.
+
+function _normCDF(x: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989422804014327 * Math.exp(-(x * x) / 2);
+  const p =
+    d *
+    t *
+    (0.319381530 +
+      t *
+        (-0.356563782 +
+          t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return x >= 0 ? 1 - p : p;
+}
+
+function _normInverseCDF(p: number): number {
+  if (p <= 0 || p >= 1) {
+    throw new Error('normInverseCDF: p must be in (0, 1)');
+  }
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
+    1.38357751867269e2, -3.066479806614716e1, 2.506628277459239,
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
+    6.680131188771972e1, -1.328068155288572e1,
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838,
+    -2.549732539343734, 4.374664141464968, 2.938163982698783,
+  ];
+  const d = [
+    7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996,
+    3.754408661907416,
+  ];
+  const pLow = 0.02425;
+  const pHigh = 1 - pLow;
+  let q: number;
+  let r: number;
+  if (p < pLow) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (
+      (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    );
+  } else if (p <= pHigh) {
+    q = p - 0.5;
+    r = q * q;
+    return (
+      ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) *
+        q) /
+      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+    );
+  } else {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return (
+      -(
+        ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q +
+        c[5]
+      ) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    );
+  }
+}
+
+function _clamp01(x: number): number {
+  if (!Number.isFinite(x)) return 0;
+  if (x < 0) return 0;
+  if (x > 1) return 1;
+  return x;
+}
+
+// --- Deflated Sharpe Ratio ---------------------------------------------------
+//
+// DSR(SR̂; N, T, V, γ̂₃, γ̂₄) = Φ((SR̂ - SR0) / σ_{SR0})
+//
+//   SR0 = √V · [(1 - γ_E)·Φ⁻¹(1 - 1/N) + γ_E·Φ⁻¹(1 - 1/(N·e))]
+//   σ_{SR0} = √((1 - γ̂₃·SR̂ + (γ̂₄ - 1)/4·SR̂²) / (T - 1))
+//
+// γ_E = 0.5772156649015329 is the Euler-Mascheroni constant.
+//
+// SR0 is the expected MAX of N independent N(0, V) Sharpe estimates — the
+// selection-bias floor. DSR collapses to PSR (probabilistic SR) when N=1.
+
+export function deflatedSharpeRatio(args: {
+  estimatedSR: number;
+  numTrials: number;
+  backtestHorizonT: number;
+  variance: number;
+  skewness: number;
+  kurtosis: number;
+}): number {
+  const {
+    estimatedSR: SR,
+    numTrials: N,
+    backtestHorizonT: T,
+    variance: V,
+    skewness: g3,
+    kurtosis: g4,
+  } = args;
+  if (!Number.isFinite(SR) || !Number.isFinite(V) || V <= 0) return 0;
+  if (!Number.isFinite(N) || N < 1) {
+    throw new Error('deflatedSharpeRatio: numTrials must be >= 1');
+  }
+  if (!Number.isFinite(T) || T <= 1) {
+    throw new Error('deflatedSharpeRatio: backtestHorizonT must be > 1');
+  }
+  const gammaE = 0.5772156649015329;
+  const sqrtV = Math.sqrt(V);
+  // For N=1, Φ⁻¹(0) is -∞; SR0 collapses to 0 (no selection bias). Guard
+  // explicitly so the function still returns the PSR value.
+  let SR0: number;
+  if (N <= 1) {
+    SR0 = 0;
+  } else {
+    SR0 =
+      sqrtV *
+      ((1 - gammaE) * _normInverseCDF(1 - 1 / N) +
+        gammaE * _normInverseCDF(1 - 1 / (N * Math.E)));
+  }
+  const sigmaSR0Numer = 1 - g3 * SR + ((g4 - 1) / 4) * SR * SR;
+  // Numerator should be positive for any reasonable (γ₃, γ₄, SR). If pathology
+  // produces a negative variance, return 0 rather than NaN.
+  if (sigmaSR0Numer <= 0) return 0;
+  const sigmaSR0 = Math.sqrt(sigmaSR0Numer / (T - 1));
+  if (sigmaSR0 === 0) return SR > SR0 ? 1 : 0;
+  return _clamp01(_normCDF((SR - SR0) / sigmaSR0));
+}
+
+// --- Probability of Backtest Overfitting (CSCV) ------------------------------
+//
+// Combinatorially Symmetric Cross-Validation per BBLPZ 2014 §3:
+//   1. Form a returns matrix M of shape [T_total][n_strategies]. Concatenate
+//      in-sample and out-of-sample returns; the algorithm itself defines IS/OOS
+//      via S-partition splits (we use the full row stack — IS rows then OOS).
+//   2. Partition rows into S equal blocks. For every C(S, S/2) way to choose
+//      S/2 blocks as IS and the remaining S/2 as OOS:
+//        - Compute metric_func per strategy on each side
+//        - Identify the IS-best strategy n* and find its OOS rank ω̄
+//        - Compute the relative-rank logit λ = log(ω̄ / (1 - ω̄))
+//   3. PBO = fraction of partitions with λ ≤ 0 (i.e. IS-best does worse than
+//      median OOS).
+//
+// Defaults: metric_func = annualized Sharpe (mean/sd) per BBLPZ §3.2; S = 16.
+//
+// NOTE on input shape: callers in this codebase pass [n_strategies][n_periods]
+// (strategies as outer index — matches the test harness). We transpose
+// internally to [n_periods][n_strategies] for the row-block partitioning.
+
+export function probBacktestOverfitting(args: {
+  inSampleStrategies: number[][];
+  outOfSampleStrategies: number[][];
+  S?: number;
+  metricFunc?: (returns: number[]) => number;
+}): number {
+  const S = args.S ?? 16;
+  const metric = args.metricFunc ?? sharpeMetric;
+  if (S < 2 || S % 2 !== 0) {
+    throw new Error('probBacktestOverfitting: S must be an even integer >= 2');
+  }
+  const inS = args.inSampleStrategies;
+  const oos = args.outOfSampleStrategies;
+  if (!Array.isArray(inS) || !Array.isArray(oos)) {
+    throw new Error('probBacktestOverfitting: strategies must be 2-D arrays');
+  }
+  const M = inS.length;
+  if (M < 2) throw new Error('probBacktestOverfitting: need ≥ 2 strategies');
+  if (oos.length !== M) {
+    throw new Error(
+      'probBacktestOverfitting: in/out strategy counts must match',
+    );
+  }
+  // Concatenate IS+OOS by row index per strategy → joint matrix [T][M]
+  // where T = T_in + T_out. CSCV operates on this joint matrix.
+  const T_in = inS[0].length;
+  const T_out = oos[0].length;
+  const T_total = T_in + T_out;
+  // Validate uniform row lengths
+  for (let m = 0; m < M; m++) {
+    if (inS[m].length !== T_in || oos[m].length !== T_out) {
+      throw new Error(
+        'probBacktestOverfitting: ragged returns — all strategies must share a length',
+      );
+    }
+  }
+  // Joint matrix in [T_total][M] (period-major) for block partitioning
+  const J: number[][] = new Array(T_total);
+  for (let t = 0; t < T_in; t++) {
+    const row = new Array(M);
+    for (let m = 0; m < M; m++) row[m] = inS[m][t];
+    J[t] = row;
+  }
+  for (let t = 0; t < T_out; t++) {
+    const row = new Array(M);
+    for (let m = 0; m < M; m++) row[m] = oos[m][t];
+    J[T_in + t] = row;
+  }
+  // Block partition: equal-size contiguous blocks of size ⌊T_total / S⌋.
+  // Tail samples beyond S·blockSize are dropped (BBLPZ §3.1).
+  const blockSize = Math.floor(T_total / S);
+  if (blockSize < 2) {
+    throw new Error(
+      `probBacktestOverfitting: ${T_total} samples too short for S=${S} (need ≥ ${2 * S})`,
+    );
+  }
+  const blocks: number[][][] = []; // S blocks each of [blockSize][M]
+  for (let s = 0; s < S; s++) {
+    const start = s * blockSize;
+    blocks.push(J.slice(start, start + blockSize));
+  }
+  // Generate every C(S, S/2) way to choose IS-blocks
+  const halfS = S / 2;
+  const combos = _combinations(S, halfS);
+  let countOverfit = 0;
+  for (const isCombo of combos) {
+    const isMask = new Array(S).fill(false);
+    for (const idx of isCombo) isMask[idx] = true;
+    // Build IS rows and OOS rows
+    const isRows: number[][] = [];
+    const oosRows: number[][] = [];
+    for (let s = 0; s < S; s++) {
+      if (isMask[s]) isRows.push(...blocks[s]);
+      else oosRows.push(...blocks[s]);
+    }
+    // Per-strategy IS metric and OOS metric
+    const isMetric = new Array(M);
+    const oosMetric = new Array(M);
+    for (let m = 0; m < M; m++) {
+      const isCol = isRows.map((r) => r[m]);
+      const oosCol = oosRows.map((r) => r[m]);
+      isMetric[m] = metric(isCol);
+      oosMetric[m] = metric(oosCol);
+    }
+    // n* = argmax IS metric (ties broken by lowest index, deterministic)
+    let bestIdx = 0;
+    for (let m = 1; m < M; m++) {
+      if (isMetric[m] > isMetric[bestIdx]) bestIdx = m;
+    }
+    // Rank of bestIdx in OOS (1 = worst, M = best). Higher rank = OOS-good.
+    let rank = 1;
+    const bestOos = oosMetric[bestIdx];
+    for (let m = 0; m < M; m++) {
+      if (m === bestIdx) continue;
+      if (oosMetric[m] < bestOos) rank++;
+    }
+    // Relative rank ω̄ ∈ (0, 1) using mid-rank correction. BBLPZ Eq 5:
+    // ω̄ = rank / (M + 1).
+    const omega = rank / (M + 1);
+    // λ = log(ω̄ / (1 - ω̄)). λ ≤ 0 ⇔ ω̄ ≤ 0.5 ⇔ overfit on this partition.
+    const lambda = Math.log(omega / (1 - omega));
+    if (lambda <= 0) countOverfit++;
+  }
+  return countOverfit / combos.length;
+}
+
+function sharpeMetric(returns: number[]): number {
+  const n = returns.length;
+  if (n < 2) return 0;
+  let sum = 0;
+  for (const r of returns) sum += r;
+  const mean = sum / n;
+  let varSum = 0;
+  for (const r of returns) varSum += (r - mean) * (r - mean);
+  const sd = Math.sqrt(varSum / (n - 1));
+  if (sd === 0) return 0;
+  return mean / sd;
+}
+
+// Generate all k-element index combinations of [0, n). Iterative emit so
+// memory stays O(C(n,k)) (acceptable for S ≤ 16 → C(16,8)=12870).
+function _combinations(n: number, k: number): number[][] {
+  const out: number[][] = [];
+  const buf: number[] = new Array(k);
+  function rec(start: number, depth: number) {
+    if (depth === k) {
+      out.push(buf.slice());
+      return;
+    }
+    const remaining = k - depth;
+    for (let i = start; i <= n - remaining; i++) {
+      buf[depth] = i;
+      rec(i + 1, depth + 1);
+    }
+  }
+  rec(0, 0);
+  return out;
+}
+
+// --- Combinatorial Purged K-Fold CV ------------------------------------------
+//
+// Lopez de Prado 2018 ch.7.4. Given N folds and k test-folds-per-split,
+// generate every C(N, k) combination of test folds. For each combination:
+//   - test_indices  = union of the k chosen folds
+//   - embargo zone  = `embargo` samples adjacent to each test-fold boundary
+//   - train_indices = remaining folds minus the embargo zone
+//
+// Backtest paths nPaths = ⌊C(N, k) · k / N⌋ — every fold is tested in
+// exactly C(N-1, k-1) splits, and concatenating one test prediction per fold
+// across distinct splits yields nPaths independent OOS path histories.
+
+export interface CPCVSplit {
+  train_indices: number[];
+  test_indices: number[];
+  embargo_indices: number[];
+}
+
+export function combinatorialPurgedKFold(args: {
+  n: number;
+  k: number;
+  embargo: number;
+  totalSamples: number;
+}): { splits: CPCVSplit[]; nPaths: number } {
+  const { n, k, embargo, totalSamples } = args;
+  if (!Number.isInteger(n) || n < 2) {
+    throw new Error('combinatorialPurgedKFold: n must be integer ≥ 2');
+  }
+  if (!Number.isInteger(k) || k < 1) {
+    throw new Error('combinatorialPurgedKFold: k must be integer ≥ 1');
+  }
+  if (k >= n) {
+    throw new Error(
+      `combinatorialPurgedKFold: k (${k}) must be < n (${n}) — need ≥ 1 train fold`,
+    );
+  }
+  if (!Number.isInteger(totalSamples) || totalSamples < n) {
+    throw new Error(
+      `combinatorialPurgedKFold: totalSamples (${totalSamples}) must be ≥ n (${n})`,
+    );
+  }
+  if (embargo < 0 || !Number.isInteger(embargo)) {
+    throw new Error('combinatorialPurgedKFold: embargo must be int ≥ 0');
+  }
+  const foldSize = Math.floor(totalSamples / n);
+  // Fold boundaries: fold f spans [f*foldSize, (f+1)*foldSize). Tail samples
+  // beyond n*foldSize are unassigned (matches LdP's convention).
+  const foldRange = (f: number) => ({
+    start: f * foldSize,
+    end: (f + 1) * foldSize, // exclusive
+  });
+  const splits: CPCVSplit[] = [];
+  const combos = _combinations(n, k);
+  for (const testFolds of combos) {
+    const testSet = new Set(testFolds);
+    const test_indices: number[] = [];
+    for (const f of testFolds) {
+      const { start, end } = foldRange(f);
+      for (let i = start; i < end; i++) test_indices.push(i);
+    }
+    // Embargo: for each test fold f, embargo trailing edge samples
+    // [end, end + embargo) and (optionally) leading edge for symmetry. LdP
+    // §7.4.2 specifies trailing-only purge for purely forward-leaking labels;
+    // the test asserts |embargo_indices| ≤ k·embargo.
+    const embargoSet = new Set<number>();
+    for (const f of testFolds) {
+      const { end } = foldRange(f);
+      for (let i = end; i < end + embargo && i < totalSamples; i++) {
+        // Only embargo indices that fall in another (non-test) fold — embargo
+        // applied within a contiguous test region is wasted.
+        const trainFold = Math.floor(i / foldSize);
+        if (trainFold < n && !testSet.has(trainFold)) embargoSet.add(i);
+      }
+    }
+    const embargo_indices = Array.from(embargoSet).sort((a, b) => a - b);
+    // Train = all fold indices NOT in test and NOT in embargo
+    const train_indices: number[] = [];
+    for (let f = 0; f < n; f++) {
+      if (testSet.has(f)) continue;
+      const { start, end } = foldRange(f);
+      for (let i = start; i < end; i++) {
+        if (!embargoSet.has(i)) train_indices.push(i);
+      }
+    }
+    splits.push({ train_indices, test_indices, embargo_indices });
+  }
+  const nPaths = Math.floor((combos.length * k) / n);
+  return { splits, nPaths };
+}

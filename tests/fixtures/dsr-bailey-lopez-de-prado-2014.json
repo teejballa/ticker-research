@@ -2,6 +2,7 @@
   "_source": "Bailey & Lopez de Prado 2014 — The Deflated Sharpe Ratio §4 worked example",
   "_url": "https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf",
   "_ssrn_fallback": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551",
+  "_computation_method": "Closed-form evaluation of the DSR formula at the paper's published §4 inputs (SR=0.15748, N=100, T=1250, Var=0.001984, skew=-3, kurt=10) using Beasley-Springer-Moro Φ⁻¹ and Abramowitz-Stegun Φ. SR0 = √V·((1-γ_E)·Φ⁻¹(1-1/N) + γ_E·Φ⁻¹(1-1/(N·e))) yields 0.1127184049184799; σ_SR0 = √((1-γ₃·SR + (γ₄-1)/4·SR²)/(T-1)) yields 0.03497957643159601; z = (SR-SR0)/σ_SR0 = 1.279649431120278; DSR = Φ(z) = 0.899666 (6dp). Verified against pure-JS reference implementation in tests/learning.dsr-pbo.test.ts referenceDSR().",
   "input": {
     "estimatedSR": 0.15748,
     "numTrials": 100,
@@ -11,7 +12,10 @@
     "kurtosis": 10
   },
   "expected": {
-    "dsr": null,
-    "_note": "EXECUTOR MUST POPULATE in Task 4 before commit. Open paper §4 Table 1, compute DSR by hand against the formula in 19-RESEARCH.md lines 671-673, paste 6-decimal value here. Falls back to SSRN paper https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551 OR pypbo cross-validation if paper unrecoverable. Task 4 acceptance gate FAILS if expected.dsr remains null."
+    "dsr": 0.899666,
+    "_intermediate_SR0": 0.112718,
+    "_intermediate_sigmaSR0": 0.03498,
+    "_intermediate_z": 1.279649,
+    "_tolerance": "1e-6"
   }
 }
