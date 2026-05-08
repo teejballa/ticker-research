@@ -57,10 +57,14 @@ import {
   timeBasedSplit,
   computeBrierOOS,
   filterSnapshotsForEmbargo,
+  // Phase 19 Plan 19-A-07 — empirical-Bayes hierarchical pooling.
+  hierarchicalPooledPosterior,
   type LogisticState,
   type WeightedObservation,
   type LearnedStatus,
 } from '@/lib/learning';
+import { FEATURES } from '@/lib/features';
+import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import type {
   TechPattern,
   TechnicalSnapshot,
@@ -381,6 +385,105 @@ async function upsertCell(
 }
 
 // ─── Recompute pass (per-cell metrics across all 216 cells) ─────────────────
+
+// ─── Phase 19 Plan 19-A-07: hierarchical pooling + lake-of-cells pruning ──
+//
+// CORE-ML-11..14: pool (α, β) across cells in the same (signal_class,
+// cap_class) group via empirical-Bayes method-of-moments. The cron writes
+// parent_alpha, parent_beta, shrinkage_strength per cell — but NEVER
+// overwrites the local α/β columns (RESEARCH §Pitfall 3 safe rollout).
+// engine-context.ts computes α_pooled at READ time when the flag is enabled,
+// so flipping the flag on or off cannot corrupt persisted state.
+//
+// CORE-ML-14 pruning: cells with raw_N === 0 AND `last_updated > 90 days
+// ago` are deleted to keep the cell space from drifting into a lake of
+// never-observed allocations.
+
+type PoolingSummary = { groups: number; pooled_cells: number };
+
+async function pruneIdleEmptyCells(): Promise<{ deleted: number }> {
+  // CORE-ML-14: cells with raw_N=0 AND no observations in the last 90 days
+  // are not allocated rows. Use last_updated as a proxy for last observation
+  // (the cron's per-cell update touches it on every cycle, so an idle cell's
+  // last_updated stays anchored at its allocation time).
+  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const result = await prisma.learnedPattern.deleteMany({
+    where: {
+      sample_size: 0,
+      last_updated: { lt: cutoff },
+    },
+  });
+  return { deleted: result.count };
+}
+
+async function applyHierarchicalPooling(): Promise<PoolingSummary> {
+  // Read every allocated cell once, group by (signal_class, cap_class),
+  // run hierarchicalPooledPosterior with the group's siblings, persist
+  // parent_alpha/beta/shrinkage_strength per cell.
+  const cells = await prisma.learnedPattern.findMany({
+    where: { cap_class: { not: 'unknown' } },
+    select: {
+      id: true,
+      signal_class: true,
+      cap_class: true,
+      alpha: true,
+      beta: true,
+      sample_size: true,
+    },
+  });
+
+  const groups = new Map<string, typeof cells>();
+  for (const c of cells) {
+    const k = `${c.signal_class}|${c.cap_class}`;
+    const arr = groups.get(k);
+    if (arr) arr.push(c);
+    else groups.set(k, [c]);
+  }
+
+  let pooled_cells = 0;
+  for (const groupCells of groups.values()) {
+    const groupBetas = groupCells.map((c) => ({ alpha: c.alpha, beta: c.beta }));
+    for (const c of groupCells) {
+      const result = hierarchicalPooledPosterior({
+        cell_local: { alpha: c.alpha, beta: c.beta },
+        cell_n: c.sample_size,
+        group_cells: groupBetas,
+      });
+      await prisma.learnedPattern.update({
+        where: { id: c.id },
+        data: {
+          // Pitfall 3 safe rollout: write parent + shrinkage only.
+          // alpha/beta untouched — read-time pooling in engine-context.
+          parent_alpha: result.parent_alpha,
+          parent_beta: result.parent_beta,
+          shrinkage_strength: result.shrinkage_strength,
+        },
+      });
+      pooled_cells += 1;
+    }
+  }
+  return { groups: groups.size, pooled_cells };
+}
+
+async function clearHierarchicalPoolingFields(): Promise<PoolingSummary> {
+  // Old / control path for shadow A/B: nulls out parent_α/β/λ so any prior
+  // pooled state is removed. Used as the baseline when flag is in shadow.
+  const result = await prisma.learnedPattern.updateMany({
+    where: { cap_class: { not: 'unknown' } },
+    data: { parent_alpha: null, parent_beta: null, shrinkage_strength: null },
+  });
+  return { groups: 0, pooled_cells: result.count };
+}
+
+async function runHierarchicalPoolingStep(): Promise<void> {
+  await runWithShadow<PoolingSummary>(
+    'hierarchical-pooling',
+    clearHierarchicalPoolingFields,
+    applyHierarchicalPooling,
+    FEATURES.hierarchical_pooling_mode,
+    {},
+  );
+}
 
 async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promise<void> {
   // Phase 17 — D-21: extends from dual-class (diffusion + technical) to
@@ -1061,6 +1164,13 @@ export async function GET(request: NextRequest) {
     // Recompute aggregate metrics + drift across all 216 cells. Always runs
     // (even with 0 new outcomes) so cell metrics catch up after data backfills.
     await recomputePerSignalClassPatternMetrics(history);
+
+    // Plan 19-A-07: prune lake-of-cells (CORE-ML-14: raw_N=0 AND idle 90d),
+    // then apply empirical-Bayes hierarchical pooling under shadow A/B.
+    // Pooling persists parent_α/β/λ only — local α/β are NEVER overwritten
+    // (RESEARCH §Pitfall 3). engine-context.ts surfaces α_pooled at READ time.
+    await pruneIdleEmptyCells();
+    await runHierarchicalPoolingStep();
 
     // Persist a fresh LogisticEpoch when the regression saw any 30d updates,
     // OR on the first post-Phase-16 cycle (so the new 12-d zero state is
