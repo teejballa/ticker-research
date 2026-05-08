@@ -101,6 +101,60 @@ export function classifyHit(args: {
   return (args.ticker_return_pct - args.spy_return_pct) > threshold;
 }
 
+// ─── Hierarchical empirical-Bayes pooling (Plan 19-A-07, CORE-ML-11..14) ──
+
+export interface PooledPosterior {
+  alpha_pooled: number;
+  beta_pooled: number;
+  parent_alpha: number;
+  parent_beta: number;
+  shrinkage_strength: number;
+}
+
+/**
+ * Empirical Bayes hierarchical pooling per CORE-ML-11..14.
+ * Method-of-moments estimation of a group-level Beta hyperprior, then per-cell
+ * shrinkage: α_pooled = (n × α_local + λ × α_group) / (n + λ).
+ * λ is bounded to [0.5, 50] for numerical stability.
+ *
+ * Cold-start: groups with fewer than 5 cells return the local posterior
+ * unchanged with shrinkage_strength=0 — falls back to the flat prior path.
+ *
+ * Pure function — no DB access, no module-level state.
+ */
+export function hierarchicalPooledPosterior(args: {
+  cell_local: BetaPosterior;
+  cell_n: number;
+  group_cells: BetaPosterior[];
+}): PooledPosterior {
+  const { cell_local, cell_n, group_cells } = args;
+  const k = group_cells.length;
+  if (k < 5) {
+    return {
+      alpha_pooled: cell_local.alpha,
+      beta_pooled: cell_local.beta,
+      parent_alpha: 1,
+      parent_beta: 1,
+      shrinkage_strength: 0,
+    };
+  }
+  const means = group_cells.map((c) => c.alpha / (c.alpha + c.beta));
+  const muBar = means.reduce((a, b) => a + b, 0) / k;
+  const sigma2 =
+    means.reduce((acc, m) => acc + (m - muBar) ** 2, 0) / Math.max(1, k - 1);
+  const ratio = sigma2 > 0 ? (muBar * (1 - muBar)) / sigma2 - 1 : 50;
+  const groupAlpha = Math.max(0.5, muBar * Math.max(1, ratio));
+  const groupBeta = Math.max(0.5, (1 - muBar) * Math.max(1, ratio));
+  const lambda = Math.min(50, Math.max(0.5, groupAlpha + groupBeta));
+  return {
+    alpha_pooled: (cell_n * cell_local.alpha + lambda * groupAlpha) / (cell_n + lambda),
+    beta_pooled: (cell_n * cell_local.beta + lambda * groupBeta) / (cell_n + lambda),
+    parent_alpha: groupAlpha,
+    parent_beta: groupBeta,
+    shrinkage_strength: lambda,
+  };
+}
+
 // ─── Bayesian logistic with Laplace approximation ─────────────────────────
 
 function sigmoid(z: number): number {
