@@ -8,7 +8,7 @@
     "postinstall": "prisma generate",
     "start": "next build && next start",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "npm run verify-fixtures-no-null && vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test --project=chromium",
@@ -19,7 +19,9 @@
     "debug:pipeline": "node scripts/live-debug.mjs full-pipeline",
     "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500",
     "shadow-verdict": "npx tsx scripts/shadow-verdict.ts",
-    "model-card-status": "npx tsx scripts/model-card-status.ts"
+    "model-card-status": "npx tsx scripts/model-card-status.ts",
+    "verify-fixtures-no-null": "npx tsx scripts/verify-fixtures-no-null.ts",
+    "dsr-pbo-audit": "npx tsx scripts/dsr-pbo-audit.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
