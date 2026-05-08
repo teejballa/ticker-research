@@ -113,7 +113,7 @@ Plans:
 - [x] 19-A-03: Conformal prediction primitive (Vovk-Romano) + EngineCalibrationPanel surface
 - [x] 19-A-04: DSR + PBO + CPCV primitives (Lopez de Prado) — unblocks v2.0 P21
 - [x] 19-A-05: Rolling 20d rank-IC monitor + alpha-decay-watch cron (completed 2026-05-08; benchmark 356ms)
-- [ ] 19-A-06: Calibration validation harness (reliability diagram + Hosmer-Lemeshow)
+- [x] 19-A-06: Calibration validation harness — reliabilityDiagram + hosmerLemeshow + scripts/calibration-report.ts → /tmp/calibration-reports/<date>.md (completed 2026-05-08; 9/9 tests GREEN; institutional class flagged miscalibrated p=0.044 on baseline run)
 - [ ] 19-A-07: Hierarchical Bayesian pooling — empirical Bayes priors (absorbed from original v2.0 P19)
 - [ ] 19-B-01: Upstash Redis client + cache-keys + TTL config (graceful degrade)
 - [ ] 19-B-02: Retry + exponential backoff wrapper (5xx + network only)

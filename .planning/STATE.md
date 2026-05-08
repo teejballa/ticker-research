@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-08T04:00:00.000Z"
-last_activity: 2026-05-08 -- Phase 19-A-05 complete
+last_updated: "2026-05-08T04:08:00.000Z"
+last_activity: 2026-05-08 -- Phase 19-A-06 complete
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 30
-  completed_plans: 9
-  percent: 30
+  completed_plans: 10
+  percent: 33
 ---
 
 # Project State
@@ -27,10 +27,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
 Milestone: v2.0
 Phase: 19 (cipher-v2-0-excellence) — EXECUTING
-Plan: 10 of 30 (next: 19-A-06 calibration validation harness, OR Wave B/C)
+Plan: 11 of 30 (next: 19-A-07, OR Wave B/C)
 Status: Executing Phase 19
-Last activity: 2026-05-08 -- Phase 19-A-05 complete
-Last completed: 19-A-05 → rolling 20d rank-IC monitor + alpha-decay-watch cron live; 9/9 unit + 5/5 integration tests GREEN; benchmark 356ms (empty-work-path on currently-EXPLORATORY universe)
+Last activity: 2026-05-08 -- Phase 19-A-06 complete
+Last completed: 19-A-06 → calibration validation harness — `reliabilityDiagram` + `hosmerLemeshow` pure functions + chi-square CDF (no jstat dep) in `learning.ts`; `scripts/calibration-report.ts` writes per-class verdicts to `/tmp/calibration-reports/<date>.md` (CLAUDE.md-compliant); 9/9 calibration tests GREEN; baseline run flagged institutional class miscalibrated (n=39, χ²=15.916, p=0.044)
+Last completed (prior): 19-A-05 → rolling 20d rank-IC monitor + alpha-decay-watch cron live; 9/9 unit + 5/5 integration tests GREEN; benchmark 356ms (empty-work-path on currently-EXPLORATORY universe)
 
 ## Accumulated Context (carried forward from v1.0)
 
