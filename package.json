@@ -21,7 +21,8 @@
     "shadow-verdict": "npx tsx scripts/shadow-verdict.ts",
     "model-card-status": "npx tsx scripts/model-card-status.ts",
     "verify-fixtures-no-null": "npx tsx scripts/verify-fixtures-no-null.ts",
-    "dsr-pbo-audit": "npx tsx scripts/dsr-pbo-audit.ts"
+    "dsr-pbo-audit": "npx tsx scripts/dsr-pbo-audit.ts",
+    "alpha-decay-cron-benchmark": "npx tsx scripts/alpha-decay-cron-benchmark.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
