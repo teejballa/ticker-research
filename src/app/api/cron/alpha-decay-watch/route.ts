@@ -8,16 +8,28 @@
 // Schedule: 06:00 UTC daily (vercel.json crons array).
 // maxDuration: 300s (Hobby/default ceiling per CLAUDE.md note).
 //
+// IC scope (per CONTEXT.md D-21): "rolling 20-day Spearman rank-IC computed
+// per signal class". One IC value per signal class — broadcast to every
+// LearnedPattern cell in that class so /insights and EngineCalibrationPanel
+// can surface it via the existing per-cell rolling_ic_20d column.
+//
+// Why per-class, not per-cell: within a single cell every prediction is the
+// same posterior mean (the cell's α/(α+β)). Pearson denominator collapses to
+// 0 → IC degenerate. Rank-IC is meaningful only when predictions vary, which
+// they do across cells within a signal class.
+//
 // State machine per cell:
-//   1. Compute today's IC across the last 20 days of resolved outcomes for
-//      this cell (predictions = current posterior mean; realized = ticker
-//      alpha vs SPY recovered from LearningEvent.delta).
-//   2. Append today's IC to a derived rolling-IC history for this cell —
-//      computed from the chronologically-ordered LearningEvent traces
-//      (no JSON history column needed; we re-derive each cron tick).
-//   3. If currently flagged: clear when isDecayCleared (last 3d >= 0.02).
-//      Else: set when isDecayConfirmed (last 5d < 0.02).
-//   4. Persist rolling_ic_20d (today's value) + ic_decay_flag.
+//   1. Compute today's IC for the entire signal class — pairs are
+//      (prediction = source-cell posterior mean, realized = ticker alpha vs
+//      SPY) across every resolved outcome in the last 20 days.
+//   2. Build a per-day rolling IC series across the history window so the
+//      isDecayConfirmed (5 of 5) / isDecayCleared (3 of 3) state machine
+//      has data to consume.
+//   3. If currently flagged: clear when isDecayCleared.
+//      Else: set when isDecayConfirmed.
+//   4. Persist today's IC + the new flag to every cell in the signal class
+//      (so the dashboard shows the same monitor state for every cell of a
+//      class — they all rise and fall together by definition of per-class IC).
 //
 // PURITY BOUNDARY: this route is the ONLY caller that touches Prisma. The
 // monitor module at src/lib/reasoning/alpha-decay-monitor.ts is DB-free.
@@ -44,15 +56,12 @@ const IC_WINDOW_DAYS = 20;
 const HISTORY_WINDOW_DAYS = 30;
 const MS_PER_DAY = 86_400_000;
 
-interface CellUpdate {
-  id: string;
+interface ClassResult {
   signal_class: string;
-  pattern_key: string;
-  cap_class: string;
-  horizon_days: number;
   rolling_ic_20d: number | null;
   ic_decay_flag: boolean;
-  reason: 'updated' | 'too-few-events' | 'set' | 'cleared';
+  cells_updated: number;
+  reason: 'updated' | 'too-few-events' | 'set' | 'cleared' | 'no-cells';
 }
 
 export async function GET(request: NextRequest) {
@@ -62,186 +71,200 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const updates: CellUpdate[] = [];
-  let cellsScanned = 0;
-  let cellsUpdated = 0;
-  let cellsSetFlag = 0;
-  let cellsClearedFlag = 0;
+  const results: ClassResult[] = [];
+  let totalCellsUpdated = 0;
+  let classesSetFlag = 0;
+  let classesClearedFlag = 0;
 
   try {
     for (const signalClass of SIGNAL_CLASSES) {
-      // Only run the monitor on cells that have actually graduated past
-      // first-touch — EXPLORATORY cells with insufficient sample size will
-      // produce noise-only IC values that thrash the flag.
-      const cells = await prisma.learnedPattern.findMany({
-        where: {
-          signal_class: signalClass,
-          status: { not: 'EXPLORATORY' },
-        },
-      });
-
-      for (const cell of cells) {
-        cellsScanned++;
-        const result = await processOneCell(cell, signalClass, now);
-        updates.push(result);
-        if (result.reason !== 'too-few-events') cellsUpdated++;
-        if (result.reason === 'set') cellsSetFlag++;
-        if (result.reason === 'cleared') cellsClearedFlag++;
-      }
+      const result = await processOneSignalClass(signalClass, now);
+      results.push(result);
+      totalCellsUpdated += result.cells_updated;
+      if (result.reason === 'set') classesSetFlag++;
+      if (result.reason === 'cleared') classesClearedFlag++;
     }
 
     return NextResponse.json({
       ok: true,
       scanned_at: now.toISOString(),
-      cells_scanned: cellsScanned,
-      cells_updated: cellsUpdated,
-      cells_set_flag: cellsSetFlag,
-      cells_cleared_flag: cellsClearedFlag,
+      results,
+      total_cells_updated: totalCellsUpdated,
+      classes_set_flag: classesSetFlag,
+      classes_cleared_flag: classesClearedFlag,
     });
   } catch (err) {
     return NextResponse.json(
       {
         ok: false,
         error: err instanceof Error ? err.message : 'alpha-decay-watch failed',
-        cells_scanned: cellsScanned,
+        results,
       },
       { status: 500 },
     );
   }
 }
 
-async function processOneCell(
-  cell: {
-    id: string;
-    signal_class: string;
-    pattern_key: string;
-    cap_class: string;
-    horizon_days: number;
-    alpha: number;
-    beta: number;
-    ic_decay_flag: boolean | null;
-  },
+async function processOneSignalClass(
   signalClass: SignalClass,
   now: Date,
-): Promise<CellUpdate> {
-  // Fetch this cell's resolved outcomes from the last HISTORY_WINDOW_DAYS.
-  // We reconstruct the IC history by re-binning events into daily buckets
-  // and computing the trailing-20d IC for each day in the history window.
-  // This keeps the cron stateless (no rolling_ic_history JSONB column).
+): Promise<ClassResult> {
+  // 1. Load every non-EXPLORATORY cell in the class. EXPLORATORY cells
+  //    (raw N + ESS too low) carry too much sampling noise — we don't write
+  //    rolling_ic_20d to them and don't include their events in the IC.
+  const cells = await prisma.learnedPattern.findMany({
+    where: {
+      signal_class: signalClass,
+      status: { not: 'EXPLORATORY' },
+    },
+  });
+
+  if (cells.length === 0) {
+    return {
+      signal_class: signalClass,
+      rolling_ic_20d: null,
+      ic_decay_flag: false,
+      cells_updated: 0,
+      reason: 'no-cells',
+    };
+  }
+
+  // Build a (pattern_key, cap_class, horizon_days) → posteriorMean map so we
+  // can attach a meaningful prediction to each event. Predictions vary
+  // across cells within the class — exactly the input variance Pearson-of-
+  // ranks needs to compute a non-zero IC.
+  const cellPrediction = new Map<string, number>();
+  for (const c of cells) {
+    cellPrediction.set(
+      cellKey(c.pattern_key, c.cap_class, c.horizon_days),
+      posteriorMean({ alpha: c.alpha, beta: c.beta }),
+    );
+  }
+
+  // Existing flag state — assume stable across the class (we always write
+  // the same flag value to every cell, so cells of a class can only diverge
+  // if external code wrote them; we trust the most-common value).
+  const wasFlagged = cells.filter((c) => c.ic_decay_flag === true).length > cells.length / 2;
+
+  // 2. Pull all posterior_update events for this class within the history
+  //    window. Filter to those whose source cell is non-EXPLORATORY (the
+  //    cellPrediction map captures exactly that subset).
   const historyStart = new Date(now.getTime() - HISTORY_WINDOW_DAYS * MS_PER_DAY);
   const events = await prisma.learningEvent.findMany({
     where: {
       event_type: 'posterior_update',
-      signal_class: cell.signal_class,
-      pattern_key: cell.pattern_key,
-      cap_class: cell.cap_class,
-      horizon_days: cell.horizon_days,
+      signal_class: signalClass,
       occurred_at: { gte: historyStart },
     },
     orderBy: { occurred_at: 'asc' },
   });
 
   const observations: Array<{ pred: number; realized: number; at: Date }> = [];
-  // Use the cell's current posterior mean as the prediction proxy for every
-  // historical event in the window (mirrors recomputeOneCell's approach in
-  // /api/cron/learn). This biases the IC toward 0 / -∞ when the cell is
-  // poorly calibrated — exactly the regime the IC monitor needs to catch.
-  const predictionProxy = posteriorMean({ alpha: cell.alpha, beta: cell.beta });
-
   for (const ev of events) {
+    if (ev.pattern_key == null || ev.cap_class == null || ev.horizon_days == null) continue;
+    const pred = cellPrediction.get(cellKey(ev.pattern_key, ev.cap_class, ev.horizon_days));
+    if (pred === undefined) continue; // event from an EXPLORATORY cell — exclude
     const d = ev.delta as
-      | { ticker_return_pct?: number; spy_return_pct?: number; hit?: boolean }
+      | { ticker_return_pct?: number; spy_return_pct?: number }
       | null;
     if (!d || typeof d.ticker_return_pct !== 'number' || typeof d.spy_return_pct !== 'number') {
       continue;
     }
     observations.push({
-      pred: predictionProxy,
+      pred,
       realized: d.ticker_return_pct - d.spy_return_pct,
       at: ev.occurred_at,
     });
   }
 
-  // Need at least 5 paired observations within the rolling window to make
-  // even a single IC value meaningful. Same lower bound as recomputeOneCell.
   if (observations.length < 5) {
+    // Not enough events to compute even one IC point — leave flag state alone.
+    // We still write the existing flag back to keep cells uniform across class.
+    await broadcastToCells(signalClass, null, wasFlagged);
     return {
-      id: cell.id,
-      signal_class: cell.signal_class,
-      pattern_key: cell.pattern_key,
-      cap_class: cell.cap_class,
-      horizon_days: cell.horizon_days,
+      signal_class: signalClass,
       rolling_ic_20d: null,
-      ic_decay_flag: cell.ic_decay_flag === true,
+      ic_decay_flag: wasFlagged,
+      cells_updated: cells.length,
       reason: 'too-few-events',
     };
   }
 
-  // Build the rolling-IC history: for each day d in the history window,
-  // compute the IC across all observations within [d - 20d, d]. The "today"
-  // IC is the last entry; the full series feeds isDecayConfirmed/Cleared.
+  // 3. Build the rolling-IC time series: for each day in the history window,
+  //    compute the IC across all observations within [d - IC_WINDOW_DAYS, d].
   const rollingICs: number[] = [];
   for (let dayOffset = HISTORY_WINDOW_DAYS - 1; dayOffset >= 0; dayOffset--) {
     const windowEnd = new Date(now.getTime() - dayOffset * MS_PER_DAY);
     const windowStart = new Date(windowEnd.getTime() - IC_WINDOW_DAYS * MS_PER_DAY);
     const windowObs = observations.filter((o) => o.at >= windowStart && o.at <= windowEnd);
-    if (windowObs.length < 5) {
-      // Not enough data for a meaningful IC at this day — skip (don't push
-      // a misleading 0 that would falsely trigger the < 0.02 confirmation).
-      continue;
-    }
-    const ic = rollingSpearmanIC({
-      predictions: windowObs.map((o) => o.pred),
-      realizedReturns: windowObs.map((o) => o.realized),
-    });
-    rollingICs.push(ic);
+    // Need at least 5 obs AND >1 distinct prediction to avoid the constant-
+    // prediction degeneracy that drives Pearson denominator → 0.
+    if (windowObs.length < 5) continue;
+    const distinctPreds = new Set(windowObs.map((o) => o.pred));
+    if (distinctPreds.size < 2) continue;
+    rollingICs.push(
+      rollingSpearmanIC({
+        predictions: windowObs.map((o) => o.pred),
+        realizedReturns: windowObs.map((o) => o.realized),
+      }),
+    );
   }
 
   if (rollingICs.length === 0) {
+    await broadcastToCells(signalClass, null, wasFlagged);
     return {
-      id: cell.id,
-      signal_class: cell.signal_class,
-      pattern_key: cell.pattern_key,
-      cap_class: cell.cap_class,
-      horizon_days: cell.horizon_days,
+      signal_class: signalClass,
       rolling_ic_20d: null,
-      ic_decay_flag: cell.ic_decay_flag === true,
+      ic_decay_flag: wasFlagged,
+      cells_updated: cells.length,
       reason: 'too-few-events',
     };
   }
 
   const todayIC = rollingICs[rollingICs.length - 1];
-  const wasFlagged = cell.ic_decay_flag === true;
-  // Asymmetric state machine:
-  //   if currently flagged → only check isDecayCleared (3 consecutive recoveries)
-  //   if currently clear   → only check isDecayConfirmed (5 consecutive < 0.02)
-  // Sticky / hysteresis: prevents single-day thrashing of the flag.
+
+  // 4. Asymmetric (sticky) state machine — prevents single-day thrashing.
+  //    Only check the relevant transition for the current state.
   const cleared = wasFlagged && isDecayCleared(rollingICs);
   const confirmed = !wasFlagged && isDecayConfirmed(rollingICs);
   const newFlag = wasFlagged ? !cleared : confirmed;
 
-  void signalClass; // kept in signature for future per-class threshold tuning
+  // 5. Broadcast to every cell of this class — they share the same per-class
+  //    rolling_ic_20d + ic_decay_flag.
+  await broadcastToCells(signalClass, todayIC, newFlag);
 
-  await prisma.learnedPattern.update({
-    where: { id: cell.id },
-    data: {
-      rolling_ic_20d: todayIC,
-      ic_decay_flag: newFlag,
-    },
-  });
-
-  let reason: CellUpdate['reason'] = 'updated';
+  let reason: ClassResult['reason'] = 'updated';
   if (!wasFlagged && newFlag) reason = 'set';
   else if (wasFlagged && !newFlag) reason = 'cleared';
 
   return {
-    id: cell.id,
-    signal_class: cell.signal_class,
-    pattern_key: cell.pattern_key,
-    cap_class: cell.cap_class,
-    horizon_days: cell.horizon_days,
+    signal_class: signalClass,
     rolling_ic_20d: todayIC,
     ic_decay_flag: newFlag,
+    cells_updated: cells.length,
     reason,
   };
+}
+
+async function broadcastToCells(
+  signalClass: SignalClass,
+  rollingIc: number | null,
+  flag: boolean,
+): Promise<void> {
+  // Single updateMany — broadcasts the same rolling_ic_20d + ic_decay_flag
+  // to every non-EXPLORATORY cell of this signal class.
+  await prisma.learnedPattern.updateMany({
+    where: {
+      signal_class: signalClass,
+      status: { not: 'EXPLORATORY' },
+    },
+    data: {
+      rolling_ic_20d: rollingIc,
+      ic_decay_flag: flag,
+    },
+  });
+}
+
+function cellKey(patternKey: string, capClass: string, horizonDays: number): string {
+  return `${patternKey}|${capClass}|${horizonDays}`;
 }
