@@ -104,3 +104,12 @@ playwright/.cache/
 # Phase 19 shadow A/B verdict artifacts (runtime output, never commit)
 # ========================
 shadow-reports/
+
+# ========================
+# Phase 19-A-06 calibration audit reports (runtime output, never commit)
+# Per CLAUDE.md "Never store generated research artifacts inside the
+# repository". Script writes to /tmp/calibration-reports/ — this entry is
+# belt-and-suspender against an accidental local calibration-reports/
+# being created at the repo root.
+# ========================
+calibration-reports/
