@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-07T17:45:45.391Z"
-last_activity: 2026-05-07
+last_updated: "2026-05-08T04:00:00.000Z"
+last_activity: 2026-05-08 -- Phase 19-A-05 complete
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 30
-  completed_plans: 7
-  percent: 23
+  completed_plans: 9
+  percent: 30
 ---
 
 # Project State
@@ -21,16 +21,16 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
 **Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — backed by an industry-standard, auditable, self-improving Bayesian learning engine.
 
-**Current focus:** Phase 19 — Cipher v2.0 Excellence
+**Current focus:** Phase 19 — cipher-v2-0-excellence
 
 ## Current Position
 
 Milestone: v2.0
-Phase: 19 (Cipher v2.0 Excellence) — EXECUTING
-Plan: 8 of 30
-Status: Ready to execute
-Last activity: 2026-05-07
-Last completed: 19-Z-04 → npm run model-card-status now exits 1 with 24-line punch list (correct pre-cutover state)
+Phase: 19 (cipher-v2-0-excellence) — EXECUTING
+Plan: 10 of 30 (next: 19-A-06 calibration validation harness, OR Wave B/C)
+Status: Executing Phase 19
+Last activity: 2026-05-08 -- Phase 19-A-05 complete
+Last completed: 19-A-05 → rolling 20d rank-IC monitor + alpha-decay-watch cron live; 9/9 unit + 5/5 integration tests GREEN; benchmark 356ms (empty-work-path on currently-EXPLORATORY universe)
 
 ## Accumulated Context (carried forward from v1.0)
 
