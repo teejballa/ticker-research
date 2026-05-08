@@ -1227,3 +1227,194 @@ export function combinatorialPurgedKFold(args: {
   const nPaths = Math.floor((combos.length * k) / n);
   return { splits, nPaths };
 }
+
+// ─── Calibration Validation Harness (Phase 19 / Plan 19-A-06 / D-22) ─────────
+//
+// Two pure functions for the calibration audit script (scripts/calibration-
+// report.ts):
+//
+//   reliabilityDiagram() — partition predictions into nBins quantile bins and
+//     report (mean predicted probability, observed hit frequency) per bin. For
+//     a perfectly calibrated model the two columns lie on the y=x diagonal.
+//
+//   hosmerLemeshow() — chi-square goodness-of-fit on the same bins:
+//        χ² = Σ_g [(O_1g - E_1g)² / (E_1g · (1 - π_g))]
+//     with df = nBins - 2. Large χ² (small p-value < 0.05) ⇒ reject the null
+//     hypothesis of good calibration. Reference: Hosmer & Lemeshow 2000 §5.
+//
+// Chi-square CDF is computed via the regularized lower incomplete gamma
+// function (no jstat dep — keep tree slim, matches the project's existing
+// "no jstat" convention from the DSR/PBO code above).
+
+export interface ReliabilityBin {
+  binIndex: number;
+  binLow: number;
+  binHigh: number;
+  meanPrediction: number;
+  observedFrequency: number;
+  count: number;
+}
+
+export function reliabilityDiagram(args: {
+  predictions: number[];
+  outcomes: boolean[];
+  nBins?: number; // default 10 quantile bins
+}): ReliabilityBin[] {
+  const { predictions, outcomes } = args;
+  const nBins = args.nBins ?? 10;
+  if (predictions.length !== outcomes.length) {
+    throw new Error(
+      `reliabilityDiagram: predictions and outcomes must be same length (${predictions.length} vs ${outcomes.length})`,
+    );
+  }
+  if (!Number.isInteger(nBins) || nBins < 2) {
+    throw new Error('reliabilityDiagram: nBins must be integer ≥ 2');
+  }
+  const n = predictions.length;
+  // Sort jointly by prediction so bins are quantile-based.
+  const indexed: Array<{ p: number; o: boolean }> = new Array(n);
+  for (let i = 0; i < n; i++) indexed[i] = { p: predictions[i], o: outcomes[i] };
+  indexed.sort((a, b) => a.p - b.p);
+
+  const out: ReliabilityBin[] = [];
+  if (n === 0) return out;
+  const baseSize = Math.floor(n / nBins);
+  for (let b = 0; b < nBins; b++) {
+    const start = b * baseSize;
+    // Last bin absorbs the tail so all samples are accounted for.
+    const end = b === nBins - 1 ? n : start + baseSize;
+    const slice = indexed.slice(start, end);
+    const cnt = slice.length;
+    let pSum = 0;
+    let hits = 0;
+    for (const x of slice) {
+      pSum += x.p;
+      if (x.o) hits++;
+    }
+    const meanP = cnt > 0 ? pSum / cnt : 0;
+    const obsF = cnt > 0 ? hits / cnt : 0;
+    out.push({
+      binIndex: b,
+      binLow: cnt > 0 ? slice[0].p : 0,
+      binHigh: cnt > 0 ? slice[cnt - 1].p : 0,
+      meanPrediction: meanP,
+      observedFrequency: obsF,
+      count: cnt,
+    });
+  }
+  return out;
+}
+
+export interface HosmerLemeshowResult {
+  chiSquare: number;
+  degreesOfFreedom: number;
+  pValue: number;
+  bins: ReliabilityBin[];
+}
+
+export function hosmerLemeshow(args: {
+  predictions: number[];
+  outcomes: boolean[];
+  nBins?: number;
+}): HosmerLemeshowResult {
+  const bins = reliabilityDiagram(args);
+  // χ² = Σ_g [(O_1g - E_1g)² / (E_1g · (1 - π_g))]
+  // O_1g = observed hits in bin g
+  // E_1g = expected hits in bin g = π_g · n_g
+  // π_g  = mean predicted probability in bin g
+  let chi2 = 0;
+  for (const b of bins) {
+    const O1 = b.observedFrequency * b.count;
+    const E1 = b.meanPrediction * b.count;
+    const piG = b.meanPrediction;
+    const denom = E1 * (1 - piG);
+    if (denom > 0 && Number.isFinite(denom)) {
+      chi2 += ((O1 - E1) ** 2) / denom;
+    }
+    // If denom == 0 (all predictions in bin are exactly 0 or 1) the bin
+    // contributes nothing — by convention HL drops degenerate bins.
+  }
+  const df = Math.max(1, bins.length - 2);
+  const pValue = 1 - _chiSquareCDF(chi2, df);
+  return { chiSquare: chi2, degreesOfFreedom: bins.length - 2, pValue, bins };
+}
+
+// ─── Chi-square CDF helpers (no external stats lib) ──────────────────────────
+//
+// CDF(χ²; k) = P(k/2, χ²/2) where P is the regularized lower incomplete gamma
+// function. Implementation follows Numerical Recipes §6.2:
+//   - Series expansion for x < a + 1
+//   - Continued fraction for x ≥ a + 1
+// Both branches converge to ~1e-12 precision well within the 50-iteration cap.
+
+function _logGamma(x: number): number {
+  // Lanczos approximation (g=7), accurate to ~1e-15 for x > 0.
+  const c = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  if (x < 0.5) {
+    // Reflection formula: Γ(x)Γ(1-x) = π / sin(πx)
+    return (
+      Math.log(Math.PI / Math.sin(Math.PI * x)) - _logGamma(1 - x)
+    );
+  }
+  x -= 1;
+  let a = c[0];
+  const t = x + 7.5;
+  for (let i = 1; i < 9; i++) a += c[i] / (x + i);
+  return (
+    0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a)
+  );
+}
+
+function _gammaIncP(a: number, x: number): number {
+  // Regularized lower incomplete gamma P(a, x) = γ(a, x) / Γ(a).
+  if (x < 0 || a <= 0) return 0;
+  if (x === 0) return 0;
+  if (x < a + 1) {
+    // Series representation (Numerical Recipes 6.2.5)
+    let ap = a;
+    let sum = 1 / a;
+    let del = sum;
+    for (let n = 1; n < 200; n++) {
+      ap += 1;
+      del *= x / ap;
+      sum += del;
+      if (Math.abs(del) < Math.abs(sum) * 1e-14) break;
+    }
+    return sum * Math.exp(-x + a * Math.log(x) - _logGamma(a));
+  }
+  // Continued fraction representation (Lentz's method, NR 6.2.7).
+  const FPMIN = 1e-300;
+  let b = x + 1 - a;
+  let c = 1 / FPMIN;
+  let d = 1 / b;
+  let h = d;
+  for (let i = 1; i < 200; i++) {
+    const an = -i * (i - a);
+    b += 2;
+    d = an * d + b;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = b + an / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < 1e-14) break;
+  }
+  // Q(a,x) = continued fraction × exp(-x + a ln x - ln Γ(a)); P = 1 - Q.
+  const Q = Math.exp(-x + a * Math.log(x) - _logGamma(a)) * h;
+  return 1 - Q;
+}
+
+function _chiSquareCDF(chi2: number, df: number): number {
+  if (!Number.isFinite(chi2) || chi2 <= 0) return 0;
+  if (df <= 0) return 0;
+  const p = _gammaIncP(df / 2, chi2 / 2);
+  // Numerical guard: clamp to [0, 1] in case of tiny floating-point excursions.
+  if (p < 0) return 0;
+  if (p > 1) return 1;
+  return p;
+}
