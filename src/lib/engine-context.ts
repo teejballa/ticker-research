@@ -57,6 +57,49 @@ import {
   FEATURE_NAMES,
   type LogisticState,
 } from './learning';
+import { FEATURES } from './features';
+
+// ─── Plan 19-A-07: read-time hierarchical pooling (RESEARCH §Pitfall 3) ─────
+//
+// The cron persists local α/β AND parent_α/β/λ separately; we recombine here
+// so the canonical posterior remains local while the *displayed* posterior
+// inherits parent strength when the flag is on. Flipping the flag therefore
+// never corrupts persisted state — only the read view changes.
+//
+// Formula:
+//   n         = α_local + β_local
+//   α_pooled  = (n × α_local + λ × α_parent) / (n + λ)
+//   β_pooled  = (n × β_local + λ × β_parent) / (n + λ)
+//
+// Cell view: when FEATURES.hierarchical_pooling_enabled is false OR the cell
+// row has no parent_alpha (cold-start, sparse group, or pre-cutover backfill),
+// we surface the local posterior unchanged.
+
+type PooledBetaCell = {
+  alpha: number;
+  beta: number;
+  parent_alpha?: number | null;
+  parent_beta?: number | null;
+  shrinkage_strength?: number | null;
+};
+
+function pooledBeta(cell: PooledBetaCell): { alpha: number; beta: number } {
+  if (
+    !FEATURES.hierarchical_pooling_enabled ||
+    cell.parent_alpha == null ||
+    cell.parent_beta == null ||
+    cell.shrinkage_strength == null
+  ) {
+    return { alpha: cell.alpha, beta: cell.beta };
+  }
+  const n = cell.alpha + cell.beta;
+  const lambda = cell.shrinkage_strength;
+  const alpha_pooled =
+    (n * cell.alpha + lambda * cell.parent_alpha) / (n + lambda);
+  const beta_pooled =
+    (n * cell.beta + lambda * cell.parent_beta) / (n + lambda);
+  return { alpha: alpha_pooled, beta: beta_pooled };
+}
 import { lightweightCommunityScan } from './data/lightweight-community-scan';
 import { computeTechnicalSnapshot } from './data/technical';
 import { fetchInsiderData } from './data/insider';
@@ -221,6 +264,12 @@ interface LearnedCellLike {
   // — the UI panel chooses which to render (additive, no replacement).
   conformal_low: number | null;
   conformal_high: number | null;
+  // Phase 19 Plan 19-A-07 — empirical-Bayes pooling fields. Cron writes them;
+  // engine-context's pooledBeta() helper recombines into a pooled posterior
+  // at READ time when FEATURES.hierarchical_pooling_enabled is true.
+  parent_alpha: number | null;
+  parent_beta: number | null;
+  shrinkage_strength: number | null;
 }
 
 function deriveCellStatus(cell: LearnedCellLike | null): CellStatus {
@@ -359,7 +408,8 @@ async function resolveBucketCellAt30(
     return { pattern: bucket, posterior: null, ci: null, sampleSize: 0, ess: 0, status: 'NO_DATA' };
   }
 
-  const ci = credibleInterval95({ alpha: cell.alpha, beta: cell.beta });
+  const pooled = pooledBeta(cell);
+  const ci = credibleInterval95(pooled);
   const status = deriveCellStatus(cell);
   return {
     pattern: bucket,
@@ -456,14 +506,19 @@ async function readHorizonCalibrations(
     const instCell = cells[i * 4 + 2];
     const insdCell = cells[i * 4 + 3];
 
-    const dPosterior    = dCell    ? posteriorMean({ alpha: dCell.alpha,    beta: dCell.beta    }) : null;
-    const dCi           = dCell    ? credibleInterval95({ alpha: dCell.alpha,    beta: dCell.beta    }) : null;
-    const tPosterior    = tCell    ? posteriorMean({ alpha: tCell.alpha,    beta: tCell.beta    }) : null;
-    const tCi           = tCell    ? credibleInterval95({ alpha: tCell.alpha,    beta: tCell.beta    }) : null;
-    const instPosterior = instCell ? posteriorMean({ alpha: instCell.alpha, beta: instCell.beta }) : null;
-    const instCi        = instCell ? credibleInterval95({ alpha: instCell.alpha, beta: instCell.beta }) : null;
-    const insdPosterior = insdCell ? posteriorMean({ alpha: insdCell.alpha, beta: insdCell.beta }) : null;
-    const insdCi        = insdCell ? credibleInterval95({ alpha: insdCell.alpha, beta: insdCell.beta }) : null;
+    // Plan 19-A-07: read-time α_pooled / β_pooled when flag enabled.
+    const dPooled    = dCell    ? pooledBeta(dCell)    : null;
+    const tPooled    = tCell    ? pooledBeta(tCell)    : null;
+    const instPooled = instCell ? pooledBeta(instCell) : null;
+    const insdPooled = insdCell ? pooledBeta(insdCell) : null;
+    const dPosterior    = dPooled    ? posteriorMean(dPooled)        : null;
+    const dCi           = dPooled    ? credibleInterval95(dPooled)   : null;
+    const tPosterior    = tPooled    ? posteriorMean(tPooled)        : null;
+    const tCi           = tPooled    ? credibleInterval95(tPooled)   : null;
+    const instPosterior = instPooled ? posteriorMean(instPooled)     : null;
+    const instCi        = instPooled ? credibleInterval95(instPooled): null;
+    const insdPosterior = insdPooled ? posteriorMean(insdPooled)     : null;
+    const insdCi        = insdPooled ? credibleInterval95(insdPooled): null;
 
     const dStatus    = deriveCellStatus(dCell);
     const tStatus    = deriveCellStatus(tCell);
@@ -662,7 +717,7 @@ export async function getEngineContextForTicker(
   let ci_high: number | null = null;
   let posterior_30d_mean: number | null = null;
   if (diffusionCell) {
-    const ci = credibleInterval95({ alpha: diffusionCell.alpha, beta: diffusionCell.beta });
+    const ci = credibleInterval95(pooledBeta(diffusionCell));
     posterior_mean = ci.mean;
     ci_low = ci.low;
     ci_high = ci.high;
@@ -706,7 +761,7 @@ export async function getEngineContextForTicker(
   let technical_posterior_mean: number | null = null;
   let technical_ci: [number, number] | null = null;
   if (technicalCell) {
-    const tci = credibleInterval95({ alpha: technicalCell.alpha, beta: technicalCell.beta });
+    const tci = credibleInterval95(pooledBeta(technicalCell));
     technical_posterior_mean = tci.mean;
     technical_ci = [tci.low, tci.high];
   }
