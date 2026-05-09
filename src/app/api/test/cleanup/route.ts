@@ -33,6 +33,10 @@ interface SeedPatternRow {
   hits?: number;
   alpha_30d?: number;
   beta_30d?: number;
+  // Phase 19 Plan 19-A-07 — optional pooling fields for e2e seeding.
+  parent_alpha?: number | null;
+  parent_beta?: number | null;
+  shrinkage_strength?: number | null;
 }
 
 interface SeedLearningEventRow {
@@ -102,6 +106,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           alpha_30d: p.alpha_30d ?? p.alpha,
           beta_30d: p.beta_30d ?? p.beta,
           status: p.status,
+          parent_alpha: p.parent_alpha ?? null,
+          parent_beta: p.parent_beta ?? null,
+          shrinkage_strength: p.shrinkage_strength ?? null,
         },
         update: {
           alpha: p.alpha,
@@ -112,6 +119,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           alpha_30d: p.alpha_30d ?? p.alpha,
           beta_30d: p.beta_30d ?? p.beta,
           status: p.status,
+          parent_alpha: p.parent_alpha ?? null,
+          parent_beta: p.parent_beta ?? null,
+          shrinkage_strength: p.shrinkage_strength ?? null,
         },
       });
       created.patterns += 1;

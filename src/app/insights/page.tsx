@@ -83,6 +83,11 @@ async function loadEssPatternRows(): Promise<PatternRow[]> {
       effective_sample_size: p.effective_sample_size,
       status: p.status,
       recoveryCount,
+      // Plan 19-A-07: surface pooling fields so PatternsTable can render
+      // α_pooled when FEATURES.hierarchical_pooling_enabled.
+      parent_alpha: p.parent_alpha,
+      parent_beta: p.parent_beta,
+      shrinkage_strength: p.shrinkage_strength,
     };
   });
 }

@@ -14,6 +14,7 @@
 // /insights page that already runs Prisma queries.
 
 import { credibleInterval95 } from '@/lib/learning';
+import { FEATURES } from '@/lib/features';
 import { WatchBadge } from '@/components/WatchBadge';
 
 export interface PatternRow {
@@ -27,6 +28,28 @@ export interface PatternRow {
   effective_sample_size: number;
   status: string;
   recoveryCount: number; // count of `drift_clear` events in last 14d (from groupBy on signal_class+pattern_key+cap_class+horizon_days)
+  // Phase 19 Plan 19-A-07 — empirical-Bayes pooling fields (nullable; cron writes them).
+  parent_alpha?: number | null;
+  parent_beta?: number | null;
+  shrinkage_strength?: number | null;
+}
+
+// Plan 19-A-07: read-time pooled (α, β) when flag is on AND parent is set.
+function pooledBeta(cell: PatternRow): { alpha: number; beta: number } {
+  if (
+    !FEATURES.hierarchical_pooling_enabled ||
+    cell.parent_alpha == null ||
+    cell.parent_beta == null ||
+    cell.shrinkage_strength == null
+  ) {
+    return { alpha: cell.alpha, beta: cell.beta };
+  }
+  const n = cell.alpha + cell.beta;
+  const lambda = cell.shrinkage_strength;
+  return {
+    alpha: (n * cell.alpha + lambda * cell.parent_alpha) / (n + lambda),
+    beta: (n * cell.beta + lambda * cell.parent_beta) / (n + lambda),
+  };
 }
 
 const SIGNAL_LABELS: Record<string, string> = {
@@ -66,7 +89,7 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
         </thead>
         <tbody>
           {rows.map((cell) => {
-            const ci = credibleInterval95({ alpha: cell.alpha, beta: cell.beta });
+            const ci = credibleInterval95(pooledBeta(cell));
             const ciLowPct = (ci.low * 100).toFixed(1);
             const ciHighPct = (ci.high * 100).toFixed(1);
             const recoveryCount = cell.recoveryCount;
