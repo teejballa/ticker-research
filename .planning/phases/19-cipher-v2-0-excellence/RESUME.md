@@ -1,16 +1,23 @@
 # Phase 19 Resume Checkpoint
 
 **Created:** 2026-05-07 (post-crash recovery)
-**Last updated:** 2026-05-08 (paused for the night after 19-A-06 — resume on user "go")
-**Last completed plan:** 19-A-06 (Calibration validation harness — reliability diagram + Hosmer-Lemeshow)
-**Last commit on `main`:** `c8b953a` (docs(19-a-06): complete calibration validation harness plan)
+**Last updated:** 2026-05-09 (after 19-A-07 inline execution, all 9 in-scope tasks committed)
+**Last completed plan:** 19-A-07 (Hierarchical Bayesian pooling — empirical Bayes, CORE-ML-11..14)
+**Last commit on `main`:** `dc0435a` (feat(19-a-07): hierarchical-sweep-report + pooling-audit scripts)
 
-## Resume Status (2026-05-08)
+## Resume Status (2026-05-09)
 
-Working tree is clean. User paused execution to continue tomorrow. On user "go":
-1. Resume with **19-A-07** (hierarchical Bayesian pooling — 10 tasks, the largest plan in the phase)
-2. **Important:** Two prior subagent attempts at 19-A-07 hit `Stream idle timeout` with 0 commits landing. Plan: execute 19-A-07 **inline** (read PLAN, edit files, run vitest, commit per task) instead of via a single mega-subagent. Each task → atomic commit prevents another timeout from losing all progress.
-3. After 19-A-07: continue with 19-B-01 → 19-C-11 (19 plans remaining after 19-A-07).
+Working tree is clean. 19-A-07 closed end-to-end via inline-per-task execution:
+seven atomic feat/test commits landed (`9395d2e`→`dc0435a`) + the SUMMARY/ROADMAP
+docs commit. Unit suite 524/527 (3 todo) green. Plan Task 10 (operator-driven
+shadow lifecycle: vercel env flip → drive workload → audit → verdict → cutover
+PR → 7d hatch → flag-removal PR) is deferred — that work happens during the
+v2.0 graduation window, not inside the plan execution.
+
+Next on user "go":
+1. **19-B-01** (Upstash Redis client + cache-keys + TTL config) — start of
+   Wave B (data-layer modernization).
+2. After 19-B-01: continue 19-B-02 → 19-C-11 (18 plans remaining after Wave A).
 
 ## Crash Context (original 2026-05-07 entry — kept for history)
 
@@ -32,11 +39,9 @@ The 2026-05-07 evening resumption then ran 19-A-05 (commit `6ee3557`) and 19-A-0
 | A | 19-A-04 DSR + PBO + CPCV primitives | done (SUMMARY exists) | `b342f6b` |
 | A | 19-A-05 Rolling 20d rank-IC monitor + alpha-decay-watch cron | done (SUMMARY exists) | `6ee3557` |
 | A | 19-A-06 Calibration validation harness | done (SUMMARY exists) | `c8b953a` |
+| A | 19-A-07 Hierarchical Bayesian pooling (absorbed P19) | done (SUMMARY exists) | `dc0435a` |
 
-## Remaining (20 plans)
-
-### Wave A — 1 plan
-- 19-A-07 — Hierarchical Bayesian pooling (absorbed P19, 10 tasks; **execute inline** — prior subagent attempts timed out)
+## Remaining (19 plans)
 
 ### Wave B — 8 plans (data-layer modernization)
 - 19-B-01 — Upstash Redis client

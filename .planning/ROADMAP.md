@@ -114,7 +114,7 @@ Plans:
 - [x] 19-A-04: DSR + PBO + CPCV primitives (Lopez de Prado) — unblocks v2.0 P21
 - [x] 19-A-05: Rolling 20d rank-IC monitor + alpha-decay-watch cron (completed 2026-05-08; benchmark 356ms)
 - [x] 19-A-06: Calibration validation harness — reliabilityDiagram + hosmerLemeshow + scripts/calibration-report.ts → /tmp/calibration-reports/<date>.md (completed 2026-05-08; 9/9 tests GREEN; institutional class flagged miscalibrated p=0.044 on baseline run)
-- [ ] 19-A-07: Hierarchical Bayesian pooling — empirical Bayes priors (absorbed from original v2.0 P19)
+- [x] 19-A-07: Hierarchical Bayesian pooling — empirical Bayes priors (absorbed from original v2.0 P19) (completed 2026-05-09; CORE-ML-11..14 verified; convergence test 50% speedup on n_local<10; cron + read-time + sweep + audit all landed flag-off; shadow lifecycle deferred to operator)
 - [ ] 19-B-01: Upstash Redis client + cache-keys + TTL config (graceful degrade)
 - [ ] 19-B-02: Retry + exponential backoff wrapper (5xx + network only)
 - [ ] 19-B-03: Tiingo adapter (point-in-time fundamentals + EOD)
