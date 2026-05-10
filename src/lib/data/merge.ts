@@ -4,6 +4,15 @@
 // Per-field provenance recorded in `_field_sources`. Fields that are null
 // across every source are listed in `unavailable_fields` so the UI can
 // distinguish "we asked three sources, none had it" from "we never asked".
+//
+// Plan 19-B-06 (D-29): the canonical FieldOrigin union (declared in
+// `src/lib/types.ts`) was extended additively with 'tiingo' | 'twelvedata' |
+// 'exa' | 'anthropic-search' so the new merge ladder
+// (tiingo → twelvedata → 'yahoo' → 'finnhub' → 'polygon' fallbacks; exa →
+// 'anthropic-search' for news/analyst) can stamp provenance without breaking
+// the existing Yahoo/Finnhub/Polygon paths. The functions below preserve
+// first-non-null-wins; new ladder rungs slot in via additional CascadeEntry
+// rows in source-package.ts's buildSourcePackageNewLadder.
 
 import type {
   MarketDataSection,
