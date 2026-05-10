@@ -394,6 +394,16 @@ export interface AnalysisResult {
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph
+  // Phase 19-C-07 (D-39) — structured citations v2.
+  // Populated when FEATURE_CITATIONS_V2 mode is shadow or on; the LLM SELECTS
+  // entries from the assembled SourcePackage citations and never fabricates URLs.
+  // Each entry is validated by CitationSchema (analyst/news require URL).
+  citations_v2?: Array<{
+    source: 'analyst' | 'news' | 'sec_filing' | 'social' | 'options' | 'community' | 'price_data' | 'other';
+    url: string | null;
+    confidence: number;
+    date_retrieved: string;
+  }>;
   engine_calibration?: EngineCalibration;        // diffusion-engine prior at report-generation time
   technical_at_report?: TechnicalSnapshot | null; // Phase 16-04: live technical snapshot at report time
   // Phase 17-04: smart-money snapshots persisted at report time (written by 17-03 cron path)
