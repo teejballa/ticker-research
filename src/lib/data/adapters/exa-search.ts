@@ -219,13 +219,16 @@ async function doFetchExaNews(ticker: string): Promise<NewsSection | null> {
   const client = getClient();
   if (!client) return null;
   const sinceIso = new Date(Date.now() - NEWS_LOOKBACK_MS).toISOString();
-  // search() now returns text contents by default per the SDK migration
-  // notice (searchAndContents → search). Options stay valid.
+  // Canonical news pattern per docs.exa.ai/reference/search-api-guide-for-coding-agents:
+  //   type=auto, category="news", contents.highlights=true. useAutoprompt is
+  //   deprecated; type='neural' is replaced by 'auto'. Highlights keep token
+  //   usage predictable for the downstream Gemini prompt.
   const resp = (await client.search(`${ticker} stock news earnings analyst`, {
+    type: 'auto',
     numResults: 10,
-    useAutoprompt: true,
-    type: 'neural',
+    category: 'news',
     startPublishedDate: sinceIso,
+    contents: { highlights: true },
   })) as ExaSearchResponseLike;
 
   return {
@@ -242,9 +245,9 @@ async function doFetchExaAnalyst(
   const resp = (await client.search(
     `${ticker} analyst recommendation price target rating`,
     {
+      type: 'auto',
       numResults: 10,
-      useAutoprompt: true,
-      type: 'neural',
+      contents: { highlights: true },
     },
   )) as ExaSearchResponseLike;
 

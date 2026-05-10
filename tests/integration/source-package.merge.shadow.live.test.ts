@@ -38,7 +38,7 @@ const TEST_TICKER_PREFIX = 'B06TST';
 
 // Mock every fetcher at the module boundary so neither ladder hits the
 // network. Old-ladder primaries return synthetic data; new-ladder primaries
-// (tiingo / twelvedata / exa) return null so the new ladder falls through
+// (twelvedata / exa) return null so the new ladder falls through
 // to its yahoo/finnhub/polygon backstops — this keeps the "outputs disagree
 // only on FieldOrigin attribution, not on values" property that the verdict
 // CLI relies on for Jaccard ≥95%.
@@ -113,11 +113,6 @@ vi.mock('@/lib/data/stocktwits', () => ({
 vi.mock('@/lib/data/options-sentiment', () => ({
   fetchOptionsSentiment: vi.fn(async () => null),
   fetchOptionsSentimentTermStructure: vi.fn(async () => null),
-}));
-
-vi.mock('@/lib/data/adapters/tiingo', () => ({
-  fetchTiingoQuote: vi.fn(async () => null),
-  fetchTiingoFundamentals: vi.fn(async () => null),
 }));
 
 vi.mock('@/lib/data/adapters/twelve-data', () => ({
@@ -244,8 +239,8 @@ describe.skipIf(!HAS_DB)('19-B-06 source-package shadow lifecycle (live)', () =>
         fundamentals: { pe_ratio: 31.2, _field_sources: { pe_ratio: 'yahoo' } },
       }),
       async () => ({
-        market_data: { price: 187.42, market_cap: 2.9e12, _field_sources: { price: 'tiingo' } },
-        fundamentals: { pe_ratio: 31.2, _field_sources: { pe_ratio: 'tiingo' } },
+        market_data: { price: 187.42, market_cap: 2.9e12, _field_sources: { price: 'twelvedata' } },
+        fundamentals: { pe_ratio: 31.2, _field_sources: { pe_ratio: 'twelvedata' } },
       }),
       'shadow',
       { ticker },
@@ -266,8 +261,8 @@ describe.skipIf(!HAS_DB)('19-B-06 source-package shadow lifecycle (live)', () =>
     };
     // Per-field provenance is preserved in JSONB so shadow-verdict CLI can
     // compute per-field fill-rate delta and per-origin attribution shifts.
-    expect(newOut.market_data._field_sources.price).toBe('tiingo');
-    expect(newOut.fundamentals._field_sources.pe_ratio).toBe('tiingo');
+    expect(newOut.market_data._field_sources.price).toBe('twelvedata');
+    expect(newOut.fundamentals._field_sources.pe_ratio).toBe('twelvedata');
   });
 
   it('mode=on: only new ladder runs; no ShadowComparison row created (cutover state)', async () => {

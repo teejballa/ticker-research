@@ -99,7 +99,6 @@ const PHASE_19_FLAGS = [
   'ic_decay_monitor',
   'hierarchical_pooling',
   'data_cache',
-  'tiingo_primary',
   'twelvedata_primary',
   'exa_primary',
   'finsentllm_ensemble',

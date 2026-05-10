@@ -119,14 +119,13 @@ describe('wave-b-rollout-status (Plan 19-B-08)', () => {
     it('marks each Wave B flag PENDING when still in features.ts', () => {
       const featuresSrc = `
         const FLAG_NAMES = [
-          'tiingo_primary',
           'twelvedata_primary',
           'exa_primary',
           'data_cache',
         ] as const;
       `;
       const gates = checkFlagRemovalGate(featuresSrc);
-      expect(gates).toHaveLength(4);
+      expect(gates).toHaveLength(3);
       for (const g of gates) {
         expect(g.status).toBe('PENDING');
         expect(g.detail).toMatch(/still present/);
@@ -139,26 +138,24 @@ describe('wave-b-rollout-status (Plan 19-B-08)', () => {
         const FLAG_NAMES = ['conformal_intervals', 'cpcv'] as const;
       `;
       const gates = checkFlagRemovalGate(featuresSrc);
-      expect(gates).toHaveLength(4);
+      expect(gates).toHaveLength(3);
       for (const g of gates) {
         expect(g.status).toBe('GREEN');
         expect(g.detail).toMatch(/removed/);
       }
     });
 
-    it('mixed state: tiingo_primary removed but data_cache still present', () => {
+    it('mixed state: exa_primary removed but data_cache still present', () => {
       const featuresSrc = `
         const FLAG_NAMES = [
           'twelvedata_primary',
-          'exa_primary',
           'data_cache',
         ] as const;
       `;
       const gates = checkFlagRemovalGate(featuresSrc);
       const byName = Object.fromEntries(gates.map((g) => [g.name, g.status]));
-      expect(byName['flag-removed-tiingo_primary']).toBe('GREEN');
       expect(byName['flag-removed-twelvedata_primary']).toBe('PENDING');
-      expect(byName['flag-removed-exa_primary']).toBe('PENDING');
+      expect(byName['flag-removed-exa_primary']).toBe('GREEN');
       expect(byName['flag-removed-data_cache']).toBe('PENDING');
     });
   });

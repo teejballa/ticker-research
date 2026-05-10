@@ -18,7 +18,7 @@
     },
     {
       "name": "wave-b-source-package-merge-flag-readsite",
-      "pattern": "tiingo_primary_mode|twelvedata_primary_mode|exa_primary_mode",
+      "pattern": "twelvedata_primary_mode|exa_primary_mode",
       "registered_by_plan": "19-B-08",
       "registered_at": "2026-05-10",
       "post_cutover": true

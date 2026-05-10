@@ -26,11 +26,11 @@ describe('features', () => {
     expect(() => resolveFeatures()).toThrow(/FEATURE_CONFORMAL/);
   });
 
-  it('exposes all 15 Phase 19 flags', () => {
+  it('exposes all 14 Phase 19 flags (post-Tiingo-removal)', () => {
     const f = resolveFeatures();
     const expected = [
       'conformal_intervals', 'cpcv', 'ic_decay_monitor', 'hierarchical_pooling',
-      'data_cache', 'tiingo_primary', 'twelvedata_primary', 'exa_primary',
+      'data_cache', 'twelvedata_primary', 'exa_primary',
       'finsentllm_ensemble', 'community_supplemental', 'cove_two_pass',
       'model_router', 'contradiction_detector', 'options_term_structure',
       'reputation_weighted_stocktwits',
