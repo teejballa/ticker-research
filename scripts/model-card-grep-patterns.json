@@ -1,12 +1,20 @@
 {
   "_doc": "Each Phase 19 cutover plan adds its pre-cutover grep pattern here. After cutover, model-card-status verifies zero matches in src/, tests/, scripts/. PLACEHOLDER never matches and is here so the registry is non-empty before any cutover lands.",
-  "_format": "Each entry: { name: <human-readable>, pattern: <ripgrep regex>, registered_by_plan: <plan-id>, registered_at: <date> }",
+  "_format": "Each entry: { name: <human-readable>, pattern: <ripgrep regex>, registered_by_plan: <plan-id>, registered_at: <date>, post_cutover: <true|false> }. post_cutover=true means model-card-status enforces zero matches AFTER the plan's cutover commit lands.",
   "patterns": [
     {
       "name": "PLACEHOLDER",
       "pattern": "<<NEVER-MATCHES>>",
       "registered_by_plan": "19-Z-04-init",
-      "registered_at": "2026-05-07"
+      "registered_at": "2026-05-07",
+      "post_cutover": false
+    },
+    {
+      "name": "old-source-package-ladder-conditional",
+      "pattern": "buildSourcePackageOldLadder",
+      "registered_by_plan": "19-B-06",
+      "registered_at": "2026-05-08",
+      "post_cutover": true
     }
   ]
 }
