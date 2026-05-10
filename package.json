@@ -40,6 +40,7 @@
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.1",
     "ai": "6.0.168",
+    "exa-js": "^2.12.1",
     "fast-xml-parser": "^4.5.1",
     "lightweight-charts": "^5.1.0",
     "next": "^15.3.9",
