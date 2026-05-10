@@ -132,7 +132,7 @@ Plans:
 - [x] 19-C-07: Structured citation schema { source, url, confidence, date_retrieved }
 - [ ] 19-C-08: CoVe two-pass wrapper (Gemini draft → NLI verification)
 - [x] 19-C-09: Model cascade router + cost telemetry (Haiku/Flash/Pro) (completed 2026-05-10; routeModel + estimateCost pure functions; geminiRouted wrapped via runWithShadow('model-router', ...) in runGeminiAnalysis; cost telemetry persisted into existing LearningEvent table — zero schema changes; 8/8 unit tests GREEN; flag-off cutover deferred to operator)
-- [ ] 19-C-10: Cross-class contradiction detector (NLI on class posteriors)
+- [x] 19-C-10: Cross-class contradiction detector (NLI on class posteriors) (completed 2026-05-09; detectContradictions runs NLI on 4-choose-2=6 pairs of class posteriors per D-42; severity threshold 0.3; warnings surfaced additively in EngineCalibrationPanel; DETECTION-ONLY mode permanent for Phase 19 — never gates report output; 6/6 unit tests GREEN; full vitest suite 577 passed; pre-19-C-08 NLI shim at src/lib/sentiment/nli-verifier.ts; shadow lifecycle deferred to operator)
 - [x] 19-C-11: Arctic Shift one-time historical Reddit backfill (training corpus)
 
 ---
