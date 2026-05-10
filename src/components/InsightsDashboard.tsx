@@ -113,15 +113,16 @@ interface HorizonBrierData {
   brier_null: number;
 }
 
-// 6-tab structure on /insights — Phase 17-05 adds Institutional + Insider libraries.
+// 7-tab structure on /insights — post-19 adds Overview as the landing tab.
 // Phase 16 tabs (technical-library, horizon-brier) flipped to isNew: false.
 const TABS = [
+  { id: 'overview', label: 'Overview', isNew: true },
   { id: 'diffusion-library', label: 'Diffusion Library', isNew: false },
   { id: 'live-map', label: 'Live Diffusion Map', isNew: false },
   { id: 'technical-library', label: 'Technical Pattern Library', isNew: false },
   { id: 'horizon-brier', label: 'Horizon Brier', isNew: false },
-  { id: 'institutional-library', label: 'Institutional Pattern Library', isNew: true },
-  { id: 'insider-library', label: 'Insider Pattern Library', isNew: true },
+  { id: 'institutional-library', label: 'Institutional Pattern Library', isNew: false },
+  { id: 'insider-library', label: 'Insider Pattern Library', isNew: false },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -211,6 +212,24 @@ const CAP_CLASS_LABEL: Record<string, string> = {
   mid_cap: 'Mid Cap',
   small_cap: 'Small Cap',
   unknown: 'Unknown',
+};
+
+const OVERVIEW_TAB_HINT: Record<string, string> = {
+  'diffusion-library': 'Sentiment family · grid',
+  'live-map': 'Sentiment family · live',
+  'technical-library': 'Technical family · grid',
+  'horizon-brier': 'Technical family · brier curves',
+  'institutional-library': 'Institutional family · grid',
+  'insider-library': 'Insider family · grid',
+};
+
+const OVERVIEW_TAB_BLURB: Record<string, string> = {
+  'diffusion-library': 'Niche-vs-mainstream community diffusion patterns across cap classes.',
+  'live-map': 'Current tickers showing niche-leads flow with sparkline + logistic score.',
+  'technical-library': '8 chart patterns × 3 cap classes × 6 horizons. Posterior means with credible intervals.',
+  'horizon-brier': 'Calibration of technical patterns over horizon — real brier vs the marginal-rate null.',
+  'institutional-library': '13F and institutional ownership flows, scored against forward returns.',
+  'insider-library': 'Form 4 insider transactions, scored against forward returns.',
 };
 
 const SIGNAL_LABELS: Record<string, string> = {
@@ -314,9 +333,9 @@ export function InsightsDashboard() {
   // window.location synchronously on first render — avoids the cascading
   // setState-in-effect anti-pattern flagged by react-hooks/set-state-in-effect.
   const [activeTab, setActiveTab] = useState<TabId>(() => {
-    if (typeof window === 'undefined') return 'diffusion-library';
+    if (typeof window === 'undefined') return 'overview';
     const hash = window.location.hash.slice(1);
-    return TABS.some((t) => t.id === hash) ? (hash as TabId) : 'diffusion-library';
+    return TABS.some((t) => t.id === hash) ? (hash as TabId) : 'overview';
   });
   // Phase 16-05: Technical Pattern Library horizon selector — default 30d★.
   const [selectedHorizon, setSelectedHorizon] = useState<number>(() => {
@@ -624,140 +643,181 @@ export function InsightsDashboard() {
         />
       )}
 
+      {/* ─────────────────────── Overview tab ─────────────────────── */}
+      {activeTab === 'overview' && <>
+        <section
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-outline-variant/30 border border-outline-variant/30 mb-12 overflow-hidden"
+          aria-label="Top-line research statistics"
+        >
+          <Stat
+            label="Data Points"
+            value={data.total_data_points.toLocaleString()}
+            sublabel="Reports + scans"
+            accent="primary"
+          />
+          <Stat
+            label="Resolved"
+            value={data.resolved_outcomes.toLocaleString()}
+            sublabel="With 7d outcome"
+            accent="default"
+          />
+          <Stat
+            label="Thesis Hit Rate"
+            value={data.thesis.pct !== null ? `${data.thesis.pct}%` : '—'}
+            sublabel={
+              data.thesis.pct !== null
+                ? `${data.thesis.high_gap_resolved} samples`
+                : 'Outcomes resolving'
+            }
+            accent={data.thesis.pct !== null ? 'tertiary' : 'default'}
+          />
+          <Stat
+            label="Concept Drift"
+            value={data.concept_drift?.status ?? '—'}
+            sublabel={
+              data.concept_drift
+                ? `worst |z| = ${data.concept_drift.worst_z.toFixed(2)}`
+                : 'Awaiting outcomes'
+            }
+            accent={
+              data.concept_drift?.status === 'ALERT'
+                ? 'error'
+                : data.concept_drift?.status === 'WARNING'
+                  ? 'tertiary'
+                  : 'secondary'
+            }
+          />
+          <Stat
+            label="Null Check"
+            value={
+              data.null_check
+                ? data.null_check.p_value < 0.05
+                  ? `p < ${data.null_check.p_value.toFixed(2)}`
+                  : 'NOISE'
+                : '—'
+            }
+            sublabel={
+              data.null_check
+                ? `real ${data.null_check.real_brier.toFixed(2)} · null ${data.null_check.null_brier.toFixed(2)}`
+                : 'No active patterns yet'
+            }
+            accent={data.null_check && data.null_check.p_value < 0.05 ? 'secondary' : 'default'}
+          />
+        </section>
+
+        <section className="mb-12 border border-outline-variant/30 bg-gradient-to-br from-primary-container/[0.08] to-transparent p-8 md:p-12">
+          <div className="flex items-baseline justify-between mb-5 gap-4 flex-wrap">
+            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase">
+              What Cipher believes right now
+            </div>
+            {data.thesis.recorded_at && (
+              <div className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+                Last revised · {new Date(data.thesis.recorded_at).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+
+          {data.thesis.families && data.thesis.families.length > 0 ? (
+            <div className="grid md:grid-cols-[1fr_auto] gap-10 items-start">
+              <div>
+                <p className="text-on-surface text-2xl md:text-[1.7rem] leading-tight font-light tracking-tight">
+                  {data.thesis.statement}
+                </p>
+
+                <div className="mt-8 space-y-3">
+                  {data.thesis.families.map(f => {
+                    const isTop = f.signal_class === data.thesis.top_family;
+                    const pct = Math.round(f.mean * 100);
+                    return (
+                      <div
+                        key={f.signal_class}
+                        className={`grid grid-cols-[1fr_auto_auto] gap-4 items-baseline py-3 border-b border-outline-variant/20 ${
+                          isTop ? 'text-on-surface' : 'text-on-surface-variant'
+                        }`}
+                      >
+                        <div className="text-sm md:text-base font-medium tracking-tight flex items-center gap-2">
+                          {isTop && <span className="text-primary text-[10px] font-mono tracking-[0.3em] uppercase">Lead</span>}
+                          {f.label}
+                        </div>
+                        <div className="font-mono tabular-nums text-2xl font-black text-on-surface">
+                          {pct}<span className="text-xs text-outline ml-0.5">%</span>
+                        </div>
+                        <div className="font-mono text-[11px] text-outline tabular-nums whitespace-nowrap">
+                          {f.n} trade{f.n === 1 ? '' : 's'} · {f.cells} cell{f.cells === 1 ? '' : 's'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-on-surface-variant text-sm mt-6 leading-relaxed max-w-2xl">
+                  These percentages are sample-weighted across every learned pattern in each family. The thesis only revises when a family&apos;s posterior moves by 5+ percentage points on at least ten new outcomes — so it builds on itself instead of flipping every learn cycle.
+                </p>
+              </div>
+
+              <div className="border-l-0 md:border-l md:pl-10 border-outline-variant/30 self-stretch flex flex-col justify-end min-w-[180px]">
+                <div className="text-[10px] tracking-[0.4em] text-outline font-mono uppercase mb-2">
+                  Lead family
+                </div>
+                <div className="font-mono text-5xl md:text-6xl font-black text-primary leading-none tabular-nums">
+                  {data.thesis.pct !== null ? data.thesis.pct : '—'}
+                  <span className="text-3xl text-outline ml-0.5">%</span>
+                </div>
+                <div className="text-xs text-on-surface-variant mt-3 font-mono">
+                  {data.thesis.total_n ?? 0} resolved · {data.thesis.total_cells ?? 0} cells
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-on-surface text-2xl leading-snug font-light tracking-tight max-w-3xl">
+              Cipher is still watching. <span className="tabular-nums">{data.total_data_points.toLocaleString()}</span> data points collected, <span className="tabular-nums">{data.resolved_outcomes}</span> resolved. As soon as any pattern hits three real outcomes, the engine will start forming a view — and you&apos;ll see it here.
+            </p>
+          )}
+        </section>
+
+        {/* Explore deeper — pointer cards into the per-family tabs */}
+        <section className="mb-16" aria-label="Drill into each family">
+          <div className="mb-6 max-w-3xl">
+            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-2">
+              Want the full picture?
+            </div>
+            <h2 className="text-on-surface text-2xl md:text-3xl font-black tracking-tight mb-3">
+              Open any family for the underlying cells
+            </h2>
+            <p className="text-on-surface-variant text-sm leading-relaxed">
+              Each tab below shows the pattern × cap × horizon grid that feeds the headline. Posterior means, sample sizes, drift, and credible intervals are exposed there.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-outline-variant/30 border border-outline-variant/30">
+            {TABS.filter(t => t.id !== 'overview').map(t => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setActiveTab(t.id);
+                  if (typeof window !== 'undefined') window.location.hash = t.id;
+                }}
+                className="bg-surface p-6 hover:bg-surface-container-low/40 transition-colors text-left flex flex-col gap-2"
+              >
+                <div className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+                  {OVERVIEW_TAB_HINT[t.id] ?? 'Detail'}
+                </div>
+                <div className="text-on-surface text-base font-bold tracking-tight">
+                  {t.label}
+                </div>
+                <div className="text-on-surface-variant text-xs leading-relaxed">
+                  {OVERVIEW_TAB_BLURB[t.id] ?? 'Drill into the underlying cells.'}
+                </div>
+                <div className="text-primary text-xs font-mono tracking-widest uppercase mt-1">
+                  Open →
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      </>}
+
       {/* ─────────────────────── Tabs 1 + 2: existing scroll layout ─────────────────────── */}
       {(activeTab === 'diffusion-library' || activeTab === 'live-map') && <>
-
-      {/* ─────────────────────── Stat strip ─────────────────────── */}
-      <section
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-outline-variant/30 border border-outline-variant/30 mb-12 overflow-hidden"
-        aria-label="Top-line research statistics"
-      >
-        <Stat
-          label="Data Points"
-          value={data.total_data_points.toLocaleString()}
-          sublabel="Reports + scans"
-          accent="primary"
-        />
-        <Stat
-          label="Resolved"
-          value={data.resolved_outcomes.toLocaleString()}
-          sublabel="With 7d outcome"
-          accent="default"
-        />
-        <Stat
-          label="Thesis Hit Rate"
-          value={data.thesis.pct !== null ? `${data.thesis.pct}%` : '—'}
-          sublabel={
-            data.thesis.pct !== null
-              ? `${data.thesis.high_gap_resolved} samples`
-              : 'Outcomes resolving'
-          }
-          accent={data.thesis.pct !== null ? 'tertiary' : 'default'}
-        />
-        <Stat
-          label="Concept Drift"
-          value={data.concept_drift?.status ?? '—'}
-          sublabel={
-            data.concept_drift
-              ? `worst |z| = ${data.concept_drift.worst_z.toFixed(2)}`
-              : 'Awaiting outcomes'
-          }
-          accent={
-            data.concept_drift?.status === 'ALERT'
-              ? 'error'
-              : data.concept_drift?.status === 'WARNING'
-                ? 'tertiary'
-                : 'secondary'
-          }
-        />
-        <Stat
-          label="Null Check"
-          value={
-            data.null_check
-              ? data.null_check.p_value < 0.05
-                ? `p < ${data.null_check.p_value.toFixed(2)}`
-                : 'NOISE'
-              : '—'
-          }
-          sublabel={
-            data.null_check
-              ? `real ${data.null_check.real_brier.toFixed(2)} · null ${data.null_check.null_brier.toFixed(2)}`
-              : 'No active patterns yet'
-          }
-          accent={data.null_check && data.null_check.p_value < 0.05 ? 'secondary' : 'default'}
-        />
-      </section>
-
-      {/* ─────────────────────── Live Thesis ─────────────────────── */}
-      <section className="mb-12 border border-outline-variant/30 bg-gradient-to-br from-primary-container/[0.08] to-transparent p-8 md:p-12">
-        <div className="flex items-baseline justify-between mb-5 gap-4 flex-wrap">
-          <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase">
-            What Cipher believes right now
-          </div>
-          {data.thesis.recorded_at && (
-            <div className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-              Last revised · {new Date(data.thesis.recorded_at).toLocaleDateString()}
-            </div>
-          )}
-        </div>
-
-        {data.thesis.families && data.thesis.families.length > 0 ? (
-          <div className="grid md:grid-cols-[1fr_auto] gap-10 items-start">
-            <div>
-              <p className="text-on-surface text-2xl md:text-[1.7rem] leading-tight font-light tracking-tight">
-                {data.thesis.statement}
-              </p>
-
-              <div className="mt-8 space-y-3">
-                {data.thesis.families.map(f => {
-                  const isTop = f.signal_class === data.thesis.top_family;
-                  const pct = Math.round(f.mean * 100);
-                  return (
-                    <div
-                      key={f.signal_class}
-                      className={`grid grid-cols-[1fr_auto_auto] gap-4 items-baseline py-3 border-b border-outline-variant/20 ${
-                        isTop ? 'text-on-surface' : 'text-on-surface-variant'
-                      }`}
-                    >
-                      <div className="text-sm md:text-base font-medium tracking-tight flex items-center gap-2">
-                        {isTop && <span className="text-primary text-[10px] font-mono tracking-[0.3em] uppercase">Lead</span>}
-                        {f.label}
-                      </div>
-                      <div className="font-mono tabular-nums text-2xl font-black text-on-surface">
-                        {pct}<span className="text-xs text-outline ml-0.5">%</span>
-                      </div>
-                      <div className="font-mono text-[11px] text-outline tabular-nums whitespace-nowrap">
-                        {f.n} trade{f.n === 1 ? '' : 's'} · {f.cells} cell{f.cells === 1 ? '' : 's'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <p className="text-on-surface-variant text-sm mt-6 leading-relaxed max-w-2xl">
-                These percentages are sample-weighted across every learned pattern in each family. The thesis only revises when a family&apos;s posterior moves by 5+ percentage points on at least ten new outcomes — so it builds on itself instead of flipping every learn cycle.
-              </p>
-            </div>
-
-            <div className="border-l-0 md:border-l md:pl-10 border-outline-variant/30 self-stretch flex flex-col justify-end min-w-[180px]">
-              <div className="text-[10px] tracking-[0.4em] text-outline font-mono uppercase mb-2">
-                Lead family
-              </div>
-              <div className="font-mono text-5xl md:text-6xl font-black text-primary leading-none tabular-nums">
-                {data.thesis.pct !== null ? data.thesis.pct : '—'}
-                <span className="text-3xl text-outline ml-0.5">%</span>
-              </div>
-              <div className="text-xs text-on-surface-variant mt-3 font-mono">
-                {data.thesis.total_n ?? 0} resolved · {data.thesis.total_cells ?? 0} cells
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="text-on-surface text-2xl leading-snug font-light tracking-tight max-w-3xl">
-            Cipher is still watching. <span className="tabular-nums">{data.total_data_points.toLocaleString()}</span> data points collected, <span className="tabular-nums">{data.resolved_outcomes}</span> resolved. As soon as any pattern hits three real outcomes, the engine will start forming a view — and you&apos;ll see it here.
-          </p>
-        )}
-      </section>
 
       {/* ─────────────────────── What changed this month ─────────────────────── */}
       {data.engine_changes && data.engine_changes.length > 0 && (
