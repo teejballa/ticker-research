@@ -105,6 +105,13 @@ import { computeTechnicalSnapshot } from './data/technical';
 import { fetchInsiderData } from './data/insider';
 import { fetchInstitutionalData } from './data/institutional';
 import type { TechPattern, TechnicalSnapshot, HorizonCalibration, InsiderSnapshot, InstitutionalSnapshot, InsiderBucket, InstitutionalBucket } from './types';
+// ─── Plan 19-C-10 (D-42) — Cross-class contradiction detector (DETECTION-ONLY) ──
+//
+// DETECTION-ONLY MODE — PERMANENT for Phase 19. The detector NEVER gates the
+// gemini-analysis output; it only feeds an additive `contradiction_warnings`
+// array consumed by EngineCalibrationPanel. Upgrading to gating mode requires
+// a separate plan + new decision (out of scope for Phase 19).
+import { detectContradictions } from './sentiment/contradiction-detector';
 
 // Match the order used by /api/cron/learn (FEATURE_NAMES) for the 6-d diffusion
 // logistic forward pass. Phase 16 introduces the 12-d combined logistic that uses
@@ -226,6 +233,19 @@ export interface EngineContext {
   institutional_ess: number;
   insider_ess: number;
   logistic_ess: number;
+
+  // ── Phase 19 Plan 19-C-10 (D-42) — Cross-class contradiction warnings ────
+  // ADDITIVE field surfaced by EngineCalibrationPanel only (DETECTION-ONLY
+  // mode is PERMANENT for Phase 19 — never gates report output). Populated
+  // when FEATURES.contradiction_detector flag is 'on' or 'shadow'; empty
+  // array otherwise. Each warning is a human-readable string — see
+  // src/lib/sentiment/contradiction-detector.ts for format.
+  //
+  // Lifecycle: shadow → PASS verdict (detector validity) → cutover ('on'
+  // permanent) → 7d hatch → flag removal makes detector unconditional code,
+  // STILL detection-only. Flag removal does NOT change behavior; gating
+  // mode is OUT OF SCOPE for Phase 19.
+  contradiction_warnings: string[];
 }
 
 function sigmoid(z: number): number {
@@ -867,6 +887,43 @@ export async function getEngineContextForTicker(
     { posterior: insiderResult.posterior,                status: insiderResult.status },
   ]);
 
+  // ── 14. Phase 19 Plan 19-C-10 (D-42) — Cross-class contradiction detector ─
+  // DETECTION-ONLY mode permanent. Runs when flag is 'on' OR 'shadow'; never
+  // gates report output. Result feeds an additive `contradiction_warnings`
+  // array consumed by EngineCalibrationPanel only.
+  //
+  // Skips entirely (empty array) when:
+  //   - flag is 'off' (default), OR
+  //   - any of the 4 class posteriors is null (insufficient calibration data)
+  //
+  // Detector errors are caught and degraded to empty warnings — the rest of
+  // the report must always render.
+  let contradiction_warnings: string[] = [];
+  const detectorMode = FEATURES.contradiction_detector_mode;
+  if (
+    (detectorMode === 'on' || detectorMode === 'shadow') &&
+    posterior_mean != null &&
+    technical_posterior_mean != null &&
+    institutionalResult.posterior != null &&
+    insiderResult.posterior != null
+  ) {
+    try {
+      const detection = await detectContradictions({
+        ticker: upperTicker,
+        classPosteriors: {
+          diffusion: posterior_mean,
+          technical: technical_posterior_mean,
+          institutional: institutionalResult.posterior,
+          insider: insiderResult.posterior,
+        },
+      });
+      contradiction_warnings = detection.warnings;
+    } catch {
+      // Graceful degrade — never fail report render because of the detector.
+      contradiction_warnings = [];
+    }
+  }
+
   return {
     flow_pattern,
     cap_class,
@@ -949,6 +1006,9 @@ export async function getEngineContextForTicker(
     institutional_ess:            institutionalResult.ess,
     insider_ess:                  insiderResult.ess,
     logistic_ess:                 0,
+
+    // ── Phase 19 Plan 19-C-10 (D-42) — DETECTION-ONLY warnings (additive) ───
+    contradiction_warnings,
   };
 }
 
