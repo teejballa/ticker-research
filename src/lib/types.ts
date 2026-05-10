@@ -124,6 +124,12 @@ export interface SentimentIntelligenceSection extends SourceSection {
   reddit_tone: 'bullish' | 'bearish' | 'neutral' | null;  // null — set by Gemini qualitatively
   put_call_ratio: number | null;
   put_call_interpretation: 'bullish' | 'bearish' | 'neutral' | null;
+  // Plan 19-C-02 (D-34) — FinSentLLM ensemble score over aggregated chatter
+  // text. Optional / nullable so SourcePackage stays backward-compatible when
+  // FEATURE_FINSENTLLM_ENSEMBLE is `off` (the canonical mode pre-rollout).
+  // model_agreement = 1 - std(non-null scores); null when <2 contributors.
+  finsentllm_score?: number | null;
+  model_agreement?: number | null;
 }
 
 export interface ChartDataPoint {

@@ -20,6 +20,7 @@ import {
 } from '@/lib/data/options-sentiment';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import { FEATURES } from '@/lib/features';
+import { ensembleSentiment } from '@/lib/sentiment/ensemble';
 import type { SourcePackage, MarketDataSection, FundamentalsSection, SupplementaryMarketData, SupplementarySource, SentimentIntelligenceSection } from '@/lib/types';
 import type { SecurityType } from '@/lib/types';
 
@@ -50,6 +51,43 @@ function emptyFundamentals(error: string): FundamentalsSection {
   };
 }
 
+// Plan 19-C-02 (D-34) — Single-model fallback used by the shadow A/B harness
+// for the `finsentllm-ensemble` path. Returns the canonical `null` baseline so
+// pre-rollout (and FEATURE_FINSENTLLM_ENSEMBLE='off') the SentimentSnapshot
+// finsentllm_score / model_agreement fields stay null exactly as today. The
+// shadow-verdict CLI computes Pearson correlation between this baseline and
+// the new ensemble path over the 7d shadow window.
+async function scoreSingleModel(): Promise<{
+  finsentllm_score: number | null;
+  model_agreement: number | null;
+}> {
+  return { finsentllm_score: null, model_agreement: null };
+}
+
+// Plan 19-C-02 (D-34) — Ensemble path. Aggregates the chatter text we have
+// in-process during sentiment intelligence collection and feeds it through
+// `ensembleSentiment` (FinGPT v3 + Mistral-Fin + FinBERT). Errors return
+// {null, null} so this path is no-op-on-failure and the shadow harness
+// records the comparison without poisoning the canonical SentimentSnapshot.
+async function scoreEnsemble(text: string): Promise<{
+  finsentllm_score: number | null;
+  model_agreement: number | null;
+}> {
+  if (!text || text.trim().length === 0) {
+    return { finsentllm_score: null, model_agreement: null };
+  }
+  const r = await ensembleSentiment(text);
+  // Map the EnsembleResult onto the SentimentSnapshot column shape per the
+  // schema additions in 19-Z-02 (D-47): finsentllm_score (Float?) +
+  // model_agreement (Float?). per_model is intentionally not persisted on
+  // SentimentSnapshot — it lives in ShadowComparison.new_output_json for
+  // verdict-time telemetry and is GC'd after 30d (D-15).
+  return {
+    finsentllm_score: r.score,
+    model_agreement: r.model_agreement,
+  };
+}
+
 async function fetchSentimentIntelligence(ticker: string): Promise<SentimentIntelligenceSection> {
   const collected_at = new Date().toISOString();
   // Plan 19-C-04: options-sentiment is now wrapped by runWithShadow.
@@ -71,6 +109,28 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
   ]);
   const stwits = stwitsResult.status === 'fulfilled' ? stwitsResult.value : null;
   const options = optionsResult.status === 'fulfilled' ? optionsResult.value : null;
+
+  // Plan 19-C-02 (D-34) — runWithShadow('finsentllm-ensemble', ...).
+  // Aggregated chatter text is the StockTwits / options interpretation
+  // signal we already have in-process. Per D-44 the dedicated community
+  // chatter ingestion lands later in Wave C (Firecrawl / Arctic Shift) and
+  // will replace this seed text with the full chatter blob; this wiring
+  // keeps the shadow harness exercising the path on every research request
+  // so 19-C-02 PASS verdict (Pearson ≥0.85, ≥95% chatter coverage) can
+  // accumulate without waiting on later plans.
+  const chatterText = [
+    stwits ? `StockTwits: bull ${stwits.stocktwits_bull_pct ?? '?'}%, bear ${stwits.stocktwits_bear_pct ?? '?'}%` : '',
+    options?.put_call_interpretation ? `Options put/call interpretation: ${options.put_call_interpretation}` : '',
+  ].filter(Boolean).join('. ');
+
+  const ensembleScores = await runWithShadow(
+    'finsentllm-ensemble',
+    () => scoreSingleModel(),
+    () => scoreEnsemble(chatterText),
+    FEATURES.finsentllm_ensemble_mode,
+    { ticker },
+  );
+
   return {
     collected_at,
     stocktwits_bull_pct: stwits?.stocktwits_bull_pct ?? null,
@@ -80,6 +140,10 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
     reddit_tone: null,  // derived qualitatively by Gemini from community content
     put_call_ratio: options?.put_call_ratio ?? null,
     put_call_interpretation: options?.put_call_interpretation ?? null,
+    // Plan 19-C-02: surface ensemble fields so downstream
+    // SentimentSnapshot.create({ data }) callers can persist them.
+    finsentllm_score: ensembleScores.finsentllm_score,
+    model_agreement: ensembleScores.model_agreement,
   };
 }
 
