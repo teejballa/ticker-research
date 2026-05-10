@@ -81,7 +81,8 @@ function statisticsOk(opts: {
 const SECRET_KEY = 'sekret-twelve-data-key-do-not-leak';
 
 describe('fetchTwelveDataFundamentals (Plan 19-B-04)', () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let fetchSpy: any;
 
   beforeEach(() => {
     cacheStore.clear();
