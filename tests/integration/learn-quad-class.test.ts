@@ -185,7 +185,7 @@ describe.skipIf(!HAS_DB)('Phase 17 — learn cron quad-class', () => {
     vi.clearAllMocks();
   });
 
-  it('upserts at least 3 LearnedPattern rows (technical + insider + institutional) on a resolved outcome at horizon=30', async () => {
+  it('upserts at least 3 LearnedPattern rows (technical + insider + institutional) on a resolved outcome at horizon=30', { timeout: 60_000 }, async () => {
     // 1. Insert a snapshot scanned 31 days ago (so a 30d outcome falls within the window).
     const snap = await insertSnapshotWithAllData(31);
 

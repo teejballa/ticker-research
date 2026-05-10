@@ -99,25 +99,29 @@ describe.skipIf(!HAS_DB)('Phase 19-Z-02 schema additions (live Neon)', () => {
     expect(second.id).not.toBe(first.id);
   });
 
-  it('LearnedPattern accepts NULL on every Phase 19 column for existing rows', async () => {
-    // Pick any existing pre-migration row; all 9 new columns must be null
-    // (defaults: rolling_ic_20d/dsr/pbo/etc nullable; ic_decay_flag has DEFAULT false
-    // which only applies on INSERT — existing rows pre-migration have NULL).
-    const existing = await prisma.learnedPattern.findFirst({
-      orderBy: { last_updated: 'desc' },
-    });
-    if (!existing) return; // empty DB — acceptable on a fresh fork
-    expect(existing.rolling_ic_20d).toBeNull();
-    expect(existing.dsr).toBeNull();
-    expect(existing.pbo).toBeNull();
-    expect(existing.conformal_low).toBeNull();
-    expect(existing.conformal_high).toBeNull();
-    expect(existing.parent_alpha).toBeNull();
-    expect(existing.parent_beta).toBeNull();
-    expect(existing.shrinkage_strength).toBeNull();
-    // ic_decay_flag is nullable — Prisma surfaces NULL on rows that pre-date the column
-    // since the DEFAULT only applies on INSERT for new rows after migration.
-    expect(existing.ic_decay_flag === null || existing.ic_decay_flag === false).toBe(true);
+  it('LearnedPattern columns accept NULL on every Phase 19 column (column nullability check)', async () => {
+    // Original intent: every additive Phase 19 column is nullable (verifies the
+    // 19-Z-02 migration applied @nullable to each new field). Once
+    // FEATURE_HIERARCHICAL_POOLING flips on, the daily learn cron writes
+    // parent_alpha/parent_beta/shrinkage_strength on every cell, so a
+    // direct row-value assertion no longer maps to "column nullability".
+    //
+    // Reframe: query Postgres' information_schema directly to confirm each
+    // column allows NULL (which is the actual schema invariant under test).
+    const cols: Array<{ column_name: string; is_nullable: string }> = await prisma.$queryRaw`
+      SELECT column_name::text AS column_name, is_nullable::text AS is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'learned_patterns'
+        AND column_name IN (
+          'rolling_ic_20d', 'ic_decay_flag', 'dsr', 'pbo',
+          'conformal_low', 'conformal_high',
+          'parent_alpha', 'parent_beta', 'shrinkage_strength'
+        )
+    `;
+    expect(cols.length).toBe(9);
+    for (const c of cols) {
+      expect(c.is_nullable).toBe('YES');
+    }
   });
 
   it('LearnedPattern accepts non-null writes to new Phase 19 columns', async () => {
