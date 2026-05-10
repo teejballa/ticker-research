@@ -215,21 +215,30 @@ const CAP_CLASS_LABEL: Record<string, string> = {
 };
 
 const OVERVIEW_TAB_HINT: Record<string, string> = {
-  'diffusion-library': 'Sentiment family · grid',
-  'live-map': 'Sentiment family · live',
-  'technical-library': 'Technical family · grid',
-  'horizon-brier': 'Technical family · brier curves',
-  'institutional-library': 'Institutional family · grid',
-  'insider-library': 'Insider family · grid',
+  'diffusion-library': 'Community chatter',
+  'live-map': 'Community chatter',
+  'technical-library': 'Chart patterns',
+  'horizon-brier': 'Chart patterns',
+  'institutional-library': 'Big-fund moves',
+  'insider-library': 'Insider trades',
+};
+
+const OVERVIEW_TAB_FRIENDLY_TITLE: Record<string, string> = {
+  'diffusion-library': 'Online community patterns',
+  'live-map': 'Live community pickups',
+  'technical-library': 'Chart-pattern library',
+  'horizon-brier': 'How chart patterns hold up over time',
+  'institutional-library': 'Big-fund position flows',
+  'insider-library': 'Insider buying & selling',
 };
 
 const OVERVIEW_TAB_BLURB: Record<string, string> = {
-  'diffusion-library': 'Niche-vs-mainstream community diffusion patterns across cap classes.',
-  'live-map': 'Current tickers showing niche-leads flow with sparkline + logistic score.',
-  'technical-library': '8 chart patterns × 3 cap classes × 6 horizons. Posterior means with credible intervals.',
-  'horizon-brier': 'Calibration of technical patterns over horizon — real brier vs the marginal-rate null.',
-  'institutional-library': '13F and institutional ownership flows, scored against forward returns.',
-  'insider-library': 'Form 4 insider transactions, scored against forward returns.',
+  'diffusion-library': 'How often a story catching fire in a niche corner of the internet before the mainstream sees it has actually predicted a price move.',
+  'live-map': 'Tickers right now where niche communities are talking before the mainstream — Cipher will grade these once the next week of price action lands.',
+  'technical-library': 'Every chart pattern Cipher tracks (breakouts, pullbacks, golden crosses, etc.) and how often each one has worked.',
+  'horizon-brier': 'How accurate the chart-pattern calls are at 3, 7, 14, 30, 60, and 90 days out — a way to see if Cipher is better at short or long forecasts.',
+  'institutional-library': 'When the largest funds buy or sell, what tends to happen to the stock afterward — broken down by ticker size.',
+  'insider-library': 'When company insiders (executives, directors) trade their own stock, what the price typically does over the next few weeks.',
 };
 
 const SIGNAL_LABELS: Record<string, string> = {
@@ -317,6 +326,34 @@ function humanizeHorizon(d: number): string {
   return 'three months';
 }
 type EngineChange = NonNullable<InsightsData['engine_changes']>[number];
+type ThesisFamily = NonNullable<InsightsData['thesis']['families']>[number];
+
+const FRIENDLY_FAMILY_LABEL: Record<string, string> = {
+  technical: 'Chart patterns',
+  diffusion: 'Online community chatter',
+  insider: 'Insider trades',
+  institutional: 'Big-fund position changes',
+};
+
+function friendlyFamilyLabel(sc: string): string {
+  return FRIENDLY_FAMILY_LABEL[sc] ?? sc;
+}
+
+function buildOverviewHeadline(top: ThesisFamily | null, families: ThesisFamily[]): string {
+  if (!top) {
+    return 'Cipher is still gathering enough graded predictions to call a winner. Check back as the engine records more outcomes.';
+  }
+  const topPct = Math.round(top.mean * 100);
+  const topName = friendlyFamilyLabel(top.signal_class).toLowerCase();
+  let verdict: string;
+  if (topPct >= 58) verdict = 'reliably beat the S&P 500';
+  else if (topPct >= 52) verdict = 'slightly edged out the S&P 500';
+  else if (topPct >= 48) verdict = 'roughly matched the S&P 500';
+  else if (topPct >= 42) verdict = 'tended to trail the S&P 500';
+  else verdict = 'consistently lagged the S&P 500';
+  const totalN = families.reduce((s, f) => s + f.n, 0);
+  return `After watching ${totalN.toLocaleString()} predictions play out, the strongest signal Cipher has found is ${topName} — those calls have ${verdict} about ${topPct}% of the time.`;
+}
 function buildPlainChange(c: EngineChange): string {
   const isUp = c.delta > 0;
   const adverb = Math.abs(c.delta) >= 0.1 ? 'sharply' : 'gradually';
@@ -644,106 +681,86 @@ export function InsightsDashboard() {
       )}
 
       {/* ─────────────────────── Overview tab ─────────────────────── */}
-      {activeTab === 'overview' && <>
-        <section
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-outline-variant/30 border border-outline-variant/30 mb-12 overflow-hidden"
-          aria-label="Top-line research statistics"
-        >
-          <Stat
-            label="Data Points"
-            value={data.total_data_points.toLocaleString()}
-            sublabel="Reports + scans"
-            accent="primary"
-          />
-          <Stat
-            label="Resolved"
-            value={data.resolved_outcomes.toLocaleString()}
-            sublabel="With 7d outcome"
-            accent="default"
-          />
-          <Stat
-            label="Thesis Hit Rate"
-            value={data.thesis.pct !== null ? `${data.thesis.pct}%` : '—'}
-            sublabel={
-              data.thesis.pct !== null
-                ? `${data.thesis.high_gap_resolved} samples`
-                : 'Outcomes resolving'
-            }
-            accent={data.thesis.pct !== null ? 'tertiary' : 'default'}
-          />
-          <Stat
-            label="Concept Drift"
-            value={data.concept_drift?.status ?? '—'}
-            sublabel={
-              data.concept_drift
-                ? `worst |z| = ${data.concept_drift.worst_z.toFixed(2)}`
-                : 'Awaiting outcomes'
-            }
-            accent={
-              data.concept_drift?.status === 'ALERT'
-                ? 'error'
-                : data.concept_drift?.status === 'WARNING'
-                  ? 'tertiary'
-                  : 'secondary'
-            }
-          />
-          <Stat
-            label="Null Check"
-            value={
-              data.null_check
-                ? data.null_check.p_value < 0.05
-                  ? `p < ${data.null_check.p_value.toFixed(2)}`
-                  : 'NOISE'
-                : '—'
-            }
-            sublabel={
-              data.null_check
-                ? `real ${data.null_check.real_brier.toFixed(2)} · null ${data.null_check.null_brier.toFixed(2)}`
-                : 'No active patterns yet'
-            }
-            accent={data.null_check && data.null_check.p_value < 0.05 ? 'secondary' : 'default'}
-          />
-        </section>
+      {activeTab === 'overview' && (() => {
+        const families = data.thesis.families ?? [];
+        const topFam = families.find(f => f.signal_class === data.thesis.top_family) ?? null;
+        const headline = buildOverviewHeadline(topFam, families);
+        return <>
+          {/* Plain-English intro — the page leads with what this thing actually is */}
+          <section className="mb-12 max-w-3xl">
+            <h1 className="text-on-surface text-3xl md:text-4xl font-black tracking-tight mb-4">
+              What Cipher has learned so far
+            </h1>
+            <p className="text-on-surface-variant text-base md:text-lg leading-relaxed">
+              Cipher is a research engine that watches the stock market and grades its own predictions. Every time it scores a ticker, it later checks whether the call was right. The numbers below come from those real, recorded outcomes — not anyone&apos;s opinion.
+            </p>
+          </section>
 
-        <section className="mb-12 border border-outline-variant/30 bg-gradient-to-br from-primary-container/[0.08] to-transparent p-8 md:p-12">
-          <div className="flex items-baseline justify-between mb-5 gap-4 flex-wrap">
-            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase">
-              What Cipher believes right now
+          {/* Simple stat strip — 4 cards, no jargon */}
+          <section
+            className="grid grid-cols-2 md:grid-cols-4 gap-px bg-outline-variant/30 border border-outline-variant/30 mb-12 overflow-hidden"
+            aria-label="Headline numbers"
+          >
+            <Stat
+              label="Stocks tracked"
+              value={data.total_data_points.toLocaleString()}
+              sublabel="Snapshots collected"
+              accent="primary"
+            />
+            <Stat
+              label="Predictions graded"
+              value={data.resolved_outcomes.toLocaleString()}
+              sublabel="Where the price has played out"
+              accent="default"
+            />
+            <Stat
+              label="Best signal hit rate"
+              value={data.thesis.pct !== null ? `${data.thesis.pct}%` : '—'}
+              sublabel={topFam ? `${friendlyFamilyLabel(topFam.signal_class)} · ${topFam.n} calls` : 'Still gathering'}
+              accent={data.thesis.pct !== null ? 'tertiary' : 'default'}
+            />
+            <Stat
+              label="Patterns learned"
+              value={(data.thesis.total_cells ?? 0).toLocaleString()}
+              sublabel={data.thesis.recorded_at ? `Updated ${new Date(data.thesis.recorded_at).toLocaleDateString()}` : 'Not yet'}
+              accent="secondary"
+            />
+          </section>
+
+          {/* Plain-English thesis */}
+          <section className="mb-12 border border-outline-variant/30 bg-gradient-to-br from-primary-container/[0.08] to-transparent p-8 md:p-12">
+            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-5">
+              What Cipher has learned
             </div>
-            {data.thesis.recorded_at && (
-              <div className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-                Last revised · {new Date(data.thesis.recorded_at).toLocaleDateString()}
-              </div>
-            )}
-          </div>
 
-          {data.thesis.families && data.thesis.families.length > 0 ? (
-            <div className="grid md:grid-cols-[1fr_auto] gap-10 items-start">
-              <div>
-                <p className="text-on-surface text-2xl md:text-[1.7rem] leading-tight font-light tracking-tight">
-                  {data.thesis.statement}
+            {families.length > 0 ? (
+              <>
+                <p className="text-on-surface text-2xl md:text-[1.7rem] leading-tight font-light tracking-tight max-w-3xl">
+                  {headline}
                 </p>
 
-                <div className="mt-8 space-y-3">
-                  {data.thesis.families.map(f => {
+                <div className="mt-8 grid sm:grid-cols-2 gap-x-8 gap-y-3 max-w-3xl">
+                  {families.map(f => {
                     const isTop = f.signal_class === data.thesis.top_family;
                     const pct = Math.round(f.mean * 100);
                     return (
                       <div
                         key={f.signal_class}
-                        className={`grid grid-cols-[1fr_auto_auto] gap-4 items-baseline py-3 border-b border-outline-variant/20 ${
+                        className={`flex items-baseline justify-between py-3 border-b border-outline-variant/20 ${
                           isTop ? 'text-on-surface' : 'text-on-surface-variant'
                         }`}
                       >
                         <div className="text-sm md:text-base font-medium tracking-tight flex items-center gap-2">
-                          {isTop && <span className="text-primary text-[10px] font-mono tracking-[0.3em] uppercase">Lead</span>}
-                          {f.label}
+                          {isTop && <span className="text-primary text-[10px] font-mono tracking-[0.3em] uppercase">Top</span>}
+                          {friendlyFamilyLabel(f.signal_class)}
                         </div>
-                        <div className="font-mono tabular-nums text-2xl font-black text-on-surface">
-                          {pct}<span className="text-xs text-outline ml-0.5">%</span>
-                        </div>
-                        <div className="font-mono text-[11px] text-outline tabular-nums whitespace-nowrap">
-                          {f.n} trade{f.n === 1 ? '' : 's'} · {f.cells} cell{f.cells === 1 ? '' : 's'}
+                        <div className="flex items-baseline gap-3">
+                          <div className="font-mono tabular-nums text-xl font-black text-on-surface">
+                            {pct}<span className="text-xs text-outline ml-0.5">%</span>
+                          </div>
+                          <div className="font-mono text-[10px] text-outline tabular-nums whitespace-nowrap">
+                            {f.n} call{f.n === 1 ? '' : 's'}
+                          </div>
                         </div>
                       </div>
                     );
@@ -751,70 +768,54 @@ export function InsightsDashboard() {
                 </div>
 
                 <p className="text-on-surface-variant text-sm mt-6 leading-relaxed max-w-2xl">
-                  These percentages are sample-weighted across every learned pattern in each family. The thesis only revises when a family&apos;s posterior moves by 5+ percentage points on at least ten new outcomes — so it builds on itself instead of flipping every learn cycle.
+                  Each percentage is how often that kind of signal beat the S&amp;P 500 over the next week. Cipher only updates this view when the numbers really move — so what you&apos;re reading reflects a settled judgement, not a single noisy day.
                 </p>
-              </div>
+              </>
+            ) : (
+              <p className="text-on-surface text-2xl leading-snug font-light tracking-tight max-w-3xl">
+                Cipher is still gathering outcomes. After watching <span className="tabular-nums">{data.total_data_points.toLocaleString()}</span> ticker snapshots, <span className="tabular-nums">{data.resolved_outcomes}</span> have played out. Once each kind of signal has at least three completed trades, you&apos;ll see what Cipher has learned right here.
+              </p>
+            )}
+          </section>
 
-              <div className="border-l-0 md:border-l md:pl-10 border-outline-variant/30 self-stretch flex flex-col justify-end min-w-[180px]">
-                <div className="text-[10px] tracking-[0.4em] text-outline font-mono uppercase mb-2">
-                  Lead family
-                </div>
-                <div className="font-mono text-5xl md:text-6xl font-black text-primary leading-none tabular-nums">
-                  {data.thesis.pct !== null ? data.thesis.pct : '—'}
-                  <span className="text-3xl text-outline ml-0.5">%</span>
-                </div>
-                <div className="text-xs text-on-surface-variant mt-3 font-mono">
-                  {data.thesis.total_n ?? 0} resolved · {data.thesis.total_cells ?? 0} cells
-                </div>
-              </div>
+          {/* Explore deeper — pointer cards into the per-family tabs */}
+          <section className="mb-16" aria-label="Drill into each section">
+            <div className="mb-6 max-w-3xl">
+              <h2 className="text-on-surface text-2xl md:text-3xl font-black tracking-tight mb-3">
+                Want to see how it actually works?
+              </h2>
+              <p className="text-on-surface-variant text-sm leading-relaxed">
+                Each tab below opens one of the signals Cipher tracks and shows every individual pattern it has learned — what the pattern is, how often it&apos;s been right, and how many real trades back that number up.
+              </p>
             </div>
-          ) : (
-            <p className="text-on-surface text-2xl leading-snug font-light tracking-tight max-w-3xl">
-              Cipher is still watching. <span className="tabular-nums">{data.total_data_points.toLocaleString()}</span> data points collected, <span className="tabular-nums">{data.resolved_outcomes}</span> resolved. As soon as any pattern hits three real outcomes, the engine will start forming a view — and you&apos;ll see it here.
-            </p>
-          )}
-        </section>
-
-        {/* Explore deeper — pointer cards into the per-family tabs */}
-        <section className="mb-16" aria-label="Drill into each family">
-          <div className="mb-6 max-w-3xl">
-            <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-2">
-              Want the full picture?
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-outline-variant/30 border border-outline-variant/30">
+              {TABS.filter(t => t.id !== 'overview').map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setActiveTab(t.id);
+                    if (typeof window !== 'undefined') window.location.hash = t.id;
+                  }}
+                  className="bg-surface p-6 hover:bg-surface-container-low/40 transition-colors text-left flex flex-col gap-2"
+                >
+                  <div className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+                    {OVERVIEW_TAB_HINT[t.id] ?? 'Detail'}
+                  </div>
+                  <div className="text-on-surface text-base font-bold tracking-tight">
+                    {OVERVIEW_TAB_FRIENDLY_TITLE[t.id] ?? t.label}
+                  </div>
+                  <div className="text-on-surface-variant text-xs leading-relaxed">
+                    {OVERVIEW_TAB_BLURB[t.id] ?? 'Explore the patterns.'}
+                  </div>
+                  <div className="text-primary text-xs font-mono tracking-widest uppercase mt-1">
+                    Open →
+                  </div>
+                </button>
+              ))}
             </div>
-            <h2 className="text-on-surface text-2xl md:text-3xl font-black tracking-tight mb-3">
-              Open any family for the underlying cells
-            </h2>
-            <p className="text-on-surface-variant text-sm leading-relaxed">
-              Each tab below shows the pattern × cap × horizon grid that feeds the headline. Posterior means, sample sizes, drift, and credible intervals are exposed there.
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-outline-variant/30 border border-outline-variant/30">
-            {TABS.filter(t => t.id !== 'overview').map(t => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setActiveTab(t.id);
-                  if (typeof window !== 'undefined') window.location.hash = t.id;
-                }}
-                className="bg-surface p-6 hover:bg-surface-container-low/40 transition-colors text-left flex flex-col gap-2"
-              >
-                <div className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-                  {OVERVIEW_TAB_HINT[t.id] ?? 'Detail'}
-                </div>
-                <div className="text-on-surface text-base font-bold tracking-tight">
-                  {t.label}
-                </div>
-                <div className="text-on-surface-variant text-xs leading-relaxed">
-                  {OVERVIEW_TAB_BLURB[t.id] ?? 'Drill into the underlying cells.'}
-                </div>
-                <div className="text-primary text-xs font-mono tracking-widest uppercase mt-1">
-                  Open →
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      </>}
+          </section>
+        </>;
+      })()}
 
       {/* ─────────────────────── Tabs 1 + 2: existing scroll layout ─────────────────────── */}
       {(activeTab === 'diffusion-library' || activeTab === 'live-map') && <>
