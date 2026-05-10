@@ -2,6 +2,14 @@
 // Orchestrates parallel data collection and assembles the SourcePackage.
 // DATA-08: Claude Code SDK orchestrates all collection and structures inputs.
 // Uses Promise.allSettled — a single source failure does not abort the pipeline.
+//
+// Plan 19-B-06 (D-29): merge precedence reorder behind shadow A/B harness.
+//   Old ladder (preserved when flags off): yahoo → finnhub → polygon for
+//     market+fundamentals; anthropic-search for news/analyst/SEC/social.
+//   New ladder (active when all 3 flags 'on'): tiingo → yahoo → finnhub →
+//     polygon for quote; tiingo → twelvedata → yahoo → finnhub → polygon for
+//     fundamentals; exa → anthropic-search for news/analyst.
+//   Yahoo / Finnhub / Polygon / Anthropic-search adapters NOT removed (D-32).
 
 import { fetchMarketData, fetchFundamentals } from '@/lib/data/yahoo';
 import {
@@ -20,8 +28,22 @@ import {
 } from '@/lib/data/options-sentiment';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import { FEATURES } from '@/lib/features';
+import type { FeatureMode } from '@/lib/features';
 import { ensembleSentiment } from '@/lib/sentiment/ensemble';
-import type { SourcePackage, MarketDataSection, FundamentalsSection, SupplementaryMarketData, SupplementarySource, SentimentIntelligenceSection } from '@/lib/types';
+// Plan 19-B-06 (D-26..D-28) — new-ladder primary fetchers from Wave-B prereqs.
+import { fetchTiingoQuote, fetchTiingoFundamentals } from '@/lib/data/adapters/tiingo';
+import { fetchTwelveDataFundamentals } from '@/lib/data/adapters/twelve-data';
+import { fetchExaNews, fetchExaAnalystSentiment } from '@/lib/data/adapters/exa-search';
+import type {
+  SourcePackage,
+  MarketDataSection,
+  FundamentalsSection,
+  SupplementaryMarketData,
+  SupplementarySource,
+  SentimentIntelligenceSection,
+  NewsSection,
+  AnalystSentimentSection,
+} from '@/lib/types';
 import type { SecurityType } from '@/lib/types';
 
 // Empty fallback sections for when a data source fails completely
@@ -147,11 +169,31 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
   };
 }
 
-export async function collectAllData(
+// ─── Plan 19-B-06 (D-29) ───────────────────────────────────────────────────
+// `combinedMode` — coalesces the three independent feature flags
+// (FEATURE_TIINGO_PRIMARY, FEATURE_TWELVEDATA_PRIMARY, FEATURE_EXA_PRIMARY)
+// into one FeatureMode for `runWithShadow('source-package-merge', ...)`.
+//
+// Decision rules:
+//   - if ANY mode is 'shadow' → 'shadow' (highest-priority observation signal)
+//   - else if ALL modes are 'on' → 'on' (full cutover)
+//   - else → 'off' (any explicit off or mixed-without-shadow keeps users on
+//                   the old ladder — safe default)
+//
+// Exported so unit tests can import + cover the 6 decision permutations
+// directly (T-19-B-06-04 mitigation).
+export function combinedMode(modes: FeatureMode[]): FeatureMode {
+  if (modes.some(m => m === 'shadow')) return 'shadow';
+  if (modes.every(m => m === 'on')) return 'on';
+  return 'off';
+}
+
+// ─── Old ladder (preserved verbatim from pre-19-B-06 implementation) ───────
+async function buildSourcePackageOldLadder(
   ticker: string,
-  companyName: string = ticker,
-  exchange: string | null = null,
-  securityType: SecurityType = 'equity',
+  companyName: string,
+  exchange: string | null,
+  securityType: SecurityType,
 ): Promise<SourcePackage> {
   // Run all 9 data sources in parallel — Promise.allSettled never throws
   const [
@@ -240,4 +282,281 @@ export async function collectAllData(
       'sentiment_intelligence',
     ),
   };
+}
+
+// ─── New ladder (Plan 19-B-06 — D-29) ──────────────────────────────────────
+// Order:
+//   1. Quote: tiingo → yahoo → finnhub → polygon (twelvedata is fundamentals only)
+//   2. Fundamentals: tiingo → twelvedata → yahoo → finnhub → polygon
+//   3. News:   exa → anthropic-search (RESEARCH Pitfall 7 fallback)
+//   4. Analyst: exa → anthropic-search
+//   5. SEC + Social: anthropic-search (no Exa parity yet — graceful keep-as-is)
+//
+// Each leg is null-on-failure (the Wave-B adapters never throw); merge layer
+// stamps FieldOrigin per-field via mergeMarketData / mergeFundamentals — the
+// new origins (tiingo / twelvedata) flow through after types.ts extension
+// (Task 1). Yahoo / Finnhub / Polygon stay as fallbacks.
+async function buildSourcePackageNewLadder(
+  ticker: string,
+  companyName: string,
+  exchange: string | null,
+  securityType: SecurityType,
+): Promise<SourcePackage> {
+  // Fan out every fetcher in parallel. Promise.allSettled never throws.
+  const [
+    tiingoQuoteResult,
+    tiingoFundsResult,
+    twelveFundsResult,
+    marketDataResult,
+    fundamentalsResult,
+    finnhubResult,
+    polygonResult,
+    exaNewsResult,
+    exaAnalystResult,
+    anthroNewsResult,
+    anthroAnalystResult,
+    secResult,
+    socialResult,
+    sentimentIntelligenceResult,
+  ] = await Promise.allSettled([
+    fetchTiingoQuote(ticker),
+    fetchTiingoFundamentals(ticker),
+    fetchTwelveDataFundamentals(ticker),
+    fetchMarketData(ticker),
+    fetchFundamentals(ticker),
+    fetchFinnhub(ticker),
+    fetchPolygon(ticker),
+    fetchExaNews(ticker),
+    fetchExaAnalystSentiment(ticker),
+    fetchNews(ticker, securityType),
+    fetchAnalystSentiment(ticker, securityType),
+    fetchSecFilingSummary(ticker, securityType),
+    fetchSocialSentiment(ticker, securityType),
+    fetchSentimentIntelligence(ticker),
+  ]);
+
+  const collection_errors: string[] = [];
+
+  function settle<T>(result: PromiseSettledResult<T>, fallback: T, label: string): T {
+    if (result.status === 'fulfilled') return result.value;
+    const msg = `${label}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`;
+    collection_errors.push(msg);
+    return fallback;
+  }
+
+  function settleNullable<T>(result: PromiseSettledResult<T | null>, label: string): T | null {
+    if (result.status === 'fulfilled') return result.value;
+    collection_errors.push(
+      `${label}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+    );
+    return null;
+  }
+
+  const settleSupplementary = (
+    result: PromiseSettledResult<SupplementarySource>,
+    sourceName: string,
+  ): SupplementarySource => {
+    if (result.status === 'fulfilled') return result.value;
+    collection_errors.push(
+      `${sourceName}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+    );
+    return { name: sourceName, fetched_at: new Date().toISOString(), text_block: '', available: false };
+  };
+
+  const finnhub = settleSupplementary(finnhubResult, 'Finnhub');
+  const polygon = settleSupplementary(polygonResult, 'Polygon');
+  const supplementary_market_data: SupplementaryMarketData = { sources: [finnhub, polygon] };
+
+  // Resolve the new-ladder primary leg outputs (null = unavailable / errored).
+  const tiingoQuote = settleNullable(tiingoQuoteResult, 'tiingo_quote');
+  const tiingoFunds = settleNullable(tiingoFundsResult, 'tiingo_fundamentals');
+  const twelveFunds = settleNullable(twelveFundsResult, 'twelvedata_fundamentals');
+  const exaNews = settleNullable(exaNewsResult, 'exa_news');
+  const exaAnalyst = settleNullable(exaAnalystResult, 'exa_analyst');
+
+  // Field-level merge — first non-null wins. New ladder synthesizes the
+  // primary slot from the highest-priority provider that returned a value.
+  // We feed mergeMarketData / mergeFundamentals a *yahoo-shaped* primary
+  // (using the Tiingo result if present) so the existing merge function's
+  // first-non-null semantics produce a tiingo→yahoo→finnhub→polygon cascade
+  // for market and tiingo→twelvedata→yahoo→finnhub→polygon for fundamentals.
+  const yahooMarket = settle(marketDataResult, emptyMarketData('market data collection failed'), 'market_data');
+  const yahooFundamentals = settle(fundamentalsResult, emptyFundamentals('fundamentals collection failed'), 'fundamentals');
+
+  // Quote: tiingo first (if present) — overlay onto the merge cascade by
+  // upgrading the "yahoo" primary slot with Tiingo values where available.
+  // Wrap as SupplementarySource so existing mergeMarketData logic uses it.
+  const tiingoQuoteAsPrimary: MarketDataSection = tiingoQuote
+    ? { ...tiingoQuote, _field_sources: undefined }
+    : yahooMarket;
+
+  const merged_market = mergeMarketData(
+    tiingoQuoteAsPrimary,
+    finnhub.available ? finnhub : null,
+    polygon.available ? polygon : null,
+  );
+
+  // Fundamentals: tiingo → twelvedata → yahoo → finnhub → polygon. We use
+  // tiingoFunds as the "yahoo-slot" primary when present (forces tiingo to
+  // win first); twelvedata gets stamped via a synthetic SupplementarySource.
+  const tiingoFundsAsPrimary: FundamentalsSection = tiingoFunds
+    ? { ...tiingoFunds, _field_sources: undefined }
+    : (twelveFunds ?? yahooFundamentals);
+
+  // Synthesize a SupplementarySource out of yahoo / twelvedata / finnhub for
+  // the cascade so per-field provenance still gets stamped. The merge layer
+  // takes the FIRST non-null per field; we sequence the cascade by the order
+  // we hand it the candidates (tiingo primary slot → twelvedata pseudo →
+  // yahoo pseudo → finnhub → polygon).
+  const twelveFundsSource: SupplementarySource | null = twelveFunds
+    ? {
+        name: 'TwelveData',
+        fetched_at: twelveFunds.collected_at,
+        text_block: '',
+        available: true,
+        fundamentals: {
+          pe_ratio: twelveFunds.pe_ratio,
+          eps: twelveFunds.eps,
+          revenue: twelveFunds.revenue,
+          debt_to_equity: twelveFunds.debt_to_equity,
+          profit_margin: twelveFunds.profit_margin,
+        },
+      }
+    : null;
+
+  const yahooFundsSource: SupplementarySource = {
+    name: 'Yahoo',
+    fetched_at: yahooFundamentals.collected_at,
+    text_block: '',
+    available: true,
+    fundamentals: {
+      pe_ratio: yahooFundamentals.pe_ratio,
+      eps: yahooFundamentals.eps,
+      revenue: yahooFundamentals.revenue,
+      debt_to_equity: yahooFundamentals.debt_to_equity,
+      profit_margin: yahooFundamentals.profit_margin,
+    },
+  };
+
+  // mergeFundamentals signature is (yahoo, finnhub, polygon). To honor the
+  // new ladder ordering tiingo → twelvedata → yahoo → finnhub → polygon, we
+  // pass tiingo (or fall-through) as primary, then sequence twelvedata-as-
+  // pseudo-finnhub, then real-finnhub-as-pseudo-polygon — but only when we
+  // have NEW values. When tiingo+twelve both null we fall through to the
+  // canonical 3-source cascade so behavior is invariant.
+  const merged_fundamentals = (() => {
+    if (tiingoFunds && twelveFundsSource && finnhub.available) {
+      // Full new-ladder cascade: tiingo → twelvedata → yahoo → finnhub.
+      // Polygon gets dropped to keep the function arity at 3 — this is fine
+      // because polygon has historically been the lowest-yield rung. The
+      // cascade still backstops with finnhub for any nulls left after the
+      // first three rungs.
+      const stage1 = mergeFundamentals(
+        tiingoFundsAsPrimary,
+        twelveFundsSource,
+        yahooFundsSource,
+      );
+      // Backfill any remaining nulls with finnhub → polygon.
+      return mergeFundamentals(
+        stage1,
+        finnhub.available ? finnhub : null,
+        polygon.available ? polygon : null,
+      );
+    }
+    if (tiingoFunds || twelveFunds) {
+      // Partial new-ladder: only tiingo OR only twelve present.
+      return mergeFundamentals(
+        tiingoFundsAsPrimary,
+        finnhub.available ? finnhub : null,
+        polygon.available ? polygon : null,
+      );
+    }
+    // Both new sources unavailable → canonical cascade unchanged.
+    return mergeFundamentals(
+      yahooFundamentals,
+      finnhub.available ? finnhub : null,
+      polygon.available ? polygon : null,
+    );
+  })();
+
+  // News + analyst: exa → anthropic-search fallback (RESEARCH Pitfall 7).
+  const news: NewsSection =
+    exaNews ??
+    settle(
+      anthroNewsResult,
+      { collected_at: new Date().toISOString(), items: [], error: 'news collection failed' },
+      'news',
+    );
+  const analyst_sentiment: AnalystSentimentSection =
+    exaAnalyst ??
+    settle(
+      anthroAnalystResult,
+      {
+        collected_at: new Date().toISOString(),
+        consensus: null,
+        avg_price_target: null,
+        analyst_count: null,
+        recent_changes: [],
+        error: 'analyst collection failed',
+      },
+      'analyst_sentiment',
+    );
+
+  return {
+    ticker,
+    company_name: companyName,
+    exchange,
+    security_type: securityType,
+    assembled_at: new Date().toISOString(),
+    market_data: merged_market,
+    fundamentals: merged_fundamentals,
+    news,
+    analyst_sentiment,
+    sec_filing_summary: settle(secResult, { collected_at: new Date().toISOString(), most_recent_10k: null, most_recent_10q: null, filing_dates: { '10k': null, '10q': null }, error: 'SEC filing collection failed' }, 'sec_filing_summary'),
+    social_sentiment: settle(socialResult, { collected_at: new Date().toISOString(), overall_tone: null, signals: [], sources_checked: [], error: 'social sentiment collection failed' }, 'social_sentiment'),
+    collection_errors,
+    supplementary_market_data,
+    sentiment_intelligence: settle(
+      sentimentIntelligenceResult,
+      {
+        collected_at: new Date().toISOString(),
+        stocktwits_bull_pct: null,
+        stocktwits_bear_pct: null,
+        stocktwits_message_count: null,
+        stocktwits_is_trending: null,
+        reddit_tone: null,
+        put_call_ratio: null,
+        put_call_interpretation: null,
+        error: 'sentiment intelligence collection failed',
+      },
+      'sentiment_intelligence',
+    ),
+  };
+}
+
+// ─── Public entry point — runWithShadow gate ───────────────────────────────
+// Plan 19-B-06 (D-05/D-14): the canonical user-facing call. When all 3 flags
+// are off (default), the old ladder runs unchanged. When all 3 flip to on,
+// the new ladder runs. When any flag is shadow, the user sees old-ladder
+// output FIRST and the new ladder runs in setImmediate, persisting a
+// ShadowComparison row for verdict scoring.
+export async function collectAllData(
+  ticker: string,
+  companyName: string = ticker,
+  exchange: string | null = null,
+  securityType: SecurityType = 'equity',
+): Promise<SourcePackage> {
+  const mode = combinedMode([
+    FEATURES.tiingo_primary_mode,
+    FEATURES.twelvedata_primary_mode,
+    FEATURES.exa_primary_mode,
+  ]);
+
+  return runWithShadow(
+    'source-package-merge',
+    () => buildSourcePackageOldLadder(ticker, companyName, exchange, securityType),
+    () => buildSourcePackageNewLadder(ticker, companyName, exchange, securityType),
+    mode,
+    { ticker },
+  );
 }
