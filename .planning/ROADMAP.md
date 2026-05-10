@@ -127,7 +127,7 @@ Plans:
 - [ ] 19-C-02: Ensemble meta-classifier (weighted avg by confidence + agreement metric)
 - [ ] 19-C-03: Reputation-weighted StockTwits aggregation (replaces naive count)
 - [ ] 19-C-04: Options term-structure 30/60/90d + IV regime gate
-- [ ] 19-C-05: Swaggystocks + ApeWisdom adapters (supplemental, Firecrawl stays primary)
+- [x] 19-C-05: Swaggystocks + ApeWisdom adapters (supplemental, Firecrawl stays primary)
 - [ ] 19-C-06: Quiver adapter (insider + congressional, optional flag)
 - [ ] 19-C-07: Structured citation schema { source, url, confidence, date_retrieved }
 - [ ] 19-C-08: CoVe two-pass wrapper (Gemini draft → NLI verification)
