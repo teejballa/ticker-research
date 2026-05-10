@@ -410,6 +410,18 @@ export interface AnalysisResult {
     confidence: number;
     date_retrieved: string;
   }>;
+  // Phase 19-C-08 (D-40) — Chain-of-Verification two-pass output.
+  // Populated when FEATURE_COVE_TWO_PASS mode is shadow or on. Each entry is
+  // the per-claim NLI verdict against the SourcePackage:
+  //   true  → claim entailed; false → claim contradicted; null → unverifiable
+  // (NLI 'neutral'/error/threw). source_warnings is appended additively with
+  // the contradiction warnings — `cove_verified` is the structured surface
+  // for downstream UI / shadow-verdict scoring.
+  cove_verified?: (boolean | null)[];
+  // Phase 19-C-08 (D-40) — verification claims emitted by Pass 1 Gemini call.
+  // Optional; populated when CoVe pass-2 path runs so callers can correlate
+  // the per-claim verdict back to the claim text.
+  verification_claims?: string[];
   engine_calibration?: EngineCalibration;        // diffusion-engine prior at report-generation time
   technical_at_report?: TechnicalSnapshot | null; // Phase 16-04: live technical snapshot at report time
   // Phase 17-04: smart-money snapshots persisted at report time (written by 17-03 cron path)
