@@ -48,6 +48,7 @@ import type {
   AnalystSentimentSection,
   NewsItem,
   AnalystChange,
+  SecFilingSummarySection,
 } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
@@ -287,6 +288,89 @@ export async function fetchExaNews(ticker: string): Promise<NewsSection | null> 
     // statusCode only — no API key. Stringify to .message to keep stack out.
     console.warn(
       `[exa] news(${ticker}) failed:`,
+      err instanceof Error ? err.message : String(err),
+    );
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Post-Phase-19 P0 — `category: 'financial report'` SEC filing fallback
+// ---------------------------------------------------------------------------
+
+const FILINGS_LOOKBACK_MS = 365 * 86_400_000; // 12 months
+
+async function doFetchExaFinancialReports(
+  ticker: string,
+): Promise<SecFilingSummarySection | null> {
+  const client = getClient();
+  if (!client) return null;
+  const sinceIso = new Date(Date.now() - FILINGS_LOOKBACK_MS).toISOString();
+  const resp = (await client.search(`${ticker} 10-K 10-Q SEC filing`, {
+    type: 'auto',
+    numResults: 8,
+    category: 'financial report',
+    startPublishedDate: sinceIso,
+    contents: { highlights: true },
+  })) as ExaSearchResponseLike;
+
+  // Pick the freshest 10-K and 10-Q hits we can identify by filename / title.
+  // Highlights are short paragraph excerpts the SDK returns when contents.highlights=true;
+  // we surface them as the summary string. Returns null if neither form is found —
+  // caller falls back to anthropic-search.fetchSecFilingSummary.
+  const items = resp?.results ?? [];
+  if (items.length === 0) return null;
+
+  function summary(item: ExaResultLike): string {
+    const title = (item.title ?? '').toString();
+    const text = (item.text ?? '').toString();
+    return text.length > 0 ? text : title;
+  }
+
+  const tenK = items.find((i) => /10-?k/i.test(`${i.title ?? ''} ${i.url ?? ''}`));
+  const tenQ = items.find((i) => /10-?q/i.test(`${i.title ?? ''} ${i.url ?? ''}`));
+  if (!tenK && !tenQ) return null;
+
+  return {
+    collected_at: new Date().toISOString(),
+    most_recent_10k: tenK ? summary(tenK) : null,
+    most_recent_10q: tenQ ? summary(tenQ) : null,
+    filing_dates: {
+      '10k': tenK ? isoDateOnly(tenK.publishedDate) || null : null,
+      '10q': tenQ ? isoDateOnly(tenQ.publishedDate) || null : null,
+    },
+  };
+}
+
+/**
+ * Fetch SEC filings (10-K + 10-Q) via Exa's `category: 'financial report'`
+ * neural search. Returns SecFilingSummarySection-shaped output so callers can
+ * swap with anthropic-search.fetchSecFilingSummary transparently.
+ *
+ * Same null-on-error semantics + cached/withRetry envelope as fetchExaNews.
+ * Returns null on missing key, 4xx, retry-exhausted 5xx/network, or when
+ * neither a 10-K nor a 10-Q can be identified in the result set — callers
+ * should fall back to anthropic-search.fetchSecFilingSummary.
+ */
+export async function fetchExaFinancialReports(
+  ticker: string,
+): Promise<SecFilingSummarySection | null> {
+  try {
+    return await cached<SecFilingSummarySection | null>(
+      `${CACHE_KEYS.news(ticker)}:exa-fin`,
+      () =>
+        withRetry(() => doFetchExaFinancialReports(ticker), {
+          maxAttempts: 3,
+          baseDelayMs: 100,
+          isRetryable: isExaRetryable,
+        }),
+      // SEC filings are slow-moving — cache for the same 24h as fundamentals
+      // rather than 30min news. The form-discovery cost is a full Exa call.
+      { ttlSeconds: 86_400 },
+    );
+  } catch (err) {
+    console.warn(
+      `[exa] financial-report(${ticker}) failed:`,
       err instanceof Error ? err.message : String(err),
     );
     return null;

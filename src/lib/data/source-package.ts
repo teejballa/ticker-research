@@ -34,7 +34,11 @@ import { ensembleSentiment } from '@/lib/sentiment/ensemble';
 // Tiingo removed 2026-05-10 — fundamentals subscription required Tiingo sales contact;
 // TwelveData + Yahoo + Finnhub + Polygon cover the same ground without it.
 import { fetchTwelveDataFundamentals } from '@/lib/data/adapters/twelve-data';
-import { fetchExaNews, fetchExaAnalystSentiment } from '@/lib/data/adapters/exa-search';
+import {
+  fetchExaNews,
+  fetchExaAnalystSentiment,
+  fetchExaFinancialReports,
+} from '@/lib/data/adapters/exa-search';
 // Post-Phase-19 P0 — free, structured Yahoo analyst module pair.
 import { fetchYahooAnalystSentiment } from '@/lib/data/yahoo-analyst';
 import type {
@@ -314,6 +318,7 @@ async function buildSourcePackageNewLadder(
     polygonResult,
     exaNewsResult,
     exaAnalystResult,
+    exaFinReportsResult,
     yahooAnalystResult,
     anthroNewsResult,
     anthroAnalystResult,
@@ -328,6 +333,7 @@ async function buildSourcePackageNewLadder(
     fetchPolygon(ticker),
     fetchExaNews(ticker),
     fetchExaAnalystSentiment(ticker),
+    fetchExaFinancialReports(ticker),
     fetchYahooAnalystSentiment(ticker),
     fetchNews(ticker, securityType),
     fetchAnalystSentiment(ticker, securityType),
@@ -373,6 +379,7 @@ async function buildSourcePackageNewLadder(
   const exaNews = settleNullable(exaNewsResult, 'exa_news');
   const exaAnalyst = settleNullable(exaAnalystResult, 'exa_analyst');
   const yahooAnalyst = settleNullable(yahooAnalystResult, 'yahoo_analyst');
+  const exaFinReports = settleNullable(exaFinReportsResult, 'exa_financial_reports');
 
   // Field-level merge — first non-null wins. New ladder uses Yahoo as the
   // quote primary (Tiingo removed). Fundamentals route through TwelveData
@@ -466,7 +473,13 @@ async function buildSourcePackageNewLadder(
     fundamentals: merged_fundamentals,
     news,
     analyst_sentiment,
-    sec_filing_summary: settle(secResult, { collected_at: new Date().toISOString(), most_recent_10k: null, most_recent_10q: null, filing_dates: { '10k': null, '10q': null }, error: 'SEC filing collection failed' }, 'sec_filing_summary'),
+    // SEC cascade (post-Phase-19 P0): exa-financial-report → anthropic-search.
+    // Exa's `category: 'financial report'` is a structured neural-search
+    // surface for 10-K / 10-Q PDFs; falls back to the existing Anthropic
+    // search prompt when neither form is identified in the result set.
+    sec_filing_summary:
+      exaFinReports ??
+      settle(secResult, { collected_at: new Date().toISOString(), most_recent_10k: null, most_recent_10q: null, filing_dates: { '10k': null, '10q': null }, error: 'SEC filing collection failed' }, 'sec_filing_summary'),
     social_sentiment: settle(socialResult, { collected_at: new Date().toISOString(), overall_tone: null, signals: [], sources_checked: [], error: 'social sentiment collection failed' }, 'social_sentiment'),
     collection_errors,
     supplementary_market_data,
