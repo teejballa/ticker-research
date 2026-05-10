@@ -19,7 +19,8 @@
     "debug:pipeline": "node scripts/live-debug.mjs full-pipeline",
     "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500",
     "shadow-verdict": "npx tsx scripts/shadow-verdict.ts",
-    "model-card-status": "npx tsx scripts/model-card-status.ts"
+    "model-card-status": "npx tsx scripts/model-card-status.ts",
+    "arctic-shift-backfill": "npx tsx scripts/arctic-shift-backfill.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
