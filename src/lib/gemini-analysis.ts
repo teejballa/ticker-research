@@ -20,7 +20,15 @@ import type { AnalysisResult, EngineCalibration, SourcePackage } from '@/lib/typ
 import { getEngineContextForTicker, type EngineContext } from '@/lib/engine-context';
 import { CitationsArraySchema, type Citation } from '@/lib/sentiment/citation-schema';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
-import type { FeatureMode } from '@/lib/features';
+import { FEATURES, type FeatureMode } from '@/lib/features';
+// Phase 19 / Plan 19-C-09 — model cascade router + cost telemetry (D-41).
+// Router decides which LLM to call based on engine context (controversy proxy,
+// ic_decay_flag, market_cap); cost telemetry persists per-call USD into the
+// existing LearningEvent table (event_type='model_router_decision').
+// Schema audit (prisma/schema.prisma lines 134-150): event_type, ticker, delta
+// (Json), message all already exist — NO new columns required.
+import { routeModel, estimateCost, type ModelChoice } from '@/lib/reasoning/router';
+import { prisma } from '@/lib/db';
 
 // Reads ANTHROPIC_API_KEY from process.env automatically.
 const anthropicClient = new Anthropic();
@@ -782,15 +790,160 @@ export async function runGeminiAnalysis(
     highlights: import('@/lib/types').CommunityHighlight[];
   } | null,
 ): Promise<AnalysisResult> {
-  const mode = getCitationsV2Mode();
+  // Phase 19-C-07 inner shadow gate (citations-v2). Stays the canonical
+  // baseline pathway. When citations-v2 mode is off, this returns the legacy
+  // path; otherwise the structured-citations path either shadows or is on.
+  const citationsMode = getCitationsV2Mode();
+  const baseline = (): Promise<AnalysisResult> =>
+    runWithShadow<AnalysisResult>(
+      'citations-v2',
+      () => generateAnalysis(ticker, pkg, communityData, false),
+      () => generateAnalysis(ticker, pkg, communityData, true),
+      citationsMode,
+      { ticker },
+    );
 
+  // Phase 19-C-09 outer shadow gate (model-router). When FEATURE_MODEL_ROUTER
+  // is off (default), `baseline` runs unchanged (today's flash-only behavior,
+  // wrapped by the citations-v2 shadow). When shadow, the routed path runs in
+  // setImmediate via runWithShadow + persists a ShadowComparison row + writes
+  // a LearningEvent (event_type='model_router_decision') with cost telemetry.
+  // When on, the routed path is canonical.
+  const routerMode = FEATURES.model_router_mode;
   return runWithShadow<AnalysisResult>(
-    'citations-v2',
-    () => generateAnalysis(ticker, pkg, communityData, false),
-    () => generateAnalysis(ticker, pkg, communityData, true),
-    mode,
+    'model-router',
+    baseline,
+    () => geminiRouted(ticker, pkg, communityData),
+    routerMode,
     { ticker },
   );
+}
+
+/**
+ * Phase 19-C-09 (D-41): the routed path. Resolves the engine context, picks a
+ * model via routeModel(), runs generateAnalysis with that model, and writes a
+ * LearningEvent row (event_type='model_router_decision') with cost telemetry.
+ *
+ * Schema reuse: prisma/schema.prisma's existing LearningEvent table already has
+ * event_type, ticker, delta (Json), message — so this plan ships ZERO new
+ * columns. The delta JSONB carries {model, tokens, estimated_cost_usd,
+ * controversy, ic_decay_flag, market_cap_class}.
+ *
+ * This function never throws on telemetry-write failures (matches the
+ * shadow-runner contract: new-path errors must NEVER propagate to caller).
+ */
+async function geminiRouted(
+  ticker: string,
+  pkg: SourcePackage,
+  communityData: {
+    pinnedContent: string;
+    nicheContent: string;
+    nicheUrls: string[];
+    pageCount: number;
+    highlights: import('@/lib/types').CommunityHighlight[];
+  } | null,
+): Promise<AnalysisResult> {
+  // Look up engine context to get the routing inputs. Failures are non-fatal
+  // — fall back to safe defaults that route to gemini-flash (the standard tier).
+  let controversy = 0;
+  let icDecayFlag = false;
+  let capClassForRouter: 'mega' | 'large' | 'mid' | 'small' | 'unknown' = 'unknown';
+  try {
+    const ctx = await getEngineContextForTicker(ticker, new Date(pkg.assembled_at));
+    // Controversy proxy from drift_z magnitude (0..1 clipped). Engine-context
+    // does not currently expose a dedicated controversy_score field; drift_z
+    // is the closest first-order signal (large drift ⇒ pattern in flux ⇒
+    // controversial). Threshold 3σ saturates the proxy at 1.0.
+    controversy = Math.min(1, Math.abs(ctx.drift_z ?? 0) / 3);
+    capClassForRouter = ctx.cap_class as typeof capClassForRouter;
+  } catch (err) {
+    console.error('[gemini-analysis] router engine-context fetch failed:', err);
+  }
+
+  // ic_decay_flag is sourced from the diffusion LearnedPattern row at horizon=7
+  // (Plan 19-A-05 wrote this nullable column on the existing table). Read direct
+  // from Prisma so the router doesn't need EngineContext to expose the field.
+  try {
+    const row = await prisma.learnedPattern.findFirst({
+      where: { signal_class: 'diffusion', cap_class: capClassForRouter, horizon_days: 7 },
+      select: { ic_decay_flag: true },
+      orderBy: { sample_size: 'desc' },
+    });
+    icDecayFlag = row?.ic_decay_flag === true;
+  } catch (err) {
+    console.error('[gemini-analysis] router ic_decay_flag lookup failed:', err);
+  }
+
+  const choice: ModelChoice = routeModel({
+    ticker,
+    controversy,
+    ic_decay_flag: icDecayFlag,
+    market_cap_class: capClassForRouter,
+  });
+
+  // Run the analysis with the chosen model (default citations-v2 OFF inside
+  // the routed path — the citations shadow lives at the baseline branch).
+  const { result, tokensUsed } = await generateAnalysisWithUsage(
+    ticker,
+    pkg,
+    communityData,
+    /* useCitationsV2 */ getCitationsV2Mode() === 'on',
+    choice,
+  );
+
+  // Cost telemetry — write into existing LearningEvent table (no schema
+  // change). Failures must not propagate to caller.
+  const estimated_cost_usd = estimateCost(choice, tokensUsed);
+  try {
+    await prisma.learningEvent.create({
+      data: {
+        event_type: 'model_router_decision',
+        ticker,
+        message: `routed ${ticker} to ${choice} (${tokensUsed} tokens, $${estimated_cost_usd.toFixed(5)})`,
+        delta: {
+          model: choice,
+          tokens: tokensUsed,
+          estimated_cost_usd,
+          controversy,
+          ic_decay_flag: icDecayFlag,
+          market_cap_class: capClassForRouter,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('[gemini-analysis] router LearningEvent persist failed:', err);
+  }
+
+  return result;
+}
+
+/**
+ * Plan 19-C-09 helper: same as generateAnalysis but also returns the token
+ * usage from the underlying generateText call so the router path can write
+ * cost telemetry. A thin shim around generateAnalysis that re-invokes the
+ * AI Gateway with the chosen model and surfaces usage.totalTokens.
+ *
+ * Implementation note: rather than thread a usage handle through every
+ * generateAnalysis call site, we call generateAnalysis with a model override
+ * and have it return token usage via a side-channel object. This keeps the
+ * 19-C-07 generateAnalysis signature backward-compatible for the citations-v2
+ * shadow path (which doesn't need the usage).
+ */
+async function generateAnalysisWithUsage(
+  ticker: string,
+  pkg: SourcePackage,
+  communityData: Parameters<typeof generateAnalysis>[2],
+  useCitationsV2: boolean,
+  modelOverride: ModelChoice,
+): Promise<{ result: AnalysisResult; tokensUsed: number }> {
+  // Side-channel for usage. generateAnalysis writes into this when
+  // modelOverride is set, then we return both the result and the tokens.
+  const usageOut: { tokens: number } = { tokens: 0 };
+  const result = await generateAnalysis(ticker, pkg, communityData, useCitationsV2, {
+    modelOverride,
+    usageOut,
+  });
+  return { result, tokensUsed: usageOut.tokens };
 }
 
 /**
@@ -812,6 +965,12 @@ async function generateAnalysis(
     highlights: import('@/lib/types').CommunityHighlight[];
   } | null,
   useCitationsV2: boolean,
+  // Phase 19-C-09 (D-41): optional router context. When provided, the chosen
+  // ModelChoice is mapped to a Vercel AI Gateway model string and total tokens
+  // are written into routerCtx.usageOut.tokens for the caller's cost telemetry.
+  // When undefined (default — citations-v2 path), the legacy
+  // 'google/gemini-3-flash' string is used and usage is ignored.
+  routerCtx?: { modelOverride: ModelChoice; usageOut: { tokens: number } },
 ): Promise<AnalysisResult> {
   const brief = formatResearchBrief(pkg);
   const newsUrls = extractNewsUrls(pkg);
@@ -853,15 +1012,34 @@ async function generateAnalysis(
   // buildSystemPrompt (so the LLM sees the dual-class context in one message).
   const systemPrompt = buildSystemPrompt(engineCtx);
 
+  // Phase 19-C-09 (D-41): map ModelChoice → AI Gateway model string. When the
+  // routerCtx is unset (default), keep the legacy flash slug verbatim so the
+  // citations-v2 baseline path is bit-identical to today's behavior. Strings
+  // pinned per the convention already in use elsewhere in this file
+  // ('google/gemini-3-flash' for the flash tier).
+  const modelString =
+    routerCtx == null
+      ? 'google/gemini-3-flash'
+      : routerCtx.modelOverride === 'gemini-pro'
+        ? 'google/gemini-3-pro'
+        : routerCtx.modelOverride === 'haiku'
+          ? 'anthropic/claude-haiku-4.5'
+          : 'google/gemini-3-flash';
+
   try {
-    const { output } = await generateText({
-      model: 'google/gemini-3-flash',
+    const { output, usage } = await generateText({
+      model: modelString,
       output: Output.object({ schema: AnalysisResultSchema }),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
     });
+    // Surface token usage to the caller's side-channel (cost telemetry).
+    // generateText returns { usage: { totalTokens?: number } } from the AI SDK.
+    if (routerCtx) {
+      routerCtx.usageOut.tokens = usage?.totalTokens ?? 0;
+    }
 
     // Build the authoritative engine_calibration block. Numeric fields come
     // from the database via engineCtx; LLM contributes only the prose
