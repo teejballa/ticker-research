@@ -56,10 +56,14 @@ import { __resetUpstashClientForTests } from '@/lib/data/cache/upstash';
 const SENTINEL_KEY = 'tk_phase19_test_sentinel_xyz';
 
 describe('Tiingo adapter (Plan 19-B-03)', () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>;
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-  let logSpy: ReturnType<typeof vi.spyOn>;
-  let errorSpy: ReturnType<typeof vi.spyOn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let fetchSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let warnSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let logSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let errorSpy: any;
 
   beforeEach(() => {
     cacheStore.clear();
