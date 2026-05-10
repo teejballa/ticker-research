@@ -52,9 +52,9 @@ describe('wave-b-rollout-status CLI (Plan 19-B-08)', () => {
     expect(parsed.exit_code).toBe(expectedExit);
     expect(result.status).toBe(expectedExit);
 
-    // 12 gates: 2 verdict + 4 flag-removed + 4 fallback adapter + 1 wiring
-    // + 1 grep-patterns-registered.
-    expect(parsed.gates.length).toBe(12);
+    // 11 gates post-Tiingo-removal: 2 verdict + 3 flag-removed (was 4)
+    // + 4 fallback adapter + 1 wiring + 1 grep-patterns-registered.
+    expect(parsed.gates.length).toBe(11);
 
     const gateNames = parsed.gates.map((g: { name: string }) => g.name).sort();
     expect(gateNames).toEqual(
@@ -68,7 +68,6 @@ describe('wave-b-rollout-status CLI (Plan 19-B-08)', () => {
         'fallback-yahoo',
         'flag-removed-data_cache',
         'flag-removed-exa_primary',
-        'flag-removed-tiingo_primary',
         'flag-removed-twelvedata_primary',
         'grep-patterns-registered',
       ].sort(),

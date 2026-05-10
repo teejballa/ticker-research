@@ -63,7 +63,6 @@ const CHILD_PLANS = ['19-B-06', '19-B-07'] as const;
 // FEATURE_*_PRIMARY flags graduated by Wave B (must all be removed from
 // features.ts post-cutover).
 const WAVE_B_FLAGS = [
-  'tiingo_primary',
   'twelvedata_primary',
   'exa_primary',
   'data_cache',

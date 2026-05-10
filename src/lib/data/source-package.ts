@@ -6,8 +6,8 @@
 // Plan 19-B-06 (D-29): merge precedence reorder behind shadow A/B harness.
 //   Old ladder (preserved when flags off): yahoo → finnhub → polygon for
 //     market+fundamentals; anthropic-search for news/analyst/SEC/social.
-//   New ladder (active when all 3 flags 'on'): tiingo → yahoo → finnhub →
-//     polygon for quote; tiingo → twelvedata → yahoo → finnhub → polygon for
+//   New ladder (active when both flags 'on'): yahoo → finnhub → polygon for
+//     quote; twelvedata → yahoo → finnhub → polygon for
 //     fundamentals; exa → anthropic-search for news/analyst.
 //   Yahoo / Finnhub / Polygon / Anthropic-search adapters NOT removed (D-32).
 
@@ -31,7 +31,8 @@ import { FEATURES } from '@/lib/features';
 import type { FeatureMode } from '@/lib/features';
 import { ensembleSentiment } from '@/lib/sentiment/ensemble';
 // Plan 19-B-06 (D-26..D-28) — new-ladder primary fetchers from Wave-B prereqs.
-import { fetchTiingoQuote, fetchTiingoFundamentals } from '@/lib/data/adapters/tiingo';
+// Tiingo removed 2026-05-10 — fundamentals subscription required Tiingo sales contact;
+// TwelveData + Yahoo + Finnhub + Polygon cover the same ground without it.
 import { fetchTwelveDataFundamentals } from '@/lib/data/adapters/twelve-data';
 import { fetchExaNews, fetchExaAnalystSentiment } from '@/lib/data/adapters/exa-search';
 import type {
@@ -284,18 +285,18 @@ async function buildSourcePackageOldLadder(
   };
 }
 
-// ─── New ladder (Plan 19-B-06 — D-29) ──────────────────────────────────────
+// ─── New ladder (Plan 19-B-06 — D-29; Tiingo removed 2026-05-10) ───────────
 // Order:
-//   1. Quote: tiingo → yahoo → finnhub → polygon (twelvedata is fundamentals only)
-//   2. Fundamentals: tiingo → twelvedata → yahoo → finnhub → polygon
+//   1. Quote: yahoo → finnhub → polygon (Tiingo removed — paid sales contact)
+//   2. Fundamentals: twelvedata → yahoo → finnhub → polygon
 //   3. News:   exa → anthropic-search (RESEARCH Pitfall 7 fallback)
 //   4. Analyst: exa → anthropic-search
 //   5. SEC + Social: anthropic-search (no Exa parity yet — graceful keep-as-is)
 //
 // Each leg is null-on-failure (the Wave-B adapters never throw); merge layer
 // stamps FieldOrigin per-field via mergeMarketData / mergeFundamentals — the
-// new origins (tiingo / twelvedata) flow through after types.ts extension
-// (Task 1). Yahoo / Finnhub / Polygon stay as fallbacks.
+// new origin (twelvedata) flows through after types.ts extension (Task 1).
+// Yahoo / Finnhub / Polygon stay as fallbacks.
 async function buildSourcePackageNewLadder(
   ticker: string,
   companyName: string,
@@ -304,8 +305,6 @@ async function buildSourcePackageNewLadder(
 ): Promise<SourcePackage> {
   // Fan out every fetcher in parallel. Promise.allSettled never throws.
   const [
-    tiingoQuoteResult,
-    tiingoFundsResult,
     twelveFundsResult,
     marketDataResult,
     fundamentalsResult,
@@ -319,8 +318,6 @@ async function buildSourcePackageNewLadder(
     socialResult,
     sentimentIntelligenceResult,
   ] = await Promise.allSettled([
-    fetchTiingoQuote(ticker),
-    fetchTiingoFundamentals(ticker),
     fetchTwelveDataFundamentals(ticker),
     fetchMarketData(ticker),
     fetchFundamentals(ticker),
@@ -368,61 +365,26 @@ async function buildSourcePackageNewLadder(
   const supplementary_market_data: SupplementaryMarketData = { sources: [finnhub, polygon] };
 
   // Resolve the new-ladder primary leg outputs (null = unavailable / errored).
-  const tiingoQuote = settleNullable(tiingoQuoteResult, 'tiingo_quote');
-  const tiingoFunds = settleNullable(tiingoFundsResult, 'tiingo_fundamentals');
   const twelveFunds = settleNullable(twelveFundsResult, 'twelvedata_fundamentals');
   const exaNews = settleNullable(exaNewsResult, 'exa_news');
   const exaAnalyst = settleNullable(exaAnalystResult, 'exa_analyst');
 
-  // Field-level merge — first non-null wins. New ladder synthesizes the
-  // primary slot from the highest-priority provider that returned a value.
-  // We feed mergeMarketData / mergeFundamentals a *yahoo-shaped* primary
-  // (using the Tiingo result if present) so the existing merge function's
-  // first-non-null semantics produce a tiingo→yahoo→finnhub→polygon cascade
-  // for market and tiingo→twelvedata→yahoo→finnhub→polygon for fundamentals.
+  // Field-level merge — first non-null wins. New ladder uses Yahoo as the
+  // quote primary (Tiingo removed). Fundamentals route through TwelveData
+  // first when present, then fall through to the canonical Yahoo cascade.
   const yahooMarket = settle(marketDataResult, emptyMarketData('market data collection failed'), 'market_data');
   const yahooFundamentals = settle(fundamentalsResult, emptyFundamentals('fundamentals collection failed'), 'fundamentals');
 
-  // Quote: tiingo first (if present) — overlay onto the merge cascade by
-  // upgrading the "yahoo" primary slot with Tiingo values where available.
-  // Wrap as SupplementarySource so existing mergeMarketData logic uses it.
-  const tiingoQuoteAsPrimary: MarketDataSection = tiingoQuote
-    ? { ...tiingoQuote, _field_sources: undefined }
-    : yahooMarket;
-
   const merged_market = mergeMarketData(
-    tiingoQuoteAsPrimary,
+    yahooMarket,
     finnhub.available ? finnhub : null,
     polygon.available ? polygon : null,
   );
 
-  // Fundamentals: tiingo → twelvedata → yahoo → finnhub → polygon. We use
-  // tiingoFunds as the "yahoo-slot" primary when present (forces tiingo to
-  // win first); twelvedata gets stamped via a synthetic SupplementarySource.
-  const tiingoFundsAsPrimary: FundamentalsSection = tiingoFunds
-    ? { ...tiingoFunds, _field_sources: undefined }
-    : (twelveFunds ?? yahooFundamentals);
-
-  // Synthesize a SupplementarySource out of yahoo / twelvedata / finnhub for
-  // the cascade so per-field provenance still gets stamped. The merge layer
-  // takes the FIRST non-null per field; we sequence the cascade by the order
-  // we hand it the candidates (tiingo primary slot → twelvedata pseudo →
-  // yahoo pseudo → finnhub → polygon).
-  const twelveFundsSource: SupplementarySource | null = twelveFunds
-    ? {
-        name: 'TwelveData',
-        fetched_at: twelveFunds.collected_at,
-        text_block: '',
-        available: true,
-        fundamentals: {
-          pe_ratio: twelveFunds.pe_ratio,
-          eps: twelveFunds.eps,
-          revenue: twelveFunds.revenue,
-          debt_to_equity: twelveFunds.debt_to_equity,
-          profit_margin: twelveFunds.profit_margin,
-        },
-      }
-    : null;
+  // Fundamentals: twelvedata → yahoo → finnhub → polygon. We use TwelveData
+  // as the primary slot when present so it wins first; otherwise fall back
+  // to the canonical Yahoo cascade.
+  const twelveFundsAsPrimary: FundamentalsSection = twelveFunds ?? yahooFundamentals;
 
   const yahooFundsSource: SupplementarySource = {
     name: 'Yahoo',
@@ -438,40 +400,22 @@ async function buildSourcePackageNewLadder(
     },
   };
 
-  // mergeFundamentals signature is (yahoo, finnhub, polygon). To honor the
-  // new ladder ordering tiingo → twelvedata → yahoo → finnhub → polygon, we
-  // pass tiingo (or fall-through) as primary, then sequence twelvedata-as-
-  // pseudo-finnhub, then real-finnhub-as-pseudo-polygon — but only when we
-  // have NEW values. When tiingo+twelve both null we fall through to the
-  // canonical 3-source cascade so behavior is invariant.
   const merged_fundamentals = (() => {
-    if (tiingoFunds && twelveFundsSource && finnhub.available) {
-      // Full new-ladder cascade: tiingo → twelvedata → yahoo → finnhub.
-      // Polygon gets dropped to keep the function arity at 3 — this is fine
-      // because polygon has historically been the lowest-yield rung. The
-      // cascade still backstops with finnhub for any nulls left after the
-      // first three rungs.
+    if (twelveFunds) {
+      // TwelveData → Yahoo → finnhub cascade.
       const stage1 = mergeFundamentals(
-        tiingoFundsAsPrimary,
-        twelveFundsSource,
+        twelveFundsAsPrimary,
         yahooFundsSource,
+        finnhub.available ? finnhub : null,
       );
-      // Backfill any remaining nulls with finnhub → polygon.
+      // Backfill any remaining nulls with polygon.
       return mergeFundamentals(
         stage1,
         finnhub.available ? finnhub : null,
         polygon.available ? polygon : null,
       );
     }
-    if (tiingoFunds || twelveFunds) {
-      // Partial new-ladder: only tiingo OR only twelve present.
-      return mergeFundamentals(
-        tiingoFundsAsPrimary,
-        finnhub.available ? finnhub : null,
-        polygon.available ? polygon : null,
-      );
-    }
-    // Both new sources unavailable → canonical cascade unchanged.
+    // No TwelveData → canonical 3-source cascade unchanged.
     return mergeFundamentals(
       yahooFundamentals,
       finnhub.available ? finnhub : null,
@@ -547,7 +491,6 @@ export async function collectAllData(
   securityType: SecurityType = 'equity',
 ): Promise<SourcePackage> {
   const mode = combinedMode([
-    FEATURES.tiingo_primary_mode,
     FEATURES.twelvedata_primary_mode,
     FEATURES.exa_primary_mode,
   ]);

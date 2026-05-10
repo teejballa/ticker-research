@@ -15,18 +15,17 @@ export interface SourceSection {
 
 // Per-field provenance after the Phase-10 merge layer runs.
 // null when no source supplied a value (the field is genuinely unavailable).
-// Plan 19-B-06 (D-29): extended additively with 'tiingo' | 'twelvedata' | 'exa'
-// so the new merge ladder can stamp provenance without breaking the existing
+// Plan 19-B-06 (D-29): extended additively with 'twelvedata' | 'exa' so the
+// new merge ladder can stamp provenance without breaking the existing
 // Yahoo / Finnhub / Polygon / EDGAR lineage. 'anthropic-search' added for the
 // news/analyst news-leg attribution under the new ladder. Original origins
 // stay because Yahoo / Finnhub / Polygon / Anthropic-search remain in tree as
-// fallbacks (D-32).
+// fallbacks (D-32). Tiingo removed 2026-05-10 (paid sales contact required).
 export type FieldOrigin =
   | 'yahoo'
   | 'finnhub'
   | 'polygon'
   | 'edgar'
-  | 'tiingo'
   | 'twelvedata'
   | 'exa'
   | 'anthropic-search'
