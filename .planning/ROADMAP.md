@@ -129,7 +129,7 @@ Plans:
 - [ ] 19-C-04: Options term-structure 30/60/90d + IV regime gate
 - [ ] 19-C-05: Swaggystocks + ApeWisdom adapters (supplemental, Firecrawl stays primary)
 - [ ] 19-C-06: Quiver adapter (insider + congressional, optional flag)
-- [ ] 19-C-07: Structured citation schema { source, url, confidence, date_retrieved }
+- [x] 19-C-07: Structured citation schema { source, url, confidence, date_retrieved }
 - [ ] 19-C-08: CoVe two-pass wrapper (Gemini draft → NLI verification)
 - [ ] 19-C-09: Model cascade router + cost telemetry (Haiku/Flash/Pro)
 - [ ] 19-C-10: Cross-class contradiction detector (NLI on class posteriors)
