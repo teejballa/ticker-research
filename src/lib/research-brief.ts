@@ -155,6 +155,23 @@ export function formatResearchBrief(pkg: SourcePackage): string {
       lines.push(`  - ${signal}`);
     }
   }
+  // Post-Phase-19: cross-source aggregated bullishness with Beta(5,5) smoothing.
+  // Always prefer this number over any single-source percentage when reasoning
+  // about retail/community sentiment — it accounts for sample-size effects and
+  // multi-source disagreement that a single venue (e.g. StockTwits on a meme
+  // stock) cannot represent.
+  const si = pkg.sentiment_intelligence;
+  if (si?.aggregated_bull_pct != null && (si.sentiment_source_count ?? 0) > 0) {
+    lines.push(
+      `Cross-Source Bullish (smoothed, ${si.sentiment_source_count} sources): ${si.aggregated_bull_pct.toFixed(1)}%`,
+    );
+    if (si.sentiment_components && si.sentiment_components.length > 0) {
+      lines.push('Per-source breakdown:');
+      for (const c of si.sentiment_components) {
+        lines.push(`  - ${c.source}: ${c.bullish_pct}% bullish (n=${c.raw_mention_count})`);
+      }
+    }
+  }
   lines.push('');
 
   // Supplementary Market Data (Finnhub, Polygon) — append available text_blocks

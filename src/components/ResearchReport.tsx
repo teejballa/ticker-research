@@ -642,34 +642,72 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                     <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">TRENDING</span>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  {/* Bull % chip */}
-                  <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">BULL</span>
-                    <span className={`text-sm font-mono font-bold ${sentiment_intelligence.stocktwits_bull_pct != null ? 'text-secondary' : 'text-on-surface-variant'}`}>
-                      {sentiment_intelligence.stocktwits_bull_pct != null ? `${sentiment_intelligence.stocktwits_bull_pct}%` : '—'}
-                    </span>
+                {(() => {
+                  // Post-Phase-19 — prefer the cross-source aggregated number
+                  // (Beta-smoothed, multi-venue) over the raw StockTwits %.
+                  // Single-source extremes like "100% bullish" are an artifact
+                  // of echo chambers; the aggregate calibrates against
+                  // sample size + cross-source disagreement.
+                  const agg = sentiment_intelligence.aggregated_bull_pct;
+                  const aggBear = sentiment_intelligence.aggregated_bear_pct;
+                  const showAggregated = agg != null && (sentiment_intelligence.sentiment_source_count ?? 0) > 0;
+                  const bullDisplay = showAggregated ? agg.toFixed(0) : (sentiment_intelligence.stocktwits_bull_pct ?? null);
+                  const bearDisplay = showAggregated ? aggBear!.toFixed(0) : (sentiment_intelligence.stocktwits_bear_pct ?? null);
+                  return (
+                    <div className="flex gap-2">
+                      {/* Bull % chip */}
+                      <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">BULL</span>
+                        <span className={`text-sm font-mono font-bold ${bullDisplay != null ? 'text-secondary' : 'text-on-surface-variant'}`}>
+                          {bullDisplay != null ? `${bullDisplay}%` : '—'}
+                        </span>
+                        {showAggregated && (
+                          <span className="text-[9px] tracking-widest uppercase text-on-surface-variant">SMOOTHED · {sentiment_intelligence.sentiment_source_count} src</span>
+                        )}
+                      </div>
+                      {/* Bear % chip */}
+                      <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">BEAR</span>
+                        <span className={`text-sm font-mono font-bold ${bearDisplay != null ? 'text-error' : 'text-on-surface-variant'}`}>
+                          {bearDisplay != null ? `${bearDisplay}%` : '—'}
+                        </span>
+                      </div>
+                      {/* P/C Ratio chip */}
+                      <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">P/C RATIO</span>
+                        <span className={`text-sm font-mono font-bold ${sentiment_intelligence.put_call_ratio != null ? 'text-tertiary' : 'text-on-surface-variant'}`}>
+                          {sentiment_intelligence.put_call_ratio != null ? sentiment_intelligence.put_call_ratio.toFixed(2) : '—'}
+                        </span>
+                        {sentiment_intelligence.put_call_interpretation && sentiment_intelligence.put_call_ratio != null && (
+                          <span className="text-[10px] text-tertiary tracking-widest uppercase">
+                            {sentiment_intelligence.put_call_interpretation.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+                {/* Per-source breakdown — visible when ≥1 source contributed */}
+                {sentiment_intelligence.sentiment_components && sentiment_intelligence.sentiment_components.length > 0 && (
+                  <div className="border-t border-surface-container-highest pt-2 mt-2">
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant mb-1">
+                      Per-source breakdown
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+                      {sentiment_intelligence.sentiment_components.map((c) => (
+                        <div key={c.source} className="flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
+                          <span>{c.source}</span>
+                          <span>
+                            <span className={c.bullish_pct >= 50 ? 'text-secondary' : 'text-error'}>
+                              {c.bullish_pct}%
+                            </span>
+                            <span className="text-on-surface-variant ml-2">n={c.raw_mention_count}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  {/* Bear % chip */}
-                  <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">BEAR</span>
-                    <span className={`text-sm font-mono font-bold ${sentiment_intelligence.stocktwits_bear_pct != null ? 'text-error' : 'text-on-surface-variant'}`}>
-                      {sentiment_intelligence.stocktwits_bear_pct != null ? `${sentiment_intelligence.stocktwits_bear_pct}%` : '—'}
-                    </span>
-                  </div>
-                  {/* P/C Ratio chip */}
-                  <div className="bg-surface-container-highest px-4 py-2 rounded flex flex-col items-center gap-1 flex-1">
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">P/C RATIO</span>
-                    <span className={`text-sm font-mono font-bold ${sentiment_intelligence.put_call_ratio != null ? 'text-tertiary' : 'text-on-surface-variant'}`}>
-                      {sentiment_intelligence.put_call_ratio != null ? sentiment_intelligence.put_call_ratio.toFixed(2) : '—'}
-                    </span>
-                    {sentiment_intelligence.put_call_interpretation && sentiment_intelligence.put_call_ratio != null && (
-                      <span className="text-[10px] text-tertiary tracking-widest uppercase">
-                        {sentiment_intelligence.put_call_interpretation.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                )}
                 {/* Annotation row */}
                 <div className="border-t border-surface-container-highest pt-2 mt-2">
                   <span className="text-[11px] text-on-surface-variant">

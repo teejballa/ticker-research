@@ -34,6 +34,9 @@ import { ensembleSentiment } from '@/lib/sentiment/ensemble';
 // Tiingo removed 2026-05-10 — fundamentals subscription required Tiingo sales contact;
 // TwelveData + Yahoo + Finnhub + Polygon cover the same ground without it.
 import { fetchTwelveDataFundamentals } from '@/lib/data/adapters/twelve-data';
+import { fetchSwaggyStocks } from '@/lib/data/adapters/swaggystocks';
+import { fetchApeWisdom } from '@/lib/data/adapters/apewisdom';
+import { aggregateCommunitySentiment } from '@/lib/sentiment/aggregator';
 import {
   fetchExaNews,
   fetchExaAnalystSentiment,
@@ -136,12 +139,33 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
     FEATURES.options_term_structure_mode,
     { ticker },
   );
-  const [stwitsResult, optionsResult] = await Promise.allSettled([
+  // Post-Phase-19 — also fan-out the supplemental community-sentiment sources
+  // (Swaggystocks + ApeWisdom) so the cross-source aggregator can apply Beta
+  // smoothing and prevent the "100% bullish" failure mode driven by StockTwits
+  // alone on meme-stock echo chambers.
+  const [stwitsResult, optionsResult, swaggyResult, apeResult] = await Promise.allSettled([
     fetchStockTwitsSentiment(ticker),
     optionsPromise,
+    fetchSwaggyStocks(ticker),
+    fetchApeWisdom(ticker),
   ]);
   const stwits = stwitsResult.status === 'fulfilled' ? stwitsResult.value : null;
   const options = optionsResult.status === 'fulfilled' ? optionsResult.value : null;
+  const swaggy = swaggyResult.status === 'fulfilled' ? swaggyResult.value : null;
+  const ape = apeResult.status === 'fulfilled' ? apeResult.value : null;
+
+  const aggregated = aggregateCommunitySentiment({
+    stocktwits:
+      stwits?.stocktwits_bull_pct != null && stwits?.stocktwits_message_count != null
+        ? { bullish_pct: stwits.stocktwits_bull_pct, mention_count: stwits.stocktwits_message_count }
+        : null,
+    swaggystocks: swaggy
+      ? { bullish_pct: swaggy.bullish_pct, mention_count: swaggy.mention_count }
+      : null,
+    apewisdom: ape
+      ? { bullish_pct: ape.bullish_pct, mention_count: ape.mention_count }
+      : null,
+  });
 
   // Plan 19-C-02 (D-34) — runWithShadow('finsentllm-ensemble', ...).
   // Aggregated chatter text is the StockTwits / options interpretation
@@ -177,6 +201,13 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
     // SentimentSnapshot.create({ data }) callers can persist them.
     finsentllm_score: ensembleScores.finsentllm_score,
     model_agreement: ensembleScores.model_agreement,
+    // Post-Phase-19: cross-source aggregated sentiment with Beta(5,5) smoothing.
+    // Surfaces the headline number the UI should display by default; the raw
+    // stocktwits_bull_pct stays available as a per-source breakdown component.
+    aggregated_bull_pct: aggregated.aggregated_bull_pct,
+    aggregated_bear_pct: aggregated.aggregated_bear_pct,
+    sentiment_source_count: aggregated.source_count,
+    sentiment_components: aggregated.components,
   };
 }
 
