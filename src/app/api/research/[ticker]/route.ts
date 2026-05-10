@@ -6,6 +6,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { collectAllData } from '@/lib/data/source-package';
+import { getCachedSourcePackage } from '@/lib/data/cache/runtime-cache';
+import { FEATURES } from '@/lib/features';
+import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import { writeSourcePackage } from '@/lib/temp-file';
 import { detectSecurityType } from '@/lib/data/security-type';
 import type { SecurityType } from '@/lib/types';
@@ -63,7 +66,17 @@ export async function POST(
     const securityType: SecurityType = await detectSecurityType(upperTicker, _quoteType, _longName).catch(() => 'equity');
 
     // Run parallel data collection — DATA-08
-    const sourcePackage = await collectAllData(upperTicker, companyName, exchange, securityType);
+    //
+    // Plan 19-B-07 (D-30) — Vercel Runtime Cache wraps the SourcePackage
+    // assembly behind FEATURE_DATA_CACHE. Shadow path is the cached wrapper;
+    // canonical (mode='off') path is the existing direct collectAllData call.
+    // 10min idempotency for warm tickers per the D-30 cache target.
+    const sourcePackage = await runWithShadow('runtime-cache',
+      () => collectAllData(upperTicker, companyName, exchange, securityType),
+      () => getCachedSourcePackage(upperTicker, companyName, exchange, securityType),
+      FEATURES.data_cache_mode,
+      { ticker: upperTicker },
+    );
 
     // Write to temp file — never in project directory
     const filePath = await writeSourcePackage(sourcePackage);
