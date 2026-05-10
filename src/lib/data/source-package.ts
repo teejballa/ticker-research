@@ -14,7 +14,12 @@ import { fetchFinnhub } from '@/lib/data/finnhub';
 import { fetchPolygon } from '@/lib/data/polygon';
 import { mergeMarketData, mergeFundamentals } from '@/lib/data/merge';
 import { fetchStockTwitsSentiment } from '@/lib/data/stocktwits';
-import { fetchOptionsSentiment } from '@/lib/data/options-sentiment';
+import {
+  fetchOptionsSentiment,
+  fetchOptionsSentimentTermStructure,
+} from '@/lib/data/options-sentiment';
+import { runWithShadow } from '@/lib/shadow/shadow-runner';
+import { FEATURES } from '@/lib/features';
 import type { SourcePackage, MarketDataSection, FundamentalsSection, SupplementaryMarketData, SupplementarySource, SentimentIntelligenceSection } from '@/lib/types';
 import type { SecurityType } from '@/lib/types';
 
@@ -47,9 +52,22 @@ function emptyFundamentals(error: string): FundamentalsSection {
 
 async function fetchSentimentIntelligence(ticker: string): Promise<SentimentIntelligenceSection> {
   const collected_at = new Date().toISOString();
+  // Plan 19-C-04: options-sentiment is now wrapped by runWithShadow.
+  // - mode='off'    → fetchOptionsSentiment (nearest-only — historical canonical)
+  // - mode='on'     → fetchOptionsSentimentTermStructure (30/60/90d OI-weighted +
+  //                   IV-regime gate — D-36 canonical post-cutover)
+  // - mode='shadow' → off-path returns first; new path runs in setImmediate
+  //                   and persists ShadowComparison (D-05/D-14).
+  const optionsPromise = runWithShadow(
+    'options-sentiment-term-structure',
+    () => fetchOptionsSentiment(ticker),
+    () => fetchOptionsSentimentTermStructure(ticker),
+    FEATURES.options_term_structure_mode,
+    { ticker },
+  );
   const [stwitsResult, optionsResult] = await Promise.allSettled([
     fetchStockTwitsSentiment(ticker),
-    fetchOptionsSentiment(ticker),
+    optionsPromise,
   ]);
   const stwits = stwitsResult.status === 'fulfilled' ? stwitsResult.value : null;
   const options = optionsResult.status === 'fulfilled' ? optionsResult.value : null;

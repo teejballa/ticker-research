@@ -126,7 +126,7 @@ Plans:
 - [ ] 19-C-01: HF Inference Endpoint + FinSentLLM client (FinGPT v3 + Mistral + FinBERT)
 - [ ] 19-C-02: Ensemble meta-classifier (weighted avg by confidence + agreement metric)
 - [ ] 19-C-03: Reputation-weighted StockTwits aggregation (replaces naive count)
-- [ ] 19-C-04: Options term-structure 30/60/90d + IV regime gate
+- [x] 19-C-04: Options term-structure 30/60/90d + IV regime gate (completed 2026-05-08; 8/8 unit tests GREEN; flag-OFF lands; D-05 lifecycle deferred to operator per 19-A-07 pattern; lazy-prisma fix in shadow-runner [Rule 1])
 - [ ] 19-C-05: Swaggystocks + ApeWisdom adapters (supplemental, Firecrawl stays primary)
 - [ ] 19-C-06: Quiver adapter (insider + congressional, optional flag)
 - [x] 19-C-07: Structured citation schema { source, url, confidence, date_retrieved }
