@@ -123,7 +123,7 @@ Plans:
 - [ ] 19-B-06: source-package.ts merge precedence reorder + shadow A/B + cutover
 - [ ] 19-B-07: Vercel Runtime Cache integration (10min SourcePackage idempotency)
 - [ ] 19-B-08: Feature flag rollout + dual-write verification (driving plan)
-- [ ] 19-C-01: HF Inference Endpoint + FinSentLLM client (FinGPT v3 + Mistral + FinBERT)
+- [x] 19-C-01: HF Inference Endpoint + FinSentLLM client (FinGPT v3 + Mistral + FinBERT) (completed 2026-05-10; @huggingface/inference 4.13.15 pinned; classifyFinGPT/classifyMistralFin/classifyFinBERT primitives with uniform SentimentScore + null-sentinel error contract per D-33; 4/4 unit tests GREEN, full suite 482/485; 3 HF Inference Endpoint provisionings deferred to operator [User Setup Required]; flag-off lands per D-09 / D-10; verbatim impl-plan test block had two latent bugs fixed inline [Rule 1])
 - [ ] 19-C-02: Ensemble meta-classifier (weighted avg by confidence + agreement metric)
 - [ ] 19-C-03: Reputation-weighted StockTwits aggregation (replaces naive count)
 - [ ] 19-C-04: Options term-structure 30/60/90d + IV regime gate
