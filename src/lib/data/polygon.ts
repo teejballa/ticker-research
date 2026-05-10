@@ -9,12 +9,38 @@ import type {
   SupplementaryMarketFields,
   SupplementaryFundamentalsFields,
 } from '@/lib/types';
+import { cached } from '@/lib/data/cache/upstash';
+import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
+import { withRetry } from '@/lib/data/retry';
 
 const BASE = 'https://api.polygon.io';
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
 
+/**
+ * Fetch a Polygon URL with `withRetry` (3x on 5xx + network). Non-OK responses
+ * are coerced to a thrown status-Error so the retry classifier decides whether
+ * to back off; callers wrap in try/catch and degrade to `available:false`.
+ */
+async function fetchOk(url: string): Promise<Response> {
+  return withRetry(
+    async () => {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) {
+        const err = Object.assign(new Error(`polygon ${res.status}`), { status: res.status });
+        throw err;
+      }
+      return res;
+    },
+    { maxAttempts: 3, baseDelayMs: 100 },
+  );
+}
+
+/**
+ * Post-Phase-19 P0: wrapped in cached(24h) + per-request withRetry inside
+ * fetchOk. The cache wrapper no-ops gracefully when Upstash is unset.
+ */
 export async function fetchPolygon(ticker: string): Promise<SupplementarySource> {
   const key = process.env.POLYGON_API_KEY;
   const empty = (available: boolean): SupplementarySource => ({
@@ -22,11 +48,28 @@ export async function fetchPolygon(ticker: string): Promise<SupplementarySource>
   });
   if (!key) return empty(false);
 
+  return cached<SupplementarySource>(
+    CACHE_KEYS.fundamentals(`polygon:${ticker.toUpperCase()}`),
+    () => fetchPolygonInner(ticker, key, empty),
+    { ttlSeconds: TTL_SECONDS.fundamentals },
+  );
+}
+
+async function fetchPolygonInner(
+  ticker: string,
+  key: string,
+  empty: (available: boolean) => SupplementarySource,
+): Promise<SupplementarySource> {
   try {
-    const [refRes, finRes] = await Promise.all([
-      fetch(`${BASE}/v3/reference/tickers/${encodeURIComponent(ticker)}?apiKey=${key}`, { signal: AbortSignal.timeout(5000) }),
-      fetch(`${BASE}/vX/reference/financials?ticker=${encodeURIComponent(ticker)}&limit=1&apiKey=${key}`, { signal: AbortSignal.timeout(5000) }),
-    ]);
+    // Reference is required; financials is optional and tolerated to fail.
+    const refRes = await fetchOk(`${BASE}/v3/reference/tickers/${encodeURIComponent(ticker)}?apiKey=${key}`);
+    let finRes: Response | null = null;
+    try {
+      finRes = await fetchOk(`${BASE}/vX/reference/financials?ticker=${encodeURIComponent(ticker)}&limit=1&apiKey=${key}`);
+    } catch {
+      // financials is supplementary — proceed without.
+      finRes = null;
+    }
     if (!refRes.ok) return empty(false);
 
     const refData = await refRes.json() as { results?: Record<string, unknown> };
@@ -37,7 +80,7 @@ export async function fetchPolygon(ticker: string): Promise<SupplementarySource>
     let revenues: number | null = null;
     let netIncome: number | null = null;
     let epsBasic: number | null = null;
-    if (finRes.ok) {
+    if (finRes && finRes.ok) {
       try {
         const finData = await finRes.json() as { results?: Array<{ financials?: { income_statement?: Record<string, { value?: number }> } }> };
         const ic = finData.results?.[0]?.financials?.income_statement ?? {};
