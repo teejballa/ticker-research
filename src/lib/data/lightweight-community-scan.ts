@@ -14,6 +14,11 @@
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
 import { fetchStockTwitsSentiment } from './stocktwits';
+import { fetchSwaggyStocks } from './adapters/swaggystocks';
+import { fetchApeWisdom } from './adapters/apewisdom';
+import type { CommunitySignal } from './adapters/apewisdom';
+import { runWithShadow } from '@/lib/shadow/shadow-runner';
+import { FEATURES } from '@/lib/features';
 import { computeSentimentDimensions, type SentimentDimensions } from '@/lib/sentiment-dimensions';
 import { classifyCapClass, type CapClass } from '@/lib/diffusion-trace';
 import type { CommunityHighlight } from '@/lib/types';
@@ -141,4 +146,65 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     market_cap: marketCap,
     cap_class: classifyCapClass(marketCap),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Plan 19-C-05 — Task 4: supplemental community aggregation behind shadow.
+// ---------------------------------------------------------------------------
+//
+// `communityAggregated(ticker)` is the new entry point that gates Swaggystocks
+// + ApeWisdom (SUPPLEMENTAL — Firecrawl REMAINS PRIMARY per D-37) behind the
+// `community_supplemental` feature flag. Three modes:
+//
+//   off    → Firecrawl-only output (current canonical behavior)
+//   shadow → Firecrawl-only is what the cron writes to community_aggregated;
+//            the supplemental candidate runs in setImmediate and persists a
+//            ShadowComparison row for offline verdict scoring (D-05, D-14)
+//   on     → supplemental candidate populates community_aggregated; Firecrawl
+//            still drives the primary `community_data` JSON column
+//
+// Promise.allSettled (T-19-C-05-01) — a rate limit on either supplemental can
+// NEVER crash the canonical Firecrawl path: settled results are mapped to
+// `null` if rejected; null sentinel everywhere downstream.
+
+/**
+ * Shape returned by communityAggregated — JSON-serializable so it can land
+ * directly in `SentimentSnapshot.community_aggregated` (Json column).
+ */
+export interface CommunityAggregated {
+  firecrawl: EnrichedSnapshot | null;
+  swaggystocks: CommunitySignal | null;
+  apewisdom: CommunitySignal | null;
+}
+
+async function communityFirecrawlOnly(ticker: string): Promise<CommunityAggregated> {
+  const firecrawl = await lightweightCommunityScan(ticker);
+  return { firecrawl, swaggystocks: null, apewisdom: null };
+}
+
+async function communityWithSupplemental(ticker: string): Promise<CommunityAggregated> {
+  const [firecrawl, swaggy, ape] = await Promise.allSettled([
+    lightweightCommunityScan(ticker),
+    fetchSwaggyStocks(ticker),
+    fetchApeWisdom(ticker),
+  ]);
+  return {
+    firecrawl: firecrawl.status === 'fulfilled' ? firecrawl.value : null,
+    swaggystocks: swaggy.status === 'fulfilled' ? swaggy.value : null,
+    apewisdom: ape.status === 'fulfilled' ? ape.value : null,
+  };
+}
+
+/**
+ * Aggregated community payload for SentimentSnapshot.community_aggregated.
+ * Gated behind `community_supplemental` flag via the standard shadow harness.
+ */
+export async function communityAggregated(ticker: string): Promise<CommunityAggregated> {
+  return runWithShadow(
+    'community-supplemental',
+    () => communityFirecrawlOnly(ticker),
+    () => communityWithSupplemental(ticker),
+    FEATURES.community_supplemental_mode,
+    { ticker },
+  );
 }
