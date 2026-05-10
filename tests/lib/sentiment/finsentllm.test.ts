@@ -1,6 +1,16 @@
 // tests/lib/sentiment/finsentllm.test.ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { classifyFinGPT, classifyMistralFin, classifyFinBERT, type SentimentScore } from '../../../src/lib/sentiment/finsentllm';
+
+// Hermetic env fixtures — finsentllm.ts checks HF_INFERENCE_TOKEN and the
+// per-model endpoint env vars before calling the SDK. The SDK itself is
+// mocked below, so these values are arbitrary stand-ins.
+beforeAll(() => {
+  process.env.HF_INFERENCE_TOKEN ??= 'test-token';
+  process.env.HF_FINGPT_ENDPOINT ??= 'https://example/fingpt@deadbeef';
+  process.env.HF_MISTRAL_FIN_ENDPOINT ??= 'https://example/mistral-fin@deadbeef';
+  process.env.HF_FINBERT_ENDPOINT ??= 'https://example/finbert@deadbeef';
+});
 
 vi.mock('@huggingface/inference', () => ({
   HfInference: vi.fn(() => ({
@@ -36,6 +46,11 @@ describe('finsentllm clients', () => {
   });
 
   it('returns null sentinel on API error (does not throw)', async () => {
+    // Re-mock with a throwing implementation. `vi.resetModules()` clears the
+    // module cache so the subsequent dynamic `import()` re-evaluates
+    // finsentllm.ts and picks up the new mock (verbatim impl-plan test
+    // structure relies on this — making the cache reset explicit).
+    vi.resetModules();
     vi.doMock('@huggingface/inference', () => ({
       HfInference: vi.fn(() => ({
         textClassification: vi.fn(async () => { throw new Error('rate limited'); }),
