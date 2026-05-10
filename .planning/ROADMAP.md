@@ -118,7 +118,7 @@ Plans:
 - [x] 19-B-01: Upstash Redis client + cache-keys + TTL config (graceful degrade) (completed 2026-05-08; 5/5 unit tests GREEN; @upstash/redis@^1.38.0 pinned; cached() + invalidate() with transparent Redis-outage fallthrough per D-24; CACHE_KEYS + TTL_SECONDS centralized; barrel src/lib/data/cache/index.ts for Wave B adapters; FEATURE_DATA_CACHE flag deferred to 19-B-08 rollout per plan preamble)
 - [x] 19-B-02: Retry + exponential backoff wrapper (5xx + network only) (completed 2026-05-08; 11/11 tests GREEN; 5xx + ECONNREFUSED/ENOTFOUND/ETIMEDOUT/ECONNRESET/EAI_AGAIN retried; 4xx incl. 401/403/404/408/429 surfaced immediately per D-25; full jitter on by default)
 - [x] 19-B-03: Tiingo adapter (point-in-time fundamentals + EOD) (completed 2026-05-08; 8/8 unit tests + 1 live-gated GREEN; fetchTiingoQuote + fetchTiingoFundamentals returning canonical MarketDataSection / FundamentalsSection shapes; cached(:tiingo, 5min/24h) + withRetry(3x, 5xx+network only) per RESEARCH Pattern 2; T-19-B-03-01 mitigated via sentinel-key spy test — Authorization: Token header only, no URL templating, console.warn logs err.message only; FEATURE_TIINGO_PRIMARY flag stays off — adapter dormant until 19-B-06 wires merge ladder)
-- [ ] 19-B-04: Twelve Data adapter (fundamentals)
+- [x] 19-B-04: Twelve Data adapter (fundamentals) — completed 2026-05-09
 - [ ] 19-B-05: Exa 2.0 adapter + Anthropic-search fallback wiring
 - [ ] 19-B-06: source-package.ts merge precedence reorder + shadow A/B + cutover
 - [ ] 19-B-07: Vercel Runtime Cache integration (10min SourcePackage idempotency)
