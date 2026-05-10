@@ -26,6 +26,7 @@ import {
   checkFlagRemovalGate,
   checkFallbackAdapterGate,
   checkFallbackWiringGate,
+  checkGrepPatternsRegisteredGate,
   computeCompositeMetrics,
   scoreComposite,
 } from '../../scripts/wave-b-rollout-status';
@@ -185,6 +186,43 @@ describe('wave-b-rollout-status (Plan 19-B-08)', () => {
       const g = checkFallbackWiringGate(src);
       expect(g.status).toBe('RED');
       expect(g.detail).toMatch(/polygon/);
+    });
+  });
+
+  describe('checkGrepPatternsRegisteredGate', () => {
+    it('returns GREEN when all 4 Wave B post-cutover patterns are registered', () => {
+      const src = JSON.stringify({
+        patterns: [
+          { name: 'wave-b-source-package-merge-flag-readsite' },
+          { name: 'wave-b-runtime-cache-flag-readsite' },
+          { name: 'wave-b-runWithShadow-source-package-merge' },
+          { name: 'wave-b-runWithShadow-runtime-cache' },
+        ],
+      });
+      const g = checkGrepPatternsRegisteredGate(src);
+      expect(g.status).toBe('GREEN');
+      expect(g.detail).toMatch(/all 4/);
+    });
+
+    it('returns PENDING and lists missing patterns', () => {
+      const src = JSON.stringify({
+        patterns: [
+          { name: 'wave-b-source-package-merge-flag-readsite' },
+          { name: 'wave-b-runtime-cache-flag-readsite' },
+          // missing the two runWithShadow patterns
+        ],
+      });
+      const g = checkGrepPatternsRegisteredGate(src);
+      expect(g.status).toBe('PENDING');
+      expect(g.detail).toMatch(/wave-b-runWithShadow-source-package-merge/);
+      expect(g.detail).toMatch(/wave-b-runWithShadow-runtime-cache/);
+    });
+
+    it('against the live model-card-grep-patterns.json: returns GREEN', () => {
+      // No arg → reads the actual repo file. This guards against accidental
+      // pattern deletion during a future cleanup commit.
+      const g = checkGrepPatternsRegisteredGate();
+      expect(g.status).toBe('GREEN');
     });
   });
 

@@ -181,7 +181,47 @@ export function checkFallbackAdapterGate(): Gate[] {
 }
 
 /**
- * Gate 5: source-package.ts still imports each fallback adapter (D-32 second
+ * Gate 5: Wave B post-cutover grep patterns registered in
+ * scripts/model-card-grep-patterns.json. The patterns enforce zero matches
+ * AFTER cutover so model-card-status will block a flag-removal PR that tries
+ * to land while readsites for the removed flags still exist in tree.
+ *
+ * Required patterns (per 19-B-08 must_haves):
+ *   - wave-b-source-package-merge-flag-readsite (3 mode vars)
+ *   - wave-b-runtime-cache-flag-readsite (data_cache_mode)
+ *   - wave-b-runWithShadow-source-package-merge
+ *   - wave-b-runWithShadow-runtime-cache
+ *
+ * Returns PENDING when patterns are missing (operator action: register them);
+ * GREEN once all 4 are registered.
+ */
+export function checkGrepPatternsRegisteredGate(grepPatternsSrc?: string): Gate {
+  const src =
+    grepPatternsSrc ??
+    readFileSync(path.join(REPO_ROOT, 'scripts/model-card-grep-patterns.json'), 'utf-8');
+  const required = [
+    'wave-b-source-package-merge-flag-readsite',
+    'wave-b-runtime-cache-flag-readsite',
+    'wave-b-runWithShadow-source-package-merge',
+    'wave-b-runWithShadow-runtime-cache',
+  ];
+  const missing = required.filter((name) => !src.includes(name));
+  if (missing.length === 0) {
+    return {
+      name: 'grep-patterns-registered',
+      status: 'GREEN',
+      detail: 'all 4 Wave B post-cutover grep patterns registered',
+    };
+  }
+  return {
+    name: 'grep-patterns-registered',
+    status: 'PENDING',
+    detail: `missing post-cutover patterns: ${missing.join(', ')}`,
+  };
+}
+
+/**
+ * Gate 6: source-package.ts still imports each fallback adapter (D-32 second
  * half — file presence alone isn't enough; the orchestrator must still wire
  * them up as fallback rungs).
  */
@@ -328,6 +368,7 @@ export function collectGates(): Gate[] {
   gates.push(...checkFlagRemovalGate());
   gates.push(...checkFallbackAdapterGate());
   gates.push(checkFallbackWiringGate());
+  gates.push(checkGrepPatternsRegisteredGate());
   return gates;
 }
 
