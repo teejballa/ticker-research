@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getMarketStatus } from '@/lib/market-status';
 import { credibleInterval95, posteriorMean } from '@/lib/learning';
+import { ensureLatestThesis } from '@/lib/engine-thesis';
 import { getCurrentWatchlist } from '@/lib/data/ticker-watchlist';
 import type { SentimentDimensions } from '@/lib/sentiment-dimensions';
 
@@ -220,11 +221,16 @@ export async function GET() {
     const drift_status: 'NORMAL' | 'WARNING' | 'ALERT' =
       worst_z > 2 ? 'ALERT' : worst_z > 1 ? 'WARNING' : 'NORMAL';
 
-    // ─── NEW: null_check (best p-value across active patterns) ───────────
-    const activePatterns = patterns.filter(p => p.status === 'ACTIVE' && p.brier_in_sample != null && p.brier_null != null);
+    // ─── null_check: best p-value across patterns with brier evidence ───
+    // Drops the status==='ACTIVE' gate — under the current Bayesian regime
+    // most cells live in EXPLORATORY for a long time but still produce
+    // meaningful brier evidence (real vs the marginal-rate null).
+    const allLearnedCellsForNull = await prisma.learnedPattern.findMany({
+      where: { brier_in_sample: { not: null }, brier_null: { not: null } },
+    });
     let null_check: { p_value: number; real_brier: number; null_brier: number } | null = null;
-    if (activePatterns.length > 0) {
-      const best = activePatterns.reduce((b, p) =>
+    if (allLearnedCellsForNull.length > 0) {
+      const best = allLearnedCellsForNull.reduce((b, p) =>
         (p.brier_in_sample ?? 1) < (b.brier_in_sample ?? 1) ? p : b
       );
       null_check = {
@@ -263,40 +269,17 @@ export async function GET() {
       };
     });
 
-    // ─── Pattern-library-derived thesis ───────────────────────────────────
-    // Replaces the previous diffusion-gap-only heuristic (which required
-    // diffusion_gap > 2 — a threshold the new StockTwits-mainstream signal
-    // rarely clears). Walks every learned cell across all 4 signal classes,
-    // ranks by sample-size-weighted posterior, and writes a thesis from the
-    // top-performing cell. This makes the thesis evolve as the engine learns.
-    const allCellsForThesis = await prisma.learnedPattern.findMany({
-      where: { sample_size: { gte: 3 } },
-    });
-    let thesisStatement: string;
-    let thesisTopCell: { signal: string; pattern: string; cap: string; horizon: number; mean: number; n: number; hits: number } | null = null;
-    if (allCellsForThesis.length === 0) {
-      thesisStatement = `Engine is observing — ${dataPoints.length} data points collected, ${resolved.length} resolved. Bayesian priors will form once any (signal × cap × horizon) cell reaches 3 outcomes.`;
-    } else {
-      const ranked = allCellsForThesis
-        .map(c => ({
-          c,
-          score: posteriorMean({ alpha: c.alpha, beta: c.beta }) * Math.log10(c.sample_size + 1),
-        }))
-        .sort((a, b) => b.score - a.score);
-      const top = ranked[0].c;
-      const mean = posteriorMean({ alpha: top.alpha, beta: top.beta });
-      thesisTopCell = {
-        signal: top.signal_class,
-        pattern: top.pattern_key,
-        cap: top.cap_class,
-        horizon: top.horizon_days,
-        mean,
-        n: top.sample_size,
-        hits: top.hits,
-      };
-      const direction = mean > 0.55 ? 'predictive of >1% excess vs SPY' : mean < 0.45 ? 'a contrarian signal (underperforms SPY)' : 'neutral';
-      thesisStatement = `The engine's strongest learned signal is ${top.signal_class}/${top.pattern_key} on ${top.cap_class} caps at ${top.horizon_days}d horizon: ${(mean * 100).toFixed(0)}% hit-rate over ${top.sample_size} outcomes — ${direction}. ${ranked.length} pattern cells active across all signal classes.`;
-    }
+    // ─── Family-aggregate thesis (Phase 19 close-out) ─────────────────────
+    // The thesis is an OVERVIEW across signal families (technical, sentiment,
+    // insider, institutional) — not the most recent learn cell. It's persisted
+    // and only re-stamped when a family's posterior moves materially, so the
+    // engine's stated view builds on itself instead of flipping every cycle.
+    const allCellsForThesis = await prisma.learnedPattern.findMany();
+    const thesisSnapshot = await ensureLatestThesis(prisma, allCellsForThesis);
+    const topFam = thesisSnapshot.top_family
+      ? thesisSnapshot.families.find(f => f.signal_class === thesisSnapshot.top_family) ?? null
+      : null;
+    const thesisPctFromFamily = topFam ? Math.round(topFam.mean * 100) : null;
 
     // ─── Engine changes feed: what the engine learned this week ───────────
     // Surfaces the actual posterior shifts (week_delta) per cell so users can
@@ -333,10 +316,23 @@ export async function GET() {
       watchlist_size: getCurrentWatchlist().length,
       resolved_outcomes: resolved.length,
       thesis: {
-        statement: thesisStatement,
-        high_gap_resolved: highGap.length,
-        pct: thesisPct,
-        top_cell: thesisTopCell,
+        statement: thesisSnapshot.narrative,
+        high_gap_resolved: thesisSnapshot.total_n,
+        pct: thesisPctFromFamily ?? thesisPct,
+        top_cell: topFam && topFam.top_pattern ? {
+          signal: topFam.signal_class,
+          pattern: topFam.top_pattern.pattern_key,
+          cap: topFam.top_pattern.cap_class,
+          horizon: topFam.top_pattern.horizon_days,
+          mean: topFam.top_pattern.mean,
+          n: topFam.top_pattern.n,
+          hits: Math.round(topFam.top_pattern.mean * topFam.top_pattern.n),
+        } : null,
+        families: thesisSnapshot.families,
+        top_family: thesisSnapshot.top_family,
+        recorded_at: thesisSnapshot.recorded_at,
+        total_cells: thesisSnapshot.total_cells,
+        total_n: thesisSnapshot.total_n,
       },
       engine_changes: engineChanges,
       diffusion_signals: diffusionSignals,

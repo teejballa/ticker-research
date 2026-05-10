@@ -19,6 +19,24 @@ interface InsightsData {
       n: number;
       hits: number;
     } | null;
+    families?: Array<{
+      signal_class: 'technical' | 'diffusion' | 'insider' | 'institutional';
+      label: string;
+      mean: number;
+      n: number;
+      cells: number;
+      top_pattern: {
+        pattern_key: string;
+        cap_class: string;
+        horizon_days: number;
+        mean: number;
+        n: number;
+      } | null;
+    }>;
+    top_family?: 'technical' | 'diffusion' | 'insider' | 'institutional' | null;
+    recorded_at?: string;
+    total_cells?: number;
+    total_n?: number;
   };
   engine_changes?: Array<{
     signal_class: string;
@@ -279,13 +297,7 @@ function humanizeHorizon(d: number): string {
   if (d <= 60) return 'two months';
   return 'three months';
 }
-type TopCell = NonNullable<InsightsData['thesis']['top_cell']>;
 type EngineChange = NonNullable<InsightsData['engine_changes']>[number];
-function buildPlainThesis(top: TopCell): string {
-  const pct = Math.round(top.mean * 100);
-  const verb = pct >= 60 ? 'beat the S&P' : pct >= 50 ? 'edge out the S&P' : 'lag the S&P';
-  return `When ${humanizePattern(top.pattern)}, ${humanizeCap(top.cap)} ${verb} about ${pct}% of the time over the next ${humanizeHorizon(top.horizon)}. The engine has watched this play out ${top.n} times.`;
-}
 function buildPlainChange(c: EngineChange): string {
   const isUp = c.delta > 0;
   const adverb = Math.abs(c.delta) >= 0.1 ? 'sharply' : 'gradually';
@@ -678,34 +690,65 @@ export function InsightsDashboard() {
 
       {/* ─────────────────────── Live Thesis ─────────────────────── */}
       <section className="mb-12 border border-outline-variant/30 bg-gradient-to-br from-primary-container/[0.08] to-transparent p-8 md:p-12">
-        <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-5">
-          What Cipher believes right now
+        <div className="flex items-baseline justify-between mb-5 gap-4 flex-wrap">
+          <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase">
+            What Cipher believes right now
+          </div>
+          {data.thesis.recorded_at && (
+            <div className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
+              Last revised · {new Date(data.thesis.recorded_at).toLocaleDateString()}
+            </div>
+          )}
         </div>
 
-        {data.thesis.top_cell ? (
-          <div className="grid md:grid-cols-[1fr_auto] gap-10 items-end">
+        {data.thesis.families && data.thesis.families.length > 0 ? (
+          <div className="grid md:grid-cols-[1fr_auto] gap-10 items-start">
             <div>
               <p className="text-on-surface text-2xl md:text-[1.7rem] leading-tight font-light tracking-tight">
-                {buildPlainThesis(data.thesis.top_cell)}
+                {data.thesis.statement}
               </p>
-              <p className="text-on-surface-variant text-sm mt-5 leading-relaxed max-w-2xl">
-                Built from <span className="text-on-surface font-medium tabular-nums">{data.resolved_outcomes}</span> resolved trades and refreshed every time a new outcome lands. No analyst picks the patterns — Cipher learns them by watching.
-              </p>
-              <div className="mt-6 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-                Strongest cell · {data.thesis.top_cell.signal} / {data.thesis.top_cell.pattern} × {data.thesis.top_cell.cap} @ {data.thesis.top_cell.horizon}d
+
+              <div className="mt-8 space-y-3">
+                {data.thesis.families.map(f => {
+                  const isTop = f.signal_class === data.thesis.top_family;
+                  const pct = Math.round(f.mean * 100);
+                  return (
+                    <div
+                      key={f.signal_class}
+                      className={`grid grid-cols-[1fr_auto_auto] gap-4 items-baseline py-3 border-b border-outline-variant/20 ${
+                        isTop ? 'text-on-surface' : 'text-on-surface-variant'
+                      }`}
+                    >
+                      <div className="text-sm md:text-base font-medium tracking-tight flex items-center gap-2">
+                        {isTop && <span className="text-primary text-[10px] font-mono tracking-[0.3em] uppercase">Lead</span>}
+                        {f.label}
+                      </div>
+                      <div className="font-mono tabular-nums text-2xl font-black text-on-surface">
+                        {pct}<span className="text-xs text-outline ml-0.5">%</span>
+                      </div>
+                      <div className="font-mono text-[11px] text-outline tabular-nums whitespace-nowrap">
+                        {f.n} trade{f.n === 1 ? '' : 's'} · {f.cells} cell{f.cells === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+
+              <p className="text-on-surface-variant text-sm mt-6 leading-relaxed max-w-2xl">
+                These percentages are sample-weighted across every learned pattern in each family. The thesis only revises when a family&apos;s posterior moves by 5+ percentage points on at least ten new outcomes — so it builds on itself instead of flipping every learn cycle.
+              </p>
             </div>
 
             <div className="border-l-0 md:border-l md:pl-10 border-outline-variant/30 self-stretch flex flex-col justify-end min-w-[180px]">
               <div className="text-[10px] tracking-[0.4em] text-outline font-mono uppercase mb-2">
-                Hit rate
+                Lead family
               </div>
-              <div className="font-mono text-6xl md:text-7xl font-black text-primary leading-none tabular-nums">
-                {Math.round(data.thesis.top_cell.mean * 100)}
+              <div className="font-mono text-5xl md:text-6xl font-black text-primary leading-none tabular-nums">
+                {data.thesis.pct !== null ? data.thesis.pct : '—'}
                 <span className="text-3xl text-outline ml-0.5">%</span>
               </div>
               <div className="text-xs text-on-surface-variant mt-3 font-mono">
-                {data.thesis.top_cell.hits} of {data.thesis.top_cell.n} trades
+                {data.thesis.total_n ?? 0} resolved · {data.thesis.total_cells ?? 0} cells
               </div>
             </div>
           </div>
