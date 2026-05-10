@@ -133,7 +133,7 @@ Plans:
 - [ ] 19-C-08: CoVe two-pass wrapper (Gemini draft → NLI verification)
 - [ ] 19-C-09: Model cascade router + cost telemetry (Haiku/Flash/Pro)
 - [ ] 19-C-10: Cross-class contradiction detector (NLI on class posteriors)
-- [ ] 19-C-11: Arctic Shift one-time historical Reddit backfill (training corpus)
+- [x] 19-C-11: Arctic Shift one-time historical Reddit backfill (training corpus)
 
 ---
 
