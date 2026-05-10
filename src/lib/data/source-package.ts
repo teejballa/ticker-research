@@ -35,6 +35,8 @@ import { ensembleSentiment } from '@/lib/sentiment/ensemble';
 // TwelveData + Yahoo + Finnhub + Polygon cover the same ground without it.
 import { fetchTwelveDataFundamentals } from '@/lib/data/adapters/twelve-data';
 import { fetchExaNews, fetchExaAnalystSentiment } from '@/lib/data/adapters/exa-search';
+// Post-Phase-19 P0 — free, structured Yahoo analyst module pair.
+import { fetchYahooAnalystSentiment } from '@/lib/data/yahoo-analyst';
 import type {
   SourcePackage,
   MarketDataSection,
@@ -312,6 +314,7 @@ async function buildSourcePackageNewLadder(
     polygonResult,
     exaNewsResult,
     exaAnalystResult,
+    yahooAnalystResult,
     anthroNewsResult,
     anthroAnalystResult,
     secResult,
@@ -325,6 +328,7 @@ async function buildSourcePackageNewLadder(
     fetchPolygon(ticker),
     fetchExaNews(ticker),
     fetchExaAnalystSentiment(ticker),
+    fetchYahooAnalystSentiment(ticker),
     fetchNews(ticker, securityType),
     fetchAnalystSentiment(ticker, securityType),
     fetchSecFilingSummary(ticker, securityType),
@@ -368,6 +372,7 @@ async function buildSourcePackageNewLadder(
   const twelveFunds = settleNullable(twelveFundsResult, 'twelvedata_fundamentals');
   const exaNews = settleNullable(exaNewsResult, 'exa_news');
   const exaAnalyst = settleNullable(exaAnalystResult, 'exa_analyst');
+  const yahooAnalyst = settleNullable(yahooAnalystResult, 'yahoo_analyst');
 
   // Field-level merge — first non-null wins. New ladder uses Yahoo as the
   // quote primary (Tiingo removed). Fundamentals route through TwelveData
@@ -431,8 +436,13 @@ async function buildSourcePackageNewLadder(
       { collected_at: new Date().toISOString(), items: [], error: 'news collection failed' },
       'news',
     );
+  // Analyst cascade (post-Phase-19 P0): exa → yahoo → anthropic-search.
+  // Yahoo's `recommendationTrend` + `upgradeDowngradeHistory` are free,
+  // structured, and require no API key — perfect mid-tier insurance for
+  // small-cap tickers Exa neural-search misses.
   const analyst_sentiment: AnalystSentimentSection =
     exaAnalyst ??
+    yahooAnalyst ??
     settle(
       anthroAnalystResult,
       {
