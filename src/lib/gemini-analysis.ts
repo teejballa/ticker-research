@@ -21,6 +21,11 @@ import { getEngineContextForTicker, type EngineContext } from '@/lib/engine-cont
 import { CitationsArraySchema, type Citation } from '@/lib/sentiment/citation-schema';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import { FEATURES, type FeatureMode } from '@/lib/features';
+// Phase 19-C-08 (D-40) — Chain-of-Verification two-pass.
+// runCoVe runs Pass 2 (NLI verification) on the 3 claims Gemini emits during
+// Pass 1. Activated behind FEATURE_COVE_TWO_PASS via runWithShadow; baseline
+// behavior is unchanged when the flag is off.
+import { runCoVe } from '@/lib/reasoning/cove';
 // Phase 19 / Plan 19-C-09 — model cascade router + cost telemetry (D-41).
 // Router decides which LLM to call based on engine context (controversy proxy,
 // ic_decay_flag, market_cap); cost telemetry persists per-call USD into the
@@ -113,6 +118,15 @@ export const AnalysisResultSchema = z.object({
   // `source_citation: string` on each bullish/bearish signal will be removed
   // and `citations_v2` becomes mandatory at the report level.
   citations_v2: CitationsArraySchema.optional(),
+
+  // Phase 19-C-08 (D-40) — Chain-of-Verification Pass-1 claims.
+  // Optional in the schema; populated when the CoVe prompt instruction is
+  // appended (FEATURE_COVE_TWO_PASS in shadow or on). Pass-2 (runCoVe) runs
+  // an NLI verifier on each claim against the SourcePackage. Min 0 / max 5
+  // (target 3) — Gemini occasionally emits 0 if no verifiable factual claim
+  // is appropriate, and we don't want a Zod failure to block the entire
+  // analysis on this enrichment.
+  verification_claims: z.array(z.string()).max(5).optional(),
 
   // Engine calibration block — Gemini contributes only the alignment/disagreement
   // strings (4 of them, post-Phase-16; 8 total post-Phase-17). All numeric fields
@@ -803,20 +817,94 @@ export async function runGeminiAnalysis(
       { ticker },
     );
 
-  // Phase 19-C-09 outer shadow gate (model-router). When FEATURE_MODEL_ROUTER
+  // Phase 19-C-09 middle shadow gate (model-router). When FEATURE_MODEL_ROUTER
   // is off (default), `baseline` runs unchanged (today's flash-only behavior,
   // wrapped by the citations-v2 shadow). When shadow, the routed path runs in
   // setImmediate via runWithShadow + persists a ShadowComparison row + writes
   // a LearningEvent (event_type='model_router_decision') with cost telemetry.
   // When on, the routed path is canonical.
   const routerMode = FEATURES.model_router_mode;
+  const routed = (): Promise<AnalysisResult> =>
+    runWithShadow<AnalysisResult>(
+      'model-router',
+      baseline,
+      () => geminiRouted(ticker, pkg, communityData),
+      routerMode,
+      { ticker },
+    );
+
+  // Phase 19-C-08 outer shadow gate (cove-two-pass). Per D-40, Pass 1 is
+  // already done inside `routed` (Gemini emits AnalysisResult + the optional
+  // `verification_claims` field — populated only when the upstream prompt
+  // requested it). Pass 2 — runCoVe — runs an NLI verifier over each claim
+  // against the SourcePackage and appends contradictions to source_warnings
+  // additively. The `cove_verified` field is the structured surface for
+  // shadow-verdict scoring; it is omitted on the OFF path so the shape stays
+  // identical to today's behavior.
+  //
+  // Cost gate (T-19-C-08-02 in plan threat model): the router (19-C-09) is
+  // expected to gate CoVe to high-stakes tickers in a follow-up wiring; for
+  // now this layer just gates on the feature flag mode.
+  const coveMode = FEATURES.cove_two_pass_mode;
   return runWithShadow<AnalysisResult>(
-    'model-router',
-    baseline,
-    () => geminiRouted(ticker, pkg, communityData),
-    routerMode,
+    'cove-two-pass',
+    routed,
+    () => runWithCove(ticker, pkg, routed),
+    coveMode,
     { ticker },
   );
+}
+
+/**
+ * Phase 19-C-08 (D-40): NEW path of the cove-two-pass shadow.
+ *
+ * 1. Runs the canonical analysis pipeline (Pass 1 — Gemini draft + Pass-1
+ *    verification_claims).
+ * 2. Calls runCoVe (Pass 2 — NLI verification) on the emitted claims against
+ *    the SourcePackage.
+ * 3. Returns an AnalysisResult with `cove_verified` populated and
+ *    `source_warnings` extended additively with the CoVe contradictions.
+ *
+ * Failures inside runCoVe are non-fatal — the shadow runner already swallows
+ * new-path errors, but we additionally guard at this layer so the analysis
+ * still ships even if the NLI endpoint is unreachable.
+ */
+async function runWithCove(
+  ticker: string,
+  pkg: SourcePackage,
+  pass1: () => Promise<AnalysisResult>,
+): Promise<AnalysisResult> {
+  const analysis = await pass1();
+
+  // If Pass 1 didn't emit any verification claims (off-prompt run, or Gemini
+  // chose not to populate the optional field), there's nothing to verify.
+  // Return the analysis as-is — but tag cove_verified=[] so callers can
+  // distinguish "ran with empty claims" from "off path".
+  const claims = analysis.verification_claims ?? [];
+  if (claims.length === 0) {
+    return { ...analysis, cove_verified: [] };
+  }
+
+  try {
+    const cove = await runCoVe({
+      analysisResult: analysis,
+      verificationClaims: claims,
+      sourcePackage: pkg,
+    });
+    return {
+      ...analysis,
+      source_warnings: [
+        ...(analysis.source_warnings ?? []),
+        ...cove.contradictions,
+      ],
+      cove_verified: cove.verified,
+    };
+  } catch (err) {
+    // Non-fatal — log and return the unverified analysis. Touch `ticker` so
+    // the symbol is included in the error trail.
+    console.error(`[gemini-analysis] CoVe pass-2 failed for ${ticker}:`, err);
+    return analysis;
+  }
 }
 
 /**
@@ -995,9 +1083,30 @@ async function generateAnalysis(
     communityData?.highlights ?? [],
     pkg.news.items ?? [],
   );
-  const userPrompt = useCitationsV2
-    ? renderCitationsSection(assembledCitations) + '\n' + baseUserPrompt
-    : baseUserPrompt;
+  // Phase 19-C-08 (D-40) — CoVe Pass-1 prompt instruction.
+  // When the cove-two-pass flag is shadow OR on, append a short instruction
+  // asking Gemini to ALSO emit `verification_claims: string[]` (3 short,
+  // checkable factual claims) so Pass 2 (runCoVe) can NLI-verify them
+  // against the SourcePackage. The instruction is additive and harmless
+  // when the flag is off (omitted entirely).
+  const coveModeInner = FEATURES.cove_two_pass_mode;
+  const coveSection =
+    coveModeInner !== 'off'
+      ? '\n=== CHAIN-OF-VERIFICATION (Pass 1) ===\n' +
+        'In addition to your structured analysis, emit a `verification_claims` ' +
+        'array of EXACTLY 3 short, factual, checkable claims drawn from your ' +
+        'analysis. Each claim must be a single sentence (≤30 words) that can ' +
+        'be verified directly against the research data above. Examples of ' +
+        'good claims: "Q1 revenue grew >10% YoY" or "Analyst consensus is ' +
+        'Buy with target of $X". Avoid speculative or directional claims ' +
+        'like "stock will outperform". These claims will be NLI-verified ' +
+        'against the SourcePackage as a hallucination check.\n'
+      : '';
+
+  const userPrompt =
+    (useCitationsV2 ? renderCitationsSection(assembledCitations) + '\n' : '') +
+    coveSection +
+    baseUserPrompt;
 
   // Fetch engine calibration context. Failures are non-fatal — the report
   // generates without an engine_calibration block (UI hides the panel).
@@ -1184,6 +1293,12 @@ async function generateAnalysis(
         : undefined,
       community_analysis: output.community_analysis || undefined,
       citations_v2,
+      // Phase 19-C-08 (D-40): Pass-1 verification claims surface forward
+      // through the result. runGeminiAnalysis's CoVe shadow layer reads this
+      // field to drive Pass-2 NLI verification. When the cove-two-pass flag
+      // is off, the field is still passed through (the LLM only emits it
+      // when prompted; under the off-prompt run it stays undefined).
+      verification_claims: output.verification_claims ?? undefined,
       engine_calibration,
     };
   } catch (err) {

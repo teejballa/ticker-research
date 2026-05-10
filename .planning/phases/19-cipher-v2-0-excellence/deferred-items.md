@@ -116,3 +116,27 @@ does not export that symbol.
 
 **Recommended fix:** Allow 19-C-03 to complete naturally; out of scope
 for 19-C-10.
+
+## 2026-05-08 — discovered during 19-C-08 execution (worktree agent-a40230e5)
+
+### 9. src/lib/gemini-analysis.ts pre-existing AI Gateway / model-slug issues flagged by Vercel plugin
+
+**Status:** Pre-existed 19-C-08. The PostToolUse Vercel plugin validator
+flags 4 issues that have been in tree since well before this plan:
+  - Line 12: direct `@anthropic-ai/sdk` import — required because Pool B
+    niche-discovery uses Anthropic-native `web_search_20250305` tool
+    which is not exposed via the Vercel AI Gateway. The file's own
+    header already documents this trade-off.
+  - Line 33: model slug `'claude-haiku-4.5'` uses hyphens. Pre-existing.
+  - Line 38: `new Anthropic()` direct construction (auto-reads
+    `ANTHROPIC_API_KEY` from process.env). Pre-existing.
+  - Line 671: another `'claude-haiku-4.5'` slug. Pre-existing.
+
+19-C-08's edit only added 5 import lines (`import { runCoVe }`) plus a
+runWithShadow wrap — none of which touch the flagged lines.
+
+**Recommended fix:** A future plan should either (a) move the niche
+discovery off `web_search_20250305` so the gateway can route Anthropic
+calls, or (b) accept the dual-stack and update the model slugs to dot-
+notation (e.g. `claude-haiku-4.5` → `claude-haiku-4-5` if the gateway
+canonical form mandates it). Out of scope for 19-C-08.
