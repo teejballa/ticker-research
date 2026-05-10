@@ -118,7 +118,7 @@ Plans:
 - [ ] 19-B-01: Upstash Redis client + cache-keys + TTL config (graceful degrade)
 - [ ] 19-B-02: Retry + exponential backoff wrapper (5xx + network only)
 - [ ] 19-B-03: Tiingo adapter (point-in-time fundamentals + EOD)
-- [ ] 19-B-04: Twelve Data adapter (fundamentals)
+- [x] 19-B-04: Twelve Data adapter (fundamentals) — completed 2026-05-09
 - [ ] 19-B-05: Exa 2.0 adapter + Anthropic-search fallback wiring
 - [ ] 19-B-06: source-package.ts merge precedence reorder + shadow A/B + cutover
 - [ ] 19-B-07: Vercel Runtime Cache integration (10min SourcePackage idempotency)
