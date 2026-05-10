@@ -438,11 +438,30 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
   const confidenceBlocks = Math.round(confidencePct / 10);
 
   const fs = s?.field_sources;
-  const sourceLabel = (origin: 'yahoo' | 'finnhub' | 'polygon' | 'edgar' | null | undefined): string | null => {
+  // Plan 19-B-06 (D-29): FieldOrigin union extended additively — accept the
+  // new ladder origins so this UI renders the correct provenance badge once
+  // the new ladder graduates past shadow.
+  const sourceLabel = (
+    origin:
+      | 'yahoo'
+      | 'finnhub'
+      | 'polygon'
+      | 'edgar'
+      | 'tiingo'
+      | 'twelvedata'
+      | 'exa'
+      | 'anthropic-search'
+      | null
+      | undefined,
+  ): string | null => {
     if (origin === 'finnhub') return 'via Finnhub';
     if (origin === 'polygon') return 'via Polygon';
     if (origin === 'yahoo')   return 'via Yahoo';
     if (origin === 'edgar')   return 'via EDGAR';
+    if (origin === 'tiingo')  return 'via Tiingo';
+    if (origin === 'twelvedata') return 'via Twelve Data';
+    if (origin === 'exa')     return 'via Exa';
+    if (origin === 'anthropic-search') return 'via Anthropic Search';
     return null;
   };
 
