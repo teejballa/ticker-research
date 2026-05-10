@@ -100,3 +100,19 @@ which has not yet been implemented.
 
 **Recommended fix:** Allow 19-C-04 to complete naturally; out of scope
 for 19-C-07.
+
+## 2026-05-08 — discovered during 19-C-10 execution (worktree agent-aaec78be)
+
+### 8. tests/lib/data/stocktwits.reputation.test.ts — `__resetReputationCacheForTests` not exported
+
+**Status:** Pre-existed 19-C-10 — confirmed via git stash on baseline.
+7 of 7 cases fail because the test imports a helper that the production
+module does not export. Belongs to sibling Plan 19-C-03 (RED tests
+landed, GREEN implementation pending).
+
+**Cause:** `tests/lib/data/stocktwits.reputation.test.ts:31` invokes
+`__resetReputationCacheForTests()` but `src/lib/data/stocktwits.ts`
+does not export that symbol.
+
+**Recommended fix:** Allow 19-C-03 to complete naturally; out of scope
+for 19-C-10.
