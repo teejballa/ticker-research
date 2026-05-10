@@ -4,6 +4,12 @@
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
 import { fetchStockTwitsSentiment } from './stocktwits';
+import {
+  fetchQuiverInsider,
+  fetchQuiverCongressional,
+  type QuiverInsiderData,
+  type QuiverCongressionalData,
+} from './adapters/quiver';
 import { computeSentimentDimensions, type SentimentDimensions } from '@/lib/sentiment-dimensions';
 import { classifyCapClass, type CapClass } from '@/lib/diffusion-trace';
 import type { CommunityHighlight } from '@/lib/types';
@@ -41,6 +47,17 @@ export interface EnrichedSnapshot extends SentimentDimensions {
   }>;
   market_cap: number | null;
   cap_class: CapClass;
+  /**
+   * Plan 19-C-06 (D-38) — Quiver Hobbyist insider trades.
+   * `null` when QUIVER_API_KEY is unset (opt-in default) or upstream fails.
+   * Populated additively into SentimentSnapshot.community_aggregated JSONB.
+   */
+  quiver_insider: QuiverInsiderData | null;
+  /**
+   * Plan 19-C-06 (D-38) — Quiver Hobbyist congressional trades.
+   * Same null semantics as quiver_insider.
+   */
+  quiver_congressional: QuiverCongressionalData | null;
 }
 
 export async function lightweightCommunityScan(ticker: string): Promise<EnrichedSnapshot | null> {
@@ -49,13 +66,32 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
   const upper = ticker.toUpperCase();
 
-  const [mainstreamMd, middleMd, nicheMd, stocktwitsResult, marketCap] = await Promise.all([
+  // Plan 19-C-06 (D-38): Quiver insider/congressional are additive supplemental
+  // sources. They no-op (return null) when QUIVER_API_KEY is unset, so wiring
+  // them into the parallel fan-out is safe by default — no flag, no shadow.
+  // Promise.allSettled isolates them: an upstream Quiver failure cannot crash
+  // the primary Firecrawl/StockTwits path.
+  const [
+    mainstreamMd,
+    middleMd,
+    nicheMd,
+    stocktwitsResult,
+    marketCap,
+    quiverInsiderRes,
+    quiverCongressRes,
+  ] = await Promise.all([
     scrapeOne(fc, `https://www.reddit.com/r/wallstreetbets/search/?q=${upper}&sort=new&t=week`),
     scrapeOne(fc, `https://www.reddit.com/r/investing/search/?q=${upper}&sort=new&t=week`),
     scrapeOne(fc, `https://www.reddit.com/r/${upper}/new/`),
     fetchStockTwitsSentiment(upper),
     yf.quote(upper).then(q => q.marketCap ?? null).catch(() => null),
+    // Both Quiver fetchers already return null on any failure; wrap defensively
+    // so any unexpected throw still degrades to null without breaking the scan.
+    fetchQuiverInsider(upper).catch(() => null),
+    fetchQuiverCongressional(upper).catch(() => null),
   ]);
+  const quiver_insider = quiverInsiderRes;
+  const quiver_congressional = quiverCongressRes;
 
   const highlights: CommunityHighlight[] = [];
   const enrichedHighlights: EnrichedSnapshot['highlights'] = [];
@@ -104,5 +140,7 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     highlights: enrichedHighlights,
     market_cap: marketCap,
     cap_class: classifyCapClass(marketCap),
+    quiver_insider,
+    quiver_congressional,
   };
 }
