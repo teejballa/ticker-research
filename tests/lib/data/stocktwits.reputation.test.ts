@@ -115,11 +115,11 @@ describe('reputationWeight (Plan 19-C-03)', () => {
 describe('getUserReputation cache (Plan 19-C-03 / T-19-C-03-02)', () => {
   // ── Test 6: cache hit on second call within 24h ───────────────────────
   it('cache hit on second call for same user within 24h (fetcher called once)', async () => {
-    const fetcher = vi.fn<[number], Promise<StocktwitsUserSnapshot>>().mockResolvedValue({
+    const fetcher = vi.fn(async (_userId: number): Promise<StocktwitsUserSnapshot> => ({
       id: 42,
       followers: 1_000,
       post_count: 500,
-    });
+    }));
 
     const a = await getUserReputation(42, fetcher);
     const b = await getUserReputation(42, fetcher);
@@ -131,11 +131,11 @@ describe('getUserReputation cache (Plan 19-C-03 / T-19-C-03-02)', () => {
   // ── Test 7: cache miss after 24h TTL ───────────────────────────────────
   it('cache miss after 24h TTL — fetcher called twice', async () => {
     vi.useFakeTimers();
-    const fetcher = vi.fn<[number], Promise<StocktwitsUserSnapshot>>().mockResolvedValue({
+    const fetcher = vi.fn(async (_userId: number): Promise<StocktwitsUserSnapshot> => ({
       id: 42,
       followers: 1_000,
       post_count: 500,
-    });
+    }));
 
     await getUserReputation(42, fetcher);
     // Advance 24h + 1 second.
