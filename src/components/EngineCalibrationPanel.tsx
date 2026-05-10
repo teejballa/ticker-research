@@ -51,6 +51,11 @@ interface EngineCalibrationESSExtensions {
   // Phase 19-A-03 (D-19) — Vovk-Romano conformal CI (additive alongside Bayesian)
   conformal_low?: number | null;
   conformal_high?: number | null;
+  // Phase 19-C-10 (D-42) — Cross-class contradiction warnings.
+  // DETECTION-ONLY mode per D-42 — warnings are informational; report output is NOT gated by them.
+  // Upgrading to gating mode requires a separate plan and explicit decision.
+  // Optional + back-compat with old persisted reports that lack the field.
+  contradiction_warnings?: string[];
 }
 
 type EngineCalibrationWithESS = Omit<
@@ -905,6 +910,10 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
     institutional_disagreement,
     insider_alignment,
     insider_disagreement,
+    // Phase 19-C-10 (D-42) — Cross-class contradiction warnings.
+    // DETECTION-ONLY mode per D-42 — warnings are informational; report output is NOT gated by them.
+    // Upgrading to gating mode requires a separate plan and explicit decision.
+    contradiction_warnings,
   } = calibration;
 
   // Phase 17 gate: quad-class layout requires populated horizon_calibrations.
@@ -979,6 +988,33 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
         insiderDisagreement={insider_disagreement}
         agreement={agreementState}
       />
+
+      {/* Phase 19-C-10 (D-42) — Cross-class contradiction warnings.
+          DETECTION-ONLY mode per D-42 — warnings are informational; report output is NOT
+          gated by them. Upgrading to gating mode requires a separate plan and explicit
+          decision. Renders only when the detector flag is on/shadow AND severity threshold
+          is exceeded. Old persisted reports without the field render nothing (graceful
+          back-compat). */}
+      {contradiction_warnings && contradiction_warnings.length > 0 && (
+        <div
+          data-testid="contradiction-warnings"
+          className="mt-4 bg-error/5 border-error/40 border-l-2 p-4 rounded-r"
+          title="DETECTION-ONLY: cross-class contradiction warnings are informational. The report output (recommendation, sentiment, signals) is NOT gated by these warnings — they are surfaced for user awareness only."
+        >
+          <h4 className="text-[10px] font-bold tracking-widest uppercase text-error mb-2 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm" aria-hidden="true">warning</span>
+            Cross-class warnings
+          </h4>
+          <ul className="text-xs text-on-surface-variant leading-relaxed list-disc pl-5 space-y-1">
+            {contradiction_warnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[10px] text-on-surface-variant tracking-wide leading-relaxed italic">
+            Detection-only — these warnings are informational and do not change the report&apos;s recommendation.
+          </p>
+        </div>
+      )}
 
       {/* Footer note — verbatim per UI-SPEC (both phases) */}
       <p className="mt-4 text-[10px] text-on-surface-variant tracking-wide leading-relaxed">
