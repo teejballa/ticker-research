@@ -339,20 +339,32 @@ function friendlyFamilyLabel(sc: string): string {
   return FRIENDLY_FAMILY_LABEL[sc] ?? sc;
 }
 
-function buildOverviewHeadline(top: ThesisFamily | null, families: ThesisFamily[]): string {
-  if (!top) {
-    return 'Cipher is still gathering enough graded predictions to call a winner. Check back as the engine records more outcomes.';
+function buildOverviewHeadline(top: ThesisFamily | null): string {
+  if (!top || !top.top_pattern) {
+    return 'Cipher is still gathering enough graded predictions to surface a strongest learned link. Check back as the engine records more outcomes.';
   }
-  const topPct = Math.round(top.mean * 100);
-  const topName = friendlyFamilyLabel(top.signal_class).toLowerCase();
-  let verdict: string;
-  if (topPct >= 58) verdict = 'reliably beat the S&P 500';
-  else if (topPct >= 52) verdict = 'slightly edged out the S&P 500';
-  else if (topPct >= 48) verdict = 'roughly matched the S&P 500';
-  else if (topPct >= 42) verdict = 'tended to trail the S&P 500';
-  else verdict = 'consistently lagged the S&P 500';
-  const totalN = families.reduce((s, f) => s + f.n, 0);
-  return `After watching ${totalN.toLocaleString()} predictions play out, the strongest signal Cipher has found is ${topName} — those calls have ${verdict} about ${topPct}% of the time.`;
+  const tp = top.top_pattern;
+  const pct = Math.round(tp.mean * 100);
+  const pattern = humanizePattern(tp.pattern_key);
+  const cap = humanizeCap(tp.cap_class);
+  const horizon = humanizeHorizon(tp.horizon_days);
+  let strength: string;
+  if (pct >= 60) strength = 'strongly tended to follow through';
+  else if (pct >= 53) strength = 'usually followed through';
+  else if (pct >= 47) strength = 'has been a coin flip';
+  else if (pct >= 40) strength = 'usually faded';
+  else strength = 'strongly tended to fade';
+  return `The strongest link Cipher has learned so far: when ${pattern}, ${cap} have ${strength} over the next ${horizon} — about ${pct}% of the time across ${tp.n} graded call${tp.n === 1 ? '' : 's'}.`;
+}
+
+function buildFamilySublabel(f: ThesisFamily): string {
+  if (!f.top_pattern) return 'Still gathering outcomes';
+  const tp = f.top_pattern;
+  const pattern = humanizePattern(tp.pattern_key);
+  const cap = humanizeCap(tp.cap_class);
+  const horizon = humanizeHorizon(tp.horizon_days);
+  const pct = Math.round(tp.mean * 100);
+  return `Strongest: when ${pattern}, ${cap} moved as expected ${pct}% of the time over ${horizon} (${tp.n} call${tp.n === 1 ? '' : 's'}).`;
 }
 function buildPlainChange(c: EngineChange): string {
   const isUp = c.delta > 0;
@@ -684,7 +696,7 @@ export function InsightsDashboard() {
       {activeTab === 'overview' && (() => {
         const families = data.thesis.families ?? [];
         const topFam = families.find(f => f.signal_class === data.thesis.top_family) ?? null;
-        const headline = buildOverviewHeadline(topFam, families);
+        const headline = buildOverviewHeadline(topFam);
         return <>
           {/* Plain-English intro — the page leads with what this thing actually is */}
           <section className="mb-12 max-w-3xl">
@@ -692,7 +704,7 @@ export function InsightsDashboard() {
               What Cipher has learned so far
             </h1>
             <p className="text-on-surface-variant text-base md:text-lg leading-relaxed">
-              Cipher is a research engine that watches the stock market and grades its own predictions. Every time it scores a ticker, it later checks whether the call was right. The numbers below come from those real, recorded outcomes — not anyone&apos;s opinion.
+              Cipher watches specific kinds of activity around a stock — chart patterns, online community chatter, insider trades, and big-fund flows — and then records what the price actually did afterwards. The numbers below describe the links it has found between those signals and how the stock moved, learned from real recorded outcomes.
             </p>
           </section>
 
@@ -714,7 +726,7 @@ export function InsightsDashboard() {
               accent="default"
             />
             <Stat
-              label="Best signal hit rate"
+              label="Top signal follow-through"
               value={data.thesis.pct !== null ? `${data.thesis.pct}%` : '—'}
               sublabel={topFam ? `${friendlyFamilyLabel(topFam.signal_class)} · ${topFam.n} calls` : 'Still gathering'}
               accent={data.thesis.pct !== null ? 'tertiary' : 'default'}
@@ -739,36 +751,39 @@ export function InsightsDashboard() {
                   {headline}
                 </p>
 
-                <div className="mt-8 grid sm:grid-cols-2 gap-x-8 gap-y-3 max-w-3xl">
+                <div className="mt-10 space-y-4 max-w-3xl">
                   {families.map(f => {
                     const isTop = f.signal_class === data.thesis.top_family;
                     const pct = Math.round(f.mean * 100);
                     return (
                       <div
                         key={f.signal_class}
-                        className={`flex items-baseline justify-between py-3 border-b border-outline-variant/20 ${
-                          isTop ? 'text-on-surface' : 'text-on-surface-variant'
-                        }`}
+                        className={`border-l-2 ${isTop ? 'border-primary' : 'border-outline-variant/40'} pl-5 py-1`}
                       >
-                        <div className="text-sm md:text-base font-medium tracking-tight flex items-center gap-2">
-                          {isTop && <span className="text-primary text-[10px] font-mono tracking-[0.3em] uppercase">Top</span>}
-                          {friendlyFamilyLabel(f.signal_class)}
-                        </div>
-                        <div className="flex items-baseline gap-3">
-                          <div className="font-mono tabular-nums text-xl font-black text-on-surface">
-                            {pct}<span className="text-xs text-outline ml-0.5">%</span>
+                        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+                          <div className="text-base md:text-lg font-bold tracking-tight text-on-surface flex items-center gap-2">
+                            {isTop && <span className="text-primary text-[10px] font-mono tracking-[0.3em] uppercase">Top link</span>}
+                            {friendlyFamilyLabel(f.signal_class)}
                           </div>
-                          <div className="font-mono text-[10px] text-outline tabular-nums whitespace-nowrap">
-                            {f.n} call{f.n === 1 ? '' : 's'}
+                          <div className="flex items-baseline gap-3">
+                            <div className="font-mono tabular-nums text-xl font-black text-on-surface">
+                              {pct}<span className="text-xs text-outline ml-0.5">%</span>
+                            </div>
+                            <div className="font-mono text-[10px] text-outline tabular-nums whitespace-nowrap">
+                              {f.n} call{f.n === 1 ? '' : 's'}
+                            </div>
                           </div>
                         </div>
+                        <p className="text-on-surface-variant text-sm mt-1.5 leading-snug">
+                          {buildFamilySublabel(f)}
+                        </p>
                       </div>
                     );
                   })}
                 </div>
 
-                <p className="text-on-surface-variant text-sm mt-6 leading-relaxed max-w-2xl">
-                  Each percentage is how often that kind of signal beat the S&amp;P 500 over the next week. Cipher only updates this view when the numbers really move — so what you&apos;re reading reflects a settled judgement, not a single noisy day.
+                <p className="text-on-surface-variant text-sm mt-8 leading-relaxed max-w-2xl">
+                  Each percentage is how often the stock&apos;s price followed through in the expected direction after the signal — not a market-wide benchmark. Cipher only updates this view when the underlying data shifts meaningfully, so what you&apos;re reading reflects a settled view, not the last noisy day.
                 </p>
               </>
             ) : (
