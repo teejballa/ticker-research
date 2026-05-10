@@ -133,7 +133,7 @@ Plans:
 - [ ] 19-C-08: CoVe two-pass wrapper (Gemini draft → NLI verification)
 - [x] 19-C-09: Model cascade router + cost telemetry (Haiku/Flash/Pro) (completed 2026-05-10; routeModel + estimateCost pure functions; geminiRouted wrapped via runWithShadow('model-router', ...) in runGeminiAnalysis; cost telemetry persisted into existing LearningEvent table — zero schema changes; 8/8 unit tests GREEN; flag-off cutover deferred to operator)
 - [ ] 19-C-10: Cross-class contradiction detector (NLI on class posteriors)
-- [ ] 19-C-11: Arctic Shift one-time historical Reddit backfill (training corpus)
+- [x] 19-C-11: Arctic Shift one-time historical Reddit backfill (training corpus)
 
 ---
 
