@@ -380,8 +380,82 @@ export function summarize(gates: Gate[]): { exit: 0 | 1 | 2; status: GateStatus 
 
 // ─── CLI ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Build the canonical 19-B-08 composite verdict object that gets written to
+ * shadow-reports/19-B-08.json. Schema matches the plan's Task 4 contract:
+ *
+ *   {
+ *     plan_id: "19-B-08",
+ *     verdict: { result: "PASS|FAIL|PENDING", reasons: [...] },
+ *     composite_metrics: { ... },
+ *     child_plans: ["19-B-06", "19-B-07"],
+ *     fallback_adapters_preserved: ["yahoo.ts", "finnhub.ts", "polygon.ts",
+ *                                   "anthropic-search.ts"],
+ *     timestamp: "<iso>"
+ *   }
+ *
+ * Exported so vitest can assert against it without spawning the CLI.
+ */
+export function buildCompositeVerdictReport() {
+  const b06 = readChildVerdict('19-B-06');
+  const b07 = readChildVerdict('19-B-07');
+  const composite = computeCompositeMetrics(b06, b07);
+  const compositeScore = scoreComposite(composite);
+  const fallbacks = checkFallbackAdapterGate();
+  const fallbackAdaptersPreserved = fallbacks
+    .filter((g) => g.status === 'GREEN')
+    .map((g) => `${g.name.replace(/^fallback-/, '')}.ts`);
+
+  return {
+    plan_id: '19-B-08' as const,
+    verdict: { result: compositeScore.result, reasons: compositeScore.reasons },
+    composite_metrics: composite,
+    child_plans: ['19-B-06', '19-B-07'] as const,
+    fallback_adapters_preserved: fallbackAdaptersPreserved,
+    child_verdicts: {
+      '19-B-06': b06 === null ? 'pending' : (b06.verdict ?? 'unknown'),
+      '19-B-07': b07 === null ? 'pending' : (b07.verdict ?? 'unknown'),
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Write the composite verdict to shadow-reports/19-B-08.json. Returns the
+ * report object so callers (tests / CLI) can inspect the same payload that
+ * was persisted.
+ */
+export function writeCompositeVerdictReport(): ReturnType<typeof buildCompositeVerdictReport> {
+  const report = buildCompositeVerdictReport();
+  // Reuse the constant rather than re-resolving — same behavior as
+  // shadow-verdict.ts mkdirSync('shadow-reports', { recursive: true }).
+  const fs = require('node:fs') as typeof import('node:fs');
+  fs.mkdirSync(SHADOW_REPORTS_DIR, { recursive: true });
+  fs.writeFileSync(
+    path.join(SHADOW_REPORTS_DIR, '19-B-08.json'),
+    JSON.stringify(report, null, 2) + '\n',
+  );
+  return report;
+}
+
 function main() {
-  const json = process.argv.includes('--json');
+  const args = process.argv.slice(2);
+  const json = args.includes('--json');
+  const writeMode = args.includes('--write');
+
+  if (writeMode) {
+    const report = writeCompositeVerdictReport();
+    if (json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(`Wrote shadow-reports/19-B-08.json — verdict=${report.verdict.result}`);
+      for (const r of report.verdict.reasons) console.log(`  - ${r}`);
+    }
+    // Exit code: 0 PASS, 1 FAIL, 2 PENDING (mirrors gate summary contract).
+    const exit = report.verdict.result === 'PASS' ? 0 : report.verdict.result === 'FAIL' ? 1 : 2;
+    process.exit(exit);
+  }
+
   const gates = collectGates();
   const b06 = readChildVerdict('19-B-06');
   const b07 = readChildVerdict('19-B-07');

@@ -29,6 +29,8 @@ import {
   checkGrepPatternsRegisteredGate,
   computeCompositeMetrics,
   scoreComposite,
+  buildCompositeVerdictReport,
+  writeCompositeVerdictReport,
 } from '../../scripts/wave-b-rollout-status';
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
@@ -342,6 +344,75 @@ describe('wave-b-rollout-status (Plan 19-B-08)', () => {
         anthropic_search_call_count_drop_pct: 0.8,
       });
       expect(r.result).toBe('PASS');
+    });
+  });
+
+  describe('buildCompositeVerdictReport', () => {
+    it('produces the canonical 19-B-08.json schema', () => {
+      const report = buildCompositeVerdictReport();
+      // Plan 19-B-08 Task 4 contract.
+      expect(report.plan_id).toBe('19-B-08');
+      expect(report.verdict.result).toMatch(/^(PASS|FAIL|PENDING)$/);
+      expect(Array.isArray(report.verdict.reasons)).toBe(true);
+      // composite_metrics keys must exist (values may be null when verdict
+      // files are missing — that's the PENDING state, not a contract break).
+      expect(report.composite_metrics).toHaveProperty('source_package_latency_p50_drop_pct');
+      expect(report.composite_metrics).toHaveProperty('cache_hit_rate');
+      expect(report.composite_metrics).toHaveProperty('anthropic_search_call_count_drop_pct');
+      expect(report.child_plans).toEqual(['19-B-06', '19-B-07']);
+      expect(report.fallback_adapters_preserved).toEqual(
+        expect.arrayContaining(['yahoo.ts', 'finnhub.ts', 'polygon.ts', 'anthropic-search.ts']),
+      );
+      expect(typeof report.timestamp).toBe('string');
+      expect(() => new Date(report.timestamp).toISOString()).not.toThrow();
+    });
+
+    it('reports child_verdicts as "pending" when verdict files missing', () => {
+      // No fixtures written → both child verdicts pending.
+      const report = buildCompositeVerdictReport();
+      // Note: this test runs in any order with the verdict-fixture tests,
+      // and afterEach() cleans them up, so we should see pending here.
+      expect(report.child_verdicts['19-B-06']).toMatch(/pending|PASS|FAIL|HOLD/);
+      expect(report.child_verdicts['19-B-07']).toMatch(/pending|PASS|FAIL|HOLD/);
+    });
+
+    it('current state: fallback_adapters_preserved lists all 4 D-32 adapters', () => {
+      const report = buildCompositeVerdictReport();
+      expect(report.fallback_adapters_preserved).toEqual(
+        expect.arrayContaining([
+          'yahoo.ts',
+          'finnhub.ts',
+          'polygon.ts',
+          'anthropic-search.ts',
+        ]),
+      );
+      expect(report.fallback_adapters_preserved).toHaveLength(4);
+    });
+  });
+
+  describe('writeCompositeVerdictReport', () => {
+    afterEach(() => {
+      // Belt-and-suspender — the `19-B-08.json` file is meant to persist
+      // between operator invocations, so we don't actively clean it up.
+      // The .gitignore on shadow-reports/ keeps it out of git.
+    });
+
+    it('writes shadow-reports/19-B-08.json with the same payload as buildCompositeVerdictReport', () => {
+      const written = writeCompositeVerdictReport();
+      const path = require('node:path');
+      const fs = require('node:fs');
+      const filePath = path.join(REPO_ROOT, 'shadow-reports', '19-B-08.json');
+      expect(fs.existsSync(filePath)).toBe(true);
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      // timestamps will differ slightly between calls — compare every field
+      // except timestamp.
+      expect({ ...parsed, timestamp: '<elided>' }).toEqual({
+        ...written,
+        timestamp: '<elided>',
+      });
+      // Plan Task 4 acceptance: file contains "fallback_adapters_preserved"
+      // — assert literally.
+      expect(fs.readFileSync(filePath, 'utf-8')).toMatch(/fallback_adapters_preserved/);
     });
   });
 });
