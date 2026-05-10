@@ -1,8 +1,14 @@
 // src/lib/research-brief.ts
 // Formats a SourcePackage into structured text and a URL list for the Gemini analysis prompt.
 // Consumed by src/lib/gemini-analysis.ts.
+//
+// Phase 19 / Plan 19-C-07 (D-39): also assembles structured Citation objects
+// from the SourcePackage and renders them into a CITATIONS section. The LLM
+// SELECTS citations from this list — it never fabricates URLs (T-19-C-07-01).
 
-import type { SourcePackage } from './types';
+import type { SourcePackage, NewsItem, AnalystChange } from './types';
+import type { Citation } from './sentiment/citation-schema';
+import { sanitizeUrl } from './sentiment/citation-schema';
 
 // ---- Helpers ----
 
@@ -190,4 +196,156 @@ export function extractNewsUrls(pkg: SourcePackage): string[] {
   }
 
   return result;
+}
+
+// ─── Phase 19-C-07 — structured citations (D-39) ─────────────────────────────
+
+function safeIso(date: string | null | undefined, fallback: string): string {
+  // Coerce to ISO 8601 datetime. Many SourcePackage date fields are date-only
+  // (e.g. "2026-04-15") — append time so it satisfies z.string().datetime().
+  if (!date || typeof date !== 'string' || date.trim() === '') return fallback;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(date)) {
+    // already datetime-like; trust it but normalize trailing zone
+    return date.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(date) ? date : `${date}Z`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return `${date}T00:00:00Z`;
+  }
+  // Unparseable — fall back so we never emit invalid citations
+  return fallback;
+}
+
+function safeUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string' || url.trim() === '') return null;
+  try {
+    // Round-trip through URL constructor to catch malformed strings before
+    // Zod does. Sanitization (strip user:pass@) is applied here AND again
+    // by CitationSchema.url.transform — defense in depth.
+    return sanitizeUrl(new URL(url).toString());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Assemble a flat array of Citation objects from a SourcePackage. The LLM is
+ * shown this exact list in the prompt's CITATIONS section and must SELECT
+ * which citations support each thesis claim by including them in
+ * `citations_v2` on the AnalysisResult — it MAY NOT fabricate new URLs
+ * (T-19-C-07-01 mitigation).
+ *
+ * Confidence policy:
+ *   - news / sec_filing / analyst with verified URL → 0.85
+ *   - analyst recent_changes (analyst+firm only, no per-row URL) → 0.5 with
+ *     null URL — these are surfaced under source: 'other' so the schema's
+ *     analyst-URL-mandatory rule isn't triggered for unsourced rows.
+ *   - social signals (e.g. StockTwits aggregate) → 0.4
+ */
+export function assembleCitationsFromPackage(pkg: SourcePackage): Citation[] {
+  const fallbackTs = pkg.assembled_at && /^\d{4}-\d{2}-\d{2}T/.test(pkg.assembled_at)
+    ? safeIso(pkg.assembled_at, new Date().toISOString())
+    : new Date().toISOString();
+
+  const out: Citation[] = [];
+  const seenUrls = new Set<string>();
+
+  // News articles → source: 'news' (URL mandatory; we only emit when present).
+  for (const item of (pkg.news.items ?? []) as NewsItem[]) {
+    const url = safeUrl(item.url);
+    if (!url) continue; // skip — schema would reject without URL
+    if (seenUrls.has(url)) continue;
+    seenUrls.add(url);
+    out.push({
+      source: 'news',
+      url,
+      confidence: 0.85,
+      date_retrieved: safeIso(item.published_date, fallbackTs),
+    });
+  }
+
+  // SEC filings → source: 'sec_filing'. Schema does NOT require URL here, but
+  // we attempt to emit one when the SourcePackage carries it. The current
+  // SecFilingSummarySection only carries date strings; emit with null URL.
+  if (pkg.sec_filing_summary.most_recent_10k) {
+    out.push({
+      source: 'sec_filing',
+      url: null,
+      confidence: 0.7,
+      date_retrieved: safeIso(pkg.sec_filing_summary.most_recent_10k, fallbackTs),
+    });
+  }
+  if (pkg.sec_filing_summary.most_recent_10q) {
+    out.push({
+      source: 'sec_filing',
+      url: null,
+      confidence: 0.7,
+      date_retrieved: safeIso(pkg.sec_filing_summary.most_recent_10q, fallbackTs),
+    });
+  }
+
+  // Analyst changes → schema requires URL for source: 'analyst'. The current
+  // AnalystChange shape has no per-row URL, so we emit these under 'other'
+  // (which has no mandatory-URL rule) to preserve the evidence without
+  // tripping Zod. When a future fetcher adds URLs to recent_changes, switch
+  // these emissions to source: 'analyst'.
+  for (const change of (pkg.analyst_sentiment.recent_changes ?? []) as AnalystChange[]) {
+    out.push({
+      source: 'other',
+      url: null,
+      confidence: 0.5,
+      date_retrieved: safeIso(change.date, fallbackTs),
+    });
+  }
+
+  // StockTwits / put-call aggregate → source: 'social'. URL optional (no
+  // single per-message URL surfaces from the StockTwits aggregate).
+  const si = pkg.sentiment_intelligence;
+  if (si && (si.stocktwits_message_count ?? 0) > 0) {
+    out.push({
+      source: 'social',
+      url: null,
+      confidence: 0.4,
+      date_retrieved: fallbackTs,
+    });
+  }
+
+  // Price/market data — single row per package, no URL.
+  out.push({
+    source: 'price_data',
+    url: null,
+    confidence: 0.95,
+    date_retrieved: fallbackTs,
+  });
+
+  return out;
+}
+
+/**
+ * Render the CITATIONS section the LLM sees in its user prompt. The text is
+ * deliberately concrete: "Available citations: [...]" + an instruction to
+ * RETURN the subset that supports each thesis claim in `citations_v2`. This
+ * is the prompt-side half of the T-19-C-07-01 mitigation (the schema-side
+ * half is the structured `Citation` validator).
+ *
+ * Returns '' when no citations were assembled (caller can skip the section).
+ */
+export function renderCitationsSection(citations: Citation[]): string {
+  if (citations.length === 0) return '';
+  const lines: string[] = [];
+  lines.push('=== CITATIONS ===');
+  lines.push(
+    `Available citations (${citations.length}). You MUST select WHICH of these support each claim by populating citations_v2 on your output. DO NOT invent URLs that are not in this list.`,
+  );
+  lines.push('');
+  // Compact JSON payload — keeps the section short while preserving every
+  // structured field the schema validates against.
+  const payload = citations.map((c) => ({
+    source: c.source,
+    url: c.url,
+    confidence: c.confidence,
+    date_retrieved: c.date_retrieved,
+  }));
+  lines.push(JSON.stringify(payload, null, 2));
+  lines.push('');
+  return lines.join('\n');
 }
