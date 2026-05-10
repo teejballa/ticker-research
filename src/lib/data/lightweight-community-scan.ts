@@ -1,6 +1,16 @@
 // src/lib/data/lightweight-community-scan.ts
-// Lightweight 3-source community scan: no Gemini, no Haiku.
-// Cost: ~3 Firecrawl credits + 1 StockTwits call per ticker.
+// Lightweight community scan: no Gemini, no Haiku.
+//
+// Plan 19-C-05 absorbs D-44 — subreddit expansion via Firecrawl. Coverage now
+// spans four mainstream + analytical subs:
+//   r/wallstreetbets   — retail momentum (mainstream)
+//   r/stocks           — general retail (mainstream, replaces r/investing)
+//   r/SecurityAnalysis — value / fundamentals niche (middle)
+//   r/algotrading      — quant / systematic niche (middle)
+// plus the per-ticker niche sub r/<TICKER>. All five via Firecrawl — no new
+// adapter needed (D-44 spec).
+//
+// Cost: ~5 Firecrawl credits + 1 StockTwits call per ticker (was 3 + 1 pre-D-44).
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
 import { fetchStockTwitsSentiment } from './stocktwits';
@@ -10,6 +20,11 @@ import {
   type QuiverInsiderData,
   type QuiverCongressionalData,
 } from './adapters/quiver';
+import { fetchSwaggyStocks } from './adapters/swaggystocks';
+import { fetchApeWisdom } from './adapters/apewisdom';
+import type { CommunitySignal } from './adapters/apewisdom';
+import { runWithShadow } from '@/lib/shadow/shadow-runner';
+import { FEATURES } from '@/lib/features';
 import { computeSentimentDimensions, type SentimentDimensions } from '@/lib/sentiment-dimensions';
 import { classifyCapClass, type CapClass } from '@/lib/diffusion-trace';
 import type { CommunityHighlight } from '@/lib/types';
@@ -66,14 +81,16 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
   const upper = ticker.toUpperCase();
 
+  // D-44 absorbed (19-C-05): 4-subreddit Firecrawl expansion (wsb + stocks +
+  // secanalysis + algotrading) + per-ticker niche sub. All five via Firecrawl.
   // Plan 19-C-06 (D-38): Quiver insider/congressional are additive supplemental
   // sources. They no-op (return null) when QUIVER_API_KEY is unset, so wiring
   // them into the parallel fan-out is safe by default — no flag, no shadow.
-  // Promise.allSettled isolates them: an upstream Quiver failure cannot crash
-  // the primary Firecrawl/StockTwits path.
   const [
-    mainstreamMd,
-    middleMd,
+    wsbMd,
+    stocksMd,
+    secanalysisMd,
+    algoMd,
     nicheMd,
     stocktwitsResult,
     marketCap,
@@ -81,7 +98,9 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     quiverCongressRes,
   ] = await Promise.all([
     scrapeOne(fc, `https://www.reddit.com/r/wallstreetbets/search/?q=${upper}&sort=new&t=week`),
-    scrapeOne(fc, `https://www.reddit.com/r/investing/search/?q=${upper}&sort=new&t=week`),
+    scrapeOne(fc, `https://www.reddit.com/r/stocks/search/?q=${upper}&sort=new&t=week`),
+    scrapeOne(fc, `https://www.reddit.com/r/SecurityAnalysis/search/?q=${upper}&sort=new&t=week`),
+    scrapeOne(fc, `https://www.reddit.com/r/algotrading/search/?q=${upper}&sort=new&t=week`),
     scrapeOne(fc, `https://www.reddit.com/r/${upper}/new/`),
     fetchStockTwitsSentiment(upper),
     yf.quote(upper).then(q => q.marketCap ?? null).catch(() => null),
@@ -96,8 +115,8 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
   const highlights: CommunityHighlight[] = [];
   const enrichedHighlights: EnrichedSnapshot['highlights'] = [];
 
-  if (mainstreamMd) {
-    const count = rawEngagementCount(mainstreamMd);
+  if (wsbMd) {
+    const count = rawEngagementCount(wsbMd);
     const engagement = toEngagement(count);
     highlights.push({
       community_name: 'r/wallstreetbets', community_type: 'mainstream',
@@ -107,15 +126,37 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     enrichedHighlights.push({ community_name: 'r/wallstreetbets', community_type: 'mainstream', engagement, engagement_count: count });
   }
 
-  if (middleMd) {
-    const count = rawEngagementCount(middleMd);
+  if (stocksMd) {
+    const count = rawEngagementCount(stocksMd);
     const engagement = toEngagement(count);
     highlights.push({
-      community_name: 'r/investing', community_type: 'middle',
+      community_name: 'r/stocks', community_type: 'mainstream',
       audience: 'general retail investors', standout_quote: '', theme: 'general discussion',
       sentiment: 'neutral', engagement_signal: engagement,
     });
-    enrichedHighlights.push({ community_name: 'r/investing', community_type: 'middle', engagement, engagement_count: count });
+    enrichedHighlights.push({ community_name: 'r/stocks', community_type: 'mainstream', engagement, engagement_count: count });
+  }
+
+  if (secanalysisMd) {
+    const count = rawEngagementCount(secanalysisMd);
+    const engagement = toEngagement(count);
+    highlights.push({
+      community_name: 'r/SecurityAnalysis', community_type: 'middle',
+      audience: 'value/fundamentals analysts', standout_quote: '', theme: 'fundamentals + valuation',
+      sentiment: 'neutral', engagement_signal: engagement,
+    });
+    enrichedHighlights.push({ community_name: 'r/SecurityAnalysis', community_type: 'middle', engagement, engagement_count: count });
+  }
+
+  if (algoMd) {
+    const count = rawEngagementCount(algoMd);
+    const engagement = toEngagement(count);
+    highlights.push({
+      community_name: 'r/algotrading', community_type: 'middle',
+      audience: 'quant/systematic traders', standout_quote: '', theme: 'systematic + quant strategies',
+      sentiment: 'neutral', engagement_signal: engagement,
+    });
+    enrichedHighlights.push({ community_name: 'r/algotrading', community_type: 'middle', engagement, engagement_count: count });
   }
 
   if (nicheMd) {
@@ -143,4 +184,65 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     quiver_insider,
     quiver_congressional,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Plan 19-C-05 — Task 4: supplemental community aggregation behind shadow.
+// ---------------------------------------------------------------------------
+//
+// `communityAggregated(ticker)` is the new entry point that gates Swaggystocks
+// + ApeWisdom (SUPPLEMENTAL — Firecrawl REMAINS PRIMARY per D-37) behind the
+// `community_supplemental` feature flag. Three modes:
+//
+//   off    → Firecrawl-only output (current canonical behavior)
+//   shadow → Firecrawl-only is what the cron writes to community_aggregated;
+//            the supplemental candidate runs in setImmediate and persists a
+//            ShadowComparison row for offline verdict scoring (D-05, D-14)
+//   on     → supplemental candidate populates community_aggregated; Firecrawl
+//            still drives the primary `community_data` JSON column
+//
+// Promise.allSettled (T-19-C-05-01) — a rate limit on either supplemental can
+// NEVER crash the canonical Firecrawl path: settled results are mapped to
+// `null` if rejected; null sentinel everywhere downstream.
+
+/**
+ * Shape returned by communityAggregated — JSON-serializable so it can land
+ * directly in `SentimentSnapshot.community_aggregated` (Json column).
+ */
+export interface CommunityAggregated {
+  firecrawl: EnrichedSnapshot | null;
+  swaggystocks: CommunitySignal | null;
+  apewisdom: CommunitySignal | null;
+}
+
+async function communityFirecrawlOnly(ticker: string): Promise<CommunityAggregated> {
+  const firecrawl = await lightweightCommunityScan(ticker);
+  return { firecrawl, swaggystocks: null, apewisdom: null };
+}
+
+async function communityWithSupplemental(ticker: string): Promise<CommunityAggregated> {
+  const [firecrawl, swaggy, ape] = await Promise.allSettled([
+    lightweightCommunityScan(ticker),
+    fetchSwaggyStocks(ticker),
+    fetchApeWisdom(ticker),
+  ]);
+  return {
+    firecrawl: firecrawl.status === 'fulfilled' ? firecrawl.value : null,
+    swaggystocks: swaggy.status === 'fulfilled' ? swaggy.value : null,
+    apewisdom: ape.status === 'fulfilled' ? ape.value : null,
+  };
+}
+
+/**
+ * Aggregated community payload for SentimentSnapshot.community_aggregated.
+ * Gated behind `community_supplemental` flag via the standard shadow harness.
+ */
+export async function communityAggregated(ticker: string): Promise<CommunityAggregated> {
+  return runWithShadow(
+    'community-supplemental',
+    () => communityFirecrawlOnly(ticker),
+    () => communityWithSupplemental(ticker),
+    FEATURES.community_supplemental_mode,
+    { ticker },
+  );
 }
