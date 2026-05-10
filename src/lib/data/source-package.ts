@@ -41,6 +41,8 @@ import {
 } from '@/lib/data/adapters/exa-search';
 // Post-Phase-19 P0 — free, structured Yahoo analyst module pair.
 import { fetchYahooAnalystSentiment } from '@/lib/data/yahoo-analyst';
+// Post-Phase-19 P0 — Polygon news as 3rd-tier news fallback.
+import { fetchPolygonNews } from '@/lib/data/polygon-news';
 import type {
   SourcePackage,
   MarketDataSection,
@@ -320,6 +322,7 @@ async function buildSourcePackageNewLadder(
     exaAnalystResult,
     exaFinReportsResult,
     yahooAnalystResult,
+    polygonNewsResult,
     anthroNewsResult,
     anthroAnalystResult,
     secResult,
@@ -335,6 +338,7 @@ async function buildSourcePackageNewLadder(
     fetchExaAnalystSentiment(ticker),
     fetchExaFinancialReports(ticker),
     fetchYahooAnalystSentiment(ticker),
+    fetchPolygonNews(ticker),
     fetchNews(ticker, securityType),
     fetchAnalystSentiment(ticker, securityType),
     fetchSecFilingSummary(ticker, securityType),
@@ -380,6 +384,7 @@ async function buildSourcePackageNewLadder(
   const exaAnalyst = settleNullable(exaAnalystResult, 'exa_analyst');
   const yahooAnalyst = settleNullable(yahooAnalystResult, 'yahoo_analyst');
   const exaFinReports = settleNullable(exaFinReportsResult, 'exa_financial_reports');
+  const polygonNews = settleNullable(polygonNewsResult, 'polygon_news');
 
   // Field-level merge — first non-null wins. New ladder uses Yahoo as the
   // quote primary (Tiingo removed). Fundamentals route through TwelveData
@@ -435,14 +440,19 @@ async function buildSourcePackageNewLadder(
     );
   })();
 
-  // News + analyst: exa → anthropic-search fallback (RESEARCH Pitfall 7).
+  // News cascade (post-Phase-19 P0 — was 19-B-06 fallback only):
+  //   exa → anthropic-search → polygon-news.
+  // Polygon is a 3rd-tier insurance source for small-cap tickers Exa neural
+  // search and Anthropic search both miss. Free on the existing Polygon tier
+  // (no new key needed).
+  const anthroNews = settle(
+    anthroNewsResult,
+    { collected_at: new Date().toISOString(), items: [], error: 'news collection failed' },
+    'news',
+  );
   const news: NewsSection =
     exaNews ??
-    settle(
-      anthroNewsResult,
-      { collected_at: new Date().toISOString(), items: [], error: 'news collection failed' },
-      'news',
-    );
+    (anthroNews.items.length > 0 ? anthroNews : (polygonNews ?? anthroNews));
   // Analyst cascade (post-Phase-19 P0): exa → yahoo → anthropic-search.
   // Yahoo's `recommendationTrend` + `upgradeDowngradeHistory` are free,
   // structured, and require no API key — perfect mid-tier insurance for
