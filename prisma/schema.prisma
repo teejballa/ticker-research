@@ -202,3 +202,19 @@ model RollbackLog {
 
   @@index([feature_flag, created_at(sort: Desc)])
 }
+
+// Family-aggregate engine thesis snapshots — see learning.computeEngineThesis.
+// Each row is the engine's current view; a new row is written only when the
+// aggregate diverges materially from the prior, so the thesis "builds on itself".
+model EngineThesis {
+  id          String   @id @default(cuid())
+  recorded_at DateTime @default(now()) @db.Timestamptz
+  families    Json     // ThesisFamily[]: { signal_class, label, mean, n, top_pattern }
+  top_family  String   // signal_class of strongest family
+  narrative   String   @db.Text
+  total_cells Int      @default(0)
+  total_n     Int      @default(0)
+
+  @@index([recorded_at(sort: Desc)])
+  @@map("engine_theses")
+}
