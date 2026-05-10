@@ -43,6 +43,8 @@ import {
 import { fetchYahooAnalystSentiment } from '@/lib/data/yahoo-analyst';
 // Post-Phase-19 P0 — Polygon news as 3rd-tier news fallback.
 import { fetchPolygonNews } from '@/lib/data/polygon-news';
+// Post-Phase-19 P0 — Finnhub structured analyst (price-target + recommendation).
+import { fetchFinnhubAnalystSentiment } from '@/lib/data/finnhub-analyst';
 import type {
   SourcePackage,
   MarketDataSection,
@@ -322,6 +324,7 @@ async function buildSourcePackageNewLadder(
     exaAnalystResult,
     exaFinReportsResult,
     yahooAnalystResult,
+    finnhubAnalystResult,
     polygonNewsResult,
     anthroNewsResult,
     anthroAnalystResult,
@@ -338,6 +341,7 @@ async function buildSourcePackageNewLadder(
     fetchExaAnalystSentiment(ticker),
     fetchExaFinancialReports(ticker),
     fetchYahooAnalystSentiment(ticker),
+    fetchFinnhubAnalystSentiment(ticker),
     fetchPolygonNews(ticker),
     fetchNews(ticker, securityType),
     fetchAnalystSentiment(ticker, securityType),
@@ -385,6 +389,7 @@ async function buildSourcePackageNewLadder(
   const yahooAnalyst = settleNullable(yahooAnalystResult, 'yahoo_analyst');
   const exaFinReports = settleNullable(exaFinReportsResult, 'exa_financial_reports');
   const polygonNews = settleNullable(polygonNewsResult, 'polygon_news');
+  const finnhubAnalyst = settleNullable(finnhubAnalystResult, 'finnhub_analyst');
 
   // Field-level merge — first non-null wins. New ladder uses Yahoo as the
   // quote primary (Tiingo removed). Fundamentals route through TwelveData
@@ -453,25 +458,29 @@ async function buildSourcePackageNewLadder(
   const news: NewsSection =
     exaNews ??
     (anthroNews.items.length > 0 ? anthroNews : (polygonNews ?? anthroNews));
-  // Analyst cascade (post-Phase-19 P0): exa → yahoo → anthropic-search.
-  // Yahoo's `recommendationTrend` + `upgradeDowngradeHistory` are free,
-  // structured, and require no API key — perfect mid-tier insurance for
-  // small-cap tickers Exa neural-search misses.
+  // Analyst cascade (post-Phase-19 P0): exa → yahoo → finnhub → anthropic-search.
+  // Yahoo's `recommendationTrend` + `upgradeDowngradeHistory` are free + structured.
+  // Finnhub adds the `avg_price_target` field Yahoo's analyst module doesn't surface.
+  // Field-level merge: when the chosen primary leaves price target null but
+  // Finnhub has it, fill it in.
+  const anthroAnalyst = settle(
+    anthroAnalystResult,
+    {
+      collected_at: new Date().toISOString(),
+      consensus: null,
+      avg_price_target: null,
+      analyst_count: null,
+      recent_changes: [],
+      error: 'analyst collection failed',
+    },
+    'analyst_sentiment',
+  );
+  const analystPrimary: AnalystSentimentSection =
+    exaAnalyst ?? yahooAnalyst ?? finnhubAnalyst ?? anthroAnalyst;
   const analyst_sentiment: AnalystSentimentSection =
-    exaAnalyst ??
-    yahooAnalyst ??
-    settle(
-      anthroAnalystResult,
-      {
-        collected_at: new Date().toISOString(),
-        consensus: null,
-        avg_price_target: null,
-        analyst_count: null,
-        recent_changes: [],
-        error: 'analyst collection failed',
-      },
-      'analyst_sentiment',
-    );
+    analystPrimary.avg_price_target == null && finnhubAnalyst?.avg_price_target != null
+      ? { ...analystPrimary, avg_price_target: finnhubAnalyst.avg_price_target }
+      : analystPrimary;
 
   return {
     ticker,
