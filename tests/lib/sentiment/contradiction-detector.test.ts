@@ -100,8 +100,8 @@ describe('detectContradictions (Plan 19-C-10, D-42)', () => {
     // All 6 pairs are 'contradict' but severity ≤ 0.10 — below threshold (0.3).
     expect(result.warnings).toEqual([]);
     expect(result.detected).toBe(false);
-    // Severity recorded but no warning issued.
-    expect(result.pairs.every(p => p.severity <= 0.10)).toBe(true);
+    // Severity recorded but no warning issued. Tolerance for FP drift on |0.55-0.45|.
+    expect(result.pairs.every(p => p.severity <= 0.10 + 1e-9)).toBe(true);
   });
 
   it('Test 4: NLI error on one pair → other pairs still evaluated; that pair marked unverified', async () => {
