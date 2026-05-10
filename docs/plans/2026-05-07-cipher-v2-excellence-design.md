@@ -4,7 +4,7 @@
 **Status:** Approved · 2026-05-07
 **Author:** brainstormed with Claude (Opus 4.7, 1M ctx)
 **Baseline:** post-Phase-18 (commit `ef52789`, "phase 18 — 11/11 plans, nyquist_compliant: true")
-**Scope:** Brownfield additive overhaul. No functionality removed. Existing v2.0 ML sequence (P20-P27) unblocked, not delayed.
+**Scope:** Brownfield additive overhaul. No functionality removed. Existing v2.0 ML sequence (P22-P29) unblocked, not delayed.
 
 > **Note 2026-05-07:** Per user direction, this effort is consolidated as **Phase 19** with three parallel waves (A/B/C) plus a prerequisite infra wave (Z). The original v2.0 Phase 19 ("Hierarchical Priors / Partial Pooling") is absorbed into **Wave A as Plan 19-A-07** — hierarchical pooling fits the quant-grade ML hygiene theme and stays within the same phase boundary.
 
@@ -12,7 +12,7 @@
 
 ## 1 — Executive Summary
 
-The just-shipped Phase 18 (time-decay + ESS + Page-Hinkley + confirmedDrift) is the keystone of the v2.0 milestone. The remaining v2.0 phases (P20-P27) cover regime, lift-gated CV, isotonic calibration, composite signals, counterfactuals, bandits, dashboard, and model card.
+The just-shipped Phase 18 (time-decay + ESS + Page-Hinkley + confirmedDrift) is the keystone of the v2.0 milestone. The remaining v2.0 phases (P22-P29) cover regime, lift-gated CV, isotonic calibration, composite signals, counterfactuals, bandits, dashboard, and model card.
 
 A focused audit of the current codebase and 2026 industry SOTA exposed three gap classes that the v2.0 sequence did not address (plus the original P19 Hierarchical Pooling work, now absorbed):
 
@@ -20,7 +20,7 @@ A focused audit of the current codebase and 2026 industry SOTA exposed three gap
 2. **Data Layer Modernization** — single-source dependence (Yahoo / Finnhub / Polygon / Anthropic-search) with no caching, no retries, ~$200/mo of avoidable spend
 3. **Sentiment + Reasoning Excellence** — naive sentiment (no FinBERT-class models), fabricated citations, no model routing, no contradiction detection
 
-This design proposes a single consolidated **Phase 19** comprising three parallel waves plus prerequisite infra, all shipping alongside (not in place of) the remaining v2.0 ML sequence (P20-P27):
+This design proposes a single consolidated **Phase 19** comprising three parallel waves plus prerequisite infra, all shipping alongside (not in place of) the remaining v2.0 ML sequence (P22-P29):
 
 | Wave | Theme | Duration |
 |---|---|---|
@@ -223,19 +223,19 @@ User → POST /api/research/[ticker]
 ```
 Day 1-3   Wave Z (shadow + cutover infra) ── prerequisite for all other waves
 
-Week 1-3  Wave A (ML Hygiene + Quant + Hierarchical) ── ships first ── unblocks v2.0 P21
+Week 1-3  Wave A (ML Hygiene + Quant + Hierarchical) ── ships first ── unblocks v2.0 P23
 Week 1-3  Wave B (Data Layer)              ── parallel    ── independent of A & C
 Week 2-5  Wave C (Sentiment + Reasoning)   ── parallel    ── depends on Wave Z flag infra only
 
-Week 6+   v2.0 P20 unaffected — starts as scheduled
-          v2.0 P21 now uses CPCV/DSR/PBO from Wave A
-          v2.0 P22 now uses conformal + isotonic together
-          v2.0 P27 model card consumes Wave A + C deliverables
+Week 6+   v2.0 P22 unaffected — starts as scheduled
+          v2.0 P23 now uses CPCV/DSR/PBO from Wave A
+          v2.0 P24 now uses conformal + isotonic together
+          v2.0 P29 model card consumes Wave A + C deliverables
 ```
 
 Constraints:
 - Wave Z (Z-01..Z-04) blocks A/B/C — flag matrix + shadow infra required first
-- Wave A 19-A-04 (DSR/PBO/CPCV primitives) blocks v2.0 P21 (lift-gated CV)
+- Wave A 19-A-04 (DSR/PBO/CPCV primitives) blocks v2.0 P23 (lift-gated CV)
 - Wave A 19-A-07 (hierarchical pooling) is internally sequenced after 19-A-04 (uses CPCV for validation)
 - Wave B 19-B-01 (cache infra) blocks 19-B-03/04/05 (adapters use cache)
 - Wave C 19-C-01 (HF client) blocks 19-C-02 (ensemble)
@@ -419,7 +419,7 @@ Phase 19 is **not done** until ALL of the following are true:
 1. Every plan in Waves Z/A/B/C satisfies the Hard Cleanup Gate (§10)
 2. **Zero feature-flag toggles remain** in `features.ts` from this effort
 3. **Zero references to the old code paths** exist in the codebase (verified by grep post-cleanup, run as part of CI)
-4. The model card draft (referenced in v2.0 P27) is updated to reflect:
+4. The model card draft (referenced in v2.0 P29) is updated to reflect:
    - FinSentLLM ensemble live
    - Conformal CIs surfaced in EngineCalibrationPanel
    - CPCV + DSR + PBO computed and gating alpha claims
@@ -445,7 +445,7 @@ Phase 19 is **not done** until ALL of the following are true:
 - Hierarchical pooling: shrinkage demonstrably accelerates sparse-cell learning vs no-pool control (per original P19 acceptance: ≥30% faster convergence on cells with n<10)
 - Rolling 20d rank-IC computed daily for all 4 signal classes
 - ic_decay_flag fires for at least one class within 30 days of deployment (validates monitor)
-- v2.0 P21 unblocked (can import CPCV/DSR/PBO/hierarchical pooling from `learning.ts`)
+- v2.0 P23 unblocked (can import CPCV/DSR/PBO/hierarchical pooling from `learning.ts`)
 
 ### 12.2 — Wave B (Data Layer Modernization)
 
@@ -483,7 +483,7 @@ Phase 19 is **not done** until ALL of the following are true:
 | Schema migration locks LearnedPattern table | Low | All ADDs nullable + default; Postgres skips full table rewrite |
 | CoVe doubles Gemini cost | Medium | Router gates CoVe to high-stakes only; budget cap in env |
 | Existing Phase 18 confirmedDrift logic affected | High | Wave A is additive — confirmedDrift, decayWeights internals untouched |
-| v2.0 P20-P27 blocked by Phase 19 | Critical | Wave A finishes ahead of Wave C; P20 can start as soon as Wave A's hierarchical pooling lands |
+| v2.0 P22-P29 blocked by Phase 19 | Critical | Wave A finishes ahead of Wave C; P22 can start as soon as Wave A's hierarchical pooling lands |
 | Shadow mode doubles request latency | Medium | New path runs in setImmediate() background; old returns first |
 | ShadowComparison table grows unbounded | Low | TTL: rows older than 30 days cleaned by daily cron |
 | Verdict gate too lenient → bad cutover | High | PASS requires non-regression on EVERY metric, not average |

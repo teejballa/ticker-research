@@ -55,7 +55,7 @@ Per Plan 18-06 Task 2 step 5:
 
 > If any class has `cv_brier_oos ≥ 0.25` because N is too low to learn anything
 > useful, leave that class at the placeholder values and add a comment
-> `// TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)`
+> `// TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P27)`
 
 Applied to all four signal classes. `HYPERPARAMETERS` now annotated:
 
@@ -64,7 +64,7 @@ diffusion / technical / insider / institutional: {
   lambda_days: 60,
   ph_delta: 0.005,
   ph_lambda: 50,
-  tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)
+  tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P27)
   cv_brier_oos: null,
 }
 ```

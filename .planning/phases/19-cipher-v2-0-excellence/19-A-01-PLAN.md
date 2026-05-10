@@ -84,7 +84,7 @@ export function validateHyperparameters(input: unknown): asserts input is typeof
 |-----------|----------|-----------|-------------|-----------------|
 | T-19-A-01-01 | Tampering | silent ESS corruption via lambda=0 | mitigate | Guard at function entry throws descriptive error rather than silently returning Infinity weights |
 | T-19-A-01-02 | Configuration | typo in HYPERPARAMETERS signal class breaks cron silently | mitigate | Zod `.strict()` schema catches unknown signal class at module load → fails fast at import, surfaces in CI |
-| T-19-A-01-03 | Future-proofing | adding regime hyperparams in Phase 20 breaks `.strict()` validation | mitigate | TODO comment flagging that future-phase additions require schema update OR removal of .strict() (per RESEARCH Pitfall 2) |
+| T-19-A-01-03 | Future-proofing | adding regime hyperparams in Phase 22 breaks `.strict()` validation | mitigate | TODO comment flagging that future-phase additions require schema update OR removal of .strict() (per RESEARCH Pitfall 2) |
 
 </threat_model>
 
@@ -172,7 +172,7 @@ export function validateHyperparameters(input: unknown): asserts input is typeof
          cv_brier_oos: z.number().nullable(),
        });
 
-       // TODO(Phase 20+): adding regime hyperparams here will require either updating this
+       // TODO(Phase 22+): adding regime hyperparams here will require either updating this
        // schema or removing .strict(). Currently the schema is .strict() to catch typos in
        // signal class names at module load — but this means any new field added to
        // HYPERPARAMETERS will throw at import time until the schema catches up.
@@ -208,7 +208,7 @@ export function validateHyperparameters(input: unknown): asserts input is typeof
     - Plan 18-10 sanity test still green: `npx vitest run tests/learning.hyperparameters.test.ts` exits 0
     - `grep -q "lambdaDays must be > 0" src/lib/learning.ts`
     - `grep -q "validateHyperparameters" src/lib/learning.ts`
-    - `grep -q "TODO(Phase 20+)" src/lib/learning.ts` (future-proofing comment per RESEARCH Pitfall 2)
+    - `grep -q "TODO(Phase 22+)" src/lib/learning.ts` (future-proofing comment per RESEARCH Pitfall 2)
     - `grep -q "validateHyperparameters(HYPERPARAMETERS)" src/lib/learning.ts` (module-load assertion at bottom)
   </acceptance_criteria>
   <automated>npx vitest run tests/learning.unit.bugs.test.ts && npx vitest run tests/learning.hyperparameters.test.ts</automated>
@@ -232,7 +232,7 @@ export function validateHyperparameters(input: unknown): asserts input is typeof
 
     HYPERPARAMETERS validated at module load via Zod .strict() — typos in
     signal class name or out-of-range params caught at startup, not at use.
-    TODO comment flags Phase 20+ additions requiring schema update.
+    TODO comment flags Phase 22+ additions requiring schema update.
 
     Plan 18-10 hyperparameter sanity test (D-54) still green.
 
@@ -252,7 +252,7 @@ export function validateHyperparameters(input: unknown): asserts input is typeof
 <verification>
 - [ ] decayWeights now throws descriptive error on lambda<=0/NaN
 - [ ] HYPERPARAMETERS Zod-validated at module load
-- [ ] TODO(Phase 20+) comment present
+- [ ] TODO(Phase 22+) comment present
 - [ ] Plan 18-10 sanity test still green (D-54 enforced)
 - [ ] No edits to existing pure-function logic beyond the guard insertion
 </verification>

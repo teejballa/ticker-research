@@ -54,7 +54,7 @@ key-decisions:
   - "Tasks 6a–6f (env flag flip → 3-7d shadow window → verdict CLI run → cutover PR → 7-day rollback hatch → flag-removal PR) are operator-driven over calendar days, identical to the 19-B-06 lifecycle deferral. This SUMMARY documents code completion through Task 5; Task 6 continues out-of-band."
 
 patterns-established:
-  - "Cache-components wrapper pattern for SourcePackage-tier idempotency: top-of-file 'use cache' directive + unstable_cacheLife at function entry + thin delegate to the assembler. Reusable for any future SourcePackage-adjacent reducer (e.g. analysis-result cache if Phase 22+ ever needs one)."
+  - "Cache-components wrapper pattern for SourcePackage-tier idempotency: top-of-file 'use cache' directive + unstable_cacheLife at function entry + thin delegate to the assembler. Reusable for any future SourcePackage-adjacent reducer (e.g. analysis-result cache if Phase 24+ ever needs one)."
   - "Two-layer shadow wrapping for cache rollouts: inner runWithShadow gates the data-source ladder, outer runWithShadow gates the cache itself. Both layers operate independently, so partial rollouts (cache on but ladder still in shadow, or vice-versa) are safe and measurable."
   - "Defensive forward-compatibility comment in the wrapper itself: 'when we upgrade to Next 16 via Plan 19-B-08, swap the directive string and nothing else needs to change here.' Future agents reading the file know exactly what one-character change unlocks the Next 16 superset."
 
@@ -145,7 +145,7 @@ _Note: Task 5 ("initial commit, flag off") is satisfied by the four atomic per-t
 
 1. **Pre-existing `<<<<<<< HEAD` marker at `.planning/ROADMAP.md` line 126.** Discovered while inspecting ROADMAP for the Wave-B plan-progress entries. Marker has no `=======` or closing `>>>>>>>`, so it is NOT a live merge conflict — appears to be cosmetic artifact from a previous merge. Out of scope per executor scope-boundary rules; logged here so a future doc-tidying plan can clean it up. The Plan 19-B-07 ticking edit operates above the marker (line 124), so no interaction.
 
-2. **Vercel-functions observability hook validation suggestion** (route handler line 22 — "no observability instrumentation"). Out of scope — Plan 19-B-07 has no observability requirements, and adding logging / OTel to the research route is an architectural change deserving its own plan. Suggestion logged for a future P26 (Live Engine Performance Dashboard) or dedicated observability plan.
+2. **Vercel-functions observability hook validation suggestion** (route handler line 22 — "no observability instrumentation"). Out of scope — Plan 19-B-07 has no observability requirements, and adding logging / OTel to the research route is an architectural change deserving its own plan. Suggestion logged for a future P28 (Live Engine Performance Dashboard) or dedicated observability plan.
 
 ## Threat Surface Scan
 

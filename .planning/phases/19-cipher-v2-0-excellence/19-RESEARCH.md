@@ -101,7 +101,7 @@
 - BloombergGPT / proprietary commercial sentiment models — out of scope; FinSentLLM ensemble (open-weight) is the chosen path
 - Real-time websocket ingestion of any source — all current adapters poll; no streaming infra in Phase 19
 - Multi-language sentiment — English-only for now; non-English subreddits / Naver / Xueqiu deferred
-- Public model card — covered by v2.0 Phase 27, NOT this phase
+- Public model card — covered by v2.0 Phase 29, NOT this phase
 </user_constraints>
 
 <phase_requirements>
@@ -127,7 +127,7 @@ These are project-wide directives the planner MUST honor (treat with same author
 6. **Source retrieval comes before analysis** — the LLM should never invent data. Plans 19-C-07 + 19-C-08 enforce this.
 7. **Vitest for units (`npm test`), live-DB integration tests (`npm run test:integration`), Playwright for e2e (`npm run test:e2e`)**.
 8. **Never store generated research artifacts inside the repository.**
-9. **Vercel cron `maxDuration: 300` (default) suffices through Phase 21**; bump to `800` only for backfill (P25). Plan 19-C-11 (Arctic Shift one-time) runs as a `scripts/` tsx invocation, NOT a cron, so 300s ceiling is irrelevant.
+9. **Vercel cron `maxDuration: 300` (default) suffices through Phase 23**; bump to `800` only for backfill (P27). Plan 19-C-11 (Arctic Shift one-time) runs as a `scripts/` tsx invocation, NOT a cron, so 300s ceiling is irrelevant.
 
 ## Summary
 
@@ -386,7 +386,7 @@ export async function fetchTiingoQuote(ticker: string): Promise<MarketDataSectio
 **How to avoid:**
 1. Plan 19-A-01 must include a Vitest test that imports `learning.ts` at module load time and verifies it doesn't throw — that's exactly what `validates current bootstrap config` test does (master plan line 367-369). KEEP that test.
 2. Add an integration test asserting the cron route loads — existing `learn.ess.live.test.ts` does this transitively.
-3. CRITICAL: the Zod schema in master plan lines 422-435 uses `.strict()` on `HyperparametersSchema` — this means **adding any new field to HYPERPARAMETERS in a future plan (e.g., regime hyperparams in Phase 20) will throw at module load**. Plan 19-A-01 should add a TODO comment flagging that future-phase additions to HYPERPARAMETERS require either schema update OR removal of `.strict()`.
+3. CRITICAL: the Zod schema in master plan lines 422-435 uses `.strict()` on `HyperparametersSchema` — this means **adding any new field to HYPERPARAMETERS in a future plan (e.g., regime hyperparams in Phase 22) will throw at module load**. Plan 19-A-01 should add a TODO comment flagging that future-phase additions to HYPERPARAMETERS require either schema update OR removal of `.strict()`.
 
 **Warning signs:** Local `npm test` fails with `HYPERPARAMETERS validation failed` immediately on any test that imports `learning.ts`.
 
@@ -616,7 +616,7 @@ export async function getCachedSourcePackage(ticker: string) {
 | Single Gemini Flash call per report | Cascade router: Haiku draft → Gemini Flash → Gemini Pro on high-stakes | Plan 19-C-09 | Cost telemetry per report; high-stakes detection driven by `controversy` + `ic_decay_flag` |
 | LLM emits sentiment + reasoning in one pass | Two-pass Chain-of-Verification (CoVe) with NLI verification (Dhuliawala et al. 2024) | Plan 19-C-08 | Reduces factual hallucinations 50-70% on QA tasks per published benchmarks [CITED: arxiv.org/abs/2309.11495] |
 | Anthropic-search hot path for news/analyst | Exa 2.0 neural search (primary) + Anthropic-search (fallback) | Plan 19-B-05 | ~$200/mo → ~$5/mo; semantic relevance over keyword match; D-32 keeps Anthropic as fallback |
-| Ad-hoc Yahoo/Finnhub/Polygon ladder | Tiingo → Twelve Data → Yahoo → Finnhub → Polygon ladder + Upstash Redis cache + Vercel Runtime Cache + retry | Plans 19-B-01/02/03/04/06/07 | Source-package median latency ≥40% drop; point-in-time fundamentals from Tiingo unblocks P25 backfill correctness |
+| Ad-hoc Yahoo/Finnhub/Polygon ladder | Tiingo → Twelve Data → Yahoo → Finnhub → Polygon ladder + Upstash Redis cache + Vercel Runtime Cache + retry | Plans 19-B-01/02/03/04/06/07 | Source-package median latency ≥40% drop; point-in-time fundamentals from Tiingo unblocks P27 backfill correctness |
 | Pushshift.io Reddit historical | Arctic Shift (free Pushshift successor) | Plan 19-C-11 | Pushshift admin-only since 2023 Reddit API controversy; Arctic Shift is the canonical replacement [CITED: github.com/ArthurHeitmann/arctic_shift] |
 
 **Deprecated/outdated:**

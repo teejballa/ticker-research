@@ -13,7 +13,7 @@ The phase ends when `npm run model-card-status` exits zero — a composite-DoD c
 
 Phase boundary in / out:
 - **IN:** Track Z (shadow + cutover infra), Track A (ML hygiene + quant-grade validation, including hierarchical pooling absorbed from original v2.0 P19), Track B (data layer modernization), Track C (sentiment + reasoning excellence)
-- **OUT:** Market-Regime Feature (P20), Historical Backfill (P25), Lift-Gated Cell Promotion (P21), Composite Signal Synthesis (P22), Counterfactual Reasoning (P23), Adaptive Watchlist (P24), Performance Dashboard (P26), Public Calibration Trail + Model Card (P27) — these continue the v2.0 sequence after Phase 19 completes
+- **OUT:** Market-Regime Feature (P22), Historical Backfill (P27), Lift-Gated Cell Promotion (P23), Composite Signal Synthesis (P24), Counterfactual Reasoning (P25), Adaptive Watchlist (P26), Performance Dashboard (P28), Public Calibration Trail + Model Card (P29) — these continue the v2.0 sequence after Phase 19 completes
 - **OUT:** Removing or modifying any existing fetcher's interface (Yahoo / Finnhub / Polygon / Anthropic-search / Firecrawl all stay) — this is brownfield additive only
 
 </domain>
@@ -153,7 +153,7 @@ Phase boundary in / out:
 ### 2026 industry research (from audit phase, Section 1 + Section 2 deltas)
 - FinSentLLM > FinBERT alone — ensemble of FinGPT v3 + Mistral 7B + FinBERT meta-classifier achieves 92% F1 on FiQA-SA (FLANG benchmark)
 - Reddit alpha decay: HOURS, not days. Rolling-IC monitor (Plan 19-A-05) is the alpha-decay tripwire.
-- CPCV + DSR + PBO are Lopez de Prado's anti-backtest-overfitting trifecta — Plan 19-A-04 implements all three; v2.0 P21 (Lift-Gated CV) imports them
+- CPCV + DSR + PBO are Lopez de Prado's anti-backtest-overfitting trifecta — Plan 19-A-04 implements all three; v2.0 P23 (Lift-Gated CV) imports them
 - Conformal prediction (Vovk-Romano) gives honest distribution-free CI bands; complements existing Bayesian credible intervals (NOT a replacement)
 - Hierarchical empirical Bayes pooling (Plan 19-A-07) shrinks per-cell α/β toward group prior — defeats lake-of-cells starvation when n<10
 
@@ -179,7 +179,7 @@ These came up during research but explicitly deferred OUT of Phase 19:
 - **BloombergGPT / proprietary commercial sentiment models** — out of scope; FinSentLLM ensemble (open-weight) is the chosen path
 - **Real-time websocket ingestion of any source** — all current adapters poll; no streaming infra in Phase 19
 - **Multi-language sentiment** — English-only for now; non-English subreddits / Naver / Xueqiu deferred
-- **Public model card** — covered by v2.0 Phase 27, NOT this phase
+- **Public model card** — covered by v2.0 Phase 29, NOT this phase
 
 </deferred>
 

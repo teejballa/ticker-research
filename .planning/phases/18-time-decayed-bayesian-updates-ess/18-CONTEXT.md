@@ -19,10 +19,10 @@ In scope:
 
 Out of scope (deferred to listed phase):
 - Hierarchical pooling using ESS — Phase 19
-- Regime feature in cell key — Phase 20
-- Lift-gated ACTIVE promotion (FDR + Purged-CV OOS Brier) — Phase 21
-- Drift-alert dashboard tile + ESS heatmap — Phase 26
-- Auto-demote on persistent drift — explicitly NOT in P18 (Pitfall 13: drift-alone demotion flaps cells on noise; revisit only after P21 ships OOS Brier degradation as a confirmation signal)
+- Regime feature in cell key — Phase 22
+- Lift-gated ACTIVE promotion (FDR + Purged-CV OOS Brier) — Phase 23
+- Drift-alert dashboard tile + ESS heatmap — Phase 28
+- Auto-demote on persistent drift — explicitly NOT in P18 (Pitfall 13: drift-alone demotion flaps cells on noise; revisit only after P23 ships OOS Brier degradation as a confirmation signal)
 
 </domain>
 
@@ -30,12 +30,12 @@ Out of scope (deferred to listed phase):
 ## Implementation Decisions
 
 ### Time decay (CORE-ML-02)
-- **D-01:** Per-class half-life λ is **empirically tuned now** via grid search over λ ∈ {14, 30, 60, 90, 180, 365} days per `signal_class`, scored by out-of-sample Brier under **Purged K-Fold + Embargo** CV (López de Prado). One winning λ per class, persisted as a config constant. No global default. Re-tuning in P21 is allowed but not required — we ship the keystone with the most defensible λ available now.
-- **D-02:** Tuning runs against the existing 87 PriceOutcomes plus any new outcomes resolved before P18 ships. Users have explicitly directed: "most advanced and optimal now, do not put things off for later." Thin-N is acknowledged but accepted because (a) it's the same N P21 will start from after backfill bootstraps, (b) the decision is reversible — λ is a config knob.
+- **D-01:** Per-class half-life λ is **empirically tuned now** via grid search over λ ∈ {14, 30, 60, 90, 180, 365} days per `signal_class`, scored by out-of-sample Brier under **Purged K-Fold + Embargo** CV (López de Prado). One winning λ per class, persisted as a config constant. No global default. Re-tuning in P23 is allowed but not required — we ship the keystone with the most defensible λ available now.
+- **D-02:** Tuning runs against the existing 87 PriceOutcomes plus any new outcomes resolved before P18 ships. Users have explicitly directed: "most advanced and optimal now, do not put things off for later." Thin-N is acknowledged but accepted because (a) it's the same N P23 will start from after backfill bootstraps, (b) the decision is reversible — λ is a config knob.
 - **D-03:** ESS is computed via the **Kish formula**: `ESS = (Σ w_i)² / Σ w_i²` where `w_i = exp(-Δt_i / λ)` and `Δt_i` is days between observation timestamp and `now()`. This is the standard for survey/weighted-sample work and is what every subsequent v2.0 phase will assume.
 
 ### ESS-based promotion gate (CORE-ML-01, CORE-ML-03)
-- **D-04:** Replace `sample_size < 10 → EXPLORATORY` with `effective_sample_size < 30 → EXPLORATORY`. Threshold 30 follows the Pitfalls research recommendation (industry standard for binary-outcome ML). Pairs cleanly with Phase 21's FDR-corrected OOS Brier-lift gate — by the time a cell reaches ESS≥30 it's a meaningful candidate, not a small-N artifact.
+- **D-04:** Replace `sample_size < 10 → EXPLORATORY` with `effective_sample_size < 30 → EXPLORATORY`. Threshold 30 follows the Pitfalls research recommendation (industry standard for binary-outcome ML). Pairs cleanly with Phase 23's FDR-corrected OOS Brier-lift gate — by the time a cell reaches ESS≥30 it's a meaningful candidate, not a small-N artifact.
 - **D-05:** Credible intervals reported in `/insights` and the `EngineCalibrationPanel` are computed against ESS, not raw N — sparse-but-recent cells visibly tighten faster than sparse-but-old cells.
 
 ### Drift detector (CORE-ML-04)
@@ -51,7 +51,7 @@ Out of scope (deferred to listed phase):
 
 ### Engine Calibration UI (CORE-ML-05)
 - **D-10:** `EngineCalibrationPanel` on `/research/[ticker]` replaces the raw-N column with ESS as the user-facing currency. One number per cell, plain-English subtitle preserved (per Phase 17 D-Log).
-- **D-11:** When a cell's status is `EXPLORATORY-WATCH`, render a compact "regime stability: watching" badge adjacent to the column. No additional text in the headline — Phase 26 will surface drift-history detail in the dashboard.
+- **D-11:** When a cell's status is `EXPLORATORY-WATCH`, render a compact "regime stability: watching" badge adjacent to the column. No additional text in the headline — Phase 28 will surface drift-history detail in the dashboard.
 - **D-12:** No N=42 (ESS=18) hybrid display. ESS is the single number; raw N is available only in the `/insights` debug surface.
 
 ### Migration & data carry-forward (CORE-ML-01)
@@ -59,14 +59,14 @@ Out of scope (deferred to listed phase):
 - **D-14:** No observation is discarded. No grandfather hack. Migration is reversible by re-running with a different λ — the raw outcomes table is the source of truth.
 
 ### Cross-cutting v2.0 mandates honored in P18
-- **D-15:** `LearnedPattern` migration adds `effective_sample_size Float NOT NULL DEFAULT 0` and `n_trials_attempted Int NOT NULL DEFAULT 0` columns (n_trials_attempted reserved for P21 FDR denominator but populated from P18 forward — every phase that touches LearnedPattern must record it).
+- **D-15:** `LearnedPattern` migration adds `effective_sample_size Float NOT NULL DEFAULT 0` and `n_trials_attempted Int NOT NULL DEFAULT 0` columns (n_trials_attempted reserved for P23 FDR denominator but populated from P18 forward — every phase that touches LearnedPattern must record it).
 - **D-16:** Every CV used in P18 (λ tuning, Page-Hinkley parameter tuning) uses **Purged K-Fold + Embargo**, never random K-fold, never simple time-split. Purge window = max horizon (90 days). Embargo = max horizon (90 days).
 - **D-17:** Every metric introduced in P18 (`effective_sample_size`, `drift_alert` counts, `EXPLORATORY-WATCH` cell counts) gets a documented operational action in CONTEXT.md or in the dashboard plan: "if metric is X, do Y." No vanity metrics.
 
 ### Architectural commitments preserved
 - **D-18:** `learning.ts` remains pure functions, no DB access. New decay/ESS/Page-Hinkley primitives are added as pure functions (`computeESS`, `decayWeights`, `pageHinkleyStatistic`, `confirmedDrift`) called by the cron route.
 - **D-19:** Schema migration is additive only. No column drops, no type changes. Soak via `DEFAULT 0` on the new column, populate via backfill cron, then production reads from the populated column.
-- **D-20:** Vercel cron `maxDuration: 300` is sufficient for the per-class CV tuning runs against current N=87. Bump to `800` only if backfill in D-13 exceeds the limit; revisit in P25 anyway.
+- **D-20:** Vercel cron `maxDuration: 300` is sufficient for the per-class CV tuning runs against current N=87. Bump to `800` only if backfill in D-13 exceeds the limit; revisit in P27 anyway.
 
 ### Claude's Discretion
 - Naming of new pure functions inside `learning.ts` and the migration filename — pick standard repo conventions
@@ -84,7 +84,7 @@ None — todo match returned 0 relevant entries for Phase 18.
 **Downstream agents MUST read these before planning or implementing.**
 
 ### v2.0 milestone artifacts
-- `.planning/ROADMAP.md` — Phase 18 line item (CORE-ML-01..05) and v2.0 build order (P18 → P20 → P19 → P25 → P21 → P22 → P23/24/26 → P27)
+- `.planning/ROADMAP.md` — Phase 18 line item (CORE-ML-01..05) and v2.0 build order (P18 → P22 → P19 → P27 → P23 → P24 → P25/P26/P28 → P29)
 - `.planning/REQUIREMENTS.md` §"Phase 18 — Time-decayed Bayesian updates + ESS" — CORE-ML-01..05 acceptance criteria
 - `.planning/PROJECT.md` §"Group A — Core ML quality" — phase intent
 - `.planning/STATE.md` — accumulated context including stack additions (`jstat`, `ml-matrix`) and cross-cutting defensive mandates
@@ -141,7 +141,7 @@ None — todo match returned 0 relevant entries for Phase 18.
 - User direction on λ tuning was explicit: "most advanced and optimal now, do not put things off for later." This rules out shipping a hand-picked default and re-tuning later — the empirical-grid-search-now path is locked.
 - The two-of-two drift confirmation rule (drift_z + Page-Hinkley) is a deliberate borrow from NannyML/Evidently best practice for low-frequency outcome monitoring. Single-detector firing is too noisy for ~30/week observations.
 - New `EXPLORATORY-WATCH` status is intentionally a non-silencing state — the cell still feeds into Engine Calibration so the user sees the prior + the watching badge. Hiding the cell during drift would create the "engine has no opinion" UX failure (Pitfall, UX section).
-- Backfill design in D-13 mirrors the discipline P25 will need: replay outcomes ordered by `recorded_at`, no future leakage, one transaction. P18 is the warm-up.
+- Backfill design in D-13 mirrors the discipline P27 will need: replay outcomes ordered by `recorded_at`, no future leakage, one transaction. P18 is the warm-up.
 
 </specifics>
 
@@ -154,10 +154,10 @@ None — discussion stayed within phase scope.
 None reviewed.
 
 ### Cross-phase items intentionally deferred (mentioned for context, not in scope)
-- Auto-demote on persistent drift → revisit only when P21 ships OOS Brier degradation as a co-confirmation signal
-- Drift-alert dashboard tile + ESS distribution heatmap → Phase 26
-- ESS-weighted information-gain reward function for the bandit → Phase 24
-- Class-specific lift thresholds → Phase 21
+- Auto-demote on persistent drift → revisit only when P23 ships OOS Brier degradation as a co-confirmation signal
+- Drift-alert dashboard tile + ESS distribution heatmap → Phase 28
+- ESS-weighted information-gain reward function for the bandit → Phase 26
+- Class-specific lift thresholds → Phase 23
 
 </deferred>
 

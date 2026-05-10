@@ -39,7 +39,7 @@ The v1.0 ceiling: Beta posteriors weight all observations equally regardless of 
 |---------|-------------------|------------|-------|
 | Per-cell adaptive half-life (vol-regime-aware) | High-vol regimes drift faster; constant half-life under-fits during calm and over-fits during shocks | MEDIUM | Tie half-life to per-cell variance of recent residuals. Stretch goal — likely v1.2. |
 | Drift-cause attribution ("posterior shift driven by N=12 fresh observations vs prior N=80") | Fiddler/Arize-style "why is drift firing" — explanatory not just alerting | MEDIUM | Compute and show on cell drill-down. Audit-trail value > model-quality value. |
-| Auto-rollback to a snapshotted prior when drift_z spikes | MLflow/Vertex pattern — version priors and revert if new posterior demonstrably worse OOS | HIGH | Defer to v1.2 — needs Phase 21 lift gating + version snapshots first. |
+| Auto-rollback to a snapshotted prior when drift_z spikes | MLflow/Vertex pattern — version priors and revert if new posterior demonstrably worse OOS | HIGH | Defer to v1.2 — needs Phase 23 lift gating + version snapshots first. |
 
 #### Anti-Features — flashy but wrong-sized for this domain
 
@@ -90,7 +90,7 @@ The v1.0 ceiling: bucket granularity is fixed and discrete. Sparse cells like `a
 
 ---
 
-### A3. Regime Awareness (Phase 20 — Market-Regime Feature)
+### A3. Regime Awareness (Phase 22 — Market-Regime Feature)
 
 #### Table Stakes
 
@@ -107,7 +107,7 @@ The v1.0 ceiling: bucket granularity is fixed and discrete. Sparse cells like `a
 |---------|-------------------|------------|-------|
 | Smooth regime transition handling (interpolation, not hard switch) | Hard regime boundaries cause priors to flicker on edge cases — production HMMs use posterior probabilities, not arg-max | MEDIUM | Use HMM posterior `P(regime=r \| observations)` as soft weights when blending priors. |
 | Multiple regime axes (vol-regime × rate-regime × trend-regime) | Real markets have multiple independent regime dimensions; one-axis regime under-fits | HIGH | Cartesian product blows up cell count — only add second axis if data supports it. |
-| Regime-conditional hierarchical pooling (regimes pool from a "regime-agnostic" parent when sparse) | Combines A2 + A3 — sparse cells in a new regime borrow from the regime-blind parent until they have evidence | HIGH | Phase 19 + Phase 20 composition. High value but high complexity. |
+| Regime-conditional hierarchical pooling (regimes pool from a "regime-agnostic" parent when sparse) | Combines A2 + A3 — sparse cells in a new regime borrow from the regime-blind parent until they have evidence | HIGH | Phase 19 + Phase 22 composition. High value but high complexity. |
 | Citadel/Quantinsti-style "regime score dashboard" with backwardation/contango/transition labels | Financial industry expects this exact UX — VIX/VIX3M ratio with regime labels | MEDIUM | TradingView "Ultron VIX Regime" indicator is the reference. |
 
 #### Anti-Features
@@ -124,7 +124,7 @@ The v1.0 ceiling: bucket granularity is fixed and discrete. Sparse cells like `a
 
 ---
 
-### A4. Lift-Gated Promotion (Phase 21 — Promotion Based on Brier Lift, Not Just N + In-Sample Brier)
+### A4. Lift-Gated Promotion (Phase 23 — Promotion Based on Brier Lift, Not Just N + In-Sample Brier)
 
 The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= threshold`. Two ACTIVE cells currently show 0% Brier lift vs null — calibration ≠ predictive lift.
 
@@ -155,13 +155,13 @@ The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= thre
 
 **Industry reference:** Walk-forward analysis is THE standard backtest method in financial ML (Lopez de Prado "Advances in Financial Machine Learning", CFA Institute 2026 backtesting & simulation refresher, QuantStart). For probability calibration validation, Brier score on rolling temporal windows is the textbook protocol per scikit-learn 1.8 calibration docs.
 
-**Dependency on v1.0:** Requires sufficient observation history — currently ~87 PriceOutcomes; walk-forward CV needs at least 3 windows. **Will only be meaningful after Phase 25 (historical backfill) bootstraps observation count.**
+**Dependency on v1.0:** Requires sufficient observation history — currently ~87 PriceOutcomes; walk-forward CV needs at least 3 windows. **Will only be meaningful after Phase 27 (historical backfill) bootstraps observation count.**
 
 ---
 
 ## Group B — Reasoning Impact
 
-### B1. Composite Signal (Phase 22 — Multi-Cell Prior Composition into Headline Number)
+### B1. Composite Signal (Phase 24 — Multi-Cell Prior Composition into Headline Number)
 
 #### Table Stakes
 
@@ -190,11 +190,11 @@ The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= thre
 
 **Industry reference:** The Brunswik lens model + multiple-regression decomposition is the established framework for combining multiple imperfect cues into a single judgment (per the 1956 Brunswik LME, modern applications in psychology + judgment analysis). Probability calibration via Platt / isotonic is scikit-learn 1.8 standard practice.
 
-**Dependency on v1.0:** Logistic regression scaffolding from Phase 16 already exists with `epoch=1` waiting for first 30d outcomes ~2026-05-26. Phase 22 turns "scaffolding" into "actively-trained composite."
+**Dependency on v1.0:** Logistic regression scaffolding from Phase 16 already exists with `epoch=1` waiting for first 30d outcomes ~2026-05-26. Phase 24 turns "scaffolding" into "actively-trained composite."
 
 ---
 
-### B2. Counterfactual Reasoning (Phase 23 — "If Signal Absent, Prior Would Shift From A to B")
+### B2. Counterfactual Reasoning (Phase 25 — "If Signal Absent, Prior Would Shift From A to B")
 
 #### Table Stakes
 
@@ -222,13 +222,13 @@ The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= thre
 
 **Industry reference:** Counterfactual explanations are now industry-standard alongside SHAP/LIME per the explainable AI literature (Wachter et al., DataCamp/Meta-Intelligence/Apxml comparisons 2025-2026). EU AI Act 2026 high-risk classification explicitly requires explainability — counterfactuals are the most user-understandable form.
 
-**Dependency on v1.0:** Requires Phase 22 composite signal first (need a composite to counterfactual against). Cleanly extends the existing `formatCalibrationContext()` in `engine-context.ts`.
+**Dependency on v1.0:** Requires Phase 24 composite signal first (need a composite to counterfactual against). Cleanly extends the existing `formatCalibrationContext()` in `engine-context.ts`.
 
 ---
 
 ## Group C — Coverage & Evidence Growth
 
-### C1. Adaptive Watchlist (Phase 24 — Bandit-Driven Sampling for Undersampled Cells)
+### C1. Adaptive Watchlist (Phase 26 — Bandit-Driven Sampling for Undersampled Cells)
 
 #### Table Stakes
 
@@ -260,7 +260,7 @@ The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= thre
 
 ---
 
-### C2. Historical Backfill (Phase 25 — Bootstrap Cells from 5+ Years of Historical Data)
+### C2. Historical Backfill (Phase 27 — Bootstrap Cells from 5+ Years of Historical Data)
 
 #### Table Stakes
 
@@ -276,7 +276,7 @@ The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= thre
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
 | Backfill institutional/insider via SEC EDGAR full-history pull | Form 4 / 13F have decade+ of public history; bootstraps insider/institutional cells | HIGH | Requires EDGAR full-archive ingestion + parsing; complex but high-value. |
-| Differential backfill cadence (rare patterns get more historical pulls) | Same logic as bandit watchlist — apply to backfill | MEDIUM | Coordinate with Phase 24 bandit. |
+| Differential backfill cadence (rare patterns get more historical pulls) | Same logic as bandit watchlist — apply to backfill | MEDIUM | Coordinate with Phase 26 bandit. |
 | Public "engine memory" page showing backfill stats ("12,847 historical observations across 47 cells, 5.3y average history") | Demonstrability — concrete evidence of accumulated knowledge | LOW | Static-ish page. Marketing value high. |
 
 #### Anti-Features
@@ -289,13 +289,13 @@ The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= thre
 
 **Industry reference:** Walk-forward backtesting standard requires high-quality historical data with no look-ahead bias and survivorship-bias awareness (Lopez de Prado, CFA Institute 2026). The principle: only backfill features that can be recomputed deterministically from data available at the historical point in time.
 
-**Dependency on v1.0:** Requires Phase 21 lift gating to be meaningful (need to validate backfilled cells achieve OOS lift before promoting). Schema: `provenance` field on observations. **Critical:** ordered with Phase 21 to make lift gating possible at all (current N too low without backfill).
+**Dependency on v1.0:** Requires Phase 23 lift gating to be meaningful (need to validate backfilled cells achieve OOS lift before promoting). Schema: `provenance` field on observations. **Critical:** ordered with Phase 23 to make lift gating possible at all (current N too low without backfill).
 
 ---
 
 ## Group D — Demonstrability
 
-### D1. Live Engine Performance Dashboard (Phase 26 — `/insights` Engine Tab)
+### D1. Live Engine Performance Dashboard (Phase 28 — `/insights` Engine Tab)
 
 #### Table Stakes
 
@@ -330,7 +330,7 @@ The v1.0 ceiling: ACTIVE = `sample_size >= threshold AND brier_in_sample >= thre
 
 ---
 
-### D2. Calibration Trail / Public Model Card (Phase 27 — Per-Report Receipts + Engine Transparency Doc)
+### D2. Calibration Trail / Public Model Card (Phase 29 — Per-Report Receipts + Engine Transparency Doc)
 
 This combines two distinct artifacts: per-report **calibration trail** (bottom-up audit of one report) and engine-level **model card** (top-down documentation of the system).
 
@@ -365,39 +365,39 @@ This combines two distinct artifacts: per-report **calibration trail** (bottom-u
 
 **Industry reference:** Model Cards for Model Reporting (Mitchell et al. 2019, arxiv 1810.03993) is the canonical specification — 9 categories, quantitative analyses with CIs, disaggregated metrics. NVIDIA's Model Card++ extends with system-level concerns. EU AI Act 2026 makes automated model cards a compliance standard for high-risk AI systems (Stirrup 2026). Datasheets for Datasets (Gebru et al.) is the data-side counterpart.
 
-**Dependency on v1.0:** Calibration trail requires Phase 22 composite signal (something to record), Phase 26 dashboard (where to surface aggregate stats). Model card is standalone — could ship at any time, but maximally honest after Phase 21 lift gating gives real numbers.
+**Dependency on v1.0:** Calibration trail requires Phase 24 composite signal (something to record), Phase 28 dashboard (where to surface aggregate stats). Model card is standalone — could ship at any time, but maximally honest after Phase 23 lift gating gives real numbers.
 
 ---
 
 ## Feature Dependencies
 
 ```
-Phase 18 (Time-Decay) ───────┬──> Phase 21 (Lift Gating)
-                              │      └─> Phase 22 (Composite)
-                              │              └─> Phase 23 (Counterfactuals)
-                              │                      └─> Phase 27 (Calibration Trail)
+Phase 18 (Time-Decay) ───────┬──> Phase 23 (Lift Gating)
+                              │      └─> Phase 24 (Composite)
+                              │              └─> Phase 25 (Counterfactuals)
+                              │                      └─> Phase 29 (Calibration Trail)
                               │
                               └──> Phase 19 (Hierarchical Pooling)
-                                       └─> Phase 20 (Regime Awareness)
-                                              └─> Phase 21 (Lift Gating, regime-conditional)
+                                       └─> Phase 22 (Regime Awareness)
+                                              └─> Phase 23 (Lift Gating, regime-conditional)
 
-Phase 25 (Historical Backfill) ──enables──> Phase 21 (Lift Gating has enough N to be meaningful)
+Phase 27 (Historical Backfill) ──enables──> Phase 23 (Lift Gating has enough N to be meaningful)
 
-Phase 24 (Adaptive Watchlist) ──enhances──> Phase 19 / 20 / 21 (sparse cells fill faster)
+Phase 26 (Adaptive Watchlist) ──enhances──> Phase 19 / 20 / 21 (sparse cells fill faster)
 
-Phase 26 (Dashboard) ──surfaces──> All of A + Phase 22
+Phase 28 (Dashboard) ──surfaces──> All of A + Phase 24
 
-Phase 27 (Calibration Trail / Model Card) ──documents──> Everything
+Phase 29 (Calibration Trail / Model Card) ──documents──> Everything
 ```
 
 ### Dependency Notes
 
 - **Phase 18 (Time-Decay) is the keystone.** Effective sample size becomes the unit of currency for Phases 19, 21, 26. Schedule first.
-- **Phase 25 (Historical Backfill) before Phase 21 (Lift Gating).** Walk-forward CV needs sufficient observations per cell. With only 87 PriceOutcomes today, lift estimates would be too noisy to gate on. Backfill first → then lift gating becomes meaningful.
-- **Phase 22 (Composite) before Phase 23 (Counterfactuals).** Counterfactuals are computed against the composite — no composite, no counterfactual.
-- **Phase 26 (Dashboard) is an integration phase.** Surfaces work from all prior phases; minimal logic of its own. Schedule near the end.
-- **Phase 27 (Model Card / Calibration Trail) is most honest last.** Quantitative metrics in the model card need real numbers — premature publication risks publishing stale or low-N stats.
-- **Phase 19 + Phase 20 conflict on schema migration order.** Both add fields to LearnedPattern composite key. Recommend Phase 19 first (single field, simpler) → Phase 20 second (regime field, more surface area). Or batch them in one migration.
+- **Phase 27 (Historical Backfill) before Phase 23 (Lift Gating).** Walk-forward CV needs sufficient observations per cell. With only 87 PriceOutcomes today, lift estimates would be too noisy to gate on. Backfill first → then lift gating becomes meaningful.
+- **Phase 24 (Composite) before Phase 25 (Counterfactuals).** Counterfactuals are computed against the composite — no composite, no counterfactual.
+- **Phase 28 (Dashboard) is an integration phase.** Surfaces work from all prior phases; minimal logic of its own. Schedule near the end.
+- **Phase 29 (Model Card / Calibration Trail) is most honest last.** Quantitative metrics in the model card need real numbers — premature publication risks publishing stale or low-N stats.
+- **Phase 19 + Phase 22 conflict on schema migration order.** Both add fields to LearnedPattern composite key. Recommend Phase 19 first (single field, simpler) → Phase 22 second (regime field, more surface area). Or batch them in one migration.
 
 ---
 
@@ -407,20 +407,20 @@ Phase 27 (Calibration Trail / Model Card) ──documents──> Everything
 
 - [ ] **Phase 18 (A1 drift defense)** — exponential decay + ESS-based promotion gate
 - [ ] **Phase 19 (A2 hierarchical priors)** — partial pooling demonstrably accelerating sparse-cell learning
-- [ ] **Phase 20 (A3 regime awareness)** — regime label in cell key + visible in EngineCalibrationPanel
-- [ ] **Phase 21 (A4 lift gating)** — at least 1 cell with measurable Brier-lift > 5% on out-of-sample data
-- [ ] **Phase 26 (D1 dashboard)** — engine performance tab live at `/insights` with daily learning feed
-- [ ] **Phase 27 (D2 calibration trail)** — per-report calibration trail published
+- [ ] **Phase 22 (A3 regime awareness)** — regime label in cell key + visible in EngineCalibrationPanel
+- [ ] **Phase 23 (A4 lift gating)** — at least 1 cell with measurable Brier-lift > 5% on out-of-sample data
+- [ ] **Phase 28 (D1 dashboard)** — engine performance tab live at `/insights` with daily learning feed
+- [ ] **Phase 29 (D2 calibration trail)** — per-report calibration trail published
 
 ### Should Ship (high-value, achievable in v1.1 window)
 
-- [ ] **Phase 22 (B1 composite signal)** — completes Phase 16's logistic regression scaffold; unlocks B2
-- [ ] **Phase 25 (C2 backfill)** — bootstraps the data needed for Phase 21 to be meaningful
+- [ ] **Phase 24 (B1 composite signal)** — completes Phase 16's logistic regression scaffold; unlocks B2
+- [ ] **Phase 27 (C2 backfill)** — bootstraps the data needed for Phase 23 to be meaningful
 
 ### Stretch / Defer to v1.2
 
-- [ ] **Phase 23 (B2 counterfactuals)** — high value, requires Phase 22 + dashboard integration
-- [ ] **Phase 24 (C1 adaptive watchlist)** — high value, lower urgency than evidence-quality phases
+- [ ] **Phase 25 (B2 counterfactuals)** — high value, requires Phase 24 + dashboard integration
+- [ ] **Phase 26 (C1 adaptive watchlist)** — high value, lower urgency than evidence-quality phases
 
 ---
 

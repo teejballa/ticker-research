@@ -223,7 +223,7 @@ Condition 5 (the only applicable gate):
 
 - **Plan 19-C-01/02 (FinSentLLM ensemble):** Has the historical training corpus once operator runs the backfill
 - **Plan 19-C-08 (CoVe NLI verification):** Can index against multi-year ticker chatter for stronger NLI grounding
-- **Phase 25 (Historical Backfill — composite training set):** Reddit slice now operator-runnable; combine with point-in-time fundamentals slice from Phase 25 plans
+- **Phase 27 (Historical Backfill — composite training set):** Reddit slice now operator-runnable; combine with point-in-time fundamentals slice from Phase 27 plans
 
 ## Self-Check: PASSED
 

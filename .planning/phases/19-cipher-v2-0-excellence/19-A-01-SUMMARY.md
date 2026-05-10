@@ -30,11 +30,11 @@ key-files:
   created:
     - tests/learning.unit.bugs.test.ts (9 tests)
   modified:
-    - src/lib/learning.ts (added: zod import, decayWeights guard, ClassHyperparametersSchema, HyperparametersSchema, validateHyperparameters export, module-load assertion, TODO(Phase 20+) comment)
+    - src/lib/learning.ts (added: zod import, decayWeights guard, ClassHyperparametersSchema, HyperparametersSchema, validateHyperparameters export, module-load assertion, TODO(Phase 22+) comment)
 decisions:
   - "Two-commit TDD split: RED commit (test file) → GREEN commit (implementation). Plan 19-A-01 task 1 spec was 'TDD true' so tests-fail-then-pass is the required ordering"
-  - "Used .strict() on HyperparametersSchema rather than the default permissive z.object(). RESEARCH Pitfall 2 explicitly authorized this trade-off — typo detection at module load is worth the future-proofing tax of having to update the schema when adding regime hyperparams in Phase 20+"
-  - "TODO(Phase 20+) comment placed inline directly above the .strict() call — most discoverable location for the future agent who hits the import-time throw after adding a new field to HYPERPARAMETERS"
+  - "Used .strict() on HyperparametersSchema rather than the default permissive z.object(). RESEARCH Pitfall 2 explicitly authorized this trade-off — typo detection at module load is worth the future-proofing tax of having to update the schema when adding regime hyperparams in Phase 22+"
+  - "TODO(Phase 22+) comment placed inline directly above the .strict() call — most discoverable location for the future agent who hits the import-time throw after adding a new field to HYPERPARAMETERS"
   - "Module-load assertion placed at the bottom of learning.ts (after HYPERPARAMETERS_DEFERRED_RETUNE) rather than top — semantic ordering: HYPERPARAMETERS must be defined before it can be validated. Top-of-file would require forward-referencing the const"
   - "Did NOT add a separate `validateHyperparameters` export to src/lib/index.ts (no such barrel) — direct named import from `src/lib/learning` is the existing convention (e.g., the new test imports `decayWeights, HYPERPARAMETERS, validateHyperparameters` together)"
   - "Did NOT modify the existing exp(-Δt / lambdaDays) math — D-54 sanity contract requires zero edits to existing pure-function logic. Only the guard insertion is new"
@@ -70,8 +70,8 @@ One-liner: `decayWeights` now rejects `lambdaDays <= 0` / NaN / non-finite with 
 - New exported `validateHyperparameters(input: unknown): asserts input is typeof HYPERPARAMETERS` runs `safeParse`, then discriminates on the first issue: `unrecognized_keys` → "unknown signal class — bogus" message; everything else → "validation failed" with full path-and-message join.
 - Module-load assertion `validateHyperparameters(HYPERPARAMETERS)` at file bottom — every importer of `src/lib/learning.ts` now transitively runs the validator. If the bootstrap config drifts away from the schema, the entire app fails to boot in CI rather than silently in production.
 
-### TODO(Phase 20+) future-proofing comment
-- Placed directly above the `.strict()` call in `HyperparametersSchema`. Flags that adding regime hyperparams or new signal classes in Phase 20+ requires either updating the schema or removing `.strict()` — otherwise import-time throws will block the entire app.
+### TODO(Phase 22+) future-proofing comment
+- Placed directly above the `.strict()` call in `HyperparametersSchema`. Flags that adding regime hyperparams or new signal classes in Phase 22+ requires either updating the schema or removing `.strict()` — otherwise import-time throws will block the entire app.
 
 ## Audit of Existing Call Sites (3 known per RESEARCH Pitfall 1)
 
@@ -130,7 +130,7 @@ Plan-level final metadata commit follows.
 |-----------|--------|
 | T-19-A-01-01 (silent ESS corruption via lambda=0) | MITIGATED — guard throws `decayWeights: lambdaDays must be > 0 and finite` |
 | T-19-A-01-02 (HYPERPARAMETERS typo breaks cron silently) | MITIGATED — `.strict()` schema + module-load assertion fails fast at import |
-| T-19-A-01-03 (Phase 20+ additions break .strict() validation) | MITIGATED via documentation — TODO(Phase 20+) comment flags the contract |
+| T-19-A-01-03 (Phase 22+ additions break .strict() validation) | MITIGATED via documentation — TODO(Phase 22+) comment flags the contract |
 
 No new security-relevant surface introduced (no new endpoints, no new auth paths, no new file access patterns, no new schema fields). Pure-function defensive guard + module-load validator only.
 
@@ -143,5 +143,5 @@ No new security-relevant surface introduced (no new endpoints, no new auth paths
 - 9/9 new tests passing
 - 5/5 Plan 18-10 sanity tests passing (D-54 honored)
 - 457/457 unit tests passing (1 todo skipped)
-- 4/4 acceptance grep checks passing (`lambdaDays must be > 0`, `validateHyperparameters`, `TODO(Phase 20+)`, `validateHyperparameters(HYPERPARAMETERS)`)
+- 4/4 acceptance grep checks passing (`lambdaDays must be > 0`, `validateHyperparameters`, `TODO(Phase 22+)`, `validateHyperparameters(HYPERPARAMETERS)`)
 - All 3 known existing call sites verified safe under new guard

@@ -84,7 +84,7 @@ Add to `prisma/schema.prisma` over the course of v2.0 phases — no new database
 |---|---|---|
 | Hosting | Vercel | unchanged |
 | Functions runtime | Node.js (Vercel Functions) | unchanged. Node 22 in use. |
-| Cron orchestration | Vercel Cron | **Pro plan timeout = 800s** for cron-triggered functions when `maxDuration` is set explicitly. The current 300s default in v1.0 is sufficient for daily learn cron through Phase 21; adaptive watchlist (Phase 24) and historical backfill (Phase 25) may need the 800s ceiling — set `export const maxDuration = 800` in those route handlers. |
+| Cron orchestration | Vercel Cron | **Pro plan timeout = 800s** for cron-triggered functions when `maxDuration` is set explicitly. The current 300s default in v1.0 is sufficient for daily learn cron through Phase 23; adaptive watchlist (Phase 26) and historical backfill (Phase 27) may need the 800s ceiling — set `export const maxDuration = 800` in those route handlers. |
 | Database | Neon Postgres | unchanged. Driver adapter is `@prisma/adapter-neon` (singleton in `src/lib/db.ts`). |
 | LLM | Gemini via Vercel AI Gateway | unchanged |
 | Observability | PostHog (recommend adding now) | Free tier covers our scale. Wire via `posthog-node` ~ 10 LOC. Captures both LLM calls (already supported via AI Gateway integration) and ML predictions (custom events). |
@@ -172,7 +172,7 @@ Three places where pure-TS is *materially* worse than a Python equivalent. None 
 ### LOW confidence (single source, would benefit from validation in implementation phase)
 - `@types/jstat` availability — DefinitelyTyped repo lists thousands of packages but I couldn't confirm `@types/jstat` specifically. **Action:** check at install time; fall back to writing a 50-line ambient `.d.ts` if missing.
 - ml-matrix Edge runtime compatibility — listed as pure-TS, but Edge runtime forbids some APIs (Buffer, fs). **Action:** verify in a Phase 18 spike; likely fine since matrix ops use only TypedArrays.
-- VIX rule-based regime classifier vs HMM equivalence — supported by [Volatility Box](https://volatilitybox.com/research/volatility-regime-detection/) and [Kritzman repo](https://github.com/tianyu-z/Kritzman-Regime-Detection); should be re-validated against Cipher's actual SPY-relative outcome data in Phase 20.
+- VIX rule-based regime classifier vs HMM equivalence — supported by [Volatility Box](https://volatilitybox.com/research/volatility-regime-detection/) and [Kritzman repo](https://github.com/tianyu-z/Kritzman-Regime-Detection); should be re-validated against Cipher's actual SPY-relative outcome data in Phase 22.
 
 ---
 
@@ -182,14 +182,14 @@ Three places where pure-TS is *materially* worse than a Python equivalent. None 
 
 - **Phase 18 (time-decay):** no new dep — pure schema + algorithm extension
 - **Phase 19 (hierarchical):** `ml-matrix` for matrix-form EB shrinkage
-- **Phase 20 (regime):** no new dep (rule-based) OR `ml-matrix` (HMM)
-- **Phase 21 (lift gating):** no new dep — temporal CV is a 3-loop algorithm
-- **Phase 22 (composite synthesis):** no new dep — IRLS upgrade uses `ml-matrix`
-- **Phase 23 (counterfactual):** no new dep
-- **Phase 24 (bandit):** `jstat` for `beta.inv`
-- **Phase 25 (backfill):** no new dep — uses existing yahoo-finance2 + technicalindicators
-- **Phase 26 (dashboard):** `posthog-node` for live metrics
-- **Phase 27 (calibration trail):** no new dep
+- **Phase 22 (regime):** no new dep (rule-based) OR `ml-matrix` (HMM)
+- **Phase 23 (lift gating):** no new dep — temporal CV is a 3-loop algorithm
+- **Phase 24 (composite synthesis):** no new dep — IRLS upgrade uses `ml-matrix`
+- **Phase 25 (counterfactual):** no new dep
+- **Phase 26 (bandit):** `jstat` for `beta.inv`
+- **Phase 27 (backfill):** no new dep — uses existing yahoo-finance2 + technicalindicators
+- **Phase 28 (dashboard):** `posthog-node` for live metrics
+- **Phase 29 (calibration trail):** no new dep
 
 **Net new npm packages across all of v2.0: 3 (`jstat`, `ml-matrix`, `posthog-node`).**
 
