@@ -15,6 +15,34 @@
       "registered_by_plan": "19-B-06",
       "registered_at": "2026-05-08",
       "post_cutover": true
+    },
+    {
+      "name": "wave-b-source-package-merge-flag-readsite",
+      "pattern": "tiingo_primary_mode|twelvedata_primary_mode|exa_primary_mode",
+      "registered_by_plan": "19-B-08",
+      "registered_at": "2026-05-10",
+      "post_cutover": true
+    },
+    {
+      "name": "wave-b-runtime-cache-flag-readsite",
+      "pattern": "data_cache_mode",
+      "registered_by_plan": "19-B-08",
+      "registered_at": "2026-05-10",
+      "post_cutover": true
+    },
+    {
+      "name": "wave-b-runWithShadow-source-package-merge",
+      "pattern": "runWithShadow\\(\\s*['\"]source-package-merge['\"]",
+      "registered_by_plan": "19-B-08",
+      "registered_at": "2026-05-10",
+      "post_cutover": true
+    },
+    {
+      "name": "wave-b-runWithShadow-runtime-cache",
+      "pattern": "runWithShadow\\(\\s*['\"]runtime-cache['\"]",
+      "registered_by_plan": "19-B-08",
+      "registered_at": "2026-05-10",
+      "post_cutover": true
     }
   ]
 }

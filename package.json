@@ -26,7 +26,8 @@
     "calibration-report": "npx tsx scripts/calibration-report.ts",
     "hierarchical-sweep-report": "npx tsx scripts/hierarchical-sweep-report.ts",
     "hierarchical-pooling-audit": "npx tsx scripts/hierarchical-pooling-audit.ts",
-    "arctic-shift-backfill": "npx tsx scripts/arctic-shift-backfill.ts"
+    "arctic-shift-backfill": "npx tsx scripts/arctic-shift-backfill.ts",
+    "wave-b-rollout-status": "npx tsx scripts/wave-b-rollout-status.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
