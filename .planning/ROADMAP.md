@@ -116,7 +116,7 @@ Plans:
 - [ ] 19-A-06: Calibration validation harness (reliability diagram + Hosmer-Lemeshow)
 - [ ] 19-A-07: Hierarchical Bayesian pooling — empirical Bayes priors (absorbed from original v2.0 P19)
 - [ ] 19-B-01: Upstash Redis client + cache-keys + TTL config (graceful degrade)
-- [ ] 19-B-02: Retry + exponential backoff wrapper (5xx + network only)
+- [x] 19-B-02: Retry + exponential backoff wrapper (5xx + network only) (completed 2026-05-08; 11/11 tests GREEN; 5xx + ECONNREFUSED/ENOTFOUND/ETIMEDOUT/ECONNRESET/EAI_AGAIN retried; 4xx incl. 401/403/404/408/429 surfaced immediately per D-25; full jitter on by default)
 - [ ] 19-B-03: Tiingo adapter (point-in-time fundamentals + EOD)
 - [ ] 19-B-04: Twelve Data adapter (fundamentals)
 - [ ] 19-B-05: Exa 2.0 adapter + Anthropic-search fallback wiring
