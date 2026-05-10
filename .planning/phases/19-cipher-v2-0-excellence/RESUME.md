@@ -1,23 +1,42 @@
 # Phase 19 Resume Checkpoint
 
 **Created:** 2026-05-07 (post-crash recovery)
-**Last updated:** 2026-05-09 (after 19-A-07 inline execution, all 9 in-scope tasks committed)
-**Last completed plan:** 19-A-07 (Hierarchical Bayesian pooling — empirical Bayes, CORE-ML-11..14)
-**Last commit on `main`:** `dc0435a` (feat(19-a-07): hierarchical-sweep-report + pooling-audit scripts)
+**Last updated:** 2026-05-09 (Phase 19 code-side COMPLETE — all 30 plans landed)
+**Last completed plan:** 19-B-08 (Wave-B rollout coordinator — driving plan)
+**Last commit on `main`:** `eeb058f` (merge(19-b-08): wave-b rollout coordinator from worktree)
 
 ## Resume Status (2026-05-09)
 
-Working tree is clean. 19-A-07 closed end-to-end via inline-per-task execution:
-seven atomic feat/test commits landed (`9395d2e`→`dc0435a`) + the SUMMARY/ROADMAP
-docs commit. Unit suite 524/527 (3 todo) green. Plan Task 10 (operator-driven
-shadow lifecycle: vercel env flip → drive workload → audit → verdict → cutover
-PR → 7d hatch → flag-removal PR) is deferred — that work happens during the
-v2.0 graduation window, not inside the plan execution.
+**Phase 19 code-side: COMPLETE.** All 30 plans (Z-01..Z-04, A-01..A-07,
+B-01..B-08, C-01..C-11) landed across 124 commits. Working tree clean. Final
+suite: **696 unit tests passing** (was 524 at Phase 19 start, +172 net).
+Typecheck clean.
 
-Next on user "go":
-1. **19-B-01** (Upstash Redis client + cache-keys + TTL config) — start of
-   Wave B (data-layer modernization).
-2. After 19-B-01: continue 19-B-02 → 19-C-11 (18 plans remaining after Wave A).
+Wave A (7 plans, ML hygiene + quant + hierarchical pooling), Wave B (8 plans,
+data-layer modernization with Tiingo / Twelve Data / Exa adapters + Upstash
+Redis + Vercel Runtime Cache + merge-precedence ladder + rollout coordinator),
+and Wave C (11 plans, sentiment + reasoning with FinSentLLM ensemble +
+reputation-weighted StockTwits + options term-structure + Swaggystocks /
+ApeWisdom / Quiver adapters + structured citations + CoVe two-pass + model
+cascade router + contradiction detector + Arctic Shift backfill) all merged.
+
+**What's still operator-driven** (multi-day, not in scope for inline execution):
+- For each of the 15 feature flags currently in `src/lib/features.ts`:
+  1. `vercel env add FEATURE_<NAME> shadow production` → trigger redeploy
+  2. Drive workload 3-7 days OR ≥200 ShadowComparison rows
+  3. Run `npm run shadow-verdict <plan-id>` → inspect verdict
+  4. PASS → cutover PR (flag default `on`)
+  5. 7-day rollback hatch (monitor RollbackLog)
+  6. Flag-removal PR (delete from features.ts)
+- `npm run wave-b-rollout-status` is the operator's one-stop dashboard for
+  Wave B gate state at any checkpoint.
+- `npm run model-card-status` is the composite Phase-19 done gate; it exits
+  zero only after every flag is removed and live-data adoption thresholds
+  are reached. Currently PENDING (expected — flags still off).
+
+## Crash Context (original 2026-05-07 entry — kept for history)
+
+The previous execution session crashed mid-way after committing the 19-A-04 GREEN code (`df0efcf`) and audit scripts (`bf691d5`), but before committing the SUMMARY.md and the ROADMAP.md `[x]` tick for 19-A-04. Both were recovered and committed in `b342f6b`.
 
 ## Crash Context (original 2026-05-07 entry — kept for history)
 
