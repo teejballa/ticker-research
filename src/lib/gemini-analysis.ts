@@ -1287,6 +1287,13 @@ async function generateAnalysis(
         stocktwits_is_trending: output.sentiment_intelligence_summary.stocktwits_is_trending ?? null,
         put_call_ratio: output.sentiment_intelligence_summary.put_call_ratio ?? null,
         put_call_interpretation: output.sentiment_intelligence_summary.put_call_interpretation ?? null,
+        // Post-Phase-19 — overlay aggregated cross-source fields from the
+        // SourcePackage directly (server-side truth, not LLM-echoed) so the UI
+        // gets the smoothed multi-source sentiment without the LLM re-emitting it.
+        aggregated_bull_pct: pkg.sentiment_intelligence?.aggregated_bull_pct ?? null,
+        aggregated_bear_pct: pkg.sentiment_intelligence?.aggregated_bear_pct ?? null,
+        sentiment_source_count: pkg.sentiment_intelligence?.sentiment_source_count ?? null,
+        sentiment_components: pkg.sentiment_intelligence?.sentiment_components ?? null,
       } : undefined,
       community_highlights: output.community_highlights?.length
         ? output.community_highlights

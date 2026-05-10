@@ -144,6 +144,20 @@ export interface SentimentIntelligenceSection extends SourceSection {
   // model_agreement = 1 - std(non-null scores); null when <2 contributors.
   finsentllm_score?: number | null;
   model_agreement?: number | null;
+  // Post-Phase-19 — multi-source community sentiment aggregator (fixes the
+  // "100% bullish" failure mode). Optional / nullable so SourcePackage stays
+  // backward-compatible when no community sources contributed.
+  aggregated_bull_pct?: number | null;
+  aggregated_bear_pct?: number | null;
+  /** Number of community sources (StockTwits / Swaggystocks / ApeWisdom) that contributed. */
+  sentiment_source_count?: number | null;
+  /** Per-source breakdown for the UI. Always populated when source_count > 0. */
+  sentiment_components?: Array<{
+    source: 'stocktwits' | 'swaggystocks' | 'apewisdom';
+    bullish_pct: number;
+    weight: number;
+    raw_mention_count: number;
+  }> | null;
 }
 
 export interface ChartDataPoint {
@@ -411,6 +425,17 @@ export interface AnalysisResult {
     stocktwits_is_trending: boolean | null;
     put_call_ratio: number | null;
     put_call_interpretation: 'bullish' | 'bearish' | 'neutral' | null;
+    // Post-Phase-19 — cross-source aggregated sentiment (Beta-smoothed).
+    // Optional/nullable for back-compat with reports persisted before this field landed.
+    aggregated_bull_pct?: number | null;
+    aggregated_bear_pct?: number | null;
+    sentiment_source_count?: number | null;
+    sentiment_components?: Array<{
+      source: 'stocktwits' | 'swaggystocks' | 'apewisdom';
+      bullish_pct: number;
+      weight: number;
+      raw_mention_count: number;
+    }> | null;
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph
