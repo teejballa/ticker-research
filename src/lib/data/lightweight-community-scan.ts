@@ -1,6 +1,16 @@
 // src/lib/data/lightweight-community-scan.ts
-// Lightweight 3-source community scan: no Gemini, no Haiku.
-// Cost: ~3 Firecrawl credits + 1 StockTwits call per ticker.
+// Lightweight community scan: no Gemini, no Haiku.
+//
+// Plan 19-C-05 absorbs D-44 — subreddit expansion via Firecrawl. Coverage now
+// spans four mainstream + analytical subs:
+//   r/wallstreetbets   — retail momentum (mainstream)
+//   r/stocks           — general retail (mainstream, replaces r/investing)
+//   r/SecurityAnalysis — value / fundamentals niche (middle)
+//   r/algotrading      — quant / systematic niche (middle)
+// plus the per-ticker niche sub r/<TICKER>. All five via Firecrawl — no new
+// adapter needed (D-44 spec).
+//
+// Cost: ~5 Firecrawl credits + 1 StockTwits call per ticker (was 3 + 1 pre-D-44).
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
 import { fetchStockTwitsSentiment } from './stocktwits';
@@ -49,9 +59,13 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
   const upper = ticker.toUpperCase();
 
-  const [mainstreamMd, middleMd, nicheMd, stocktwitsResult, marketCap] = await Promise.all([
+  // D-44 absorbed: 4-subreddit Firecrawl expansion (mainstream + analytical)
+  // plus the per-ticker niche sub. All five via Firecrawl — no new adapter.
+  const [wsbMd, stocksMd, secanalysisMd, algoMd, nicheMd, stocktwitsResult, marketCap] = await Promise.all([
     scrapeOne(fc, `https://www.reddit.com/r/wallstreetbets/search/?q=${upper}&sort=new&t=week`),
-    scrapeOne(fc, `https://www.reddit.com/r/investing/search/?q=${upper}&sort=new&t=week`),
+    scrapeOne(fc, `https://www.reddit.com/r/stocks/search/?q=${upper}&sort=new&t=week`),
+    scrapeOne(fc, `https://www.reddit.com/r/SecurityAnalysis/search/?q=${upper}&sort=new&t=week`),
+    scrapeOne(fc, `https://www.reddit.com/r/algotrading/search/?q=${upper}&sort=new&t=week`),
     scrapeOne(fc, `https://www.reddit.com/r/${upper}/new/`),
     fetchStockTwitsSentiment(upper),
     yf.quote(upper).then(q => q.marketCap ?? null).catch(() => null),
@@ -60,8 +74,8 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
   const highlights: CommunityHighlight[] = [];
   const enrichedHighlights: EnrichedSnapshot['highlights'] = [];
 
-  if (mainstreamMd) {
-    const count = rawEngagementCount(mainstreamMd);
+  if (wsbMd) {
+    const count = rawEngagementCount(wsbMd);
     const engagement = toEngagement(count);
     highlights.push({
       community_name: 'r/wallstreetbets', community_type: 'mainstream',
@@ -71,15 +85,37 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     enrichedHighlights.push({ community_name: 'r/wallstreetbets', community_type: 'mainstream', engagement, engagement_count: count });
   }
 
-  if (middleMd) {
-    const count = rawEngagementCount(middleMd);
+  if (stocksMd) {
+    const count = rawEngagementCount(stocksMd);
     const engagement = toEngagement(count);
     highlights.push({
-      community_name: 'r/investing', community_type: 'middle',
+      community_name: 'r/stocks', community_type: 'mainstream',
       audience: 'general retail investors', standout_quote: '', theme: 'general discussion',
       sentiment: 'neutral', engagement_signal: engagement,
     });
-    enrichedHighlights.push({ community_name: 'r/investing', community_type: 'middle', engagement, engagement_count: count });
+    enrichedHighlights.push({ community_name: 'r/stocks', community_type: 'mainstream', engagement, engagement_count: count });
+  }
+
+  if (secanalysisMd) {
+    const count = rawEngagementCount(secanalysisMd);
+    const engagement = toEngagement(count);
+    highlights.push({
+      community_name: 'r/SecurityAnalysis', community_type: 'middle',
+      audience: 'value/fundamentals analysts', standout_quote: '', theme: 'fundamentals + valuation',
+      sentiment: 'neutral', engagement_signal: engagement,
+    });
+    enrichedHighlights.push({ community_name: 'r/SecurityAnalysis', community_type: 'middle', engagement, engagement_count: count });
+  }
+
+  if (algoMd) {
+    const count = rawEngagementCount(algoMd);
+    const engagement = toEngagement(count);
+    highlights.push({
+      community_name: 'r/algotrading', community_type: 'middle',
+      audience: 'quant/systematic traders', standout_quote: '', theme: 'systematic + quant strategies',
+      sentiment: 'neutral', engagement_signal: engagement,
+    });
+    enrichedHighlights.push({ community_name: 'r/algotrading', community_type: 'middle', engagement, engagement_count: count });
   }
 
   if (nicheMd) {
