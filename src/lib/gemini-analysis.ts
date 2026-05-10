@@ -10,9 +10,17 @@ import Firecrawl from '@mendable/firecrawl-js';
 // the `web_search_20250305` tool, which is an Anthropic-native feature not available through
 // the AI Gateway. Gemini calls route through the Gateway via plain model strings as normal.
 import Anthropic from '@anthropic-ai/sdk';
-import { formatResearchBrief, extractNewsUrls } from '@/lib/research-brief';
+import {
+  formatResearchBrief,
+  extractNewsUrls,
+  assembleCitationsFromPackage,
+  renderCitationsSection,
+} from '@/lib/research-brief';
 import type { AnalysisResult, EngineCalibration, SourcePackage } from '@/lib/types';
 import { getEngineContextForTicker, type EngineContext } from '@/lib/engine-context';
+import { CitationsArraySchema, type Citation } from '@/lib/sentiment/citation-schema';
+import { runWithShadow } from '@/lib/shadow/shadow-runner';
+import type { FeatureMode } from '@/lib/features';
 
 // Reads ANTHROPIC_API_KEY from process.env automatically.
 const anthropicClient = new Anthropic();
@@ -90,6 +98,14 @@ export const AnalysisResultSchema = z.object({
   }).optional(),
   community_highlights: z.array(CommunityHighlightSchema).optional().default([]),
   community_analysis: z.string().optional().default(''),
+
+  // Phase 19-C-07 (D-39) — structured citations v2.
+  // Optional in the schema during shadow mode (off path won't populate).
+  // Once cutover lands per shadow lifecycle, the legacy free-text
+  // `source_citation: string` on each bullish/bearish signal will be removed
+  // and `citations_v2` becomes mandatory at the report level.
+  citations_v2: CitationsArraySchema.optional(),
+
   // Engine calibration block — Gemini contributes only the alignment/disagreement
   // strings (4 of them, post-Phase-16; 8 total post-Phase-17). All numeric fields
   // are overwritten post-generation with authoritative values from getEngineContextForTicker.
@@ -721,8 +737,35 @@ INSTRUCTIONS for engine_calibration:
 // ---- Main analysis function ----
 
 /**
+ * Read FEATURE_CITATIONS_V2 once per call. Three-mode flag (D-09):
+ *   off    → legacy free-text source_citation only (default)
+ *   shadow → legacy is canonical (returned to caller); new (with citations_v2)
+ *            runs in setImmediate via runWithShadow + persists ShadowComparison
+ *   on     → new path is canonical
+ *
+ * This flag is intentionally local to gemini-analysis.ts (NOT in the central
+ * features.ts matrix) because per the 19-C-07 plan: "this plan uses
+ * runWithShadow with no specific feature flag — citations_v2 is the canonical
+ * post-cutover; flag-removal step is N/A". Once shadow → cutover lands and
+ * 7-day hatch closes, this helper + the shadow wrap is removed and the
+ * citations-v2 path becomes the only path.
+ */
+function getCitationsV2Mode(): FeatureMode {
+  const raw = process.env.FEATURE_CITATIONS_V2;
+  if (raw === 'true' || raw === 'on') return 'on';
+  if (raw === 'shadow') return 'shadow';
+  return 'off';
+}
+
+/**
  * Calls Gemini via AI SDK + Vercel AI Gateway and returns a fully typed AnalysisResult.
  * Auth: VERCEL_OIDC_TOKEN (auto-managed by Vercel runtime — never reference in application code).
+ *
+ * Phase 19-C-07: wrapped in runWithShadow('citations-v2', ...). When mode=off,
+ * the legacy free-text source_citation path runs (no citations_v2). When mode=
+ * shadow, the new structured-citations path runs in setImmediate background and
+ * persists a ShadowComparison row for shadow-verdict scoring; the user sees
+ * the legacy result. When mode=on, the structured-citations path is canonical.
  *
  * @param ticker - The ticker symbol (e.g., 'AAPL')
  * @param pkg - The assembled SourcePackage from the research pipeline
@@ -739,12 +782,53 @@ export async function runGeminiAnalysis(
     highlights: import('@/lib/types').CommunityHighlight[];
   } | null,
 ): Promise<AnalysisResult> {
+  const mode = getCitationsV2Mode();
+
+  return runWithShadow<AnalysisResult>(
+    'citations-v2',
+    () => generateAnalysis(ticker, pkg, communityData, false),
+    () => generateAnalysis(ticker, pkg, communityData, true),
+    mode,
+    { ticker },
+  );
+}
+
+/**
+ * Inner generator. `useCitationsV2=false` → legacy prompt + no citations_v2 on
+ * the result (free-text source_citation already inside bullish/bearish signals).
+ * `useCitationsV2=true` → CITATIONS section appended to the user prompt + the
+ * resulting `output.citations_v2` is filtered to only include entries whose URL
+ * appears in the assembled SourcePackage list (T-19-C-07-01: LLM may not invent
+ * URLs even when it tries).
+ */
+async function generateAnalysis(
+  ticker: string,
+  pkg: SourcePackage,
+  communityData: {
+    pinnedContent: string;
+    nicheContent: string;
+    nicheUrls: string[];
+    pageCount: number;
+    highlights: import('@/lib/types').CommunityHighlight[];
+  } | null,
+  useCitationsV2: boolean,
+): Promise<AnalysisResult> {
   const brief = formatResearchBrief(pkg);
   const newsUrls = extractNewsUrls(pkg);
   const combinedContent = communityData
     ? [communityData.pinnedContent, communityData.nicheContent].filter(Boolean).join('\n\n---\n\n')
     : '';
-  const userPrompt = buildUserPrompt(
+
+  // Phase 19-C-07 (D-39): assemble structured citations from the SourcePackage.
+  // The LLM is shown this list and must SELECT (not fabricate). When useCitationsV2
+  // is false (shadow off path), the section is omitted and the legacy prompt
+  // is unchanged.
+  const assembledCitations = useCitationsV2 ? assembleCitationsFromPackage(pkg) : [];
+  const allowedUrls = new Set<string>(
+    assembledCitations.map((c) => c.url).filter((u): u is string => typeof u === 'string'),
+  );
+
+  const baseUserPrompt = buildUserPrompt(
     brief,
     newsUrls,
     combinedContent,
@@ -752,6 +836,9 @@ export async function runGeminiAnalysis(
     communityData?.highlights ?? [],
     pkg.news.items ?? [],
   );
+  const userPrompt = useCitationsV2
+    ? renderCitationsSection(assembledCitations) + '\n' + baseUserPrompt
+    : baseUserPrompt;
 
   // Fetch engine calibration context. Failures are non-fatal — the report
   // generates without an engine_calibration block (UI hides the panel).
@@ -860,6 +947,25 @@ export async function runGeminiAnalysis(
       };
     }
 
+    // Phase 19-C-07 (D-39) — citations_v2 post-process.
+    // Filter LLM-emitted citations to ONLY include entries whose URL appears
+    // in the assembled SourcePackage list (T-19-C-07-01: defense-in-depth even
+    // if Gemini ignores the "do not invent URLs" instruction). Re-validate
+    // each entry against CitationSchema in case the LLM produced a row that
+    // breaks the analyst-mandatory-URL invariant.
+    let citations_v2: Citation[] | undefined;
+    if (useCitationsV2) {
+      const llmCitations = (output.citations_v2 ?? []) as Citation[];
+      const filtered: Citation[] = [];
+      for (const c of llmCitations) {
+        if (c.url && !allowedUrls.has(c.url)) continue; // fabricated URL — drop
+        filtered.push(c);
+      }
+      // If the LLM returned nothing (or everything was fabricated), fall back
+      // to the assembled list so users always see SOME citation provenance.
+      citations_v2 = filtered.length > 0 ? filtered : assembledCitations;
+    }
+
     return {
       ticker,
       company_name: pkg.company_name,
@@ -899,6 +1005,7 @@ export async function runGeminiAnalysis(
         ? output.community_highlights
         : undefined,
       community_analysis: output.community_analysis || undefined,
+      citations_v2,
       engine_calibration,
     };
   } catch (err) {
