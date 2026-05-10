@@ -86,33 +86,38 @@ The system is a pure-TypeScript pipeline running entirely on Vercel:
 
 ### v2.0 Phase Order (reconciled across 4 research dimensions)
 
-P18 → P20 → P19 → P25 → P21 → P22 → (P23 / P24 / P26 in parallel) → P27
+P18 → P22 → P19 → P27 → P23 → P24 → (P25 / P26 / P28 in parallel) → P29
 
 The phase numbers are NOT in execution order — they reflect the original capability grouping. Build dependencies determine the sequence: time-decay (keystone) → regime-key extension (risky migration first) → hierarchical pooling (uses ESS + regime) → backfill (bootstraps lift-gating data) → lift-gating → composite signal (first user-visible win) → counterfactuals + bandit + dashboard (parallel) → public calibration trail (last, needs legal sign-off).
+
+**Group U — Urgent re-prioritization (front-loaded 2026-05-10)**
+
+- **Phase 20: Real Sentiment Analysis & Report-Generation Excellence.** Bring sentiment and report-generation layers to documented industry baseline (RavenPack / MarketPsych parity on per-document NLP, source-tier weighting, dispersion/crowding flags, volume baselining, bot filters, per-source IC calibration; Mitchell-2019 model cards; PIT discipline; numeric-grounding regression; golden-ticker failure-mode coverage). Triggered by post-19 finding that StockTwits raw bull% reads as 100% on meme stocks (GME) — the engine currently treats single-source extremes as thesis confirmation when the literature shows they are echo-chamber crowding signals that mean-revert.
+- **Phase 21: Sector-Relative Outcome Labels.** Switch the engine's primary outcome label from `alpha-vs-SPY` to `alpha-vs-sector-ETF`; retain SPY-alpha as a secondary diagnostic. Driven by 4-agent literature synthesis (DGTW 1997, Lakonishok-Lee, AQR, Park-Irwin, Quantopian) that SPY-alpha confounds firm-specific signal information with sector beta. Sector-relative is the consensus benchmark for the signals Cipher tracks (insider, institutional, sentiment, technical patterns).
 
 **Group A — Core ML quality (the "infinitely better" path)**
 
 - **Phase 18: Time-decayed Bayesian updates.** Add exponential decay to LearnedPattern observations (recent samples weighted more, old samples decay). Defeats concept drift. Drives `drift_z` from a logged metric to an active gating signal. Effective sample size becomes the cell's currency.
 - **Phase 19: Hierarchical priors (partial pooling).** Related buckets share information via a shared parent prior — `consolidation/large_cap/3d` borrows strength from `consolidation/mid_cap/3d` etc. Defeats granularity fragmentation. Sparse cells learn faster.
-- **Phase 20: Market-regime feature.** Add a regime label (bull/bear/chop, rate-cycle, vol-regime) to the cell key so 2026-bull patterns don't contaminate 2028-bear posteriors. Regime detector via macro indicators + VIX bucketing.
-- **Phase 21: Lift-driven cell promotion.** Today ACTIVE = sample_size + brier_in_sample threshold. Add Brier-lift-vs-null as the actual promotion gate, with `out-of-sample` validation via temporal CV. ACTIVE cells then *guarantee* lift, not just calibration.
+- **Phase 22: Market-regime feature.** Add a regime label (bull/bear/chop, rate-cycle, vol-regime) to the cell key so 2026-bull patterns don't contaminate 2028-bear posteriors. Regime detector via macro indicators + VIX bucketing.
+- **Phase 23: Lift-driven cell promotion.** Today ACTIVE = sample_size + brier_in_sample threshold. Add Brier-lift-vs-null as the actual promotion gate, with `out-of-sample` validation via temporal CV. ACTIVE cells then *guarantee* lift, not just calibration.
 
 **Group B — Engine impact on reports**
 
-- **Phase 22: Multi-cell prior composition in the prompt.** Today the calibration block surfaces 4 cells (one per signal class). Compose them via the trained logistic regression into a single composite-signal probability with credible interval, surfaced as the headline number. Reasoning becomes "the composite signal says X with Y confidence" — directly checkable against outcomes.
-- **Phase 23: Counterfactual reasoning in reports.** Inject "if this signal had been absent, the prior would shift from A to B" into the prompt — Gemini explains *why* the calibration moved the thesis, not just that it did. Educational + auditable.
+- **Phase 24: Multi-cell prior composition in the prompt.** Today the calibration block surfaces 4 cells (one per signal class). Compose them via the trained logistic regression into a single composite-signal probability with credible interval, surfaced as the headline number. Reasoning becomes "the composite signal says X with Y confidence" — directly checkable against outcomes.
+- **Phase 25: Counterfactual reasoning in reports.** Inject "if this signal had been absent, the prior would shift from A to B" into the prompt — Gemini explains *why* the calibration moved the thesis, not just that it did. Educational + auditable.
 
 **Group C — Coverage & evidence growth**
 
-- **Phase 24: Adaptive watchlist.** Replace the fixed rotating watchlist with one that targets undersampled cells — explore-exploit on which buckets to populate. Sparse cells get scanned more aggressively until threshold sample size is reached.
-- **Phase 25: Backfill from historical price data.** For any signal class with deterministic features (technical patterns), backfill 5+ years of historical SentimentSnapshots + PriceOutcomes against historical SPY data. Bootstraps thousands of observations per cell instead of waiting weeks.
+- **Phase 26: Adaptive watchlist.** Replace the fixed rotating watchlist with one that targets undersampled cells — explore-exploit on which buckets to populate. Sparse cells get scanned more aggressively until threshold sample size is reached.
+- **Phase 27: Backfill from historical price data.** For any signal class with deterministic features (technical patterns), backfill 5+ years of historical SentimentSnapshots + PriceOutcomes against historical SPY data. Bootstraps thousands of observations per cell instead of waiting weeks.
 
 **Group D — Demonstrability**
 
-- **Phase 26: Live engine performance dashboard.** A new tab on `/insights` that shows actual Brier lift over time, % reports using ACTIVE priors, top-performing cells, drift detection alerts, and a daily "engine learned X new things" feed. Makes the learning visible to non-experts.
-- **Phase 27: Public research log + transparency.** Publish a per-report "calibration trail" — what priors fired, what the engine predicted, what actually happened, ongoing accuracy stats. This becomes the differentiator: every Cipher report has receipts.
+- **Phase 28: Live engine performance dashboard.** A new tab on `/insights` that shows actual Brier lift over time, % reports using ACTIVE priors, top-performing cells, drift detection alerts, and a daily "engine learned X new things" feed. Makes the learning visible to non-experts.
+- **Phase 29: Public research log + transparency.** Publish a per-report "calibration trail" — what priors fired, what the engine predicted, what actually happened, ongoing accuracy stats. This becomes the differentiator: every Cipher report has receipts.
 
-**Phase 28+: TBD via `/gsd-new-milestone` — likely v1.2 candidates**
+**Phase 30+: TBD via `/gsd-new-milestone` — likely v1.2 candidates**
 
 ### Why this is the right v1.1 scope
 
@@ -125,14 +130,14 @@ The phase numbers are NOT in execution order — they reflect the original capab
 
 1. Drift detector live with `effective_sample_size` down-weighting > 30-day-old observations (P18)
 2. Hierarchical pooling demonstrably accelerates sparse-cell learning vs no-pool control on out-of-sample data (P19)
-3. Regime feature integrated with deterministic regime labels for all snapshots, live + backfill (P20)
-4. ≥1 cell with FDR-corrected, Purged-CV out-of-sample Brier-lift > 5% vs null model (P21)
-5. Composite signal block in every report (headline probability + CI + per-class breakdown) (P22)
-6. Counterfactual deltas in every report explaining how each signal class moved the thesis (P23)
-7. Adaptive watchlist live and measurably accelerating cell saturation (P24)
-8. Backfill universe ≥100 tickers × 5 years with point-in-time correctness (P25)
-9. Performance dashboard live at `/insights` with daily learning feed + drift alerts (P26)
-10. Public calibration trail published with legal sign-off and aggregate-only metrics (P27)
+3. Regime feature integrated with deterministic regime labels for all snapshots, live + backfill (P22)
+4. ≥1 cell with FDR-corrected, Purged-CV out-of-sample Brier-lift > 5% vs null model (P23)
+5. Composite signal block in every report (headline probability + CI + per-class breakdown) (P24)
+6. Counterfactual deltas in every report explaining how each signal class moved the thesis (P25)
+7. Adaptive watchlist live and measurably accelerating cell saturation (P26)
+8. Backfill universe ≥100 tickers × 5 years with point-in-time correctness (P27)
+9. Performance dashboard live at `/insights` with daily learning feed + drift alerts (P28)
+10. Public calibration trail published with legal sign-off and aggregate-only metrics (P29)
 
 For full requirement-by-requirement breakdown see `.planning/REQUIREMENTS.md` (50 requirements). For per-dimension research findings see `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS,SUMMARY}.md`.
 

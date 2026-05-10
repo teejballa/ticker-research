@@ -19,7 +19,7 @@ dependency_graph:
     - "tests/fixtures/dsr-bailey-lopez-de-prado-2014.json (DSR=0.899666 golden)"
     - "tests/fixtures/pbo-pypbo-reference.json (PBO=0.348485 deterministic synthetic)"
   affects:
-    - "v2.0 P21 (Lift-Gated Cell Promotion) can now import all three primitives"
+    - "v2.0 P23 (Lift-Gated Cell Promotion) can now import all three primitives"
     - "Plan 19-Z-04 model-card-status threshold inputs"
 tech_stack:
   added: []
@@ -55,11 +55,11 @@ metrics:
 
 # Phase 19 Plan 19-A-04: DSR + PBO + CPCV primitives Summary
 
-Lopez de Prado anti-backtest-overfitting trifecta landed as DB-free pure functions in `src/lib/learning.ts`. Three quant-grade validation primitives (Deflated Sharpe Ratio, Probability of Backtest Overfitting via CSCV, Combinatorial Purged K-Fold CV) golden-master-tested at 1e-6 tolerance against pinned fixtures. CI guard prevents future fixture trivial-pass regressions. Audit script calibrates thresholds for the Plan 19-Z-04 composite gate. Unblocks v2.0 P21 (Lift-Gated Cell Promotion).
+Lopez de Prado anti-backtest-overfitting trifecta landed as DB-free pure functions in `src/lib/learning.ts`. Three quant-grade validation primitives (Deflated Sharpe Ratio, Probability of Backtest Overfitting via CSCV, Combinatorial Purged K-Fold CV) golden-master-tested at 1e-6 tolerance against pinned fixtures. CI guard prevents future fixture trivial-pass regressions. Audit script calibrates thresholds for the Plan 19-Z-04 composite gate. Unblocks v2.0 P23 (Lift-Gated Cell Promotion).
 
 ## Plan Goal Alignment
 
-This plan was the third Wave A primitive landing (after 19-A-02 Brier OOS and 19-A-03 Conformal) and is the gating requirement for v2.0 P21 (Lift-Gated Cell Promotion). All three exports are pure functions per the CLAUDE.md `learning.ts is pure functions, no DB` invariant.
+This plan was the third Wave A primitive landing (after 19-A-02 Brier OOS and 19-A-03 Conformal) and is the gating requirement for v2.0 P23 (Lift-Gated Cell Promotion). All three exports are pure functions per the CLAUDE.md `learning.ts is pure functions, no DB` invariant.
 
 ## What Got Built
 

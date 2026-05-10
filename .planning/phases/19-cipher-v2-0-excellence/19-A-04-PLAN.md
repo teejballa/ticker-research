@@ -23,7 +23,7 @@ must_haves:
     - "combinatorialPurgedKFold(N=6, k=2) produces 15 splits and 5 distinct backtest paths"
     - "All three primitives DB-free pure functions in learning.ts"
     - "Audit script writes calibration thresholds for DSR and PBO to a config file consumed by 19-Z-04"
-    - "v2.0 P21 (Lift-Gated Cell Promotion) can import all three primitives"
+    - "v2.0 P23 (Lift-Gated Cell Promotion) can import all three primitives"
     - "Fixtures committed with NO null expected values — all expected.dsr/pbo populated with real numbers from paper §4 OR pypbo cross-validation. Tests refuse to pass with null expected fields"
   artifacts:
     - path: "src/lib/learning.ts"
@@ -50,7 +50,7 @@ must_haves:
 
 ## Autonomous Execution Clause (D-04..D-07)
 
-Land three primitives + audit script + golden-master fixtures (with REAL non-null expected values) → tests green at 1e-6 tolerance → commit. No shadow needed (additive primitives; existing CV path unchanged). v2.0 P21 imports these post-completion.
+Land three primitives + audit script + golden-master fixtures (with REAL non-null expected values) → tests green at 1e-6 tolerance → commit. No shadow needed (additive primitives; existing CV path unchanged). v2.0 P23 imports these post-completion.
 
 ### Fixture non-null contract
 
@@ -73,7 +73,7 @@ This plan now enforces:
 </universal_preamble>
 
 <objective>
-Implement Lopez de Prado's anti-backtest-overfitting trifecta as additive pure functions per D-20: Deflated Sharpe Ratio (Bailey-Lopez de Prado 2014), Probability of Backtest Overfitting (Bailey-Borwein-Lopez de Prado-Zhu 2014), and Combinatorial Purged K-Fold CV (Lopez de Prado 2018 ch.7). All golden-master tested to 1e-6 tolerance against published references. Unblocks v2.0 P21.
+Implement Lopez de Prado's anti-backtest-overfitting trifecta as additive pure functions per D-20: Deflated Sharpe Ratio (Bailey-Lopez de Prado 2014), Probability of Backtest Overfitting (Bailey-Borwein-Lopez de Prado-Zhu 2014), and Combinatorial Purged K-Fold CV (Lopez de Prado 2018 ch.7). All golden-master tested to 1e-6 tolerance against published references. Unblocks v2.0 P23.
 </objective>
 
 <execution_context>
@@ -440,7 +440,7 @@ export function combinatorialPurgedKFold(args: {
     Audit script (scripts/dsr-pbo-audit.ts) calibrates thresholds for
     19-Z-04 model-card-status gate (writes config/quant-gate-thresholds.json).
 
-    Unblocks v2.0 P21 (Lift-Gated Cell Promotion).
+    Unblocks v2.0 P23 (Lift-Gated Cell Promotion).
 
     Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
     ```
@@ -463,7 +463,7 @@ export function combinatorialPurgedKFold(args: {
 - [ ] verify-fixtures-no-null guard exits 0 (and is wired into npm test)
 - [ ] All three primitives DB-free
 - [ ] Audit script writes threshold config
-- [ ] v2.0 P21 dependency satisfied
+- [ ] v2.0 P23 dependency satisfied
 </verification>
 
 <success_criteria>

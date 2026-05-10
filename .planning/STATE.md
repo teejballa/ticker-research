@@ -35,19 +35,23 @@ Last completed (prior): 19-A-05 → rolling 20d rank-IC monitor + alpha-decay-wa
 
 ## Accumulated Context (carried forward from v1.0)
 
+### Roadmap Evolution
+
+- 2026-05-10: Phase 21 added — Sector-Relative Outcome Labels (`alpha-vs-sector-ETF` becomes primary outcome label; SPY-alpha retained as secondary). Driven by 4-agent literature synthesis: DGTW 1997 / Lakonishok-Lee / AQR / Park-Irwin / Quantopian all converge that sector-relative is the right benchmark for the firm-specific signals Cipher tracks. Context doc: `.planning/phases/21-sector-relative-outcome-labels/CONTEXT.md`.
+
 **Architectural commitments preserved:**
 
 - Pure-TypeScript on Vercel — no Python, no containers
 - `learning.ts` is "pure functions, no DB" — every v2.0 algorithm follows
 - `engine-context.ts` is the single trust boundary for authoritative numerics — composite signals + counterfactuals come from here, never from the LLM
 - Prisma schema migrations are additive — never drop columns, never change types
-- Vercel cron `maxDuration: 300` (default) suffices through Phase 21; bump to `800` for backfill (P25) and adaptive watchlist (P24) on Pro tier
+- Vercel cron `maxDuration: 300` (default) suffices through Phase 23; bump to `800` for backfill (P27) and adaptive watchlist (P26) on Pro tier
 
 **v2.0 stack additions (verified May 2026):**
 
 - `jstat` — Beta-CDF quantiles for exact Thompson sampling + CI replacement
 - `ml-matrix` (6.12.2) — IRLS for full Bayesian logistic with proper covariance
-- `posthog-node` — optional metric collection for Phase 26 dashboard
+- `posthog-node` — optional metric collection for Phase 28 dashboard
 
 **Critical defensive mandates (cross-cutting, every phase):**
 
@@ -55,7 +59,7 @@ Last completed (prior): 19-A-05 → rolling 20d rank-IC monitor + alpha-decay-wa
 - Purged K-Fold + Embargo CV (never random splits, never simple time-split)
 - Document operational action per metric (no vanity metrics)
 - Show ESS, not raw N, on every posterior surface
-- Phase 27 entry gate is "legal counsel engaged"
+- Phase 29 entry gate is "legal counsel engaged"
 
 ## v1.0 Carryover Items (calendar-gated, not blocking)
 

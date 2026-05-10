@@ -24,7 +24,7 @@ D-01..D-20 in `18-CONTEXT.md`. Salient implementation invariants:
 - Backfill ships as a separate cron route vs inline script — **CONTEXT explicitly lands on a route (D-13)**, so locked.
 
 ### Deferred Ideas (OUT OF SCOPE)
-None. CONTEXT.md kept the discussion within phase scope. Cross-phase items mentioned only for context: hierarchical pooling (P19), regime feature (P20), lift-gated ACTIVE (P21), drift dashboard tile (P26), auto-demote (post-P21).
+None. CONTEXT.md kept the discussion within phase scope. Cross-phase items mentioned only for context: hierarchical pooling (P19), regime feature (P22), lift-gated ACTIVE (P23), drift dashboard tile (P28), auto-demote (post-P23).
 </user_constraints>
 
 <phase_requirements>
@@ -43,7 +43,7 @@ None. CONTEXT.md kept the discussion within phase scope. Cross-phase items menti
 
 Phase 18 adds **three pure primitives** to `src/lib/learning.ts` (`decayWeights`, `computeESS`, `pageHinkleyStatistic` plus a `confirmedDrift` composer that wraps existing `driftZ`), a fourth utility (`purgedKFold`) likely in a new `src/lib/cv.ts`, an additive Prisma migration (`effective_sample_size`, `n_trials_attempted`, status string gains `EXPLORATORY-WATCH`), an idempotent one-shot backfill cron at `/api/cron/backfill-ess`, an extension to `recomputeOneCell` in `src/app/api/cron/learn/route.ts` to apply weights and run two-of-two drift, and an additive change to `EngineCalibrationPanel` (replace `n=` subValue with `ESS=`, render `EXPLORATORY-WATCH` badge). All primitives are pure-functional, all DB writes funnel through one transaction per cell, and migration is additive — D-19 invariant preserved.
 
-The riskiest implementation choice is **persisting per-class λ and per-class Page-Hinkley parameters** (Q4). Pick the wrong storage and either (a) tuning becomes invisible to ops (constants are recompiled to ship a re-tune), (b) the database accrues a tiny lookup table that every learn-cycle reads. **Mitigation: ship a typed config constant in `learning.ts` (option A) for v2.0, document the tuning script that regenerates it, and defer a `LearningHyperparameters` table to P21 when re-tuning becomes a recurring operation.** This pairs cleanly with the "no global default" mandate (the constant carries per-class winners, not a global) while keeping the schema additive-minimum.
+The riskiest implementation choice is **persisting per-class λ and per-class Page-Hinkley parameters** (Q4). Pick the wrong storage and either (a) tuning becomes invisible to ops (constants are recompiled to ship a re-tune), (b) the database accrues a tiny lookup table that every learn-cycle reads. **Mitigation: ship a typed config constant in `learning.ts` (option A) for v2.0, document the tuning script that regenerates it, and defer a `LearningHyperparameters` table to P23 when re-tuning becomes a recurring operation.** This pairs cleanly with the "no global default" mandate (the constant carries per-class winners, not a global) while keeping the schema additive-minimum.
 
 ## Q1: Time-decay primitives in learning.ts
 
@@ -194,10 +194,10 @@ Tuning runs (λ grid + (δ, λ_PH) grid) live in `scripts/tune-decay.ts` and `sc
 **Recommendation: (A) typed config constant in `learning.ts`** (e.g., `export const HYPERPARAMETERS: Record<SignalClass, {lambda_days: number, ph_delta: number, ph_lambda: number, tuned_at: string, cv_brier_oos: number}>`).
 
 - **Defensible against D-17 ("documented operational action"):** the constant is type-checked, version-controlled, reviewable in the PR; tuning runs print a JSON blob the developer pastes in. Re-tunes leave a git diff.
-- **Cheapest schema impact:** D-19 mandates additive-only migrations; option (B) introduces a new table whose only row is a singleton — pure overhead until P21 wants automated re-tuning.
-- **`LogisticEpoch` reuse (C) is wrong shape:** that table is per-cycle posterior state; per-class λ is run-config, not posterior. Conflating them muddles meaning and complicates the P21 lift-gated promotion which needs a clean `LogisticEpoch` series.
+- **Cheapest schema impact:** D-19 mandates additive-only migrations; option (B) introduces a new table whose only row is a singleton — pure overhead until P23 wants automated re-tuning.
+- **`LogisticEpoch` reuse (C) is wrong shape:** that table is per-cycle posterior state; per-class λ is run-config, not posterior. Conflating them muddles meaning and complicates the P23 lift-gated promotion which needs a clean `LogisticEpoch` series.
 
-Migrate to a `LearningHyperparameters` table when P21 lands automated re-tuning + A/B comparison — at that point the row count grows and the audit trail belongs in the DB.
+Migrate to a `LearningHyperparameters` table when P23 lands automated re-tuning + A/B comparison — at that point the row count grows and the audit trail belongs in the DB.
 
 ## Q5: Migration sequencing
 

@@ -14,7 +14,7 @@
 | Option | Description | Selected |
 |--------|-------------|----------|
 | Empirical grid search now | Grid over λ ∈ {14,30,60,90,180,365}d per signal_class, score via OOS Brier on 87 existing PriceOutcomes via Purged K-Fold + Embargo. Pick best λ per class. Risk: N=87 thin — winner may not be robust. | ✓ |
-| Sane default now, tune in P21 (Recommended) | Ship single default (λ=90d diffusion/technical, λ=180d institutional/insider). Re-tune in P21 once P25 backfill bootstraps real N. | |
+| Sane default now, tune in P23 (Recommended) | Ship single default (λ=90d diffusion/technical, λ=180d institutional/insider). Re-tune in P23 once P27 backfill bootstraps real N. | |
 | Hand-pick from research priors | diffusion=60d, technical=90d, institutional=180d, insider=180d. No tuning. Document picks. | |
 
 **User's choice:** Empirical grid search now (overrode the recommended option)
@@ -26,8 +26,8 @@
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| ESS < 30 (research recommendation) | Stricter gate per Pitfalls research — industry standard for binary-outcome ML. Most cells stay EXPLORATORY longer; ACTIVE flags become more meaningful. Pairs with P21 FDR. | ✓ |
-| ESS < 10 (Recommended) | Direct ESS substitution — same threshold spirit as v1.0 but in effective sample size. Keeps v1.0 ACTIVE cell count alive while migration soaks. Tighten in P21. | |
+| ESS < 30 (research recommendation) | Stricter gate per Pitfalls research — industry standard for binary-outcome ML. Most cells stay EXPLORATORY longer; ACTIVE flags become more meaningful. Pairs with P23 FDR. | ✓ |
+| ESS < 10 (Recommended) | Direct ESS substitution — same threshold spirit as v1.0 but in effective sample size. Keeps v1.0 ACTIVE cell count alive while migration soaks. Tighten in P23. | |
 | Class-specific thresholds | diffusion ESS<10, technical ESS<15, institutional/insider ESS<5. More tuning surface, reflects each class's natural data velocity. | |
 
 **User's choice:** ESS < 30 (research recommendation)
@@ -40,7 +40,7 @@
 | Option | Description | Selected |
 |--------|-------------|----------|
 | Log + new EXPLORATORY-WATCH status (Recommended) | Write `drift_alert` LearningEvent AND flip status to new `EXPLORATORY-WATCH`. Cell still surfaced but flagged. No auto-demote (Pitfall 13). | ✓ |
-| Log-only | Write `drift_alert` and surface in `EngineCalibration`. Status unchanged. Minimal-surface change. Demotion deferred to P21. | |
+| Log-only | Write `drift_alert` and surface in `EngineCalibration`. Status unchanged. Minimal-surface change. Demotion deferred to P23. | |
 | Auto-demote with persistence window | After 14 consecutive days drift_z high OR OOS Brier degradation > 0.03, flip ACTIVE → EXPLORATORY. | |
 
 **User's choice:** Log + new EXPLORATORY-WATCH status
@@ -54,10 +54,10 @@
 |--------|-------------|----------|
 | Show ESS only + drift hint badge (Recommended) | Replace raw N with ESS. When drift_z elevated, show "regime stability: watching" badge. Cleanest user-facing surface. | ✓ |
 | Show both N and ESS side-by-side | Display "N=42 (ESS=18)". Transparent but busier. | |
-| ESS replaces N silently | Just show ESS where N was; defer drift badging to P26. Minimum viable. | |
+| ESS replaces N silently | Just show ESS where N was; defer drift badging to P28. Minimum viable. | |
 
 **User's choice:** Show ESS only + drift hint badge
-**Notes:** Aligns with CORE-ML-05 wording. Raw N stays available in `/insights` debug surface only. Phase 26 dashboard will surface drift-history detail.
+**Notes:** Aligns with CORE-ML-05 wording. Raw N stays available in `/insights` debug surface only. Phase 28 dashboard will surface drift-history detail.
 
 ---
 
@@ -70,7 +70,7 @@
 | Grandfather: pre-P18 = weight 1, decay only new | Easiest. Old observations dominate posteriors longer than they should. | |
 
 **User's choice:** Recompute ESS from `recorded_at` timestamps
-**Notes:** Mirrors the replay discipline P25 will need at scale. One transaction, idempotent, gated by env flag. The 30d rolling alpha_30d/beta_30d are also rebuilt during the same replay so drift_z is internally consistent post-migration.
+**Notes:** Mirrors the replay discipline P27 will need at scale. One transaction, idempotent, gated by env flag. The 30d rolling alpha_30d/beta_30d are also rebuilt during the same replay so drift_z is internally consistent post-migration.
 
 ---
 
@@ -110,7 +110,7 @@ Locked as **Kish formula**: `ESS = (Σ w_i)² / Σ w_i²` where `w_i = exp(-Δt_
 None — all discussion stayed within Phase 18 scope.
 
 Cross-phase items mentioned for context but explicitly deferred:
-- Auto-demote on persistent drift → revisit only after P21 ships OOS Brier as co-confirmation
-- Drift-alert dashboard tile + ESS distribution heatmap → P26
-- ESS-weighted information-gain reward function → P24
-- Class-specific lift thresholds → P21
+- Auto-demote on persistent drift → revisit only after P23 ships OOS Brier as co-confirmation
+- Drift-alert dashboard tile + ESS distribution heatmap → P28
+- ESS-weighted information-gain reward function → P26
+- Class-specific lift thresholds → P23

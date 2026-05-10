@@ -11,7 +11,7 @@ requires:
     provides: Phase 18 keystone — research/context committed; Plan 03 is the schema-side migration this plan operationalizes against live Neon
 provides:
   - "LearnedPattern.effective_sample_size Float NOT NULL DEFAULT 0 — ESS column for time-decayed Bayesian posteriors (D-15)"
-  - "LearnedPattern.n_trials_attempted Int NOT NULL DEFAULT 0 — FDR denominator reserved for Phase 21, populated from P18 forward (D-15)"
+  - "LearnedPattern.n_trials_attempted Int NOT NULL DEFAULT 0 — FDR denominator reserved for Phase 23, populated from P18 forward (D-15)"
   - "Live Neon dev branch DDL synced with the new columns (npx prisma db push completed)"
   - "All 47 existing LearnedPattern rows on the dev branch take DEFAULT 0 (D-19 additive-soak verified)"
 affects: [18-04 (cron rewire — reads/writes ESS), 18-05+ (drift gating, lift gating), 21 (FDR denominator), 22 (composite signal weighting by ESS)]
@@ -63,7 +63,7 @@ completed: 2026-05-06
 
 - Two additive columns added inside `model LearnedPattern` (between `sample_size` and `hits`):
   - `effective_sample_size Float    @default(0)` — D-15
-  - `n_trials_attempted    Int      @default(0)` — D-15 (reserved for P21 FDR denominator)
+  - `n_trials_attempted    Int      @default(0)` — D-15 (reserved for P23 FDR denominator)
 - `npx prisma format` succeeded; reformatted column-width alignment in the model (cosmetic-only — no semantic change to any other line).
 - `npx prisma generate` succeeded — generated client at `node_modules/@prisma/client` (v7.7.0) now exposes `effective_sample_size: number` + `n_trials_attempted: number` on the LearnedPattern model.
 - `npx tsc --noEmit` exits 0 — no broken consumers (none read the new columns yet; Plan 18-04 will).

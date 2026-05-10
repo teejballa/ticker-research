@@ -12,7 +12,7 @@
 ### Pitfall 1: Multiple Comparisons / "Lake of Cells" False ACTIVE Promotion (THE BIGGEST RISK)
 
 **What goes wrong:**
-The cell space is `signal_class (4) × pattern_key (~8 per class) × cap_class (3) × horizon_days (6) × regime (≥3 once Phase 20 ships) ≈ 1,728+ cells`. With v1.0's `patternStatus()` promoting any cell where `brier_in < brier_null`, the expected number of *spuriously* ACTIVE cells under a true null is enormous. Even at a strict α=0.05 per-cell test, ~86 of 1,728 cells will look ACTIVE by chance. The engine will appear to "learn" patterns that are pure noise — exactly the failure mode v1.1 is meant to defeat. This is the financial-ML-equivalent of p-hacking: many trials, no correction, plausible-looking winners.
+The cell space is `signal_class (4) × pattern_key (~8 per class) × cap_class (3) × horizon_days (6) × regime (≥3 once Phase 22 ships) ≈ 1,728+ cells`. With v1.0's `patternStatus()` promoting any cell where `brier_in < brier_null`, the expected number of *spuriously* ACTIVE cells under a true null is enormous. Even at a strict α=0.05 per-cell test, ~86 of 1,728 cells will look ACTIVE by chance. The engine will appear to "learn" patterns that are pure noise — exactly the failure mode v1.1 is meant to defeat. This is the financial-ML-equivalent of p-hacking: many trials, no correction, plausible-looking winners.
 
 **Why it happens:**
 Engineers test each cell independently, treat each `ACTIVE` flag as a discovery, and never compute the family-wise error rate or False Discovery Rate (FDR) across the cell ensemble. The current `adversarialNullBrier` in `learning.ts` (lines 197-219) does a permutation test *per cell* — it answers "is this cell better than chance?" but not "across all 1,728 cells, how many would beat chance under the null?" López de Prado calls this the most important missing piece in published backtests: "the number of trials attempted."
@@ -29,7 +29,7 @@ Engineers test each cell independently, treat each `ACTIVE` flag as a discovery,
 - Cells flip ACTIVE → DEPRECATED → ACTIVE on consecutive cron runs (test instability typical of multiple-testing artifacts)
 - Out-of-sample Brier on ACTIVE cells < in-sample Brier by > 0.03 (classic overfit gap)
 
-**Phase to address:** **Phase 21 (Lift-Driven Cell Promotion)** — this is its primary deliverable. The phase plan must include `applyFDRCorrection(cellPValues, q=0.10)` as an explicit module, persist `n_trials_attempted`, and surface the deflated lift in the dashboard.
+**Phase to address:** **Phase 23 (Lift-Driven Cell Promotion)** — this is its primary deliverable. The phase plan must include `applyFDRCorrection(cellPValues, q=0.10)` as an explicit module, persist `n_trials_attempted`, and surface the deflated lift in the dashboard.
 
 ---
 
@@ -52,7 +52,7 @@ Engineers reach for `train_test_split(shuffle=True)` or even an honest time-orde
 - 30d horizon Brier-lift ≈ 3d horizon Brier-lift (suggests the model isn't actually learning the long horizon, just leaking)
 - Random shuffling the snapshot order in CV changes the OOS Brier by < 5% (no temporal structure means leakage is dominating)
 
-**Phase to address:** **Phase 21 (Lift-Driven Cell Promotion)** — adopt purged-CV as the OOS gate. **Phase 25 (Backfill)** — also needs purging because backfilled snapshots will be used for both training AND validation.
+**Phase to address:** **Phase 23 (Lift-Driven Cell Promotion)** — adopt purged-CV as the OOS gate. **Phase 27 (Backfill)** — also needs purging because backfilled snapshots will be used for both training AND validation.
 
 ---
 
@@ -113,7 +113,7 @@ The partial-pooling prior structure is a modeling decision, not a hyperparameter
 ### Pitfall 5: Regime Mis-labeling Poisons Training (Especially at Transitions)
 
 **What goes wrong:**
-Adding a `regime` dimension to the cell key (Phase 20) means every observation must be labeled with a regime at scan time. Three failure modes:
+Adding a `regime` dimension to the cell key (Phase 22) means every observation must be labeled with a regime at scan time. Three failure modes:
 1. **Look-ahead bias in regime labeling**: training a regime classifier (e.g., HMM) on the full history and applying it to historical snapshots. The model has *seen the future* — it knows that volatile periods preceded crashes — and will be unrealistically accurate. Documented in QuantConnect's "Rage Against the Regimes" essay as the dominant academic mistake.
 2. **Regime label flipping**: HMMlearn assigns state IDs non-deterministically. State 0 might be "bull" today and "bear" tomorrow after a re-fit. Cells keyed by state ID become incoherent.
 3. **Regime transition contamination**: when regime changes from bull to bear on day T, snapshots from days [T-5, T+5] are ambiguously labeled. Either label poisons the cell — bull regime cells absorb bear-onset behavior, or vice versa.
@@ -132,7 +132,7 @@ HMMs fit by EM on full history are computationally cheap and produce visually pl
 - The same cell key flips between ACTIVE and DEPRECATED when the regime classifier is re-fit (state-ID instability)
 - "Bull regime" cells have suspiciously high hit rates compared to "bear regime" cells across all signal classes (look-ahead bias — the labeler knows which periods preceded gains)
 
-**Phase to address:** **Phase 20 (Market-Regime Feature)** — must implement rolling-window labeler with deterministic state ordering, regime confidence threshold for cell-inclusion, and a regression test that a 2024 snapshot's regime label is identical whether labeled in 2024 or 2026.
+**Phase to address:** **Phase 22 (Market-Regime Feature)** — must implement rolling-window labeler with deterministic state ordering, regime confidence threshold for cell-inclusion, and a regression test that a 2024 snapshot's regime label is identical whether labeled in 2024 or 2026.
 
 ---
 
@@ -155,14 +155,14 @@ The first version of the cron was built to make *something* go ACTIVE so the das
 - A cell's `brier_in` improves monotonically with each cron run while `brier_out` stays flat (the engine is fitting to itself)
 - OOS Brier > null Brier on cells flagged ACTIVE (demote immediately)
 
-**Phase to address:** **Phase 21 (Lift-Driven Cell Promotion)** — primary deliverable. Must rewrite `patternStatus()`, add `brier_out_of_sample` and `n_oos_observations` columns to LearnedPattern.
+**Phase to address:** **Phase 23 (Lift-Driven Cell Promotion)** — primary deliverable. Must rewrite `patternStatus()`, add `brier_out_of_sample` and `n_oos_observations` columns to LearnedPattern.
 
 ---
 
 ### Pitfall 7: Composite Signal — Naive Averaging Across Calibration-Mismatched Models
 
 **What goes wrong:**
-Phase 22 composes priors from 4 signal classes (diffusion, technical, institutional, insider) into one composite probability. Three pitfalls from ensemble literature:
+Phase 24 composes priors from 4 signal classes (diffusion, technical, institutional, insider) into one composite probability. Three pitfalls from ensemble literature:
 1. **Naive averaging of mis-calibrated probabilities**: if technical is well-calibrated and insider is over-confident, averaging produces an in-between probability that is calibrated for nothing. Sklearn's calibration docs are explicit: ensemble *predictions* must be calibrated *individually* before averaging.
 2. **Double-counting correlated signals**: institutional 13F filings and insider Form 4 transactions are not independent — when insiders buy, institutions often follow (and vice versa via signaling). Treating their priors as independent in a logistic regression overweights the joint signal.
 3. **Logistic regression over-fits to the strongest single signal in low-N regimes**: with only 87 PriceOutcome rows resolved, the 4 signal classes will have very few overlapping observations. The composite logistic will assign nearly all weight to whichever class happened to fire on the small handful of joint snapshots — not a real composition.
@@ -182,14 +182,14 @@ Engineers reach for `softmax(linear_combination(signals))` as the obvious compos
 - Logistic coefficient on one signal class > 5× the next (single-class dominance — the composition isn't actually composing)
 - Reports cite composite > 0.7 with composite credible interval [0.35, 0.95] — the interval is meaningless because nothing was calibrated
 
-**Phase to address:** **Phase 22 (Multi-cell Prior Composition)** — must include per-class calibration step, signal-correlation diagnostic, and composite reliability diagram in the dashboard.
+**Phase to address:** **Phase 24 (Multi-cell Prior Composition)** — must include per-class calibration step, signal-correlation diagnostic, and composite reliability diagram in the dashboard.
 
 ---
 
 ### Pitfall 8: Counterfactual Reasoning Invites LLM Hallucination
 
 **What goes wrong:**
-Phase 23 injects "if signal X had been absent, prior would shift from A to B" into Gemini's prompt. Three failure modes:
+Phase 25 injects "if signal X had been absent, prior would shift from A to B" into Gemini's prompt. Three failure modes:
 1. **Counterfactual is mathematically wrong**: if the composite uses non-linear features (e.g., interactions), removing one signal isn't a clean subtraction — recomputation is required. Engineers ship a "delta = full_prior − single_signal_contribution" formula that approximates poorly. The LLM faithfully reports a wrong number.
 2. **LLM elaborates beyond the data**: given "without insider buying, prior would be 0.35 instead of 0.50," Gemini extrapolates to "this means insider conviction is the dominant factor" — a story that may or may not be true. Counterfactual injection invites narrative confabulation, the well-documented LLM failure mode.
 3. **Counterfactual on a non-firing signal**: "if signal X (which didn't fire) had been absent, prior would be unchanged" — true but meaningless. Cluttering the prompt with no-op counterfactuals trains the user to ignore them.
@@ -209,14 +209,14 @@ Counterfactual explanations look educational and serious; the math gets less att
 - Reports include 4+ counterfactuals where 3 have |delta| < 0.02 (no-op clutter)
 - Counterfactual delta for a signal that didn't fire on this ticker is > 0 (bug)
 
-**Phase to address:** **Phase 23 (Counterfactual Reasoning)** — must implement true leave-one-out, |delta| filter, structured output schema, and a regression test that signal X with score 0 produces a 0 counterfactual.
+**Phase to address:** **Phase 25 (Counterfactual Reasoning)** — must implement true leave-one-out, |delta| filter, structured output schema, and a regression test that signal X with score 0 produces a 0 counterfactual.
 
 ---
 
 ### Pitfall 9: Adaptive Watchlist Bandit — Cold-Start Optimism Wastes Coverage Budget
 
 **What goes wrong:**
-Phase 24 replaces the fixed rotating watchlist with a multi-armed bandit (Thompson sampling, UCB, or similar). Three pitfalls:
+Phase 26 replaces the fixed rotating watchlist with a multi-armed bandit (Thompson sampling, UCB, or similar). Three pitfalls:
 1. **Optimistic priors on new tickers**: Thompson sampling with `Beta(1,1)` priors makes every new ticker look "potentially infinitely informative." A new ticker added on Monday will be over-scanned all week before its outcomes resolve and the prior tightens. Documented in production Thompson sampling: "an overly optimistic prior wastes substantial impressions before feedback is incorporated."
 2. **Exploit dominates exploration once a few cells go ACTIVE**: bandit reward = "informativeness for the calibration goal." If a few cells are already calibrated, the bandit allocates almost all scans to confirming them, never exploring undersampled cells. The watchlist becomes degenerate.
 3. **Regret minimization vs identification mismatch**: standard MAB literature optimizes cumulative regret (maximize total reward). Cipher's actual goal is *cell identification* (find which cells generalize). These have different optimal policies — pure regret minimization exploits too aggressively.
@@ -236,14 +236,14 @@ Off-the-shelf MAB libraries default to regret-minimization Thompson sampling; th
 - ESS distribution across cells is bimodal (some cells over-scanned, many under-scanned)
 - Bandit-selected tickers' Brier-lift contribution to the engine is < the random baseline (bandit is hurting, not helping)
 
-**Phase to address:** **Phase 24 (Adaptive Watchlist)** — must use cap-class informative priors, ESS-weighted information-gain reward, ε-floor exploration, and benchmark vs the v1.0 fixed rotation as a phase-completion gate.
+**Phase to address:** **Phase 26 (Adaptive Watchlist)** — must use cap-class informative priors, ESS-weighted information-gain reward, ε-floor exploration, and benchmark vs the v1.0 fixed rotation as a phase-completion gate.
 
 ---
 
 ### Pitfall 10: Historical Backfill Smuggles in Look-Ahead via Snapshot Reconstruction
 
 **What goes wrong:**
-Phase 25 backfills 5+ years of historical SentimentSnapshots and PriceOutcomes from technical patterns. Four failure modes:
+Phase 27 backfills 5+ years of historical SentimentSnapshots and PriceOutcomes from technical patterns. Four failure modes:
 1. **Survivorship bias**: backfilling only currently-listed tickers excludes failed companies, biasing posteriors toward the patterns that preceded survival. Documented to inflate annual returns by 1–4%.
 2. **Look-ahead bias in feature reconstruction**: computing RSI(14) for 2021-06-01 uses the corrected/restated price data available in 2026, not the raw real-time data available in 2021. Yahoo Finance silently restates splits, dividends, and corrections — the historical snapshot is *not* what would have been seen at scan time.
 3. **Backfill bias / point-in-time violation**: even with raw price data, if cap_class is computed from current market cap, a 2018 small-cap that grew to large-cap is misclassified across the entire backfill. Cell keys become incoherent.
@@ -265,14 +265,14 @@ The Yahoo / Polygon / Finnhub APIs return current-state-restated data by default
 - Backfill Brier-lift dramatically exceeds live Brier-lift (look-ahead in features)
 - A 2019 snapshot's `cap_class` is the same as the ticker's current cap_class (point-in-time violation)
 
-**Phase to address:** **Phase 25 (Historical Backfill)** — must use point-in-time vendor or document deviations, include delisted tickers, compute cap_class as-of, separate backfill-vs-live Brier evaluation as a phase-completion gate.
+**Phase to address:** **Phase 27 (Historical Backfill)** — must use point-in-time vendor or document deviations, include delisted tickers, compute cap_class as-of, separate backfill-vs-live Brier evaluation as a phase-completion gate.
 
 ---
 
 ### Pitfall 11: Vanity Metrics on the Dashboard ("Looks Good in Slides, Means Nothing Operationally")
 
 **What goes wrong:**
-Phase 26's dashboard becomes a showcase rather than an operational tool. Common metric failures:
+Phase 28's dashboard becomes a showcase rather than an operational tool. Common metric failures:
 1. **"Total observations: 50,000"**: impressive number, no decision attached. Doesn't tell anyone whether the engine is improving.
 2. **"% reports using ACTIVE priors"**: looks like adoption, but if ACTIVE cells are spurious (Pitfall 1), this metric is celebrating false positives.
 3. **"Average Brier score across all cells"**: averaged over EXPLORATORY + DEPRECATED cells, pulled down by chance. Hides the fact that ACTIVE cells aren't actually better than null.
@@ -293,14 +293,14 @@ Dashboards are built to impress stakeholders before they are built to inform eng
 - Metrics monotonically increase over time with no qualitative interpretation
 - No metric has a "this is bad if it crosses X" threshold annotated
 
-**Phase to address:** **Phase 26 (Live Engine Performance Dashboard)** — every metric must have a written action, baseline comparison, and threshold annotation as part of the phase deliverable.
+**Phase to address:** **Phase 28 (Live Engine Performance Dashboard)** — every metric must have a written action, baseline comparison, and threshold annotation as part of the phase deliverable.
 
 ---
 
 ### Pitfall 12: Public Calibration Trails — Goodhart, Gaming, and Compliance Risk
 
 **What goes wrong:**
-Phase 27 publishes per-report calibration trails (predictions + outcomes). Three independent risk classes:
+Phase 29 publishes per-report calibration trails (predictions + outcomes). Three independent risk classes:
 1. **Goodhart's Law / metric gaming**: once predictions are public, they become a target. External actors (or even users) can game inputs (e.g., creating coordinated StockTwits sentiment) to manipulate Cipher's predictions and then trade against the resulting "ACTIVE" calibration.
 2. **Reflexivity / market impact**: if Cipher's published predictions become widely-read, they may *cause* the price action they predict (or cause anti-action from contrarians). Predictions become unfalsifiable.
 3. **SEC/FINRA "investment advice" framing**: published probabilistic predictions of price movement, especially with a track record, may cross the line from "research tool" to "investment recommendation" or "investment adviser" under the SEC Marketing Rule. The 2023 SEC predictive-analytics rule explicitly addresses AI-driven recommendations. Hypothetical / model performance has triggered enforcement actions against firms.
@@ -321,7 +321,7 @@ The "transparency" framing assumes more publishing = more trust. But in financia
 - Marketing copy says "Cipher predicts" rather than "Cipher's engine assigns probability"
 - Disclaimer is a single paragraph at the page bottom, not adjacent to each prediction
 
-**Phase to address:** **Phase 27 (Public Research Log)** — must consult legal/compliance review before launch, restrict public log to resolved-outcome aggregates, build live predictions as user-private, and add prominent disclaimer adjacent to every published prediction.
+**Phase to address:** **Phase 29 (Public Research Log)** — must consult legal/compliance review before launch, restrict public log to resolved-outcome aggregates, build live predictions as user-private, and add prominent disclaimer adjacent to every published prediction.
 
 ---
 
@@ -344,14 +344,14 @@ Drift detectors are designed for high-frequency feature monitoring (millions of 
 - Cells flip ACTIVE → EXPLORATORY → ACTIVE multiple times based on drift signal alone
 - Drift alerts cluster around regime transitions (Pitfall 5 — regime change being mis-attributed to drift)
 
-**Phase to address:** **Phase 18 (Time-Decayed Updates)** — drift detector tuning is part of the decay package. Two-of-two rule, minimum N, rolling window all implemented here. **Phase 26 (Dashboard)** must surface drift alerts with status + history, not as a binary flag.
+**Phase to address:** **Phase 18 (Time-Decayed Updates)** — drift detector tuning is part of the decay package. Two-of-two rule, minimum N, rolling window all implemented here. **Phase 28 (Dashboard)** must surface drift alerts with status + history, not as a binary flag.
 
 ---
 
 ### Pitfall 14: Distribution Shift Between Backfill and Live (Train/Serve Skew)
 
 **What goes wrong:**
-The backfilled training data (Phase 25) and the live serving data are produced by different pipelines — different vendors, different APIs, different normalization. Even if features have the same names, their distributions differ. Training-serving skew is the #1 cause of production ML degradation per Google's "Rules of ML."
+The backfilled training data (Phase 27) and the live serving data are produced by different pipelines — different vendors, different APIs, different normalization. Even if features have the same names, their distributions differ. Training-serving skew is the #1 cause of production ML degradation per Google's "Rules of ML."
 
 Examples specific to Cipher:
 - Backfilled `volume_ratio` computed from end-of-day Polygon vs live `volume_ratio` from intraday Yahoo — units may not match.
@@ -373,7 +373,7 @@ Backfill and live pipelines are built at different times by different code paths
 - Logistic regression coefficients flip sign after switching from backfill to live training data
 - Null-rate per feature differs > 20% between backfill and live
 
-**Phase to address:** **Phase 25 (Backfill)** — single code path, distribution monitor, live-only validation as a phase gate. **Phase 26 (Dashboard)** — surface train/serve skew metrics.
+**Phase to address:** **Phase 27 (Backfill)** — single code path, distribution monitor, live-only validation as a phase gate. **Phase 28 (Dashboard)** — surface train/serve skew metrics.
 
 ---
 
@@ -388,7 +388,7 @@ The cell-space explosion is a natural consequence of v1.1's design (more dimensi
 **How to avoid:**
 1. **Cell-space pruning by economic prior.** Define which cells are *expected* to differ. E.g., insider Form 4 has no mid_cap × short-horizon meaningful difference; collapse those to a single pooled cell. Document and version the pruned cell space.
 2. **Lazy cell instantiation.** Cells aren't created until at least 1 observation arrives. Empty cells don't count toward the multiple-comparisons denominator.
-3. **Coverage budget allocation.** Phase 24's adaptive watchlist gets a *coverage budget* — minimum N per cell within 90 days. Cells that the watchlist can't fill stay EXPLORATORY indefinitely or get pruned.
+3. **Coverage budget allocation.** Phase 26's adaptive watchlist gets a *coverage budget* — minimum N per cell within 90 days. Cells that the watchlist can't fill stay EXPLORATORY indefinitely or get pruned.
 4. **Aggressive parent-prior reporting.** When a leaf cell has ESS < 10, the report should say "no calibrated leaf-cell signal; falling back to parent (ESS=N): prior=X." Prevents pretending sparse cells have unique information.
 5. **Honest dashboard column for "cells that have ever reached ESS ≥ 30."** This is the real population. Total cell count is misleading.
 
@@ -398,7 +398,7 @@ The cell-space explosion is a natural consequence of v1.1's design (more dimensi
 - Reports cite "leaf cell prior" when the leaf has ESS=2 (false precision)
 - Cell count grows but ACTIVE count stays flat (the lake widens, the islands don't)
 
-**Phase to address:** **Phase 19 (Hierarchical Priors)** — pruning logic, lazy instantiation, parent-fallback reporting. **Phase 24 (Adaptive Watchlist)** — coverage budget. **Phase 26 (Dashboard)** — ESS distribution and "cells ≥ ESS 30" as a primary metric.
+**Phase to address:** **Phase 19 (Hierarchical Priors)** — pruning logic, lazy instantiation, parent-fallback reporting. **Phase 26 (Adaptive Watchlist)** — coverage budget. **Phase 28 (Dashboard)** — ESS distribution and "cells ≥ ESS 30" as a primary metric.
 
 ---
 
@@ -407,11 +407,11 @@ The cell-space explosion is a natural consequence of v1.1's design (more dimensi
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
 | In-sample Brier promotion (current v1.0) | Cells go ACTIVE so dashboard isn't empty | False ACTIVE flags, no real lift, dashboard credibility degraded | Only as a debug stage, gated behind a feature flag, never in production |
-| Single global decay rate λ | One hyperparameter to tune | Underfits per-class drift dynamics | Acceptable in Phase 18 MVP if logged as known limitation, must be class-specific by Phase 21 |
+| Single global decay rate λ | One hyperparameter to tune | Underfits per-class drift dynamics | Acceptable in Phase 18 MVP if logged as known limitation, must be class-specific by Phase 23 |
 | Naive averaging of signal-class priors | Composite signal ships fast | Mis-calibrated composite, double-counting | Never — calibration step is mandatory before composition |
 | Backfill from current-state Yahoo data | 5 years of data in one cron | Look-ahead bias, survivorship bias, potentially unusable training data | Acceptable for *exploratory* visualization (not training) with a `is_lookahead_unsafe=true` flag |
 | Public per-ticker prediction log | Strong "transparency" marketing story | Goodhart gaming, SEC enforcement risk, market reflexivity | Never publicly per-ticker live; aggregate or post-resolution only |
-| Skipping FDR correction "because we have few cells" | Faster cron, simpler stats | The 1,728-cell future arrives fast; refactoring stats post-hoc is harder than building it correctly now | Never — bake FDR into the gate from Phase 21 onward |
+| Skipping FDR correction "because we have few cells" | Faster cron, simpler stats | The 1,728-cell future arrives fast; refactoring stats post-hoc is harder than building it correctly now | Never — bake FDR into the gate from Phase 23 onward |
 | Treating drift_z as a binary demotion trigger | One-line implementation | Cells flap ACTIVE/DEPRECATED on noise | Never — two-of-two rule + persistence requirement is mandatory |
 
 ## Integration Gotchas
@@ -460,23 +460,23 @@ The cell-space explosion is a natural consequence of v1.1's design (more dimensi
 - [ ] **Time-decayed updates (Phase 18):** Often missing per-class λ tuning — verify each signal class has its own λ, tuned via OOS Brier on a holdout
 - [ ] **Hierarchical priors (Phase 19):** Often missing economic justification for the pooling structure — verify a written doc explains why each pool exists
 - [ ] **Hierarchical priors (Phase 19):** Often missing per-cell shrinkage diagnostic — verify "raw vs shrunk posterior mean" logged per cell
-- [ ] **Regime feature (Phase 20):** Often missing rolling-window labeler regression test — verify a 2024 snapshot's regime label is identical whether labeled in 2024 or in 2026
-- [ ] **Regime feature (Phase 20):** Often missing deterministic state ordering — verify HMM states are post-sorted by mean return, not used by raw state ID
-- [ ] **Lift-driven promotion (Phase 21):** Often missing FDR correction — verify `applyFDRCorrection()` is called before any cell is promoted
-- [ ] **Lift-driven promotion (Phase 21):** Often missing purged-CV — verify `n_oos_observations` column populated per cell from purged folds
-- [ ] **Composite signal (Phase 22):** Often missing per-class calibration — verify `CalibratedClassifierCV(method='isotonic')` (or equivalent) called before composition
-- [ ] **Composite signal (Phase 22):** Often missing reliability diagram — verify dashboard shows composite calibration plot
-- [ ] **Counterfactuals (Phase 23):** Often missing leave-one-out re-prediction — verify counterfactual delta = full prediction − null-feature prediction (not approximation)
-- [ ] **Counterfactuals (Phase 23):** Often missing |delta| filter — verify no-op counterfactuals (|delta| < 0.05) are not injected
-- [ ] **Adaptive watchlist (Phase 24):** Often missing ε-floor exploration — verify ≥ 20% of daily scans go to ESS<30 cells
-- [ ] **Adaptive watchlist (Phase 24):** Often missing benchmark vs v1.0 fixed rotation — verify A/B test demonstrates net Brier-lift improvement, not just coverage change
-- [ ] **Backfill (Phase 25):** Often missing point-in-time verification — verify backfilled `cap_class` for ticker T at date D matches T's market cap from D, not from today
-- [ ] **Backfill (Phase 25):** Often missing delisted tickers — verify SEC EDGAR scan for companies that filed 10-K in backfill year and delisted before 2026 includes them
-- [ ] **Backfill (Phase 25):** Often missing live-only validation — verify Brier-lift on first 60 days of live data (post-backfill) is within 0.02 of backfill-validation lift
-- [ ] **Dashboard (Phase 26):** Often missing per-metric action — verify every dashboard metric has a documented "if X then do Y" action
-- [ ] **Dashboard (Phase 26):** Often missing baseline comparison — verify every learning-engine metric reports against the no-engine baseline
-- [ ] **Public log (Phase 27):** Often missing legal/compliance review — verify counsel sign-off before public launch
-- [ ] **Public log (Phase 27):** Often missing per-prediction disclaimer — verify disclaimer appears adjacent to every prediction, not buried in TOS
+- [ ] **Regime feature (Phase 22):** Often missing rolling-window labeler regression test — verify a 2024 snapshot's regime label is identical whether labeled in 2024 or in 2026
+- [ ] **Regime feature (Phase 22):** Often missing deterministic state ordering — verify HMM states are post-sorted by mean return, not used by raw state ID
+- [ ] **Lift-driven promotion (Phase 23):** Often missing FDR correction — verify `applyFDRCorrection()` is called before any cell is promoted
+- [ ] **Lift-driven promotion (Phase 23):** Often missing purged-CV — verify `n_oos_observations` column populated per cell from purged folds
+- [ ] **Composite signal (Phase 24):** Often missing per-class calibration — verify `CalibratedClassifierCV(method='isotonic')` (or equivalent) called before composition
+- [ ] **Composite signal (Phase 24):** Often missing reliability diagram — verify dashboard shows composite calibration plot
+- [ ] **Counterfactuals (Phase 25):** Often missing leave-one-out re-prediction — verify counterfactual delta = full prediction − null-feature prediction (not approximation)
+- [ ] **Counterfactuals (Phase 25):** Often missing |delta| filter — verify no-op counterfactuals (|delta| < 0.05) are not injected
+- [ ] **Adaptive watchlist (Phase 26):** Often missing ε-floor exploration — verify ≥ 20% of daily scans go to ESS<30 cells
+- [ ] **Adaptive watchlist (Phase 26):** Often missing benchmark vs v1.0 fixed rotation — verify A/B test demonstrates net Brier-lift improvement, not just coverage change
+- [ ] **Backfill (Phase 27):** Often missing point-in-time verification — verify backfilled `cap_class` for ticker T at date D matches T's market cap from D, not from today
+- [ ] **Backfill (Phase 27):** Often missing delisted tickers — verify SEC EDGAR scan for companies that filed 10-K in backfill year and delisted before 2026 includes them
+- [ ] **Backfill (Phase 27):** Often missing live-only validation — verify Brier-lift on first 60 days of live data (post-backfill) is within 0.02 of backfill-validation lift
+- [ ] **Dashboard (Phase 28):** Often missing per-metric action — verify every dashboard metric has a documented "if X then do Y" action
+- [ ] **Dashboard (Phase 28):** Often missing baseline comparison — verify every learning-engine metric reports against the no-engine baseline
+- [ ] **Public log (Phase 29):** Often missing legal/compliance review — verify counsel sign-off before public launch
+- [ ] **Public log (Phase 29):** Often missing per-prediction disclaimer — verify disclaimer appears adjacent to every prediction, not buried in TOS
 
 ## Recovery Strategies
 
@@ -501,21 +501,21 @@ The cell-space explosion is a natural consequence of v1.1's design (more dimensi
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| 1. Multiple comparisons / lake-of-cells false ACTIVE | **Phase 21** (Lift-Driven Promotion) | Dashboard shows `n_trials_attempted` and FDR q-value per ACTIVE cell; ACTIVE-cell rate < expected-by-chance rate |
-| 2. Temporal CV leakage | **Phase 21**, **Phase 25** | Purged-CV fold definition committed to repo; regression test verifies no train/test horizon overlap |
+| 1. Multiple comparisons / lake-of-cells false ACTIVE | **Phase 23** (Lift-Driven Promotion) | Dashboard shows `n_trials_attempted` and FDR q-value per ACTIVE cell; ACTIVE-cell rate < expected-by-chance rate |
+| 2. Temporal CV leakage | **Phase 23**, **Phase 27** | Purged-CV fold definition committed to repo; regression test verifies no train/test horizon overlap |
 | 3. Time-decay misconfiguration | **Phase 18** | Per-class λ documented; ESS surfaced on dashboard; ESS/N ratio sane (≥ 0.3) |
 | 4. Hierarchical pooling mis-grouping | **Phase 19** | Economic-justification doc committed; no-pool/partial/complete sweep results in repo; per-cell shrinkage diagnostic visible |
-| 5. Regime mis-labeling / look-ahead | **Phase 20** | Rolling-window labeler test passes; HMM state ordering deterministic; regime transitions excluded by confidence threshold |
-| 6. In-sample-only promotion | **Phase 21** | `patternStatus()` rewritten; OOS Brier-lift gate enforced; ACTIVE-without-OOS regression test |
-| 7. Composite signal ensemble pitfalls | **Phase 22** | Per-class calibrators committed; composite reliability diagram on dashboard; signal-correlation diagnostic surfaces double-counting |
-| 8. Counterfactual hallucination | **Phase 23** | Leave-one-out implementation tested; |delta|<0.05 filter active; structured Zod schema for counterfactual section |
-| 9. Bandit cold-start / exploit dominance | **Phase 24** | Cap-class informative priors implemented; ε-floor active; A/B test vs fixed watchlist shows net Brier-lift |
-| 10. Backfill survivorship / look-ahead | **Phase 25** | Point-in-time vendor documented; delisted tickers included; backfill-vs-live Brier gap < 0.02 |
-| 11. Vanity dashboard metrics | **Phase 26** | Per-metric action document; every metric has baseline comparison; growth metrics demoted below performance metrics |
-| 12. Public log gaming / SEC risk | **Phase 27** | Legal sign-off documented; live per-ticker public predictions prohibited; per-prediction disclaimer present |
-| 13. Drift detector false positives | **Phase 18** + **Phase 26** | Two-of-two confirmation rule; minimum N=30 for drift testing; rolling window for drift baseline |
-| 14. Train/serve distribution shift | **Phase 25** + **Phase 26** | Single feature-extraction code path; KS-statistic monitor on dashboard; live-only validation gate |
-| 15. Lake of cells | **Phase 19** + **Phase 24** + **Phase 26** | Cell pruning rules committed; lazy instantiation in code; "ESS≥30 cells" primary dashboard metric |
+| 5. Regime mis-labeling / look-ahead | **Phase 22** | Rolling-window labeler test passes; HMM state ordering deterministic; regime transitions excluded by confidence threshold |
+| 6. In-sample-only promotion | **Phase 23** | `patternStatus()` rewritten; OOS Brier-lift gate enforced; ACTIVE-without-OOS regression test |
+| 7. Composite signal ensemble pitfalls | **Phase 24** | Per-class calibrators committed; composite reliability diagram on dashboard; signal-correlation diagnostic surfaces double-counting |
+| 8. Counterfactual hallucination | **Phase 25** | Leave-one-out implementation tested; |delta|<0.05 filter active; structured Zod schema for counterfactual section |
+| 9. Bandit cold-start / exploit dominance | **Phase 26** | Cap-class informative priors implemented; ε-floor active; A/B test vs fixed watchlist shows net Brier-lift |
+| 10. Backfill survivorship / look-ahead | **Phase 27** | Point-in-time vendor documented; delisted tickers included; backfill-vs-live Brier gap < 0.02 |
+| 11. Vanity dashboard metrics | **Phase 28** | Per-metric action document; every metric has baseline comparison; growth metrics demoted below performance metrics |
+| 12. Public log gaming / SEC risk | **Phase 29** | Legal sign-off documented; live per-ticker public predictions prohibited; per-prediction disclaimer present |
+| 13. Drift detector false positives | **Phase 18** + **Phase 28** | Two-of-two confirmation rule; minimum N=30 for drift testing; rolling window for drift baseline |
+| 14. Train/serve distribution shift | **Phase 27** + **Phase 28** | Single feature-extraction code path; KS-statistic monitor on dashboard; live-only validation gate |
+| 15. Lake of cells | **Phase 19** + **Phase 26** + **Phase 28** | Cell pruning rules committed; lazy instantiation in code; "ESS≥30 cells" primary dashboard metric |
 
 ## Sources
 

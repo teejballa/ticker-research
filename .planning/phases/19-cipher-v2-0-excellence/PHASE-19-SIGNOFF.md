@@ -170,18 +170,18 @@ Per NEXT-SESSION-PROMPT line 145-148.
 
 ## 6. Phase-20 readiness gate
 
-Per `.planning/ROADMAP.md` line 34, **Phase 20: Market-Regime Feature**
+Per `.planning/ROADMAP.md` line 34, **Phase 22: Market-Regime Feature**
 is the next eligible phase. It extends the LearnedPattern composite key
 with a regime dimension (4 buckets: bull/bear/chop × low-vol/high-vol via
 VIX bucketing + SPY trend) via a 2-step migration.
 
-Phase 20 entry gate: **NOT BLOCKED on Phase 19 close-out.** Phase 19's
+Phase 22 entry gate: **NOT BLOCKED on Phase 19 close-out.** Phase 19's
 diffusion learning engine + Wave A pooling/conformal/CPCV foundations
-are the prereqs Phase 20 depends on, and all are shipped + ON in
-production. Phase 20 can be planned (`/gsd-plan-phase 20`) as soon as
+are the prereqs Phase 22 depends on, and all are shipped + ON in
+production. Phase 22 can be planned (`/gsd-plan-phase 20`) as soon as
 the operator wants to start.
 
-The flag-removal PRs do NOT block Phase 20 — they are independent
+The flag-removal PRs do NOT block Phase 22 — they are independent
 hygiene work the operator can interleave.
 
 ---
