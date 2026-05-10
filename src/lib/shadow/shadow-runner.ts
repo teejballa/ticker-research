@@ -15,8 +15,17 @@
 //   - T-19-Z-03-03: URL strings sanitized before persist (V7 ASVS) — strips
 //     embedded `user:pass@` auth from any string in the output graph.
 
-import { prisma } from '@/lib/db';
 import type { FeatureMode } from '@/lib/features';
+
+// Lazy import: prisma is only touched in shadow-mode persistence below. Eager
+// import at module load forces every consumer of runWithShadow to have a live
+// DATABASE_URL, which broke source-package unit tests in 19-C-04 (the first
+// hot-path consumer). Deferring the import keeps `mode='off'` and `mode='on'`
+// callers DB-free.
+async function getPrisma() {
+  const { prisma } = await import('@/lib/db');
+  return prisma;
+}
 
 export interface ShadowContext {
   ticker?: string;
@@ -90,6 +99,7 @@ export async function runWithShadow<T>(
     const newLatency = Date.now() - newStart;
 
     try {
+      const prisma = await getPrisma();
       await prisma.shadowComparison.create({
         data: {
           path_name: pathName,
