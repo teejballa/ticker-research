@@ -260,3 +260,35 @@ export async function fetchOptionsTermStructure(ticker: string): Promise<TermStr
     iv_realized_ratio: Math.round(iv_realized_ratio * 1000) / 1000,
   };
 }
+
+/**
+ * Plan 19-C-04 — adapter that derives the legacy OptionsSentimentResult
+ * shape (`put_call_ratio` + `put_call_interpretation`) from term-structure
+ * output, so the source-package consumer signature is unchanged when the
+ * shadow harness flips from old to new.
+ *
+ * D-36 IV-regime modifier: in 'high' IV regime (implied >> realized) elevated
+ * put activity is interpreted as hedging rather than bearish thesis. That
+ * folds the bearish bucket into 'neutral' — interpretation in 'high' regime
+ * never reads as 'bearish'.
+ */
+export async function fetchOptionsSentimentTermStructure(
+  ticker: string,
+): Promise<OptionsSentimentResult> {
+  const ts = await fetchOptionsTermStructure(ticker);
+  if (ts === null) return { put_call_ratio: null, put_call_interpretation: null };
+
+  const ratio = ts.oi_weighted_avg;
+  let interpretation: 'bullish' | 'bearish' | 'neutral';
+  if (ts.iv_regime === 'high') {
+    // D-36 high-IV flip: elevated puts = hedging, not bearish thesis.
+    interpretation = ratio < 0.5 ? 'bullish' : 'neutral';
+  } else {
+    interpretation = ratio > 1.0 ? 'bearish' : ratio < 0.5 ? 'bullish' : 'neutral';
+  }
+
+  return {
+    put_call_ratio: Math.round(ratio * 1000) / 1000,
+    put_call_interpretation: interpretation,
+  };
+}
