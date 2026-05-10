@@ -19,6 +19,7 @@ import {
 import type { AnalysisResult, EngineCalibration, SourcePackage } from '@/lib/types';
 import { getEngineContextForTicker, type EngineContext } from '@/lib/engine-context';
 import { CitationsArraySchema, type Citation } from '@/lib/sentiment/citation-schema';
+import { derivePipelineProviders } from '@/lib/sentiment/pipeline-providers';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import { FEATURES, type FeatureMode } from '@/lib/features';
 // Phase 19-C-08 (D-40) — Chain-of-Verification two-pass.
@@ -1277,7 +1278,20 @@ async function generateAnalysis(
       key_risks: output.key_risks,
       valuation_context: output.valuation_context,
       catalyst_watch: output.catalyst_watch ?? [],
-      sources_used: output.sources_used,
+      // Post-Phase-19: append data-pipeline provider attribution. The LLM
+      // emits publisher names (CNBC, Reuters) from news items but doesn't
+      // know which retrieval-layer providers (Twelve Data, Exa, Yahoo,
+      // Finnhub, Polygon, Anthropic web search) actually fired. We derive
+      // those from the SourcePackage and append them so the UI credits the
+      // full pipeline, not just the publishers. Dedup on name in case the
+      // LLM also surfaced one (e.g. "Yahoo Finance") on its own.
+      sources_used: (() => {
+        const llmSources = output.sources_used ?? [];
+        const providers = derivePipelineProviders(pkg);
+        const llmNames = new Set(llmSources.map((s) => s.name.toLowerCase()));
+        const additions = providers.filter((p) => !llmNames.has(p.name.toLowerCase()));
+        return [...llmSources, ...additions];
+      })(),
       future_projection: output.future_projection || undefined,
       community_sources_scraped: communityData?.pageCount && communityData.pageCount > 0 ? communityData.pageCount : undefined,
       sentiment_intelligence: output.sentiment_intelligence_summary ? {
