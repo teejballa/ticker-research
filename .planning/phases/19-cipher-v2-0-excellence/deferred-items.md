@@ -55,3 +55,48 @@ gate tightening), the marker is never emitted.
 **Recommended fix:** This is a calendar-gated condition, not a code bug.
 Once enough resolved outcomes accumulate to flip cells back to ACTIVE,
 the test will pass naturally. Track in v1.0 carryover items in STATE.md.
+
+## 2026-05-08 — discovered during 19-C-07 execution (worktree agent-ab1bb1fa)
+
+### 5. Unresolved git merge-conflict markers in worktree
+
+**Status:** Pre-existed 19-C-07 — NOT introduced by this plan.
+
+**Cause:** The worktree `agent-ab1bb1fa` has uncommitted modifications
+(after `git stash pop` of the parent worktree's stash) containing
+`<<<<<<< Updated upstream / ======= / >>>>>>> Stashed changes` markers in:
+  - `src/app/api/cron/learn/route.ts` (lines 448, 453, 471, 472, 952, 991, 996, 1167)
+  - `src/lib/data/merge.ts` (lines 148, 240, 241)
+  - `src/lib/engine-context.ts` (lines 29, 32, 33, 108, 112, 114, 608, 609, 611)
+
+These cause `npx tsc --noEmit -p tsconfig.json` and `npx vitest run` (full
+suite) to fail on files unrelated to 19-C-07's `src/lib/sentiment/`
+deliverables. 19-C-07 itself compiles cleanly when scoped to its own files.
+
+**Recommended fix:** A subsequent integration agent must resolve the
+conflict markers (likely by accepting either upstream or stashed for
+each block based on whichever Wave A/B agent's work is canonical).
+Out of scope for 19-C-07.
+
+### 6. tests/lib/reasoning/router.test.ts is in RED state from 19-C-09
+
+**Status:** Pre-existed 19-C-07 — file was committed by `d62f8b1
+test(19-c-09): RED tests for routeModel + estimateCost (Task 1)`.
+
+**Cause:** 19-C-09 is mid-execution in a sibling worktree; it has landed
+its TDD RED tests but not yet the GREEN implementation
+(`src/lib/reasoning/router.ts` exists as untracked but is not yet exporting
+`routeModel` / `estimateCost`).
+
+**Recommended fix:** Allow 19-C-09 to complete naturally; out of scope
+for 19-C-07.
+
+### 7. tests/lib/data/options-sentiment.term-structure.test.ts missing export
+
+**Status:** Pre-existed 19-C-07 — RED test from sibling 19-C-04 plan.
+
+**Cause:** Sibling 19-C-04 RED test references `fetchOptionsTermStructure`
+which has not yet been implemented.
+
+**Recommended fix:** Allow 19-C-04 to complete naturally; out of scope
+for 19-C-07.
