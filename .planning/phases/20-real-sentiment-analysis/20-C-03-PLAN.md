@@ -23,7 +23,7 @@ files_modified:
   - tests/sentiment/bot-filter-aggregator.unit.test.ts
   - tests/integration/bot-filter.integration.test.ts
   - tests/components/research-report-bot-filter.unit.test.tsx
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: null

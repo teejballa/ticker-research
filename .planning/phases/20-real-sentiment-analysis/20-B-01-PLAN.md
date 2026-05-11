@@ -28,7 +28,7 @@ files_modified:
   - package.json
   - docs/cards/MODEL-CARD-gemini-per-doc.md
   - HYPERPARAMETERS.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""

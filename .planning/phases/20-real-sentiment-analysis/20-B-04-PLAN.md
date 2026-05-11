@@ -18,7 +18,7 @@ files_modified:
   - tests/integration/source-tier-recompute.integration.test.ts
   - .planning/phases/20-real-sentiment-analysis/MODEL-CARD-source-tier.md
   - .github/workflows/no-hand-curated-tier-weights.yml
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""

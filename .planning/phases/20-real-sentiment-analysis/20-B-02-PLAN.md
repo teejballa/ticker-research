@@ -19,7 +19,7 @@ files_modified:
   - tests/sentiment/per-message-pass.unit.test.ts
   - tests/sentiment/local-finbert-fallback.unit.test.ts
   - tests/integration/finbert-hf-endpoint.integration.test.ts
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_verdict_criteria:

@@ -18,7 +18,7 @@ files_modified:
   - tests/sentiment-decay.unit.test.ts
   - tests/sentiment-source-class.unit.test.ts
   - tests/integration/tune-decay.integration.test.ts
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""

@@ -13,7 +13,7 @@ files_modified:
   - tests/sentiment-observation-store.unit.test.ts
   - tests/integration/sentiment-observation.integration.test.ts
   - .planning/phases/20-real-sentiment-analysis/DATASET-CARD-SentimentObservation.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: false
 shadow_skip_reason: "Additive table + insert-only DAO with NO existing read consumers. Writes run in parallel alongside the unchanged SentimentSnapshot writer (which keeps serving all current readers). Per S3, when no read path is being changed there is no off→shadow→on transition to gate; verdict for the new writer is purely the numerical acceptance criteria below."

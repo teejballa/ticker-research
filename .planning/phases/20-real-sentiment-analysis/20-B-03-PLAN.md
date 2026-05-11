@@ -22,7 +22,7 @@ files_modified:
   - tests/sentiment-calibration.unit.test.ts
   - tests/sentiment-calibration-fit.unit.test.ts
   - tests/integration/calibrate-temperature.integration.test.ts
-autonomous: false
+autonomous: true
 requirements: [20-B-03]
 shadow_required: true
 shadow_skip_reason: ""

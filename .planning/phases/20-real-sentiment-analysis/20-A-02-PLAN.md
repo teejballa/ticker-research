@@ -18,7 +18,7 @@ files_modified:
   - vercel.json
   - tests/integration/mention-baseline.integration.test.ts
   - .planning/phases/20-real-sentiment-analysis/MODEL-CARD-mention-baseline.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""
