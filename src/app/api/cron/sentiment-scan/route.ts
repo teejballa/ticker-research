@@ -7,6 +7,8 @@ import { computeTechnicalSnapshot } from '@/lib/data/technical';
 import { fetchInsiderData } from '@/lib/data/insider';
 import { fetchInstitutionalData } from '@/lib/data/institutional';
 import YahooFinance from 'yahoo-finance2';
+import { insertObservation, SentimentObservationDuplicateError } from '@/lib/sentiment/observation-store';
+import { createHash } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -67,6 +69,69 @@ export async function GET(request: NextRequest) {
             : Prisma.JsonNull,
         },
       });
+
+      // Plan 20-Z-01 — write per-message SentimentObservation rows in PARALLEL with the
+      // SentimentSnapshot above. This is the PIT-immutable row-level grain that
+      // 20-A-03 (time decay), 20-B-01 (per-doc NLP), 20-B-04 (source-tier weight),
+      // and 20-C-01 (per-source ICIR) will join on. Failure here is logged-and-continued —
+      // it MUST NOT block the snapshot writer that serves current readers.
+      // NOTE: lightweightCommunityScan currently returns EnrichedSnapshot (sentiment
+      // dimensions + highlights), not raw StockTwits messages. The shape cast below
+      // gracefully handles either future-state — once an upstream returns raw messages
+      // (Phase 20-C-01 wires this), this loop starts populating rows without further
+      // edits to the cron route.
+      const stocktwitsMessages =
+        (communityData as { stocktwits?: { messages?: Array<{ id?: string | number; body?: string; created_at?: string; user?: { username?: string; followers?: number; ideas?: number; created_at?: string; identity?: string } }> } } | null | undefined)
+          ?.stocktwits?.messages ?? [];
+
+      const MODEL_VERSION_BOOTSTRAP = 'stocktwits-tag-v1';      // initial classifier version; backfills bump this
+      const CLASSIFIER_VERSION_BOOTSTRAP = 'stocktwits-tag-v1'; // same as model_version for the initial write
+
+      let obs_written = 0;
+      let obs_dupes = 0;
+      let obs_errors = 0;
+      for (const m of stocktwitsMessages) {
+        if (!m.id || !m.body) continue;
+        const handle = m.user?.username ?? 'anonymous';
+        const author_id = createHash('sha256').update(`stocktwits:${handle}`, 'utf8').digest('hex');
+        const account_age_days = m.user?.created_at
+          ? Math.max(0, Math.floor((Date.now() - new Date(m.user.created_at).getTime()) / 86_400_000))
+          : null;
+        try {
+          await insertObservation({
+            ticker,
+            source: 'stocktwits',
+            message_id: String(m.id),
+            raw_body: m.body,                          // hashed inside the DAO; never persisted raw
+            classifier_version: CLASSIFIER_VERSION_BOOTSTRAP,
+            classifier_score: null,                    // bootstrap row — Phase 20-B-01 fills this in via a new model_version
+            model_version: MODEL_VERSION_BOOTSTRAP,
+            decay_weight: null,                        // populated by 20-A-03 via new model_version
+            author_id,
+            author_features_snapshot: {
+              account_age_days,
+              follower_count: m.user?.followers ?? null,
+              is_verified: m.user?.identity ? m.user.identity === 'Official' : null,
+              message_count_30d: m.user?.ideas ?? null,
+            },
+            published_at: m.created_at ? new Date(m.created_at) : null,
+            // fetched_at omitted — DB defaults to now() (PIT-INVARIANT)
+          });
+          obs_written++;
+        } catch (e) {
+          if (e instanceof SentimentObservationDuplicateError) {
+            obs_dupes++;                               // expected on re-scan of the same ticker within the dedupe window
+          } else {
+            obs_errors++;                              // logged-and-continued; does NOT fail the cron
+          }
+        }
+      }
+      // (We attach the counters to the route response below for telemetry; 20-Z-03 will
+      // graduate this to ProviderCallLog.)
+      (results as Record<string, number>)[`obs_written_${ticker}`] = obs_written;
+      (results as Record<string, number>)[`obs_dupes_${ticker}`]   = obs_dupes;
+      (results as Record<string, number>)[`obs_errors_${ticker}`]  = obs_errors;
+
       results.scanned++;
 
       await new Promise(r => setTimeout(r, 2000));
