@@ -36,7 +36,7 @@ files_modified:
   - tests/telemetry/cost-budget-check.unit.test.ts
   - tests/integration/provider-call-log.integration.test.ts
   - tests/integration/sentiment-health-api.integration.test.ts
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: false
 shadow_skip_reason: "Additive ProviderCallLog table + non-blocking async-fire wrapper around the existing return value. The wrapped call site receives the IDENTICAL return value with IDENTICAL timing semantics — telemetry INSERT runs in a fire-and-forget Promise that never throws into the caller. Per S3, when no read/return path is being changed there is no off→shadow→on transition to gate; the verdict is purely the numerical acceptance criteria below (overhead p99 < 2ms, ≥6 wrapped sites, non-zero data after 24h)."

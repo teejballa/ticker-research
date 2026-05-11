@@ -21,7 +21,7 @@ files_modified:
   - tests/sentiment/crowded-consensus.unit.test.ts
   - tests/integration/crowded-consensus-calibration.integration.test.ts
   - tests/components/research-report-crowded-consensus.unit.test.tsx
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: null

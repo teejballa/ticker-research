@@ -20,7 +20,7 @@ files_modified:
   - docs/cards/MODEL-CARD-pump-dump-detector.md
   - HYPERPARAMETERS.md
   - package.json
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""

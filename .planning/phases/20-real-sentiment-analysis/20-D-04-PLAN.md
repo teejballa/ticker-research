@@ -50,7 +50,7 @@ files_modified:
   - vercel.json
   - package.json
   - .planning/phases/20-real-sentiment-analysis/MODEL-CARD-golden-ticker-corpus.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: false
 shadow_skip_reason: "Test-only artifact (corpus catalog + rotation policy + orchestrated suite + human-label exemplars). No production code path runs the manifest, the rotation script, or the suite test — they live in tests/, scripts/, and CI. Per S3 the shadow lifecycle applies to new production code paths; this plan introduces none. The monthly rotation cron is a separate Vercel cron under /api/cron/rotate-micro-cap, but it writes only to test fixtures and the planning meta — it never affects user-visible behavior."

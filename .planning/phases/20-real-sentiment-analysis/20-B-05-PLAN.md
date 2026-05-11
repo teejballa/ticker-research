@@ -25,7 +25,7 @@ files_modified:
   - HYPERPARAMETERS.md
   - docs/cards/MODEL-CARD-per-aspect-aggregate.md
   - docs/runbooks/aspect-label-curation.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""

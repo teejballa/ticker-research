@@ -20,7 +20,7 @@ files_modified:
   - tests/learning-pattern-key-agreement.unit.test.ts
   - docs/cards/MODEL-CARD-agreement.md
   - HYPERPARAMETERS.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""

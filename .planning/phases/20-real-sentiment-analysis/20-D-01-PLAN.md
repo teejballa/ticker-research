@@ -33,7 +33,7 @@ files_modified:
   - .github/workflows/numeric-grounding.yml
   - package.json
   - .planning/phases/20-real-sentiment-analysis/MODEL-CARD-numeric-grounding.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: false
 autonomous_skip_reason: "Task 6 is a checkpoint:human-action because recording the 8 frozen Gemini outputs at temperature=0 with pinned prompt versions requires the operator to (a) ensure GEMINI_API_KEY/AI_GATEWAY_API_KEY are present in .env.local (Claude has no way to write those, they live only in the operator shell) and (b) accept the ~$0.40 of Gemini API spend that the recording cycle consumes. Every other task in this plan is fully autonomous."

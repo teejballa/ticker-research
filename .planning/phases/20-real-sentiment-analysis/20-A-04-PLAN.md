@@ -18,7 +18,7 @@ files_modified:
   - tests/playwright/research-author-concentration.spec.ts
   - docs/cards/MODEL-CARD-author-gini.md
   - HYPERPARAMETERS.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""

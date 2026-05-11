@@ -21,7 +21,7 @@ files_modified:
   - tests/sentiment-per-source-ic.unit.test.ts
   - tests/integration/per-source-ic.integration.test.ts
   - .planning/phases/20-real-sentiment-analysis/MODEL-CARD-per-source-ic.md
-autonomous: false
+autonomous: true
 requirements: []
 shadow_required: true
 shadow_skip_reason: ""
