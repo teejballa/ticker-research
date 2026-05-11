@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-11T17:42:53.590Z"
-last_activity: 2026-05-11 -- Phase 20 planning complete
+last_updated: "2026-05-11T21:45:00.000Z"
+last_activity: 2026-05-11 -- Plan 20-Z-01 complete — SentimentObservation PIT feature store live in Neon
 progress:
   total_phases: 1
   completed_phases: 1
@@ -21,17 +21,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
 **Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — backed by an industry-standard, auditable, self-improving Bayesian learning engine.
 
-**Current focus:** Phase 19 — cipher-v2-0-excellence
+**Current focus:** Phase 20 — real-sentiment-analysis
 
 ## Current Position
 
 Milestone: v2.0
-Phase: 19 (cipher-v2-0-excellence) — EXECUTING
-Plan: 11 of 30 (next: 19-A-07, OR Wave B/C)
-Status: Ready to execute
-Last activity: 2026-05-11 -- Phase 20 planning complete
-Last completed: 19-A-06 → calibration validation harness — `reliabilityDiagram` + `hosmerLemeshow` pure functions + chi-square CDF (no jstat dep) in `learning.ts`; `scripts/calibration-report.ts` writes per-class verdicts to `/tmp/calibration-reports/<date>.md` (CLAUDE.md-compliant); 9/9 calibration tests GREEN; baseline run flagged institutional class miscalibrated (n=39, χ²=15.916, p=0.044)
-Last completed (prior): 19-A-05 → rolling 20d rank-IC monitor + alpha-decay-watch cron live; 9/9 unit + 5/5 integration tests GREEN; benchmark 356ms (empty-work-path on currently-EXPLORATORY universe)
+Phase: 20 (real-sentiment-analysis) — EXECUTING
+Plan: 2 of 29 (next: 20-Z-02 — model + dataset card scaffold)
+Status: Executing Phase 20
+Last activity: 2026-05-11 -- Plan 20-Z-01 complete
+Last completed: 20-Z-01 → SentimentObservation PIT feature store — Prisma model live in Neon (13 cols, 0 NULL fetched_at, 2 composite indexes, 1 composite unique on (ticker, message_id, model_version)); insert-only DAO with SHA-256 body hashing + PII allowlist + typed SentimentObservationDuplicateError on P2002; parallel writer wired into sentiment-scan cron (existing SentimentSnapshot writer untouched); `npm run check-immutability` CI guard; 16 unit + 6 live-Neon integration tests green; dataset card stub forward-references 20-Z-02. 8 atomic commits.
+Last completed (prior): 19-A-06 → calibration validation harness — `reliabilityDiagram` + `hosmerLemeshow` pure functions + chi-square CDF (no jstat dep) in `learning.ts`; `scripts/calibration-report.ts` writes per-class verdicts to `/tmp/calibration-reports/<date>.md` (CLAUDE.md-compliant); 9/9 calibration tests GREEN; baseline run flagged institutional class miscalibrated (n=39, χ²=15.916, p=0.044)
 
 ## Accumulated Context (carried forward from v1.0)
 
