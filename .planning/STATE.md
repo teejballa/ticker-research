@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-11T00:20:59.932Z"
-last_activity: 2026-05-11 -- Phase 20-Z-01 planning complete
+last_updated: "2026-05-11T17:42:53.590Z"
+last_activity: 2026-05-11 -- Phase 20 planning complete
 progress:
   total_phases: 1
   completed_phases: 1
@@ -29,7 +29,7 @@ Milestone: v2.0
 Phase: 19 (cipher-v2-0-excellence) — EXECUTING
 Plan: 11 of 30 (next: 19-A-07, OR Wave B/C)
 Status: Ready to execute
-Last activity: 2026-05-11 -- Phase 20-Z-01 planning complete
+Last activity: 2026-05-11 -- Phase 20 planning complete
 Last completed: 19-A-06 → calibration validation harness — `reliabilityDiagram` + `hosmerLemeshow` pure functions + chi-square CDF (no jstat dep) in `learning.ts`; `scripts/calibration-report.ts` writes per-class verdicts to `/tmp/calibration-reports/<date>.md` (CLAUDE.md-compliant); 9/9 calibration tests GREEN; baseline run flagged institutional class miscalibrated (n=39, χ²=15.916, p=0.044)
 Last completed (prior): 19-A-05 → rolling 20d rank-IC monitor + alpha-decay-watch cron live; 9/9 unit + 5/5 integration tests GREEN; benchmark 356ms (empty-work-path on currently-EXPLORATORY universe)
 
