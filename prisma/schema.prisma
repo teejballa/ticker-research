@@ -209,12 +209,40 @@ model RollbackLog {
 model EngineThesis {
   id          String   @id @default(cuid())
   recorded_at DateTime @default(now()) @db.Timestamptz
-  families    Json     // ThesisFamily[]: { signal_class, label, mean, n, top_pattern }
-  top_family  String   // signal_class of strongest family
+  families    Json // ThesisFamily[]: { signal_class, label, mean, n, top_pattern }
+  top_family  String // signal_class of strongest family
   narrative   String   @db.Text
   total_cells Int      @default(0)
   total_n     Int      @default(0)
 
   @@index([recorded_at(sort: Desc)])
   @@map("engine_theses")
+}
+
+// ─── Phase 20-Z-01 — Sentiment feature store with PIT snapshots ───
+// Immutable point-in-time observations. (ticker, message_id, model_version) is unique —
+// a classifier upgrade or backfill inserts a NEW row under a new model_version, never
+// overwrites an existing row. fetched_at is the ONLY PIT-safe join key for backtest
+// queries; published_at is upstream-claimed and may be revised — DO NOT JOIN ON IT for
+// backtest paths. Enforced by 20-Z-07 lookahead-bias regression test.
+model SentimentObservation {
+  id                       String    @id @default(uuid())
+  ticker                   String
+  source                   String // 'stocktwits' | 'reddit' | 'x' | 'news' | 'sec' | 'apewisdom' | 'firecrawl'
+  message_id               String // upstream-provided message ID
+  // PIT-INVARIANT — queryable join key; never join on published_at for backtests (enforced by 20-Z-07)
+  fetched_at               DateTime  @default(now()) @db.Timestamptz
+  published_at             DateTime? @db.Timestamptz // informational only — NOT a backtest join key
+  raw_body_hash            String // sha256 hex of raw body (64 lowercase chars); raw text never persisted (T-20-Z-01-02)
+  classifier_version       String // pinned classifier id (e.g. "finbert-prosus@<commit-sha>")
+  classifier_score         Float?
+  decay_weight             Float? // populated by 20-A-03 calibration via NEW model_version row
+  author_id                String // hashed handle: sha256("{source}:{handle}")
+  author_features_snapshot Json // allowlisted fields only — see DAO + T-20-Z-01-01
+  model_version            String // backfill partition key
+
+  @@unique([ticker, message_id, model_version], map: "sentobs_ticker_msg_modelver_uq")
+  @@index([ticker, fetched_at(sort: Desc)], map: "idx_sentobs_ticker_fetched_at")
+  @@index([ticker, model_version, fetched_at(sort: Desc)], map: "idx_sentobs_ticker_modelver_fetched_at")
+  @@map("sentiment_observations")
 }
