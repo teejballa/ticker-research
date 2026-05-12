@@ -13,6 +13,7 @@
 // Cost: ~5 Firecrawl credits + 1 StockTwits call per ticker (was 3 + 1 pre-D-44).
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { fetchStockTwitsSentiment } from './stocktwits';
 import {
   fetchQuiverInsider,
@@ -33,7 +34,12 @@ const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 async function scrapeOne(fc: Firecrawl, url: string): Promise<string> {
   try {
-    const doc = await fc.scrape(url, { formats: ['markdown'], onlyMainContent: true } as Parameters<typeof fc.scrape>[1]);
+    // Plan 20-Z-03: wrap the Firecrawl scrape with telemetry. Cost defaults
+    // to the flat $0.001/call rate from COST_PER_CALL_USD['firecrawl'].
+    const doc = await withTelemetry(
+      'firecrawl',
+      () => fc.scrape(url, { formats: ['markdown'], onlyMainContent: true } as Parameters<typeof fc.scrape>[1]),
+    );
     const content = (doc as { markdown?: string }).markdown ?? '';
     // Lowered from 150 → 30: previous gate punished partial scrapes and starved
     // the diffusion engine of tier signal. A short scrape still resolves to "low"

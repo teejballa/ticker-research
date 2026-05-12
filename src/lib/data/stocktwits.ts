@@ -12,6 +12,7 @@
 
 import { FEATURES } from '@/lib/features';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 // ── Public API types (existing) ──────────────────────────────────────────────
 interface StockTwitsMessage {
@@ -222,9 +223,14 @@ export async function fetchStockTwitsSentimentNaive(ticker: string): Promise<Sto
   });
 
   try {
-    const res = await fetch(
-      `https://api.stocktwits.com/api/2/streams/symbol/${encodeURIComponent(ticker)}.json`,
-      { signal: AbortSignal.timeout(5000) },
+    const res = await withTelemetry(
+      'stocktwits',
+      () =>
+        fetch(
+          `https://api.stocktwits.com/api/2/streams/symbol/${encodeURIComponent(ticker)}.json`,
+          { signal: AbortSignal.timeout(5000) },
+        ),
+      { ticker },
     );
     if (!res.ok) return empty(`StockTwits API error: ${res.status} ${res.statusText}`);
 
@@ -281,9 +287,14 @@ export async function fetchStockTwitsSentimentReputationWeighted(
   });
 
   try {
-    const res = await fetch(
-      `https://api.stocktwits.com/api/2/streams/symbol/${encodeURIComponent(ticker)}.json`,
-      { signal: AbortSignal.timeout(5000) },
+    const res = await withTelemetry(
+      'stocktwits',
+      () =>
+        fetch(
+          `https://api.stocktwits.com/api/2/streams/symbol/${encodeURIComponent(ticker)}.json`,
+          { signal: AbortSignal.timeout(5000) },
+        ),
+      { ticker },
     );
     if (!res.ok) return empty(`StockTwits API error: ${res.status} ${res.statusText}`);
 

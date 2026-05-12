@@ -35,6 +35,11 @@ import { runCoVe } from '@/lib/reasoning/cove';
 // (Json), message all already exist — NO new columns required.
 import { routeModel, estimateCost, type ModelChoice } from '@/lib/reasoning/router';
 import { prisma } from '@/lib/db';
+// Plan 20-Z-03 — wrap the Gemini generateText() call with per-call telemetry.
+// cost_usd_estimator reads usage.inputTokens/outputTokens off the SDK return
+// shape and multiplies by GEMINI_TOKEN_RATES (pinned 2026-Q1).
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
+import { GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
 
 // Reads ANTHROPIC_API_KEY from process.env automatically.
 const anthropicClient = new Anthropic();
@@ -1137,14 +1142,31 @@ async function generateAnalysis(
           : 'google/gemini-3-flash';
 
   try {
-    const { output, usage } = await generateText({
-      model: modelString,
-      output: Output.object({ schema: AnalysisResultSchema }),
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    });
+    // Plan 20-Z-03: wrap the Gemini call with telemetry. cost_usd_estimator
+    // reads token usage off the AI SDK return shape and multiplies by the
+    // pinned 2026-Q1 GEMINI_TOKEN_RATES. Wrapper is fire-and-forget on the
+    // INSERT; caller sees identical return value + timing.
+    const { output, usage } = await withTelemetry(
+      'gemini',
+      () =>
+        generateText({
+          model: modelString,
+          output: Output.object({ schema: AnalysisResultSchema }),
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+      {
+        ticker,
+        cost_usd_estimator: (r) => {
+          const u = (r as { usage?: { inputTokens?: number; outputTokens?: number } }).usage;
+          const inT = u?.inputTokens ?? 0;
+          const outT = u?.outputTokens ?? 0;
+          return inT * GEMINI_TOKEN_RATES.input + outT * GEMINI_TOKEN_RATES.output;
+        },
+      },
+    );
     // Surface token usage to the caller's side-channel (cost telemetry).
     // generateText returns { usage: { totalTokens?: number } } from the AI SDK.
     if (routerCtx) {

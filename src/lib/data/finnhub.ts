@@ -11,6 +11,7 @@ import type {
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 const BASE = 'https://finnhub.io/api/v1';
 
@@ -22,17 +23,22 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 
  * coerce non-OK responses into a thrown status-Error so the retry classifier
  * can decide whether to back off.
  */
-async function fetchOk(url: string): Promise<Response> {
-  return withRetry(
-    async () => {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) {
-        const err = Object.assign(new Error(`finnhub ${res.status}`), { status: res.status });
-        throw err;
-      }
-      return res;
-    },
-    { maxAttempts: 3, baseDelayMs: 100 },
+async function fetchOk(url: string, ticker?: string): Promise<Response> {
+  return withTelemetry(
+    'finnhub',
+    () =>
+      withRetry(
+        async () => {
+          const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+          if (!res.ok) {
+            const err = Object.assign(new Error(`finnhub ${res.status}`), { status: res.status });
+            throw err;
+          }
+          return res;
+        },
+        { maxAttempts: 3, baseDelayMs: 100 },
+      ),
+    { ticker },
   );
 }
 
@@ -61,8 +67,8 @@ async function fetchFinnhubInner(
 ): Promise<SupplementarySource> {
   try {
     const [pRes, mRes] = await Promise.all([
-      fetchOk(`${BASE}/stock/profile2?symbol=${encodeURIComponent(ticker)}&token=${key}`),
-      fetchOk(`${BASE}/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${key}`),
+      fetchOk(`${BASE}/stock/profile2?symbol=${encodeURIComponent(ticker)}&token=${key}`, ticker),
+      fetchOk(`${BASE}/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${key}`, ticker),
     ]);
     if (!pRes.ok || !mRes.ok) return empty(false);
 

@@ -42,6 +42,11 @@ import { Exa } from 'exa-js';
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+// Plan 20-Z-03: telemetry for external calls.
+// provider_id 'anthropic-search' is the umbrella for all LLM-search vendors
+// in v1; per-vendor split (Exa as its own id) deferred — see 20-Z-03-PLAN.md
+// Task 5j for the deviation note. Keeps ProviderId enum at 9 entries.
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 // Reuse canonical types so callers can swap with anthropic-search.ts output.
 import type {
   NewsSection,
@@ -276,11 +281,16 @@ export async function fetchExaNews(ticker: string): Promise<NewsSection | null> 
     return await cached<NewsSection | null>(
       `${CACHE_KEYS.news(ticker)}:exa`,
       () =>
-        withRetry(() => doFetchExaNews(ticker), {
-          maxAttempts: 3,
-          baseDelayMs: 100,
-          isRetryable: isExaRetryable,
-        }),
+        withTelemetry(
+          'anthropic-search',
+          () =>
+            withRetry(() => doFetchExaNews(ticker), {
+              maxAttempts: 3,
+              baseDelayMs: 100,
+              isRetryable: isExaRetryable,
+            }),
+          { ticker },
+        ),
       { ttlSeconds: TTL_SECONDS.news },
     );
   } catch (err) {
@@ -359,11 +369,16 @@ export async function fetchExaFinancialReports(
     return await cached<SecFilingSummarySection | null>(
       `${CACHE_KEYS.news(ticker)}:exa-fin`,
       () =>
-        withRetry(() => doFetchExaFinancialReports(ticker), {
-          maxAttempts: 3,
-          baseDelayMs: 100,
-          isRetryable: isExaRetryable,
-        }),
+        withTelemetry(
+          'anthropic-search',
+          () =>
+            withRetry(() => doFetchExaFinancialReports(ticker), {
+              maxAttempts: 3,
+              baseDelayMs: 100,
+              isRetryable: isExaRetryable,
+            }),
+          { ticker },
+        ),
       // SEC filings are slow-moving — cache for the same 24h as fundamentals
       // rather than 30min news. The form-discovery cost is a full Exa call.
       { ttlSeconds: 86_400 },
@@ -388,11 +403,16 @@ export async function fetchExaAnalystSentiment(
     return await cached<AnalystSentimentSection | null>(
       `${CACHE_KEYS.news(ticker)}:exa-analyst`,
       () =>
-        withRetry(() => doFetchExaAnalyst(ticker), {
-          maxAttempts: 3,
-          baseDelayMs: 100,
-          isRetryable: isExaRetryable,
-        }),
+        withTelemetry(
+          'anthropic-search',
+          () =>
+            withRetry(() => doFetchExaAnalyst(ticker), {
+              maxAttempts: 3,
+              baseDelayMs: 100,
+              isRetryable: isExaRetryable,
+            }),
+          { ticker },
+        ),
       { ttlSeconds: TTL_SECONDS.news },
     );
   } catch (err) {

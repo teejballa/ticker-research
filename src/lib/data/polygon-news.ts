@@ -17,6 +17,7 @@
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import type { NewsSection, NewsItem } from '@/lib/types';
 
 const POLYGON_BASE = 'https://api.polygon.io';
@@ -101,10 +102,15 @@ export async function fetchPolygonNews(
     return await cached<NewsSection | null>(
       `${CACHE_KEYS.news(ticker)}:polygon`,
       () =>
-        withRetry(() => doFetchPolygonNews(ticker), {
-          maxAttempts: 3,
-          baseDelayMs: 100,
-        }),
+        withTelemetry(
+          'polygon',
+          () =>
+            withRetry(() => doFetchPolygonNews(ticker), {
+              maxAttempts: 3,
+              baseDelayMs: 100,
+            }),
+          { ticker },
+        ),
       { ttlSeconds: TTL_SECONDS.news },
     );
   } catch (err) {

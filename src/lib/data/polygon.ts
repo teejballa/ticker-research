@@ -12,6 +12,7 @@ import type {
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 const BASE = 'https://api.polygon.io';
 
@@ -23,17 +24,22 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 
  * are coerced to a thrown status-Error so the retry classifier decides whether
  * to back off; callers wrap in try/catch and degrade to `available:false`.
  */
-async function fetchOk(url: string): Promise<Response> {
-  return withRetry(
-    async () => {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) {
-        const err = Object.assign(new Error(`polygon ${res.status}`), { status: res.status });
-        throw err;
-      }
-      return res;
-    },
-    { maxAttempts: 3, baseDelayMs: 100 },
+async function fetchOk(url: string, ticker?: string): Promise<Response> {
+  return withTelemetry(
+    'polygon',
+    () =>
+      withRetry(
+        async () => {
+          const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+          if (!res.ok) {
+            const err = Object.assign(new Error(`polygon ${res.status}`), { status: res.status });
+            throw err;
+          }
+          return res;
+        },
+        { maxAttempts: 3, baseDelayMs: 100 },
+      ),
+    { ticker },
   );
 }
 
@@ -62,10 +68,10 @@ async function fetchPolygonInner(
 ): Promise<SupplementarySource> {
   try {
     // Reference is required; financials is optional and tolerated to fail.
-    const refRes = await fetchOk(`${BASE}/v3/reference/tickers/${encodeURIComponent(ticker)}?apiKey=${key}`);
+    const refRes = await fetchOk(`${BASE}/v3/reference/tickers/${encodeURIComponent(ticker)}?apiKey=${key}`, ticker);
     let finRes: Response | null = null;
     try {
-      finRes = await fetchOk(`${BASE}/vX/reference/financials?ticker=${encodeURIComponent(ticker)}&limit=1&apiKey=${key}`);
+      finRes = await fetchOk(`${BASE}/vX/reference/financials?ticker=${encodeURIComponent(ticker)}&limit=1&apiKey=${key}`, ticker);
     } catch {
       // financials is supplementary — proceed without.
       finRes = null;

@@ -26,6 +26,7 @@
 // message (which the SDK is responsible for sanitizing).
 
 import { HfInference } from '@huggingface/inference';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 export interface SentimentScore {
   score: number | null;        // [-1, 1] — positive bullish, negative bearish
@@ -68,7 +69,13 @@ async function classifyVia(
     const endpoint = process.env[endpointEnv];
     if (!endpoint) throw new Error(`${endpointEnv} not set`);
     const client = getClient();
-    const out = await client.textClassification({ model: endpoint, inputs: text });
+    // Plan 20-Z-03: wrap HF FinBERT/FinGPT/Mistral-fin endpoint calls with
+    // withTelemetry. All three share provider_id 'finbert-hf' (same HF
+    // Inference Endpoint billing surface — per-model cost is identical).
+    const out = await withTelemetry(
+      'finbert-hf',
+      () => client.textClassification({ model: endpoint, inputs: text }),
+    );
     const arr = Array.isArray(out) ? out : [out];
     const { score, confidence } = reduceLabels(arr as Array<{ label: string; score: number }>);
     return { score, confidence, model };
