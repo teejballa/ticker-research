@@ -246,3 +246,31 @@ model SentimentObservation {
   @@index([ticker, model_version, fetched_at(sort: Desc)], map: "idx_sentobs_ticker_modelver_fetched_at")
   @@map("sentiment_observations")
 }
+
+// ─── Phase 20-Z-03 — Telemetry (per-call observability for external providers) ───
+// Insert-only by production paths (only the retention cron deletes). Captures
+// wall-clock timing + status + cost for every external provider call routed
+// through withTelemetry(). Powers /insights/sentiment-health and the daily
+// 1.5× rolling-7d cost-budget alerter. error_class is a controlled enum —
+// raw error messages are NEVER persisted (T-20-Z-03-05).
+model ProviderCallLog {
+  id                  String   @id @default(uuid())
+  provider_id         String // pinned enum — see ProviderId in src/lib/telemetry/withTelemetry.ts
+  ticker              String?
+  started_at          DateTime @db.Timestamptz
+  ended_at            DateTime @db.Timestamptz
+  duration_ms         Int
+  status              String // 'ok' | 'error'
+  http_status         Int?
+  error_class         String? // controlled TelemetryErrorClass; NEVER raw message (T-20-Z-03-05)
+  fallback_used       Boolean  @default(false)
+  cache_hit           Boolean  @default(false)
+  cost_usd            Float    @default(0)
+  request_size_bytes  Int?
+  response_size_bytes Int?
+  retry_count         Int      @default(0)
+
+  @@index([provider_id, started_at(sort: Desc)], map: "idx_pcl_provider_started")
+  @@index([ticker, started_at(sort: Desc)], map: "idx_pcl_ticker_started")
+  @@map("provider_call_logs")
+}
