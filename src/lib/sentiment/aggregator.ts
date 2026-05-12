@@ -1,3 +1,4 @@
+// @model-card: docs/cards/MODEL-CARD-reputation-weighted.md
 /**
  * Post-Phase-19 — multi-source community sentiment aggregator.
  *

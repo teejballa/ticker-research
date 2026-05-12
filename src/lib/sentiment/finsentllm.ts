@@ -1,3 +1,4 @@
+// @model-card: docs/cards/MODEL-CARD-finbert.md
 // src/lib/sentiment/finsentllm.ts
 //
 // FinSentLLM clients per CONTEXT decision D-33.
