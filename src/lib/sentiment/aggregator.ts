@@ -24,6 +24,17 @@
  * remains unchanged so the per-source UI breakdown can still display it.
  */
 
+import { FEATURES } from '@/lib/features';
+import {
+  authorDiversityGini,
+  bullPctStd,
+  crowdedConsensus,
+  shannonEntropy,
+  type DispersionFeatures,
+} from '@/lib/sentiment/dispersion';
+import { mentionZ } from '@/lib/sentiment/mention-z-stub';
+import { loadLatestCrowdedConsensusThresholds } from '@/lib/sentiment/crowded-consensus-config';
+
 export type SentimentSource = 'stocktwits' | 'swaggystocks' | 'apewisdom';
 
 export interface SourceInput {
@@ -50,6 +61,17 @@ export interface AggregatedSentiment {
   /** Number of contributing sources (non-null bullish_pct AND mention_count > 0). */
   source_count: number;
   components: SentimentComponent[];
+  // ── Plan 20-A-01 — crowded_consensus flag (GME-100% fix) ─────
+  /**
+   * true  → flag fires (warning UI in 'on' mode)
+   * false → flag explicitly does NOT fire
+   * null  → cannot compute (calibration unavailable, or any input non-finite)
+   */
+  crowded_consensus?: boolean | null;
+  /** Inputs used to compute the flag — surfaced for telemetry + spot-check log. */
+  dispersion_features?: DispersionFeatures | null;
+  /** 'off' | 'shadow' | 'on' — value of FEATURE_CROWDED_CONSENSUS at compute time. */
+  crowded_consensus_mode?: 'off' | 'shadow' | 'on';
 }
 
 /**
@@ -127,4 +149,61 @@ export function aggregateCommunitySentiment(inputs: AggregatorInputs): Aggregate
     source_count: components.length,
     components,
   };
+}
+
+// ─── Plan 20-A-01 — crowded_consensus flag (GME-100% fix) ──────────────────────
+/**
+ * Compute the crowded_consensus flag + the 4-feature dispersion vector.
+ *
+ * Sibling to `aggregateCommunitySentiment`. Called by the cron writer
+ * (sentiment-scan) and the per-request analysis path. The three-mode flag
+ * gates work as follows:
+ *   - 'off':    short-circuit; return mode only (flag/features undefined)
+ *   - 'shadow': compute, persist into SentimentSnapshot.community_aggregated.crowded_consensus_shadow,
+ *               but DO NOT surface to UI (UI suppresses on 'shadow')
+ *   - 'on':     compute + surface to UI
+ */
+export async function computeCrowdedConsensus(args: {
+  components: SentimentComponent[];
+  messageTagCounts: { bull: number; bear: number; neutral: number };
+  messagesByAuthor: Map<string, number>;
+  observations: unknown[];
+}): Promise<{
+  flag: boolean | null | undefined;
+  features: DispersionFeatures | null | undefined;
+  mode: 'off' | 'shadow' | 'on';
+}> {
+  const mode = FEATURES.crowded_consensus_mode;
+  if (mode === 'off') {
+    return { flag: undefined, features: undefined, mode };
+  }
+
+  const thresholds = await loadLatestCrowdedConsensusThresholds();
+
+  // Compute features even if thresholds are null — feature persistence has
+  // independent value (audit log, debugging) and is cheap.
+  let features: DispersionFeatures | null;
+  try {
+    const total =
+      args.messageTagCounts.bull +
+      args.messageTagCounts.bear +
+      args.messageTagCounts.neutral;
+    features = {
+      entropy_bits: total > 0 ? shannonEntropy(args.messageTagCounts) : NaN,
+      bull_pct_std: bullPctStd(
+        args.components.map((c) => ({ source: c.source, bull_pct: c.bullish_pct })),
+      ),
+      author_gini: authorDiversityGini(args.messagesByAuthor),
+      mention_z: mentionZ(args.observations),
+    };
+  } catch {
+    features = null;
+  }
+
+  if (thresholds == null || features == null) {
+    return { flag: null, features, mode };
+  }
+
+  const flag = crowdedConsensus(features, thresholds);
+  return { flag, features, mode };
 }
