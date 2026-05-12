@@ -193,6 +193,21 @@ export interface SentimentIntelligenceSection extends SourceSection {
     share: number; // ∈ [0, 1]
     message_count: number;
   }> | null;
+  // Plan 20-A-05 — Cross-platform agreement signal (Cookson & Engelberg
+  // "Echo Chambers"). Optional/nullable so SourcePackage stays
+  // backward-compatible when FEATURE_AGREEMENT_SIGNAL is 'off' or fewer than
+  // 2 sources contributed.
+  /**
+   * agreement_score = 1 - std(per-source bull_pct) / 50, clamped [0, 1].
+   * Null when <2 sources contributed (no cross-platform signal possible).
+   */
+  agreement_score?: number | null;
+  /**
+   * True when agreement_score < calibrated threshold (default 0.5 per
+   * Cookson & Engelberg). Drives the "MIXED · LOW AGREEMENT" UI badge.
+   * Always false when agreement_score is null.
+   */
+  low_agreement_warning?: boolean;
 }
 
 export interface ChartDataPoint {
@@ -487,6 +502,9 @@ export interface AnalysisResult {
       share: number;
       message_count: number;
     }> | null;
+    // Plan 20-A-05 — cross-platform agreement signal.
+    agreement_score?: number | null;
+    low_agreement_warning?: boolean;
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph

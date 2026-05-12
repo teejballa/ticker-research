@@ -33,6 +33,8 @@ const FLAG_NAMES = [
   'crowded_consensus',
   // Plan 20-A-02 — robust mention-volume baseline replaces stocktwits_is_trending heuristic
   'mention_z_trending',
+  // Plan 20-A-05 — cross-platform agreement signal + MIXED · LOW AGREEMENT badge
+  'agreement_signal',
 ] as const;
 
 type FlagName = typeof FLAG_NAMES[number];

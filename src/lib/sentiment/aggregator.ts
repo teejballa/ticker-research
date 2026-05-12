@@ -26,6 +26,10 @@
 
 import { FEATURES } from '@/lib/features';
 import {
+  AGREEMENT_DEFAULT_THRESHOLD,
+  agreementScore,
+} from '@/lib/sentiment/agreement';
+import {
   authorDiversityGini,
   bullPctStd,
   crowdedConsensus,
@@ -96,6 +100,21 @@ export interface AggregatedSentiment {
   is_trending_v2?: boolean | null;
   /** 'off' | 'shadow' | 'on' — value of FEATURE_MENTION_Z_TRENDING at compute time. */
   mention_z_trending_mode?: 'off' | 'shadow' | 'on';
+  // ── Plan 20-A-05 — cross-platform agreement signal ───────────
+  /**
+   * agreement_score = 1 - std(per-source bull_pct) / 50, clamped [0, 1].
+   * Null when <2 sources contributed (T-20-A-05-01 sparse-data sentinel) OR
+   * when FEATURE_AGREEMENT_SIGNAL is 'off'.
+   */
+  agreement_score?: number | null;
+  /**
+   * True iff agreement_score < calibrated threshold (default 0.5 per Cookson
+   * & Engelberg). Drives the "MIXED · LOW AGREEMENT" UI badge when the flag
+   * is 'on'; logged but UI-hidden when 'shadow'; always false when 'off'.
+   */
+  low_agreement_warning?: boolean;
+  /** 'off' | 'shadow' | 'on' — value of FEATURE_AGREEMENT_SIGNAL at compute time. */
+  agreement_signal_mode?: 'off' | 'shadow' | 'on';
 }
 
 /**
@@ -142,6 +161,18 @@ export function aggregateCommunitySentiment(inputs: AggregatorInputs): Aggregate
     if (c) components.push(c);
   }
 
+  // ── Plan 20-A-05 — Range validation (T-20-A-05-02 mitigation) ─────────────
+  // Per-source bull_pct MUST be ∈ [0, 100]. Out-of-range silently breaks the
+  // /50 normalization in agreementScore. Throw with diagnostic — caller bug.
+  for (const c of components) {
+    if (c.bullish_pct < 0 || c.bullish_pct > 100) {
+      throw new Error(
+        `aggregator: per-source bull_pct out of [0,100]: source=${c.source} ` +
+          `bullish_pct=${c.bullish_pct} — see T-20-A-05-02`,
+      );
+    }
+  }
+
   if (components.length === 0) {
     return {
       aggregated_bull_pct: null,
@@ -167,11 +198,76 @@ export function aggregateCommunitySentiment(inputs: AggregatorInputs): Aggregate
   const clamped = Math.max(0, Math.min(100, aggregated_bull_pct));
   const rounded = Math.round(clamped * 100) / 100;
 
+  // ── Plan 20-A-05 — Agreement signal (flag-gated) ──────────────────────────
+  // Three-mode flag (FEATURE_AGREEMENT_SIGNAL):
+  //   'off':    short-circuit; agreement fields are undefined
+  //   'shadow': compute + surface on AggregatedSentiment; UI badge hidden
+  //   'on':     compute + surface + UI badge visible
+  // Threshold defaults to AGREEMENT_DEFAULT_THRESHOLD (0.5); the calibrated
+  // override is loaded async via getLatestAgreementThreshold() at the
+  // SourcePackage layer when a Prisma client is available.
+  const agreementMode = FEATURES.agreement_signal_mode;
+  let agreement_score: number | null | undefined;
+  let low_agreement_warning: boolean | undefined;
+  if (agreementMode === 'off') {
+    agreement_score = null;
+    low_agreement_warning = false;
+  } else {
+    agreement_score = agreementScore(components.map((c) => c.bullish_pct));
+    low_agreement_warning =
+      agreement_score != null && agreement_score < AGREEMENT_DEFAULT_THRESHOLD;
+  }
+
   return {
     aggregated_bull_pct: rounded,
     aggregated_bear_pct: Math.round((100 - rounded) * 100) / 100,
     source_count: components.length,
     components,
+    agreement_score,
+    low_agreement_warning,
+    agreement_signal_mode: agreementMode,
+  };
+}
+
+// ─── Plan 20-A-05 — Threshold loader (async, Prisma-bound) ─────────────────
+/**
+ * Reads the latest AgreementCalibration.threshold (by computed_at DESC).
+ * Falls back to AGREEMENT_DEFAULT_THRESHOLD (0.5 — Cookson & Engelberg
+ * literature default) when no calibration row exists.
+ *
+ * Cached for the duration of one process (no in-process TTL — calibration
+ * runs monthly so per-cold-start refresh is sufficient). The cache is
+ * cleared by Vercel's serverless container recycling.
+ */
+let _cachedAgreementThreshold: number | null = null;
+
+export async function getLatestAgreementThreshold(): Promise<number> {
+  if (_cachedAgreementThreshold != null) return _cachedAgreementThreshold;
+  try {
+    const { prisma } = await import('@/lib/db');
+    const row = await prisma.agreementCalibration.findFirst({
+      orderBy: { computed_at: 'desc' },
+    });
+    _cachedAgreementThreshold = row?.threshold ?? AGREEMENT_DEFAULT_THRESHOLD;
+  } catch {
+    // No DB available (unit tests, missing DATABASE_URL) — return literature default.
+    _cachedAgreementThreshold = AGREEMENT_DEFAULT_THRESHOLD;
+  }
+  return _cachedAgreementThreshold;
+}
+
+/** Recompute low_agreement_warning for an AggregatedSentiment using the
+ *  calibrated threshold. Called by SourcePackage assembly so the UI badge
+ *  reflects the latest AgreementCalibration row rather than the literature
+ *  default 0.5. No-op when agreement_score is null. */
+export function applyCalibratedAgreementThreshold(
+  agg: AggregatedSentiment,
+  threshold: number,
+): AggregatedSentiment {
+  if (agg.agreement_score == null) return agg;
+  return {
+    ...agg,
+    low_agreement_warning: agg.agreement_score < threshold,
   };
 }
 
