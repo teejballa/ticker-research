@@ -1,0 +1,63 @@
+# .github/workflows/prompts.yml
+#
+# Plan 20-Z-04 — Prompt Registry CI gate.
+#
+# Runs on every PR that touches:
+#   - src/lib/prompts/**            (any prompt body / manifest / loader change)
+#   - src/lib/gemini-analysis.ts    (a migrated call site)
+#   - src/lib/research-brief.ts     (a migrated call site)
+#   - src/app/api/cron/learn/route.ts (a migrated call site)
+#   - tests/prompts/**              (test changes)
+#   - scripts/check-prompt-versions.ts (the gate itself)
+#
+# Two gates enforced:
+#  1. `npm run check-prompts` — git-diff-aware script that exits non-zero on a
+#     prompt body change without a sibling _v(N+1)/ directory. T-20-Z-04-01.
+#  2. Golden snapshot + registry + render + version-bump fixture tests — any
+#     body / variables / description change on a registered (id, version) tuple
+#     fails the snapshot diff unless the snapshot was explicitly updated via
+#     `npx vitest -u`. T-20-Z-04-01 + T-20-Z-04-03.
+
+name: Prompt Registry Gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/prompts/**'
+      - 'src/lib/gemini-analysis.ts'
+      - 'src/lib/research-brief.ts'
+      - 'src/app/api/cron/learn/route.ts'
+      - 'tests/prompts/**'
+      - 'scripts/check-prompt-versions.ts'
+      - '.github/workflows/prompts.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history required for `git merge-base HEAD origin/main` in
+          # scripts/check-prompt-versions.ts.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Gate 1 — diff-aware version-bump enforcement.
+      - name: Run check-prompts (T-20-Z-04-01 git-diff gate)
+        run: npm run check-prompts
+
+      # Gate 2 — golden snapshot + behavioral tests for the registry.
+      - name: Run prompt registry test suite
+        run: |
+          npx vitest run \
+            tests/prompts/registry.unit.test.ts \
+            tests/prompts/render.unit.test.ts \
+            tests/prompts/byte-equality.unit.test.ts \
+            tests/prompts/registry.golden.test.ts \
+            tests/prompts/version-bump.fixture.test.ts
