@@ -98,3 +98,28 @@ Lives inline in `src/lib/learning.ts` HYPERPARAMETERS const (per CONTEXT D-19 �
 > These two decay tables are intentionally separate — sentiment-message decay (per source class, t½ ≈ 1-7d) and learning-engine observation decay (per signal class, t½ ≈ 60d) are different domains with different calibration targets. Do not merge them. See `src/lib/sentiment/decay.ts` header for rationale.
 
 Updated by: Plan 20-A-03 (2026-05-12).
+
+---
+
+## Phase 20-A-04 — Author-concentration Gini
+
+Source: `src/lib/sentiment/aggregator.ts` `computeAuthorConcentration()` +
+weekly `scripts/calibrate-author-share-thresholds.ts` cron writing to the
+`AuthorShareCalibration` table. Q1 thresholds are NEVER hand-set (S1).
+
+| Param | Value | Source / rationale |
+|-------|-------|---------------------|
+| `FEATURE_AUTHOR_GINI` down-weight multiplier | `0.5` | Cookson & Engelberg 2020 echo-chamber down-weight literature default. Re-tunable; out of scope for first ship. |
+| `AUTHOR_GINI_N_MIN` sentinel | `5` | Below this, Gini is statistically meaningless on a 24h window. Returns null → UI hides sub-card (T-20-A-04-02). Soft default; revisit after 90d production. |
+| `q1_author_share_pct` | per-ticker, weekly | NOT hand-set — calibrated by `/api/cron/author-share-calibration` schedule `'0 8 * * 1'` UTC (S1 compliance). Stored in `AuthorShareCalibration` table. |
+| `AUTHOR_GINI_GLOBAL_Q1_FALLBACK` | `0.25` | Conservative fallback used only when no calibration row exists for the ticker yet. console.warn fires alongside. Replaced on first cron run. |
+| `training_window_days` | `90` | Standard quarterly window; matches 20-A-02 / 20-A-03 baseline windows. |
+| `topN` author bars | `5` | UI density choice; not a model parameter. |
+
+- **Computed_at:** pending — first weekly cron run lands the inaugural rows for each ticker. Until then, the global Q1 fallback (`0.25`) applies.
+- **Recalibration cadence:** weekly via `/api/cron/author-share-calibration` (`'0 8 * * 1'` UTC).
+- **Cutover criteria (shadow → on):** ≥7d shadow + Gini values in the published meme-stock range [0.3, 0.85] on the GME/AMC/SOFI backfill set. UI rollout (`FEATURE_AUTHOR_GINI_UI`) is gated SEPARATELY in a follow-up commit.
+
+**Citation:** Cookson, J. A., & Engelberg, J. (2020). "Echo Chambers." *Review of Financial Studies*. https://doi.org/10.1093/rfs/hhaa027
+
+Updated by: Plan 20-A-04 (2026-05-12).
