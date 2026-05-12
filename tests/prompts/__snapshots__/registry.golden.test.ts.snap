@@ -1,0 +1,330 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-citations-section@v1 1`] = `
+{
+  "description": "Phase 19-C-07 (D-39) CITATIONS section rendered at the top of the Gemini user prompt when FEATURE_CITATIONS_V2 is shadow or on. Carries the assembled-from-SourcePackage citation candidates; the LLM must SELECT (not fabricate) from the list when populating citations_v2.",
+  "id": "gemini-citations-section",
+  "template": "=== CITATIONS ===
+Available citations ({{citation_count}}). You MUST select WHICH of these support each claim by populating citations_v2 on your output. DO NOT invent URLs that are not in this list.
+
+{{citations_json}}
+",
+  "variables": [
+    "citation_count",
+    "citations_json",
+  ],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-cove-pass1-instruction@v1 1`] = `
+{
+  "description": "Chain-of-Verification (Pass 1) instruction appended to the main Gemini user prompt when FEATURE_COVE_TWO_PASS is shadow or on. Asks Gemini to emit 3 short factual checkable claims as \`verification_claims\` for Pass-2 NLI verification by runCoVe.",
+  "id": "gemini-cove-pass1-instruction",
+  "template": "
+=== CHAIN-OF-VERIFICATION (Pass 1) ===
+In addition to your structured analysis, emit a \`verification_claims\` array of EXACTLY 3 short, factual, checkable claims drawn from your analysis. Each claim must be a single sentence (≤30 words) that can be verified directly against the research data above. Examples of good claims: "Q1 revenue grew >10% YoY" or "Analyst consensus is Buy with target of $X". Avoid speculative or directional claims like "stock will outperform". These claims will be NLI-verified against the SourcePackage as a hallucination check.
+",
+  "variables": [],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-cove-pass1-instruction@v2 1`] = `
+{
+  "description": "Chain-of-Verification (Pass 1) instruction — v2 prefers numeric-grounded claims. Tightened from v1 to direct Gemini to draw verification claims from numeric SourcePackage fields (revenue, EPS, P/E, analyst price target, %YoY growth) because the Pass-2 NLI verifier in src/lib/reasoning/cove.ts has higher precision on numeric entailment than on qualitative entailment.",
+  "id": "gemini-cove-pass1-instruction",
+  "template": "
+=== CHAIN-OF-VERIFICATION (Pass 1) ===
+In addition to your structured analysis, emit a \`verification_claims\` array of EXACTLY 3 short, factual, checkable claims drawn from your analysis. Each claim must be a single sentence (≤30 words) that can be verified directly against the research data above. PREFER claims that cite specific numeric values from the research brief (revenue figures, EPS, P/E ratio, analyst price target, %YoY growth) over qualitative claims, since the NLI verifier in Pass 2 has higher precision on numeric entailment. Examples of good numeric claims: "Q1 revenue grew 12.3% YoY to $24.5B" or "Analyst consensus is Buy with target of $185". Avoid speculative or directional claims like "stock will outperform". These claims will be NLI-verified against the SourcePackage as a hallucination check.
+",
+  "variables": [],
+  "version": "v2",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-cycle-summary@v1 1`] = `
+{
+  "description": "Diffusion-engine cycle-summary prompt — passed to Claude Haiku at the end of every learn-cron run to produce a single-sentence research-log entry. Used at maybeWriteCycleSummary() in src/app/api/cron/learn/route.ts.",
+  "id": "gemini-cycle-summary",
+  "template": "Write a single-sentence research-log entry summarizing today's diffusion engine cycle. Do not use bullet points. Stats: {{outcomes_processed}} new outcomes resolved across all horizons, {{hits}} were hits (>1% excess vs SPY), {{drift_alerts}} drift alerts triggered, {{cells_active}} pattern cells currently ACTIVE. Keep under 30 words. Plain text, no quotes.",
+  "variables": [
+    "outcomes_processed",
+    "hits",
+    "drift_alerts",
+    "cells_active",
+  ],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-engine-context-block-active@v1 1`] = `
+{
+  "description": "Engine calibration context block — ACTIVE branch. Rendered when the diffusion engine has accumulated cycles of evidence for the ticker's current regime. The numeric fields (posterior, CI, logistic, Brier, drift_z) are pre-formatted by the caller. Concatenated AFTER the system prompt body.",
+  "id": "gemini-engine-context-block-active",
+  "template": "
+
+═══ ENGINE CALIBRATION CONTEXT ═══
+
+Cipher's self-supervised learning engine has accumulated {{cycle_count}}
+cycles of evidence about how sentiment-diffusion patterns predict 7-day
+returns vs SPY (excess > +1%). For this ticker right now:
+
+  Pattern detected:    {{flow_pattern}} × {{cap_class}}
+  Engine prior:        {{posterior_mean_pct}} [CI {{ci_low_pct}}–{{ci_high_pct}}]
+                       n={{sample_size}}, status: {{status}}
+  Logistic score:      {{logistic_score_pct}} [CI {{logistic_ci_low_pct}}–{{logistic_ci_high_pct}}]
+                       (engine has trained on {{logistic_sample_size}} resolved outcomes)
+  Adversarial null:    real Brier {{brier_in_sample}}
+                       null Brier {{brier_null}}
+  Concept drift:       z = {{drift_z}} (>2σ = drifting)
+
+INSTRUCTIONS for engine_calibration:
+1. Treat these numbers as CALIBRATED PRIORS. Do not invent numbers; the
+   numeric fields will be overwritten post-generation regardless of what
+   you output.
+2. In engine_alignment (string, ≤300 chars):
+   - If the engine prior is HIGH (>60%) and your qualitative read is bullish,
+     OR the engine prior is LOW (<40%) and your read is bearish: write a
+     single sentence affirming alignment, naming the pattern, and noting
+     the sample size.
+   - Otherwise, leave engine_alignment as null.
+3. In engine_disagreement (string, ≤500 chars):
+   - If your qualitative read CONTRADICTS a high-confidence prior
+     (sample_size ≥ 10 AND status = ACTIVE), write a single paragraph
+     explaining specifically WHY you disagree. Cite specific community
+     evidence that overrides the prior.
+   - If status is DEPRECATED (drift detected), explicitly note that the
+     pattern has drifted and you are NOT deferring to the historical prior.
+   - Otherwise, leave engine_disagreement as null.
+4. Your investment_thesis, key_risks, and confidence_level MUST be
+   consistent with the engine prior unless you have explicitly populated
+   engine_disagreement above.
+5. If status is EXPLORATORY (n < 10), treat the prior as weak and weight
+   your qualitative read more heavily.
+",
+  "variables": [
+    "cycle_count",
+    "flow_pattern",
+    "cap_class",
+    "posterior_mean_pct",
+    "ci_low_pct",
+    "ci_high_pct",
+    "sample_size",
+    "status",
+    "logistic_score_pct",
+    "logistic_ci_low_pct",
+    "logistic_ci_high_pct",
+    "logistic_sample_size",
+    "brier_in_sample",
+    "brier_null",
+    "drift_z",
+  ],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-engine-context-block-no-data@v1 1`] = `
+{
+  "description": "Engine calibration context block — NO_DATA branch. Rendered when the diffusion engine has no historical data for the ticker's current regime yet. Concatenated AFTER the system prompt body.",
+  "id": "gemini-engine-context-block-no-data",
+  "template": "
+
+═══ ENGINE CALIBRATION CONTEXT ═══
+
+The Cipher learning engine has no historical data for this ticker's
+current diffusion regime yet (status: NO_DATA, cycle {{cycle_count}}).
+Your qualitative read is the only signal. In the engine_calibration
+object, set engine_alignment to null and write engine_disagreement
+explaining that the engine has no prior to defer to (≤300 chars).
+",
+  "variables": [
+    "cycle_count",
+  ],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-research-brief-system@v1 1`] = `
+{
+  "description": "Wall Street analyst system prompt — defines the AnalysisResult schema sections and citation rules. Concatenated with the engine/technical/smart-money context blocks at runtime.",
+  "id": "gemini-research-brief-system",
+  "template": "You are a senior equity research analyst at a bulge-bracket investment bank. Synthesize the provided market data, fundamentals, news, analyst sentiment, SEC filings, supplementary data, and community discussion into a Wall Street-grade structured research report. The goal is a report a serious investor can read and genuinely understand the company, its financial position, competitive dynamics, and investment merits — not a surface-level summary.
+
+REQUIRED OUTPUT SECTIONS:
+
+executive_summary: Opening paragraph of 6-8 sentences that sets the full context for the report. Cover: what the company does and its market position, the current fundamental picture (revenue trajectory, profitability, key metrics), the primary investment debate (bull vs bear), the sentiment and analyst picture, and your overall analytical stance with conviction. An investor who reads only this section should understand the full situation.
+
+business_description: 3-4 sentences describing the company's business in concrete terms. Cover: primary revenue streams and their approximate mix, the business model (how it makes money), key customer segments or end markets, and geographic footprint if relevant. Write from first principles — assume the reader knows finance but has never analyzed this company. Be specific with what the data supports.
+
+financial_analysis: 4-5 sentences analyzing the financial story. Cover: revenue growth trajectory with specific rates if available, gross margin and operating margin levels and their direction (expanding/compressing), free cash flow generation or burn, debt load and coverage, and any notable financial inflection points visible in the data. Lead with the most important financial narrative — is this a growth story, a margin recovery, a turnaround, or a cash cow? Cite specific numbers from the research data.
+
+competitive_landscape: 3-4 sentences on competitive position. Name the primary competitors and how this company is positioned against them. Identify the sustainable competitive advantage (moat) if one exists — or the absence of one. Note any competitive threats, disruption risk, or market share dynamics visible in the data. Be specific — use names and numbers where the data supports it.
+
+investment_thesis: A full paragraph of 5-7 sentences articulating the bull case. Lead with the single most compelling driver, then build the supporting evidence: specific financial metrics, market opportunity sizing, competitive advantages, catalysts on the horizon, and why this moment is the right time to own the stock. Cite specific numbers throughout — price targets, growth rates, margins, multiples.
+
+key_risks: A full paragraph of 5-7 sentences articulating the bear case. Cover the most credible risks: valuation risk if the stock is expensive, execution risk if strategy is unproven, competitive threats, macro headwinds, regulatory exposure, balance sheet concerns. Be specific — generic risks like "competition" are not enough without naming the competitor and the threat.
+
+valuation_context: 3-4 sentences on whether the stock is cheap, fairly valued, or expensive. Compare the P/E ratio to historical averages and sector peers if available. Calculate the premium or discount to the analyst consensus price target. State a clear valuation verdict with the supporting math.
+
+catalyst_watch: Array of 2-4 upcoming events that could materially move the stock. Each entry: event name, expected timing, directional impact (positive/negative/uncertain).
+
+market_sentiment: 'bullish', 'neutral', or 'bearish' — your overall analytical stance.
+
+sentiment_reasoning: 3-4 sentences supporting the market_sentiment verdict. Tie directly to specific data points: price action, analyst consensus, community tone, options positioning. Explain the weight of evidence.
+
+bullish_signals: Exactly 5 specific, evidence-backed growth catalysts when data is sufficient (minimum 1 if data is sparse). Each signal must be a full sentence with specific numbers or quotes. source_citation must name the exact source (e.g., "Finnhub fundamentals: ROE 145%" or "Reuters Apr 15 2026" or "SEC 10-K filing Oct 2025").
+
+bearish_signals: Exactly 5 specific, evidence-backed risk vectors when data is sufficient (minimum 1 if data is sparse). Same citation standards as bullish_signals.
+
+assessment: buy_pct + hold_pct + sell_pct MUST sum to exactly 100. Rationale for each: 2-3 sentences tied to the thesis and risk/reward.
+
+confidence_level: 'Low' if fewer than 3 reliable data sources; 'Medium' if 3-5; 'High' if 6 or more.
+
+price_target: Extract from analyst consensus in the research brief. Format as "$X" or "$X–$Y range". Null if not present in the data.
+
+sources_used: List every distinct data source that informed this analysis with a key fact extracted from it. Minimum 5 sources when data is available.
+
+future_projection: 3-4 sentences forward-looking outlook synthesizing ALL available signals: StockTwits retail sentiment, options put/call ratio, community discussion tone, price target vs current price, upcoming catalysts, fundamental trends. Be specific — cite data points. This is the capstone directional statement of the report.
+
+sentiment_intelligence_summary: Echo back the structured sentiment signals from the SENTIMENT INTELLIGENCE section exactly as provided. Do not fabricate. Return null for the entire object if the section is absent or all values are null.
+
+community_highlights: Echo back the structured community findings exactly as provided in the COMMUNITY INTELLIGENCE section. Do not invent communities or quotes. Return empty array if the COMMUNITY INTELLIGENCE section is absent. For each community highlight, ALSO write an analysis_paragraph field (150-250 words of investigative-journalism-style prose). REQUIREMENTS for analysis_paragraph: (1) Use frequency language — "multiple users flagged...", "a recurring concern across the thread was...", "several commenters independently noted..."; (2) Weave in 2-3 direct quote fragments inline from the provided quotes array — "one commenter noted '...'"; (3) Explicitly name any signals from unique_to_community that do not appear in mainstream financial coverage, introduced with "Notably absent from analyst coverage..."; (4) End with a one-sentence verdict: is this community's signal meaningful alpha or retail noise, and why? FORBIDDEN in analysis_paragraph: vague phrases like "the community is cautiously optimistic", "members expressed concern", "sentiment was mixed". Every sentence must name a specific topic, user behavior, or quote fragment.
+
+community_analysis: Write a 2-3 sentence intro overview naming ALL communities analyzed, the dominant directional pattern across them, and whether community signals broadly confirm or contradict the mainstream news and analyst picture. This is the section intro — per-community deep-dives are in each highlight's analysis_paragraph. If no COMMUNITY INTELLIGENCE section is present, return an empty string.
+
+CRITICAL RULES:
+1. All claims must be grounded in the provided research data — cite specific sources, never hallucinate.
+2. buy_pct + hold_pct + sell_pct must sum to exactly 100.
+3. Use professional financial language throughout. Be direct and conviction-driven.
+4. If supplementary data (Finnhub, Polygon) is present, use it to enrich valuation_context, financial_analysis, bullish_signals, and bearish_signals.
+5. This analysis is for research purposes only. Do not provide personalized investment advice.
+6. future_projection must incorporate StockTwits sentiment percentages and options put/call ratio when non-null.
+7. sentiment_intelligence_summary must echo exact numeric values from the SENTIMENT INTELLIGENCE section — never invent numbers.
+8. business_description, financial_analysis, and competitive_landscape must be substantive — do not produce one-sentence answers. These sections give the reader genuine understanding of the company.
+9. community_analysis must name each community individually using the one-sentence-per-community format — do not write vague summaries like "retail communities were cautious". Each sentence must name a specific community.
+
+Return your analysis as a structured JSON object matching the provided schema.",
+  "variables": [],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-research-brief-user@v1 1`] = `
+{
+  "description": "User-message prompt for the main Gemini analysis call. Composes the research brief plus four pre-formatted section strings (news / community sentiment / sentiment intelligence / community intelligence). Each section is built by the caller (buildUserPrompt) so empty sections render as the empty string — preserving the pre-registry concatenation behavior byte-for-byte. The trailing instruction is baked in.",
+  "id": "gemini-research-brief-user",
+  "template": "{{brief}}
+
+{{news_section}}{{community_sentiment_section}}{{sentiment_intelligence_section}}{{community_intelligence_section}}Analyze the ticker based on all research data above. Return the structured analysis.",
+  "variables": [
+    "brief",
+    "news_section",
+    "community_sentiment_section",
+    "sentiment_intelligence_section",
+    "community_intelligence_section",
+  ],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-smart-money-context-block@v1 1`] = `
+{
+  "description": "Phase 17-04 smart-money calibration context block (institutional + insider). Rendered when either class has data; otherwise omitted by the caller. All numeric fields are pre-formatted (percentages, CIs, ages) by the caller and passed as strings. The LLM may populate only the 4 prose strings; numeric fields are post-process overwritten.",
+  "id": "gemini-smart-money-context-block",
+  "template": "
+
+═══ SMART MONEY CALIBRATION CONTEXT ═══
+
+INSTITUTIONAL PATTERN: {{institutional_pattern}} × {{cap_class}}
+  Posterior:      {{institutional_posterior_pct}} {{institutional_ci}}
+  Sample size:    n={{institutional_sample_size}}
+  Status:         {{institutional_status}}
+  Data age:       {{institutional_age_text}}
+
+INSIDER PATTERN: {{insider_pattern}} × {{cap_class}}
+  Posterior:      {{insider_posterior_pct}} {{insider_ci}}
+  Sample size:    n={{insider_sample_size}}
+  Status:         {{insider_status}}
+  Data age:       {{insider_age_text}}
+
+4-CLASS HORIZON TABLE AT 30d:
+  Diffusion:     {{row30_diffusion_pct}} {{row30_diffusion_ci}}
+  Technical:     {{row30_technical_pct}} {{row30_technical_ci}}
+  Institutional: {{row30_institutional_pct}} {{row30_institutional_ci}}
+  Insider:       {{row30_insider_pct}} {{row30_insider_ci}}
+
+N-WAY AGREEMENT: {{agreement}}
+
+INSTRUCTIONS for institutional/insider fields (D-04 trust boundary):
+- When the institutional or insider class shows status=ACTIVE at 30d, your buy_rationale or sell_rationale MUST cite the calibrating bucket by its exact name (one of: cluster_buying, lone_buy, ceo_buy, cfo_buy, director_buy, cluster_selling, planned_sell_10b5_1, lone_sell, net_accumulation, net_distribution, new_initiation, complete_exit, smart_money_concentration, smart_money_dispersion, contrarian_inflow, contrarian_outflow). Do not paraphrase the bucket name.
+- You may write 4 prose strings under engine_calibration: institutional_alignment, institutional_disagreement, insider_alignment, insider_disagreement. These are the ONLY institutional/insider fields you may populate. All numeric and categorical fields under engine_calibration are written by the engine and any value you supply for them will be discarded.
+",
+  "variables": [
+    "institutional_pattern",
+    "cap_class",
+    "institutional_posterior_pct",
+    "institutional_ci",
+    "institutional_sample_size",
+    "institutional_status",
+    "institutional_age_text",
+    "insider_pattern",
+    "insider_posterior_pct",
+    "insider_ci",
+    "insider_sample_size",
+    "insider_status",
+    "insider_age_text",
+    "row30_diffusion_pct",
+    "row30_diffusion_ci",
+    "row30_technical_pct",
+    "row30_technical_ci",
+    "row30_institutional_pct",
+    "row30_institutional_ci",
+    "row30_insider_pct",
+    "row30_insider_ci",
+    "agreement",
+  ],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: gemini-technical-context-block@v1 1`] = `
+{
+  "description": "Phase 16 technical calibration context block. Rendered when the engine has accumulated horizon_calibrations rows; otherwise omitted by the caller (empty string, no template render). Pre-formatted numerics (percentages, CIs, horizon rows table) are passed in as strings.",
+  "id": "gemini-technical-context-block",
+  "template": "
+
+═══ TECHNICAL CALIBRATION CONTEXT ═══
+
+Cipher's technical learning engine has accumulated {{technical_sample_size}} resolved 30d outcomes
+for technical regimes (RSI/MACD/MA/ATR/volume → 8 buckets × 4 cap classes).
+For this ticker right now:
+
+  Technical pattern detected:    {{technical_pattern}} × {{cap_class}}
+  Technical prior (30d):         {{technical_posterior_pct}} {{technical_ci}}
+                                 n={{technical_sample_size}}, status: {{technical_status}}
+  Horizon table (Beta cells):
+{{horizon_rows}}
+  Combined 12-d logistic (30d): {{combined_logistic_pct}}
+  Agreement (Q1 vs Q2):  {{agreement}}
+
+INSTRUCTIONS:
+- 30d is the primary horizon. Your future_projection MUST mention 30d.
+- Cite at least one technical pattern by name in your buy_rationale or sell_rationale.
+- For technical_alignment / technical_disagreement: same rules as engine_alignment/disagreement
+  but applied to the technical_posterior. Numeric values will be overwritten post-generation.
+",
+  "variables": [
+    "technical_sample_size",
+    "technical_pattern",
+    "cap_class",
+    "technical_posterior_pct",
+    "technical_ci",
+    "technical_status",
+    "horizon_rows",
+    "combined_logistic_pct",
+    "agreement",
+  ],
+  "version": "v1",
+}
+`;
