@@ -44,6 +44,7 @@ export interface SentimentObservationInput {
   author_id: string;
   author_features_snapshot: AuthorFeaturesSnapshot;
   fetched_at?: Date;
+  // LOOKAHEAD-OK: DAO input field — published_at is informational only (Plan 20-Z-01 schema marker); never used in backtest joins. The PIT join key is fetched_at. Static-check exemption granted because this is a WRITE-side type, not a query.
   published_at?: Date | null;
 }
 
@@ -106,6 +107,7 @@ export async function insertObservation(
         source: input.source,
         message_id: input.message_id,
         fetched_at: input.fetched_at ?? new Date(),
+        // LOOKAHEAD-OK: insert-only write of the upstream-claimed timestamp into the schema column; the column itself carries a // PIT-INVARIANT marker in prisma/schema.prisma forbidding backtest joins. This is a WRITE, not a query — no lookahead risk.
         published_at: input.published_at ?? null,
         raw_body_hash,
         classifier_version: input.classifier_version,

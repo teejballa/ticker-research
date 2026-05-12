@@ -30,6 +30,8 @@
     "arctic-shift-backfill": "npx tsx scripts/arctic-shift-backfill.ts",
     "wave-b-rollout-status": "npx tsx scripts/wave-b-rollout-status.ts",
     "check-immutability": "npx tsx scripts/check-sentiment-immutability.ts",
+    "check-lookahead": "npx tsx scripts/check-lookahead-static.ts",
+    "test:lookahead-bias": "vitest run --config vitest.integration.config.ts tests/integration/lookahead-bias.regression.test.ts",
     "check-telemetry-coverage": "npx tsx scripts/check-telemetry-coverage.ts",
     "check-prompts": "npx tsx scripts/check-prompt-versions.ts",
     "eval": "npx tsx scripts/eval-report.ts",
