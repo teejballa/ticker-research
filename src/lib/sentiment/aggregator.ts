@@ -169,6 +169,83 @@ export function aggregateCommunitySentiment(inputs: AggregatorInputs): Aggregate
   };
 }
 
+// ─── Plan 20-A-03 — Decayed aggregator branch (shadow lifecycle) ──────────
+// SENTIMENT_DECAY_MODE ∈ {off, shadow, on}
+//   off    → existing aggregateCommunitySentiment only (current production behavior)
+//   shadow → both paths compute; the decayed result is logged but NOT served
+//   on     → aggregateDecayed result is the authoritative number (cutover)
+//
+// Cutover from shadow → on requires the paired-bootstrap report from
+// scripts/tune-decay.ts --bootstrap-cutover with 95% CI lower-bound > 0
+// on Sharpe (T-20-A-03-04).
+
+export const DECAY_EPSILON = 1e-9; // T-20-A-03-02 — div-by-zero floor
+
+export type SentimentDecayMode = 'off' | 'shadow' | 'on';
+
+export interface DecayedAggregatorInput {
+  ticker: string;
+  source: string; // raw source string from DB (CipherSource)
+  message_id: string;
+  classifier_score: number; // [-1, +1]
+  decay_weight: number; // pre-computed, persisted in SentimentObservation by 20-A-03 backfill
+}
+
+export interface DecayedAggregatorResult {
+  weighted_score: number; // [-1, +1]
+  total_weight: number;
+  fallback_to_uniform: boolean; // true iff Σ decay_weight < EPSILON
+  n_rows: number;
+}
+
+/**
+ * Σ score × decay_weight / Σ decay_weight, with uniform-weight fallback when
+ * Σ decay_weight < EPSILON (all-old samples).
+ */
+export function aggregateDecayed(
+  rows: DecayedAggregatorInput[],
+): DecayedAggregatorResult {
+  if (rows.length === 0) {
+    return {
+      weighted_score: 0,
+      total_weight: 0,
+      fallback_to_uniform: false,
+      n_rows: 0,
+    };
+  }
+  let num = 0;
+  let den = 0;
+  for (const r of rows) {
+    num += r.classifier_score * r.decay_weight;
+    den += r.decay_weight;
+  }
+  if (den < DECAY_EPSILON) {
+    // Uniform fallback — all decay_weights effectively zero.
+    const uniform =
+      rows.reduce((a, r) => a + r.classifier_score, 0) / rows.length;
+    return {
+      weighted_score: uniform,
+      total_weight: 0,
+      fallback_to_uniform: true,
+      n_rows: rows.length,
+    };
+  }
+  return {
+    weighted_score: num / den,
+    total_weight: den,
+    fallback_to_uniform: false,
+    n_rows: rows.length,
+  };
+}
+
+/** Reads SENTIMENT_DECAY_MODE env var; defaults to 'off' (safe default for first deploy). */
+export function getDecayMode(): SentimentDecayMode {
+  const v = (process.env.SENTIMENT_DECAY_MODE ?? 'off').toLowerCase();
+  if (v === 'off' || v === 'shadow' || v === 'on') return v;
+  // Unknown values fail closed → 'off'
+  return 'off';
+}
+
 // ─── Plan 20-A-01 — crowded_consensus flag (GME-100% fix) ──────────────────────
 /**
  * Compute the crowded_consensus flag + the 4-feature dispersion vector.
