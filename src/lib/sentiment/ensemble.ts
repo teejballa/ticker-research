@@ -1,3 +1,4 @@
+// @model-card: docs/cards/MODEL-CARD-finbert.md
 // src/lib/sentiment/ensemble.ts
 //
 // Phase 19 / Plan 19-C-02 — FinSentLLM ensemble meta-classifier (D-34).
