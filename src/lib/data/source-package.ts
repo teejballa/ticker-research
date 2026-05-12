@@ -36,7 +36,11 @@ import { ensembleSentiment } from '@/lib/sentiment/ensemble';
 import { fetchTwelveDataFundamentals } from '@/lib/data/adapters/twelve-data';
 import { fetchSwaggyStocks } from '@/lib/data/adapters/swaggystocks';
 import { fetchApeWisdom } from '@/lib/data/adapters/apewisdom';
-import { aggregateCommunitySentiment } from '@/lib/sentiment/aggregator';
+import {
+  aggregateCommunitySentiment,
+  applyCalibratedAgreementThreshold,
+  getLatestAgreementThreshold,
+} from '@/lib/sentiment/aggregator';
 import {
   fetchExaNews,
   fetchExaAnalystSentiment,
@@ -154,7 +158,7 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
   const swaggy = swaggyResult.status === 'fulfilled' ? swaggyResult.value : null;
   const ape = apeResult.status === 'fulfilled' ? apeResult.value : null;
 
-  const aggregated = aggregateCommunitySentiment({
+  const aggregatedRaw = aggregateCommunitySentiment({
     stocktwits:
       stwits?.stocktwits_bull_pct != null && stwits?.stocktwits_message_count != null
         ? { bullish_pct: stwits.stocktwits_bull_pct, mention_count: stwits.stocktwits_message_count }
@@ -166,6 +170,11 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
       ? { bullish_pct: ape.bullish_pct, mention_count: ape.mention_count }
       : null,
   });
+  // Plan 20-A-05 — overlay the calibrated AgreementCalibration.threshold on
+  // top of the literature-default 0.5 that aggregateCommunitySentiment used.
+  // No-op when no calibration row exists yet.
+  const agreementThreshold = await getLatestAgreementThreshold();
+  const aggregated = applyCalibratedAgreementThreshold(aggregatedRaw, agreementThreshold);
 
   // Plan 19-C-02 (D-34) — runWithShadow('finsentllm-ensemble', ...).
   // Aggregated chatter text is the StockTwits / options interpretation
@@ -208,6 +217,9 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
     aggregated_bear_pct: aggregated.aggregated_bear_pct,
     sentiment_source_count: aggregated.source_count,
     sentiment_components: aggregated.components,
+    // Plan 20-A-05 — cross-platform agreement signal.
+    agreement_score: aggregated.agreement_score,
+    low_agreement_warning: aggregated.low_agreement_warning,
   };
 }
 
