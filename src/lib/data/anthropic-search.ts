@@ -13,6 +13,7 @@ import type {
   SocialSentimentSection,
 } from '@/lib/types';
 import type { SecurityType } from '@/lib/types';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 const client = new Anthropic();
 // Anthropic SDK reads ANTHROPIC_API_KEY from process.env automatically.
@@ -57,15 +58,20 @@ Return an empty array [] if no relevant news is found.`;
 
   try {
     // Equity searches get max_uses: 5 for broader coverage; SPAC/ETF use max_uses: 3
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
-      messages: [{
-        role: 'user',
-        content: prompt,
-      }],
-    });
+    const response = await withTelemetry(
+      'anthropic-search',
+      () =>
+        client.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 2048,
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
+          messages: [{
+            role: 'user',
+            content: prompt,
+          }],
+        }),
+      { ticker },
+    );
 
     const text = extractTextContent(response);
     const parsed = parseJsonFromResponse<Array<{ headline: string; url: string; published_date: string; source: string }>>(text);
@@ -115,16 +121,21 @@ Focus on: Wall Street consensus rating, average price target, recent upgrades/do
   }
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      // Equity analyst searches: max_uses: 5; SPAC and other non-ETF: max_uses: 3
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
-      messages: [{
-        role: 'user',
-        content: prompt,
-      }],
-    });
+    const response = await withTelemetry(
+      'anthropic-search',
+      () =>
+        client.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 2048,
+          // Equity analyst searches: max_uses: 5; SPAC and other non-ETF: max_uses: 3
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
+          messages: [{
+            role: 'user',
+            content: prompt,
+          }],
+        }),
+      { ticker },
+    );
 
     const text = extractTextContent(response);
     const parsed = parseJsonFromResponse<{
@@ -176,15 +187,20 @@ risks, and business developments from the filing. Return null if the filing cann
   }
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
-      messages: [{
-        role: 'user',
-        content: prompt,
-      }],
-    });
+    const response = await withTelemetry(
+      'anthropic-search',
+      () =>
+        client.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 3000,
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+          messages: [{
+            role: 'user',
+            content: prompt,
+          }],
+        }),
+      { ticker },
+    );
 
     const text = extractTextContent(response);
     const parsed = parseJsonFromResponse<{
@@ -232,15 +248,20 @@ Return null for overall_tone if sentiment is unclear or insufficient data.`;
   }
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
-      messages: [{
-        role: 'user',
-        content: prompt,
-      }],
-    });
+    const response = await withTelemetry(
+      'anthropic-search',
+      () =>
+        client.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 2048,
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+          messages: [{
+            role: 'user',
+            content: prompt,
+          }],
+        }),
+      { ticker },
+    );
 
     const text = extractTextContent(response);
     const parsed = parseJsonFromResponse<{

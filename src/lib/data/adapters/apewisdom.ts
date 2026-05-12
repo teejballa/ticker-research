@@ -27,6 +27,7 @@
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 export interface CommunitySignal {
   source: 'swaggystocks' | 'apewisdom';
@@ -129,10 +130,16 @@ export async function fetchApeWisdom(
         try {
           // graceful catch: withRetry exhaustion bubbles up here — we degrade
           // to null so the calling Promise.allSettled branch resolves cleanly.
-          return await withRetry(() => doFetchApeWisdom(ticker), {
-            maxAttempts: 3,
-            baseDelayMs: 100,
-          });
+          // Plan 20-Z-03: telemetry wraps the retry-wrapped fetch.
+          return await withTelemetry(
+            'apewisdom',
+            () =>
+              withRetry(() => doFetchApeWisdom(ticker), {
+                maxAttempts: 3,
+                baseDelayMs: 100,
+              }),
+            { ticker },
+          );
         } catch (err) {
           console.warn(
             `[apewisdom] ${ticker} failed:`,

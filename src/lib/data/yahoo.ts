@@ -13,6 +13,7 @@ import type {
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 // yahoo-finance2 v3 requires instantiation
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
@@ -63,10 +64,15 @@ export async function fetchMarketData(ticker: string): Promise<MarketDataSection
     async () => {
       const collected_at = new Date().toISOString();
       try {
-        const quote = await withRetry(() => yahooFinance.quote(ticker), {
-          maxAttempts: 3,
-          baseDelayMs: 100,
-        });
+        const quote = await withTelemetry(
+          'yahoo',
+          () =>
+            withRetry(() => yahooFinance.quote(ticker), {
+              maxAttempts: 3,
+              baseDelayMs: 100,
+            }),
+          { ticker },
+        );
         return {
           collected_at,
           price: quote.regularMarketPrice ?? null,
@@ -109,12 +115,17 @@ export async function fetchFundamentals(ticker: string): Promise<FundamentalsSec
     async () => {
       const collected_at = new Date().toISOString();
       try {
-        const summary = await withRetry(
+        const summary = await withTelemetry(
+          'yahoo',
           () =>
-            yahooFinance.quoteSummary(ticker, {
-              modules: ['financialData', 'defaultKeyStatistics'],
-            }),
-          { maxAttempts: 3, baseDelayMs: 100 },
+            withRetry(
+              () =>
+                yahooFinance.quoteSummary(ticker, {
+                  modules: ['financialData', 'defaultKeyStatistics'],
+                }),
+              { maxAttempts: 3, baseDelayMs: 100 },
+            ),
+          { ticker },
         );
         const dks = summary.defaultKeyStatistics;
         return {

@@ -23,6 +23,7 @@
  */
 
 import type { AnalystSentimentSection, AnalystChange } from '@/lib/types';
+import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
@@ -106,9 +107,21 @@ export async function fetchFinnhubAnalystSentiment(
   const auth = `&token=${encodeURIComponent(key)}`;
 
   const [recRows, priceTarget, upDowns] = await Promise.all([
-    getJson<RecommendationCell[]>(`${FINNHUB_BASE}/stock/recommendation?symbol=${symbol}${auth}`),
-    getJson<PriceTargetResp>(`${FINNHUB_BASE}/stock/price-target?symbol=${symbol}${auth}`),
-    getJson<UpgradeDowngradeRow[]>(`${FINNHUB_BASE}/stock/upgrade-downgrade?symbol=${symbol}${auth}`),
+    withTelemetry(
+      'finnhub',
+      () => getJson<RecommendationCell[]>(`${FINNHUB_BASE}/stock/recommendation?symbol=${symbol}${auth}`),
+      { ticker },
+    ),
+    withTelemetry(
+      'finnhub',
+      () => getJson<PriceTargetResp>(`${FINNHUB_BASE}/stock/price-target?symbol=${symbol}${auth}`),
+      { ticker },
+    ),
+    withTelemetry(
+      'finnhub',
+      () => getJson<UpgradeDowngradeRow[]>(`${FINNHUB_BASE}/stock/upgrade-downgrade?symbol=${symbol}${auth}`),
+      { ticker },
+    ),
   ]);
 
   if (!recRows || recRows.length === 0) return null;
