@@ -25,6 +25,9 @@ import { Prisma } from '@prisma/client';
 import { generateText } from 'ai';
 import YahooFinance from 'yahoo-finance2';
 import { prisma } from '@/lib/db';
+// Plan 20-Z-04 — cycle-summary prompt is a versioned registry artifact.
+// Body lives at src/lib/prompts/_v1/gemini-cycle-summary.md.
+import { renderPrompt } from '@/lib/prompts/render';
 import {
   computeDiffusionTrace,
   classifyCapClass,
@@ -863,7 +866,12 @@ async function maybeWriteCycleSummary(stats: {
   try {
     const { text } = await generateText({
       model: 'anthropic/claude-haiku-4.5',
-      prompt: `Write a single-sentence research-log entry summarizing today's diffusion engine cycle. Do not use bullet points. Stats: ${stats.outcomes_processed} new outcomes resolved across all horizons, ${stats.hits} were hits (>1% excess vs SPY), ${stats.drift_alerts} drift alerts triggered, ${stats.cells_active} pattern cells currently ACTIVE. Keep under 30 words. Plain text, no quotes.`,
+      prompt: renderPrompt('gemini-cycle-summary', {
+        outcomes_processed: String(stats.outcomes_processed),
+        hits: String(stats.hits),
+        drift_alerts: String(stats.drift_alerts),
+        cells_active: String(stats.cells_active),
+      }),
     });
     if (text && text.length > 0 && text.length < 400) message = text.trim();
   } catch {

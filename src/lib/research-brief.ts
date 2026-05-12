@@ -9,6 +9,10 @@
 import type { SourcePackage, NewsItem, AnalystChange } from './types';
 import type { Citation } from './sentiment/citation-schema';
 import { sanitizeUrl } from './sentiment/citation-schema';
+// Plan 20-Z-04 — every Gemini-bound prompt section is a versioned (id, version)
+// artifact in src/lib/prompts/registry. The CITATIONS section body is in
+// src/lib/prompts/_v1/gemini-citations-section.md.
+import { renderPrompt } from '@/lib/prompts/render';
 
 // ---- Helpers ----
 
@@ -348,12 +352,6 @@ export function assembleCitationsFromPackage(pkg: SourcePackage): Citation[] {
  */
 export function renderCitationsSection(citations: Citation[]): string {
   if (citations.length === 0) return '';
-  const lines: string[] = [];
-  lines.push('=== CITATIONS ===');
-  lines.push(
-    `Available citations (${citations.length}). You MUST select WHICH of these support each claim by populating citations_v2 on your output. DO NOT invent URLs that are not in this list.`,
-  );
-  lines.push('');
   // Compact JSON payload — keeps the section short while preserving every
   // structured field the schema validates against.
   const payload = citations.map((c) => ({
@@ -362,7 +360,9 @@ export function renderCitationsSection(citations: Citation[]): string {
     confidence: c.confidence,
     date_retrieved: c.date_retrieved,
   }));
-  lines.push(JSON.stringify(payload, null, 2));
-  lines.push('');
-  return lines.join('\n');
+  // Plan 20-Z-04 — body lives in src/lib/prompts/_v1/gemini-citations-section.md.
+  return renderPrompt('gemini-citations-section', {
+    citation_count: String(citations.length),
+    citations_json: JSON.stringify(payload, null, 2),
+  });
 }

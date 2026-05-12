@@ -40,6 +40,10 @@ import { prisma } from '@/lib/db';
 // shape and multiplies by GEMINI_TOKEN_RATES (pinned 2026-Q1).
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
+// Plan 20-Z-04 — every Gemini prompt is a (id, version) artifact in the
+// registry. renderPrompt() substitutes {{var}} placeholders + throws on
+// missing required vars or leftover placeholders (T-20-Z-04-03).
+import { renderPrompt } from '@/lib/prompts/render';
 
 // Reads ANTHROPIC_API_KEY from process.env automatically.
 const anthropicClient = new Anthropic();
@@ -162,62 +166,7 @@ export const AnalysisResultSchema = z.object({
 
 // ---- System prompt ----
 
-export const SYSTEM_PROMPT = `You are a senior equity research analyst at a bulge-bracket investment bank. Synthesize the provided market data, fundamentals, news, analyst sentiment, SEC filings, supplementary data, and community discussion into a Wall Street-grade structured research report. The goal is a report a serious investor can read and genuinely understand the company, its financial position, competitive dynamics, and investment merits — not a surface-level summary.
-
-REQUIRED OUTPUT SECTIONS:
-
-executive_summary: Opening paragraph of 6-8 sentences that sets the full context for the report. Cover: what the company does and its market position, the current fundamental picture (revenue trajectory, profitability, key metrics), the primary investment debate (bull vs bear), the sentiment and analyst picture, and your overall analytical stance with conviction. An investor who reads only this section should understand the full situation.
-
-business_description: 3-4 sentences describing the company's business in concrete terms. Cover: primary revenue streams and their approximate mix, the business model (how it makes money), key customer segments or end markets, and geographic footprint if relevant. Write from first principles — assume the reader knows finance but has never analyzed this company. Be specific with what the data supports.
-
-financial_analysis: 4-5 sentences analyzing the financial story. Cover: revenue growth trajectory with specific rates if available, gross margin and operating margin levels and their direction (expanding/compressing), free cash flow generation or burn, debt load and coverage, and any notable financial inflection points visible in the data. Lead with the most important financial narrative — is this a growth story, a margin recovery, a turnaround, or a cash cow? Cite specific numbers from the research data.
-
-competitive_landscape: 3-4 sentences on competitive position. Name the primary competitors and how this company is positioned against them. Identify the sustainable competitive advantage (moat) if one exists — or the absence of one. Note any competitive threats, disruption risk, or market share dynamics visible in the data. Be specific — use names and numbers where the data supports it.
-
-investment_thesis: A full paragraph of 5-7 sentences articulating the bull case. Lead with the single most compelling driver, then build the supporting evidence: specific financial metrics, market opportunity sizing, competitive advantages, catalysts on the horizon, and why this moment is the right time to own the stock. Cite specific numbers throughout — price targets, growth rates, margins, multiples.
-
-key_risks: A full paragraph of 5-7 sentences articulating the bear case. Cover the most credible risks: valuation risk if the stock is expensive, execution risk if strategy is unproven, competitive threats, macro headwinds, regulatory exposure, balance sheet concerns. Be specific — generic risks like "competition" are not enough without naming the competitor and the threat.
-
-valuation_context: 3-4 sentences on whether the stock is cheap, fairly valued, or expensive. Compare the P/E ratio to historical averages and sector peers if available. Calculate the premium or discount to the analyst consensus price target. State a clear valuation verdict with the supporting math.
-
-catalyst_watch: Array of 2-4 upcoming events that could materially move the stock. Each entry: event name, expected timing, directional impact (positive/negative/uncertain).
-
-market_sentiment: 'bullish', 'neutral', or 'bearish' — your overall analytical stance.
-
-sentiment_reasoning: 3-4 sentences supporting the market_sentiment verdict. Tie directly to specific data points: price action, analyst consensus, community tone, options positioning. Explain the weight of evidence.
-
-bullish_signals: Exactly 5 specific, evidence-backed growth catalysts when data is sufficient (minimum 1 if data is sparse). Each signal must be a full sentence with specific numbers or quotes. source_citation must name the exact source (e.g., "Finnhub fundamentals: ROE 145%" or "Reuters Apr 15 2026" or "SEC 10-K filing Oct 2025").
-
-bearish_signals: Exactly 5 specific, evidence-backed risk vectors when data is sufficient (minimum 1 if data is sparse). Same citation standards as bullish_signals.
-
-assessment: buy_pct + hold_pct + sell_pct MUST sum to exactly 100. Rationale for each: 2-3 sentences tied to the thesis and risk/reward.
-
-confidence_level: 'Low' if fewer than 3 reliable data sources; 'Medium' if 3-5; 'High' if 6 or more.
-
-price_target: Extract from analyst consensus in the research brief. Format as "$X" or "$X–$Y range". Null if not present in the data.
-
-sources_used: List every distinct data source that informed this analysis with a key fact extracted from it. Minimum 5 sources when data is available.
-
-future_projection: 3-4 sentences forward-looking outlook synthesizing ALL available signals: StockTwits retail sentiment, options put/call ratio, community discussion tone, price target vs current price, upcoming catalysts, fundamental trends. Be specific — cite data points. This is the capstone directional statement of the report.
-
-sentiment_intelligence_summary: Echo back the structured sentiment signals from the SENTIMENT INTELLIGENCE section exactly as provided. Do not fabricate. Return null for the entire object if the section is absent or all values are null.
-
-community_highlights: Echo back the structured community findings exactly as provided in the COMMUNITY INTELLIGENCE section. Do not invent communities or quotes. Return empty array if the COMMUNITY INTELLIGENCE section is absent. For each community highlight, ALSO write an analysis_paragraph field (150-250 words of investigative-journalism-style prose). REQUIREMENTS for analysis_paragraph: (1) Use frequency language — "multiple users flagged...", "a recurring concern across the thread was...", "several commenters independently noted..."; (2) Weave in 2-3 direct quote fragments inline from the provided quotes array — "one commenter noted '...'"; (3) Explicitly name any signals from unique_to_community that do not appear in mainstream financial coverage, introduced with "Notably absent from analyst coverage..."; (4) End with a one-sentence verdict: is this community's signal meaningful alpha or retail noise, and why? FORBIDDEN in analysis_paragraph: vague phrases like "the community is cautiously optimistic", "members expressed concern", "sentiment was mixed". Every sentence must name a specific topic, user behavior, or quote fragment.
-
-community_analysis: Write a 2-3 sentence intro overview naming ALL communities analyzed, the dominant directional pattern across them, and whether community signals broadly confirm or contradict the mainstream news and analyst picture. This is the section intro — per-community deep-dives are in each highlight's analysis_paragraph. If no COMMUNITY INTELLIGENCE section is present, return an empty string.
-
-CRITICAL RULES:
-1. All claims must be grounded in the provided research data — cite specific sources, never hallucinate.
-2. buy_pct + hold_pct + sell_pct must sum to exactly 100.
-3. Use professional financial language throughout. Be direct and conviction-driven.
-4. If supplementary data (Finnhub, Polygon) is present, use it to enrich valuation_context, financial_analysis, bullish_signals, and bearish_signals.
-5. This analysis is for research purposes only. Do not provide personalized investment advice.
-6. future_projection must incorporate StockTwits sentiment percentages and options put/call ratio when non-null.
-7. sentiment_intelligence_summary must echo exact numeric values from the SENTIMENT INTELLIGENCE section — never invent numbers.
-8. business_description, financial_analysis, and competitive_landscape must be substantive — do not produce one-sentence answers. These sections give the reader genuine understanding of the company.
-9. community_analysis must name each community individually using the one-sentence-per-community format — do not write vague summaries like "retail communities were cautious". Each sentence must name a specific community.
-
-Return your analysis as a structured JSON object matching the provided schema.`;
+export const SYSTEM_PROMPT = renderPrompt('gemini-research-brief-system', {});
 
 // ---- Prompt builder ----
 
@@ -241,61 +190,84 @@ export function buildUserPrompt(
   communityHighlights?: import('@/lib/types').CommunityHighlight[],
   newsItems?: import('@/lib/types').NewsItem[],
 ): string {
-  let prompt = brief + '\n\n';
+  // ── news_section ─────────────────────────────────────────────────────────
+  // Original (pre-20-Z-04) behavior: when newsItems is present, append
+  // '=== NEWS SOURCES ===\n' + per-item lines + '\n' (trailing single newline).
+  // When only newsUrls is present, append '=== NEWS SOURCES ===\n' + bullet
+  // list + '\n\n' (trailing double newline). When neither, append nothing.
+  let news_section = '';
   if (newsItems && newsItems.length > 0) {
-    prompt += '=== NEWS SOURCES ===\n';
+    news_section = '=== NEWS SOURCES ===\n';
     for (const item of newsItems.slice(0, 15)) {
-      prompt += `[${item.published_date}] ${item.headline} (${item.source})\n`;
-      prompt += `  URL: ${item.url}\n`;
+      news_section += `[${item.published_date}] ${item.headline} (${item.source})\n`;
+      news_section += `  URL: ${item.url}\n`;
     }
-    prompt += '\n';
+    news_section += '\n';
   } else if (newsUrls.length > 0) {
-    prompt += '=== NEWS SOURCES ===\n';
-    prompt += newsUrls.map(url => `- ${url}`).join('\n');
-    prompt += '\n\n';
+    news_section = '=== NEWS SOURCES ===\n';
+    news_section += newsUrls.map(url => `- ${url}`).join('\n');
+    news_section += '\n\n';
   }
+
+  // ── community_sentiment_section ──────────────────────────────────────────
+  let community_sentiment_section = '';
   if (communityContent) {
-    prompt += '=== COMMUNITY SENTIMENT ===\n';
-    prompt += communityContent;
-    prompt += '\n\n';
+    community_sentiment_section = '=== COMMUNITY SENTIMENT ===\n';
+    community_sentiment_section += communityContent;
+    community_sentiment_section += '\n\n';
   }
-  // Inject sentiment intelligence section for Gemini to echo back + use in future_projection
+
+  // ── sentiment_intelligence_section ───────────────────────────────────────
+  let sentiment_intelligence_section = '';
   if (sentimentIntelligence) {
     const si = sentimentIntelligence;
-    prompt += '=== SENTIMENT INTELLIGENCE ===\n';
-    prompt += `StockTwits Bullish: ${si.stocktwits_bull_pct != null ? si.stocktwits_bull_pct + '%' : 'N/A'}\n`;
-    prompt += `StockTwits Bearish: ${si.stocktwits_bear_pct != null ? si.stocktwits_bear_pct + '%' : 'N/A'}\n`;
-    prompt += `StockTwits Messages: ${si.stocktwits_message_count ?? 'N/A'}\n`;
-    prompt += `StockTwits Trending: ${si.stocktwits_is_trending != null ? si.stocktwits_is_trending : 'N/A'}\n`;
-    prompt += `Options Put/Call Ratio: ${si.put_call_ratio != null ? si.put_call_ratio.toFixed(3) : 'N/A'}\n`;
-    prompt += `Options Interpretation: ${si.put_call_interpretation ?? 'N/A'}\n`;
-    prompt += '\n';
+    sentiment_intelligence_section = '=== SENTIMENT INTELLIGENCE ===\n';
+    sentiment_intelligence_section += `StockTwits Bullish: ${si.stocktwits_bull_pct != null ? si.stocktwits_bull_pct + '%' : 'N/A'}\n`;
+    sentiment_intelligence_section += `StockTwits Bearish: ${si.stocktwits_bear_pct != null ? si.stocktwits_bear_pct + '%' : 'N/A'}\n`;
+    sentiment_intelligence_section += `StockTwits Messages: ${si.stocktwits_message_count ?? 'N/A'}\n`;
+    sentiment_intelligence_section += `StockTwits Trending: ${si.stocktwits_is_trending != null ? si.stocktwits_is_trending : 'N/A'}\n`;
+    sentiment_intelligence_section += `Options Put/Call Ratio: ${si.put_call_ratio != null ? si.put_call_ratio.toFixed(3) : 'N/A'}\n`;
+    sentiment_intelligence_section += `Options Interpretation: ${si.put_call_interpretation ?? 'N/A'}\n`;
+    sentiment_intelligence_section += '\n';
   }
-  // Inject structured community highlights for Gemini to echo + synthesize
+
+  // ── community_intelligence_section ───────────────────────────────────────
+  // Original behavior: when present, starts with '\n\n=== COMMUNITY INTELLIGENCE ===\n'
+  // (note the leading two newlines that separated it from the previous section).
+  let community_intelligence_section = '';
   if (communityHighlights && communityHighlights.length > 0) {
-    prompt += `\n\n=== COMMUNITY INTELLIGENCE ===\n`;
-    prompt += `Structured findings extracted from ${communityHighlights.length} community source${communityHighlights.length !== 1 ? 's' : ''}:\n\n`;
+    community_intelligence_section = `\n\n=== COMMUNITY INTELLIGENCE ===\n`;
+    community_intelligence_section += `Structured findings extracted from ${communityHighlights.length} community source${communityHighlights.length !== 1 ? 's' : ''}:\n\n`;
     for (const h of communityHighlights) {
-      prompt += `Community: ${h.community_name} (${h.community_type}, audience: ${h.audience})\n`;
-      prompt += `Sentiment: ${h.sentiment} | Engagement: ${h.engagement_signal}\n`;
-      prompt += `Primary theme: ${h.theme}\n`;
+      community_intelligence_section += `Community: ${h.community_name} (${h.community_type}, audience: ${h.audience})\n`;
+      community_intelligence_section += `Sentiment: ${h.sentiment} | Engagement: ${h.engagement_signal}\n`;
+      community_intelligence_section += `Primary theme: ${h.theme}\n`;
       if (h.quotes && h.quotes.length > 0) {
-        prompt += `Direct user quotes (verbatim):\n`;
-        h.quotes.forEach(q => { prompt += `  - "${q}"\n`; });
+        community_intelligence_section += `Direct user quotes (verbatim):\n`;
+        h.quotes.forEach(q => { community_intelligence_section += `  - "${q}"\n`; });
       } else {
-        prompt += `Standout quote: "${h.standout_quote}"\n`;
+        community_intelligence_section += `Standout quote: "${h.standout_quote}"\n`;
       }
       if (h.recurring_themes && h.recurring_themes.length > 0) {
-        prompt += `Recurring themes (mentioned by multiple users): ${h.recurring_themes.join('; ')}\n`;
+        community_intelligence_section += `Recurring themes (mentioned by multiple users): ${h.recurring_themes.join('; ')}\n`;
       }
       if (h.unique_to_community && h.unique_to_community.length > 0) {
-        prompt += `Unique to this community (not in mainstream financial news): ${h.unique_to_community.join('; ')}\n`;
+        community_intelligence_section += `Unique to this community (not in mainstream financial news): ${h.unique_to_community.join('; ')}\n`;
       }
-      prompt += '\n';
+      community_intelligence_section += '\n';
     }
   }
-  prompt += 'Analyze the ticker based on all research data above. Return the structured analysis.';
-  return prompt;
+
+  // Plan 20-Z-04 — the registered v1 template composes these sections plus
+  // the trailing "Analyze the ticker…" instruction. The empty-section default
+  // ('') ensures bit-identical output when a section is absent.
+  return renderPrompt('gemini-research-brief-user', {
+    brief,
+    news_section,
+    community_sentiment_section,
+    sentiment_intelligence_section,
+    community_intelligence_section,
+  });
 }
 
 // ---- Firecrawl community sentiment gatherer ----
@@ -598,28 +570,18 @@ export function buildTechnicalContextBlock(ctx: EngineContext): string {
     ? `[CI ${pct(ctx.technical_ci[0])}–${pct(ctx.technical_ci[1])}]`
     : '';
 
-  return `
-
-═══ TECHNICAL CALIBRATION CONTEXT ═══
-
-Cipher's technical learning engine has accumulated ${ctx.technical_sample_size ?? 0} resolved 30d outcomes
-for technical regimes (RSI/MACD/MA/ATR/volume → 8 buckets × 4 cap classes).
-For this ticker right now:
-
-  Technical pattern detected:    ${ctx.technical_pattern ?? '—'} × ${ctx.cap_class}
-  Technical prior (30d):         ${pct(ctx.technical_posterior_mean ?? null)} ${techCi}
-                                 n=${ctx.technical_sample_size ?? 0}, status: ${ctx.technical_status ?? 'NO_DATA'}
-  Horizon table (Beta cells):
-${horizonRows}
-  Combined 12-d logistic (30d): ${pct(ctx.combined_logistic_score ?? null)}
-  Agreement (Q1 vs Q2):  ${ctx.agreement ?? 'unknown'}
-
-INSTRUCTIONS:
-- 30d is the primary horizon. Your future_projection MUST mention 30d.
-- Cite at least one technical pattern by name in your buy_rationale or sell_rationale.
-- For technical_alignment / technical_disagreement: same rules as engine_alignment/disagreement
-  but applied to the technical_posterior. Numeric values will be overwritten post-generation.
-`;
+  // Plan 20-Z-04 — body lives in src/lib/prompts/_v1/gemini-technical-context-block.md.
+  return renderPrompt('gemini-technical-context-block', {
+    technical_sample_size: String(ctx.technical_sample_size ?? 0),
+    technical_pattern: ctx.technical_pattern ?? '—',
+    cap_class: ctx.cap_class,
+    technical_posterior_pct: pct(ctx.technical_posterior_mean ?? null),
+    technical_ci: techCi,
+    technical_status: ctx.technical_status ?? 'NO_DATA',
+    horizon_rows: horizonRows,
+    combined_logistic_pct: pct(ctx.combined_logistic_score ?? null),
+    agreement: ctx.agreement ?? 'unknown',
+  });
 }
 
 /**
@@ -650,34 +612,37 @@ export function buildSmartMoneyContextBlock(ctx: EngineContext): string {
   // 30d horizon row for the 4-class table
   const row30 = ctx.horizon_calibrations?.find(h => h.horizon_days === 30);
 
-  return `
-
-═══ SMART MONEY CALIBRATION CONTEXT ═══
-
-INSTITUTIONAL PATTERN: ${ctx.institutional_pattern ?? 'NO PATTERN'} × ${ctx.cap_class}
-  Posterior:      ${pct(ctx.institutional_posterior_mean)} ${ci(ctx.institutional_ci)}
-  Sample size:    n=${ctx.institutional_sample_size ?? 0}
-  Status:         ${ctx.institutional_status ?? 'NO_DATA'}
-  Data age:       ${ctx.institutional_data_age_days != null ? `${ctx.institutional_data_age_days} days since latest 13F` : 'unknown'}
-
-INSIDER PATTERN: ${ctx.insider_pattern ?? 'NO PATTERN'} × ${ctx.cap_class}
-  Posterior:      ${pct(ctx.insider_posterior_mean)} ${ci(ctx.insider_ci)}
-  Sample size:    n=${ctx.insider_sample_size ?? 0}
-  Status:         ${ctx.insider_status ?? 'NO_DATA'}
-  Data age:       ${ctx.insider_data_age_days != null ? `${ctx.insider_data_age_days} days since latest Form 4` : 'unknown'}
-
-4-CLASS HORIZON TABLE AT 30d:
-  Diffusion:     ${pct(row30?.diffusion_posterior)} ${ci(row30?.diffusion_ci)}
-  Technical:     ${pct(row30?.technical_posterior)} ${ci(row30?.technical_ci)}
-  Institutional: ${pct(row30?.institutional_posterior)} ${ci(row30?.institutional_ci)}
-  Insider:       ${pct(row30?.insider_posterior)} ${ci(row30?.insider_ci)}
-
-N-WAY AGREEMENT: ${ctx.agreement?.toUpperCase() ?? 'UNKNOWN'}
-
-INSTRUCTIONS for institutional/insider fields (D-04 trust boundary):
-- When the institutional or insider class shows status=ACTIVE at 30d, your buy_rationale or sell_rationale MUST cite the calibrating bucket by its exact name (one of: cluster_buying, lone_buy, ceo_buy, cfo_buy, director_buy, cluster_selling, planned_sell_10b5_1, lone_sell, net_accumulation, net_distribution, new_initiation, complete_exit, smart_money_concentration, smart_money_dispersion, contrarian_inflow, contrarian_outflow). Do not paraphrase the bucket name.
-- You may write 4 prose strings under engine_calibration: institutional_alignment, institutional_disagreement, insider_alignment, insider_disagreement. These are the ONLY institutional/insider fields you may populate. All numeric and categorical fields under engine_calibration are written by the engine and any value you supply for them will be discarded.
-`;
+  // Plan 20-Z-04 — body lives in src/lib/prompts/_v1/gemini-smart-money-context-block.md.
+  return renderPrompt('gemini-smart-money-context-block', {
+    institutional_pattern: ctx.institutional_pattern ?? 'NO PATTERN',
+    cap_class: ctx.cap_class,
+    institutional_posterior_pct: pct(ctx.institutional_posterior_mean),
+    institutional_ci: ci(ctx.institutional_ci),
+    institutional_sample_size: String(ctx.institutional_sample_size ?? 0),
+    institutional_status: ctx.institutional_status ?? 'NO_DATA',
+    institutional_age_text:
+      ctx.institutional_data_age_days != null
+        ? `${ctx.institutional_data_age_days} days since latest 13F`
+        : 'unknown',
+    insider_pattern: ctx.insider_pattern ?? 'NO PATTERN',
+    insider_posterior_pct: pct(ctx.insider_posterior_mean),
+    insider_ci: ci(ctx.insider_ci),
+    insider_sample_size: String(ctx.insider_sample_size ?? 0),
+    insider_status: ctx.insider_status ?? 'NO_DATA',
+    insider_age_text:
+      ctx.insider_data_age_days != null
+        ? `${ctx.insider_data_age_days} days since latest Form 4`
+        : 'unknown',
+    row30_diffusion_pct: pct(row30?.diffusion_posterior),
+    row30_diffusion_ci: ci(row30?.diffusion_ci),
+    row30_technical_pct: pct(row30?.technical_posterior),
+    row30_technical_ci: ci(row30?.technical_ci),
+    row30_institutional_pct: pct(row30?.institutional_posterior),
+    row30_institutional_ci: ci(row30?.institutional_ci),
+    row30_insider_pct: pct(row30?.insider_posterior),
+    row30_insider_ci: ci(row30?.insider_ci),
+    agreement: ctx.agreement?.toUpperCase() ?? 'UNKNOWN',
+  });
 }
 
 /**
@@ -704,62 +669,37 @@ export function buildSystemPrompt(engineCtx: EngineContext | null): string {
  */
 export function buildEngineContextBlock(ctx: EngineContext): string {
   if (ctx.status === 'NO_DATA') {
-    return `
-
-═══ ENGINE CALIBRATION CONTEXT ═══
-
-The Cipher learning engine has no historical data for this ticker's
-current diffusion regime yet (status: NO_DATA, cycle ${ctx.cycle_count}).
-Your qualitative read is the only signal. In the engine_calibration
-object, set engine_alignment to null and write engine_disagreement
-explaining that the engine has no prior to defer to (≤300 chars).
-`;
+    // Plan 20-Z-04 — body lives in
+    // src/lib/prompts/_v1/gemini-engine-context-block-no-data.md.
+    return renderPrompt('gemini-engine-context-block-no-data', {
+      cycle_count: String(ctx.cycle_count),
+    });
   }
 
   const pct = (n: number | null) => (n != null ? (n * 100).toFixed(0) + '%' : '—');
   const fix = (n: number | null) => (n != null ? n.toFixed(2) : '—');
 
-  return `
-
-═══ ENGINE CALIBRATION CONTEXT ═══
-
-Cipher's self-supervised learning engine has accumulated ${ctx.cycle_count}
-cycles of evidence about how sentiment-diffusion patterns predict 7-day
-returns vs SPY (excess > +1%). For this ticker right now:
-
-  Pattern detected:    ${ctx.flow_pattern} × ${ctx.cap_class}
-  Engine prior:        ${pct(ctx.posterior_mean)} [CI ${pct(ctx.ci_low)}–${pct(ctx.ci_high)}]
-                       n=${ctx.sample_size}, status: ${ctx.status}
-  Logistic score:      ${pct(ctx.logistic_score)} [CI ${pct(ctx.logistic_ci_low)}–${pct(ctx.logistic_ci_high)}]
-                       (engine has trained on ${ctx.logistic_sample_size} resolved outcomes)
-  Adversarial null:    real Brier ${fix(ctx.brier_in_sample)}
-                       null Brier ${fix(ctx.brier_null)}
-  Concept drift:       z = ${ctx.drift_z.toFixed(2)} (>2σ = drifting)
-
-INSTRUCTIONS for engine_calibration:
-1. Treat these numbers as CALIBRATED PRIORS. Do not invent numbers; the
-   numeric fields will be overwritten post-generation regardless of what
-   you output.
-2. In engine_alignment (string, ≤300 chars):
-   - If the engine prior is HIGH (>60%) and your qualitative read is bullish,
-     OR the engine prior is LOW (<40%) and your read is bearish: write a
-     single sentence affirming alignment, naming the pattern, and noting
-     the sample size.
-   - Otherwise, leave engine_alignment as null.
-3. In engine_disagreement (string, ≤500 chars):
-   - If your qualitative read CONTRADICTS a high-confidence prior
-     (sample_size ≥ 10 AND status = ACTIVE), write a single paragraph
-     explaining specifically WHY you disagree. Cite specific community
-     evidence that overrides the prior.
-   - If status is DEPRECATED (drift detected), explicitly note that the
-     pattern has drifted and you are NOT deferring to the historical prior.
-   - Otherwise, leave engine_disagreement as null.
-4. Your investment_thesis, key_risks, and confidence_level MUST be
-   consistent with the engine prior unless you have explicitly populated
-   engine_disagreement above.
-5. If status is EXPLORATORY (n < 10), treat the prior as weak and weight
-   your qualitative read more heavily.
-`;
+  // Plan 20-Z-04 — body lives in
+  // src/lib/prompts/_v1/gemini-engine-context-block-active.md.
+  // Legacy template literal coerced flow_pattern via `${ctx.flow_pattern}` which
+  // produces 'null' for null. Use String() for the same coercion.
+  return renderPrompt('gemini-engine-context-block-active', {
+    cycle_count: String(ctx.cycle_count),
+    flow_pattern: String(ctx.flow_pattern),
+    cap_class: ctx.cap_class,
+    posterior_mean_pct: pct(ctx.posterior_mean),
+    ci_low_pct: pct(ctx.ci_low),
+    ci_high_pct: pct(ctx.ci_high),
+    sample_size: String(ctx.sample_size),
+    status: ctx.status,
+    logistic_score_pct: pct(ctx.logistic_score),
+    logistic_ci_low_pct: pct(ctx.logistic_ci_low),
+    logistic_ci_high_pct: pct(ctx.logistic_ci_high),
+    logistic_sample_size: String(ctx.logistic_sample_size),
+    brier_in_sample: fix(ctx.brier_in_sample),
+    brier_null: fix(ctx.brier_null),
+    drift_z: ctx.drift_z.toFixed(2),
+  });
 }
 
 // ---- Main analysis function ----
@@ -1095,18 +1035,17 @@ async function generateAnalysis(
   // checkable factual claims) so Pass 2 (runCoVe) can NLI-verify them
   // against the SourcePackage. The instruction is additive and harmless
   // when the flag is off (omitted entirely).
+  //
+  // Plan 20-Z-04 Task 5 — pinned to v1 explicitly. A v2 of this prompt is
+  // registered (gemini-cove-pass1-instruction@v2 prefers numeric-grounded
+  // claims) but NOT wired into the live call site yet.
+  // TODO(20-Z-05): switch this pin to default (latest non-deprecated = v2)
+  // once the LLM-as-judge eval harness in 20-Z-05 confirms v2 is a
+  // non-regression on numeric-grounding + citation-coverage metrics.
   const coveModeInner = FEATURES.cove_two_pass_mode;
   const coveSection =
     coveModeInner !== 'off'
-      ? '\n=== CHAIN-OF-VERIFICATION (Pass 1) ===\n' +
-        'In addition to your structured analysis, emit a `verification_claims` ' +
-        'array of EXACTLY 3 short, factual, checkable claims drawn from your ' +
-        'analysis. Each claim must be a single sentence (≤30 words) that can ' +
-        'be verified directly against the research data above. Examples of ' +
-        'good claims: "Q1 revenue grew >10% YoY" or "Analyst consensus is ' +
-        'Buy with target of $X". Avoid speculative or directional claims ' +
-        'like "stock will outperform". These claims will be NLI-verified ' +
-        'against the SourcePackage as a hallucination check.\n'
+      ? renderPrompt('gemini-cove-pass1-instruction', {}, 'v1')
       : '';
 
   const userPrompt =
