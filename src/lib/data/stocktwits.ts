@@ -13,6 +13,41 @@
 import { FEATURES } from '@/lib/features';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
+import {
+  getBaselineForTicker,
+  mentionZScore,
+  getZThresh,
+} from '@/lib/sentiment/baseline';
+
+// ── Plan 20-A-02 — shadow-gated is_trending replacement ─────────────────────
+//
+// Legacy heuristic (off-path, preserved verbatim):
+//   stocktwits_is_trending = Math.abs(symbol.sentiment_change) > 0.5
+//
+// New path (shadow/on): per-ticker rolling-90d median + MAD baseline →
+// z-score → cap_class-stratified threshold lookup. Cap-class is left as
+// 'unknown' here (StockTwits fetcher has no market-cap context) — the
+// cutover plan will wire upstream cap_class resolution before mode='on'.
+async function computeIsTrendingShadowed(
+  ticker: string,
+  sentiment_change: number,
+  message_count: number,
+): Promise<boolean> {
+  const legacy = (): Promise<boolean> => Promise.resolve(Math.abs(sentiment_change) > 0.5);
+  const baselineGated = async (): Promise<boolean> => {
+    const baseline = await getBaselineForTicker(ticker, 'community', new Date());
+    if (!baseline) return Math.abs(sentiment_change) > 0.5; // sparse-data fallback
+    const z = mentionZScore(message_count, baseline);
+    return z > getZThresh('unknown');
+  };
+  return runWithShadow<boolean>(
+    'stocktwits.is_trending',
+    legacy,
+    baselineGated,
+    FEATURES.mention_z_trending_mode,
+    { ticker },
+  );
+}
 
 // ── Public API types (existing) ──────────────────────────────────────────────
 interface StockTwitsMessage {
@@ -245,7 +280,11 @@ export async function fetchStockTwitsSentimentNaive(ticker: string): Promise<Sto
     const bear_pct = total > 0 ? 100 - bull_pct! : null;
 
     const sentiment_change = data.symbol?.sentiment_change ?? 0;
-    const is_trending = Math.abs(sentiment_change) > 0.5;
+    const is_trending = await computeIsTrendingShadowed(
+      ticker,
+      sentiment_change,
+      messages.length,
+    );
 
     return {
       collected_at,
@@ -314,7 +353,11 @@ export async function fetchStockTwitsSentimentReputationWeighted(
         stocktwits_bull_pct: null,
         stocktwits_bear_pct: null,
         stocktwits_message_count: messages.length,
-        stocktwits_is_trending: Math.abs(sentiment_change) > 0.5,
+        stocktwits_is_trending: await computeIsTrendingShadowed(
+          ticker,
+          sentiment_change,
+          messages.length,
+        ),
         stocktwits_reputation_weighted_score: null,
         stocktwits_reputation_total: 0,
       };
@@ -351,7 +394,11 @@ export async function fetchStockTwitsSentimentReputationWeighted(
     const bear_pct = 100 - bull_pct;
 
     const sentiment_change = data.symbol?.sentiment_change ?? 0;
-    const is_trending = Math.abs(sentiment_change) > 0.5;
+    const is_trending = await computeIsTrendingShadowed(
+      ticker,
+      sentiment_change,
+      messages.length,
+    );
 
     return {
       collected_at,
