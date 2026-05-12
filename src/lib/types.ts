@@ -453,6 +453,15 @@ export interface AnalysisResult {
       weight: number;
       raw_mention_count: number;
     }> | null;
+    // Plan 20-A-01 — crowded_consensus flag (GME-100% fix).
+    crowded_consensus?: boolean | null;
+    dispersion_features?: {
+      entropy_bits: number;
+      bull_pct_std: number;
+      author_gini: number;
+      mention_z: number;
+    } | null;
+    crowded_consensus_mode?: 'off' | 'shadow' | 'on';
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph
