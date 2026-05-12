@@ -8,6 +8,7 @@ import { fetchInsiderData } from '@/lib/data/insider';
 import { fetchInstitutionalData } from '@/lib/data/institutional';
 import YahooFinance from 'yahoo-finance2';
 import { insertObservation, SentimentObservationDuplicateError } from '@/lib/sentiment/observation-store';
+import { computeCrowdedConsensus } from '@/lib/sentiment/aggregator';
 import { createHash } from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -52,12 +53,39 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
+      // ── Plan 20-A-01 — compute crowded_consensus (off / shadow / on) ──
+      // Off mode: function short-circuits; flag/features are undefined.
+      // Shadow mode: flag is persisted into community_aggregated.crowded_consensus_shadow
+      // JSONB key below (additive — community_data is already Json?).
+      // On mode: also flows through the per-request analysis path via SentimentIntelligenceSection.
+      const cc = await computeCrowdedConsensus({
+        components: [],                    // populated once cross-source mention counts wired in 20-A-05
+        messageTagCounts: { bull: 0, bear: 0, neutral: 0 }, // populated when 20-B-01 tags each message
+        messagesByAuthor: new Map(),       // populated when 20-A-04 emits the rolling window
+        observations: [],                  // forward-ref for 20-A-02's mentionZ
+      });
+      console.log('[crowded_consensus]', ticker, cc.mode, cc.flag);
+
+      const communityDataBase = (communityData ?? {}) as Record<string, unknown>;
+      const communityDataWithShadow: Record<string, unknown> =
+        cc.mode === 'shadow' && cc.flag !== undefined
+          ? {
+              ...communityDataBase,
+              crowded_consensus_shadow: {
+                flag: cc.flag,
+                features: cc.features,
+                computed_at: new Date().toISOString(),
+                mode: cc.mode,
+              },
+            }
+          : communityDataBase;
+
       await prisma.sentimentSnapshot.create({
         data: {
           ticker,
           scanned_at: new Date(),
           price_at_scan: price,
-          community_data: (communityData ?? {}) as Prisma.InputJsonValue,
+          community_data: communityDataWithShadow as Prisma.InputJsonValue,
           technical_data: technicalData
             ? (technicalData as unknown as Prisma.InputJsonValue)
             : Prisma.JsonNull,
