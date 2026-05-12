@@ -345,3 +345,24 @@ model ProviderCallLog {
   @@index([ticker, started_at(sort: Desc)], map: "idx_pcl_ticker_started")
   @@map("provider_call_logs")
 }
+
+// ─── Phase 20-A-04 — Per-ticker author-share Q1 calibration ───
+// Weekly cron computes the 25th percentile (Q1) of trailing-90d author-share
+// distribution per ticker. Aggregator down-weights observations whose author's
+// 24h share exceeds this Q1 — punishes only authors more concentrated than the
+// ticker's OWN historical pattern (Cookson & Engelberg 2020 relative-baseline).
+// Insert-only; 30d retention is a Phase-27 cleanup follow-up. Old rows preserved
+// so historical reads can replay the threshold active at any past timestamp.
+// PIT-INVARIANT — readers MUST use computed_at to find the threshold active at any past time.
+model AuthorShareCalibration {
+  id                   String   @id @default(uuid())
+  ticker               String
+  // PIT-INVARIANT — readers use computed_at to find the threshold active at any past time.
+  computed_at          DateTime @default(now()) @db.Timestamptz
+  q1_author_share_pct  Float // 25th percentile of author-share distribution ∈ [0, 1]
+  n_observations       Int // size of the 90d calibration sample for the ticker
+  training_window_days Int      @default(90)
+
+  @@index([ticker, computed_at(sort: Desc)], map: "idx_authcal_ticker_computed_at")
+  @@map("author_share_calibrations")
+}
