@@ -641,6 +641,20 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                   {sentiment_intelligence.stocktwits_is_trending && (
                     <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">TRENDING</span>
                   )}
+                  {/* Plan 20-A-05 — MIXED · LOW AGREEMENT amber badge.
+                      Amber (warning), NOT red (action) per T-20-A-05-05.
+                      Tooltip cites Cookson & Engelberg as a volatility-regime
+                      indicator — NOT a directional sell signal. */}
+                  {sentiment_intelligence.low_agreement_warning === true &&
+                    process.env.NEXT_PUBLIC_FEATURE_AGREEMENT_SIGNAL_UI === 'on' && (
+                      <span
+                        data-testid="agreement-low-badge"
+                        className="text-[10px] font-bold tracking-widest uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded"
+                        title="Cross-platform sources disagree; per Cookson & Engelberg historically predicts higher subsequent volatility, NOT a directional signal."
+                      >
+                        MIXED · LOW AGREEMENT
+                      </span>
+                    )}
                 </div>
                 {(() => {
                   // Post-Phase-19 — prefer the cross-source aggregated number
@@ -706,6 +720,23 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                         </div>
                       ))}
                     </div>
+                    {/* Plan 20-A-05 — Agreement chip. Renders the agreement_score
+                        numeric (or '—' when null). Visible whenever the
+                        per-source breakdown is, so it sits next to the data
+                        that produced it. */}
+                    {sentiment_intelligence.agreement_score !== undefined && (
+                      <div
+                        data-testid="agreement-score-chip"
+                        className="flex items-center justify-between text-[11px] font-mono text-on-surface-variant mt-1"
+                      >
+                        <span className="tracking-widest uppercase text-[10px]">Agreement</span>
+                        <span>
+                          {sentiment_intelligence.agreement_score == null
+                            ? '—'
+                            : sentiment_intelligence.agreement_score.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* Plan 20-A-04 — Top author concentration sub-card. Renders ONLY
