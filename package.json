@@ -20,6 +20,7 @@
     "debug:record": "node scripts/live-debug.mjs full-pipeline --record --record-fps 500",
     "shadow-verdict": "npx tsx scripts/shadow-verdict.ts",
     "model-card-status": "npx tsx scripts/model-card-status.ts",
+    "check-model-cards": "npx tsx scripts/check-model-cards.ts",
     "verify-fixtures-no-null": "npx tsx scripts/verify-fixtures-no-null.ts",
     "dsr-pbo-audit": "npx tsx scripts/dsr-pbo-audit.ts",
     "alpha-decay-cron-benchmark": "npx tsx scripts/alpha-decay-cron-benchmark.ts",
