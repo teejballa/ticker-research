@@ -18,6 +18,7 @@
     { "path": "/api/cron/learn", "schedule": "30 7 * * *" },
     { "path": "/api/cron/alpha-decay-watch", "schedule": "0 6 * * *" },
     { "path": "/api/cron/cost-budget-check", "schedule": "0 9 * * *" },
-    { "path": "/api/cron/provider-call-log-retention", "schedule": "30 9 * * *" }
+    { "path": "/api/cron/provider-call-log-retention", "schedule": "30 9 * * *" },
+    { "path": "/api/cron/calibrate-crowded-consensus", "schedule": "0 7 1 * *" }
   ]
 }
