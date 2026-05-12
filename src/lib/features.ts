@@ -29,6 +29,8 @@ const FLAG_NAMES = [
   'contradiction_detector',
   'options_term_structure',
   'reputation_weighted_stocktwits',
+  // Plan 20-A-01 — crowded-consensus flag (GME-100% fix)
+  'crowded_consensus',
 ] as const;
 
 type FlagName = typeof FLAG_NAMES[number];

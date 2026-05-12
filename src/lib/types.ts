@@ -158,6 +158,23 @@ export interface SentimentIntelligenceSection extends SourceSection {
     weight: number;
     raw_mention_count: number;
   }> | null;
+  // Plan 20-A-01 — crowded_consensus flag (GME-100% fix). Optional / nullable so
+  // SourcePackage stays backward-compatible when FEATURE_CROWDED_CONSENSUS is 'off'.
+  /**
+   * true  → flag fires (warning UI in 'on' mode)
+   * false → flag explicitly does NOT fire
+   * null  → cannot compute (calibration unavailable, or any input non-finite)
+   */
+  crowded_consensus?: boolean | null;
+  /** Inputs used to compute the flag — surfaced for telemetry + the model card spot-check log. */
+  dispersion_features?: {
+    entropy_bits: number;
+    bull_pct_std: number;
+    author_gini: number;
+    mention_z: number;
+  } | null;
+  /** 'off' | 'shadow' | 'on' — the value FEATURE_CROWDED_CONSENSUS read at compute time. */
+  crowded_consensus_mode?: 'off' | 'shadow' | 'on';
 }
 
 export interface ChartDataPoint {
