@@ -32,7 +32,8 @@
     "check-immutability": "npx tsx scripts/check-sentiment-immutability.ts",
     "check-telemetry-coverage": "npx tsx scripts/check-telemetry-coverage.ts",
     "check-prompts": "npx tsx scripts/check-prompt-versions.ts",
-    "eval": "npx tsx scripts/eval-report.ts"
+    "eval": "npx tsx scripts/eval-report.ts",
+    "phase-20-status": "npx tsx scripts/phase-20-status.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
