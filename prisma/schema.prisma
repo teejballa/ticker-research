@@ -247,6 +247,42 @@ model SentimentObservation {
   @@map("sentiment_observations")
 }
 
+// ─── Phase 20-C-01 — Per-source rolling-20d ICIR + Newey-West HAC + BH-FDR ──
+// Append-only daily history of per-input-source rolling 20-day cross-sectional
+// Spearman IC of (bull_pct - bear_pct) vs forward alpha-vs-SPY at 7d & 30d.
+// ICIR = mean(IC) / sample_std(IC) over the window. Significance via Newey-
+// West 1987 Bartlett-kernel HAC SE (lag 5 for h=7, lag 10 for h=30 — derived
+// from L = floor(4·(T/100)^(2/9))). BH-FDR α=0.05 across the daily
+// (source × horizon) panel of p-values (Benjamini & Hochberg 1995).
+//
+// PIT-INVARIANT — readers join via SentimentObservation.fetched_at and
+// PriceOutcome.recorded_at; NEVER via SentimentObservation.published_at
+// (enforced by 20-Z-07 lookahead-bias regression).
+//
+// Cron writes one row per (source × horizon) per day; composite unique +
+// `skipDuplicates` make reruns idempotent. Consumed by 20-B-04 SourceTier
+// recompute (forward-reference). Auto-down-weight signal: dashboard flags
+// any (source, horizon) whose last 2 consecutive 20d-windows both have
+// icir_20d < 0.3 (CONTEXT.md §20-C-01 spec line 124 verbatim).
+model PerSourceIC {
+  id                   String   @id @default(uuid())
+  source_id            String // 'stocktwits' | 'reddit' | 'x' | 'news' | 'apewisdom' | 'firecrawl'
+  computed_at          DateTime @default(now()) @db.Timestamptz // wall-clock when row was computed; PIT-safe for readers
+  forward_horizon_days Int // 7 | 30
+  ic_20d               Float // rolling-20d Spearman IC across cross-section × days
+  icir_20d             Float? // mean(IC) / sample_std(IC); null when std == 0 or window < 2
+  ic_se_nw             Float // Newey-West HAC standard error (Bartlett kernel)
+  ic_p_value_nw        Float // raw two-sided p-value via Student-t on t = ic_20d / ic_se_nw
+  ic_p_value_bh_fdr    Float // BH-FDR-adjusted p-value across all today's source × horizon panel
+  n_observations       Int // distinct fetched_at days contributing to the 20d window
+  nw_lag               Int // Bartlett-kernel truncation lag used (5 for h=7, 10 for h=30)
+  model_version        String // 'per-source-ic-v1' — bumped on algorithm change, never overwritten
+
+  @@unique([source_id, computed_at, forward_horizon_days, model_version], map: "psic_src_date_hor_ver_uq")
+  @@index([source_id, forward_horizon_days, computed_at(sort: Desc)], map: "idx_psic_src_hor_computed_at")
+  @@map("per_source_ic")
+}
+
 // ─── Phase 20-A-01 — Crowded-consensus calibration (GME-100% fix) ───
 // Persists the grid-searched (H_thresh, V_thresh, D_thresh) tuple maximizing
 // Brier Skill Score on the binary "crowded → underperformed SPY at 14d" claim
