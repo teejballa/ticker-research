@@ -38,3 +38,9 @@ calibration work.
 - **Writer**: `src/app/api/cron/sentiment-scan/route.ts` (Plan 20-Z-01 block)
 - **Immutability guard**: `scripts/check-sentiment-immutability.ts`
 - **PIT defense**: Plan 20-Z-07 lookahead-bias regression test (future)
+
+---
+
+**Moved to: docs/cards/DATASET-CARD-SentimentObservation.md**
+
+The full Gebru-2018 datasheet for `SentimentObservation` lives at `docs/cards/DATASET-CARD-SentimentObservation.md` per Plan 20-Z-02. This stub is preserved for traceability — it satisfies the 20-Z-01 frontmatter `must_haves` reference. All future updates land in the canonical card under `docs/cards/`.
