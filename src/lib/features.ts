@@ -31,6 +31,8 @@ const FLAG_NAMES = [
   'reputation_weighted_stocktwits',
   // Plan 20-A-01 — crowded-consensus flag (GME-100% fix)
   'crowded_consensus',
+  // Plan 20-A-02 — robust mention-volume baseline replaces stocktwits_is_trending heuristic
+  'mention_z_trending',
 ] as const;
 
 type FlagName = typeof FLAG_NAMES[number];

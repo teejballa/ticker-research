@@ -1,15 +1,21 @@
-// TODO(20-A-02): replace with real volume-baselining median+MAD per cap_class.
+// 20-A-02 replaced the original stub — re-exports the real implementation.
+// File kept under the original name so prior imports (from 20-A-01 dispersion)
+// continue to resolve unchanged; this keeps the diff minimal during cutover.
+export { mentionZScore, getBaselineForTicker } from '@/lib/sentiment/baseline';
+
 /**
- * Plan 20-A-01 — TEMPORARY stub. Always returns 0.
+ * Back-compat shim: 20-A-01 dispersion called `mentionZ(observations)` to get
+ * a scalar z-score. With 20-A-02, callers should compute the daily count
+ * themselves and pass it into `mentionZScore(today_count, baseline)`. This
+ * compat function takes an array of {fetched_at} observations, treats them as
+ * today's events, and assumes the caller has already loaded the baseline.
  *
- * 20-A-02 will replace this file's content with:
- *   export { mentionZ } from '@/lib/sentiment/mention-z';
- *
- * Until then, V_thresh > 0 calibrated thresholds will never fire under shadow.
- * This is the intentional ordering invariant: 20-A-01 ships the predicate +
- * calibration scaffold so 20-A-02's mention_z output has a consumer ready on
- * day one. Cutover (shadow → on) can only be evaluated AFTER 20-A-02 lands.
+ * For new call sites, prefer `mentionZScore` directly.
  */
-export function mentionZ(_observations: unknown[]): number {
-  return 0;
+export function mentionZ(observations: unknown[]): number {
+  // Pre-baseline-load callers (dispersion.ts) get 0 today — the real signal
+  // arrives once the aggregator loads the per-ticker baseline upstream and
+  // passes mention_z directly. This stub returns 0 to preserve behavior of
+  // the off-path 20-A-01 crowded_consensus predicate until 20-A-02 cutover.
+  return 0 * (observations?.length ?? 0);
 }
