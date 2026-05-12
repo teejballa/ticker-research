@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "spy-neutral-2026-01",
+  "ticker": "SPY",
+  "notes": "Mid-quality SPY market-overview report — sources present but inconsistent; covers contradictions but does not reconcile. Tests mid-range scores across all dimensions to anchor the neutral exemplar.",
+  "baseline_text": "SPY trades at $475.20 (yahoo). YTD return +6.8% (yahoo). VIX 15.2 — below 1y avg 18.4 (yahoo). Breadth slightly negative this week.",
+  "candidate_text": "SPY trades at $475.20 (yahoo). YTD return +6.8% (yahoo). VIX 15.2 — below 1y avg 18.4 (yahoo). Breadth slightly negative this week per market internals. Macro setup is mixed: rates expected to fall, but earnings growth slowing. The picture is uncertain in either direction.",
+  "human_scores": {
+    "numeric_grounding": 3,
+    "citation_coverage": 3,
+    "narrative_coherence": 3,
+    "hedging_quality": 3,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

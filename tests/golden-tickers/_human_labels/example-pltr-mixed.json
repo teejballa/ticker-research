@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "pltr-mixed-2026-01",
+  "ticker": "PLTR",
+  "notes": "PLTR report with strong hedging language (CI-style probabilities, source-count caveats) but invented numbers — the candidate cites a 'P/E of 78.4' that does not trace back to yahoo/finnhub/polygon. Tests high hedging_quality with low numeric_grounding.",
+  "baseline_text": "PLTR shows mixed signals. Revenue growth 21% YoY (anthropic-search via 10-Q). Government segment expanding. Commercial segment under pressure.",
+  "candidate_text": "PLTR shows mixed signals — based on 14 sources, directional agreement only 55% so confidence is LOW. Revenue growth 21% YoY (anthropic-search via 10-Q). P/E of 78.4 suggests rich valuation but no margin of safety. EPS forward 0.42 implies a forward P/E of 67. Government segment expanding at ~30% YoY. Commercial segment under pressure with churn estimated at 8-12%. Verdict: HOLD with 60% probability the stock trades within +/-10% over 90d.",
+  "human_scores": {
+    "numeric_grounding": 1,
+    "citation_coverage": 2,
+    "narrative_coherence": 4,
+    "hedging_quality": 5,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

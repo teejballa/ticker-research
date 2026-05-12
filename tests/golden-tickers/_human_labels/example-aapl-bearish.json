@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "aapl-bearish-2026-01",
+  "ticker": "AAPL",
+  "notes": "Bear thesis with strong citation coverage but assertive 'will fall' language — no qualifiers despite 50/50 setup. Tests high citation_coverage with low hedging_quality.",
+  "baseline_text": "AAPL faces multiple headwinds: China revenue down 12% YoY (10-K, anthropic-search), services growth decelerating (Q1 earnings call, anthropic-search), iPhone unit shipments flat (Counterpoint via anthropic-search). P/E 28.3 sits above 5-year median 24.1 (yahoo).",
+  "candidate_text": "AAPL faces multiple headwinds: China revenue down 12% YoY (10-K, anthropic-search), services growth decelerating (Q1 earnings call, anthropic-search), iPhone unit shipments flat (Counterpoint via anthropic-search). P/E 28.3 sits above 5-year median 24.1 (yahoo). The stock WILL fall to $160 within 90 days. SELL.",
+  "human_scores": {
+    "numeric_grounding": 4,
+    "citation_coverage": 5,
+    "narrative_coherence": 3,
+    "hedging_quality": 1,
+    "contradiction_handling": 2
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}
