@@ -21,6 +21,7 @@
     { "path": "/api/cron/provider-call-log-retention", "schedule": "30 9 * * *" },
     { "path": "/api/cron/calibrate-crowded-consensus", "schedule": "0 7 1 * *" },
     { "path": "/api/cron/mention-baselines", "schedule": "30 4 * * *" },
-    { "path": "/api/cron/tune-decay", "schedule": "0 6 1 * *" }
+    { "path": "/api/cron/tune-decay", "schedule": "0 6 1 * *" },
+    { "path": "/api/cron/author-share-calibration", "schedule": "0 8 * * 1" }
   ]
 }
