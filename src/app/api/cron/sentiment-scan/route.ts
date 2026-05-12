@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
               is_verified: m.user?.identity ? m.user.identity === 'Official' : null,
               message_count_30d: m.user?.ideas ?? null,
             },
+            // LOOKAHEAD-OK: cron writer passes upstream-claimed StockTwits timestamp into the DAO; the DAO writes it to an informational-only schema column carrying // PIT-INVARIANT. No backtest join uses it. The PIT key is fetched_at (defaulted by Prisma).
             published_at: m.created_at ? new Date(m.created_at) : null,
             // fetched_at omitted — DB defaults to now() (PIT-INVARIANT)
           });
