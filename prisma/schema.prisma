@@ -366,3 +366,29 @@ model AuthorShareCalibration {
   @@index([ticker, computed_at(sort: Desc)], map: "idx_authcal_ticker_computed_at")
   @@map("author_share_calibrations")
 }
+
+// ─── Phase 20-A-05 — Cross-platform agreement threshold calibration ───
+// Monthly cron grid-searches threshold ∈ [0.3, 0.7] step 0.05 against forward
+// 7d realized-volatility uplift (low-agreement cohort vs high-agreement cohort)
+// over the trailing `training_window_days` of SentimentObservation rows.
+// Aggregator reads the latest row by computed_at (1h in-process cache) at
+// runtime — threshold is NEVER hardcoded in TS.
+// Null-result branch (T-20-A-05-04): when no candidate's bootstrap CI > 0,
+// threshold = 0.5 is persisted (literature default per Cookson & Engelberg)
+// with null_result=true. Re-evaluation cadence: monthly + mandatory 6-month
+// full review per docs/cards/MODEL-CARD-agreement.md.
+model AgreementCalibration {
+  id                     String   @id @default(uuid())
+  computed_at            DateTime @default(now()) @db.Timestamptz
+  threshold              Float // ∈ [0.3, 0.7] grid-search; 0.5 on null result
+  vol_uplift_vs_baseline Float // forward 7d realized-vol uplift (bps): low-agreement minus high-agreement
+  vol_uplift_ci_low      Float // bootstrap 95% CI lower bound; positive ⇒ signal beat baseline
+  vol_uplift_ci_high     Float // bootstrap 95% CI upper bound
+  training_window_days   Int // backfill window (default 90)
+  n_examples             Int // count of (ticker, fetched_at) pairs contributing
+  null_result            Boolean  @default(false) // true ⇒ literature default 0.5 fallback
+  notes                  String?  @db.Text
+
+  @@index([computed_at(sort: Desc)], map: "idx_agreement_calib_computed_at")
+  @@map("agreement_calibrations")
+}
