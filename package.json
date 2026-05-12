@@ -36,7 +36,9 @@
     "check-prompts": "npx tsx scripts/check-prompt-versions.ts",
     "eval": "npx tsx scripts/eval-report.ts",
     "phase-20-status": "npx tsx scripts/phase-20-status.ts",
-    "calibrate-crowded-consensus": "npx tsx scripts/calibrate-crowded-consensus.ts"
+    "calibrate-crowded-consensus": "npx tsx scripts/calibrate-crowded-consensus.ts",
+    "tune-decay": "npx tsx scripts/tune-decay.ts",
+    "backfill-decay": "npx tsx scripts/backfill-decay-weights.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
