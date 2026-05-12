@@ -29,7 +29,8 @@
     "hierarchical-pooling-audit": "npx tsx scripts/hierarchical-pooling-audit.ts",
     "arctic-shift-backfill": "npx tsx scripts/arctic-shift-backfill.ts",
     "wave-b-rollout-status": "npx tsx scripts/wave-b-rollout-status.ts",
-    "check-immutability": "npx tsx scripts/check-sentiment-immutability.ts"
+    "check-immutability": "npx tsx scripts/check-sentiment-immutability.ts",
+    "check-telemetry-coverage": "npx tsx scripts/check-telemetry-coverage.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
