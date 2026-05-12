@@ -1,0 +1,10 @@
+{
+  "classifier_export_regex": "^(classify|score|aggregate|predict)",
+  "default_retrain_cadence": "P90D",
+  "exemptions": [
+    { "file": "src/lib/sentiment/citation-schema.ts",      "reason": "Pure Zod schemas — sanitizeUrl is URL hygiene, not a classifier." },
+    { "file": "src/lib/sentiment/contradiction-detector.ts", "reason": "LLM-as-judge wrapper around Gemini — covered by 20-Z-04 prompt registry, not the model-card scaffold." },
+    { "file": "src/lib/sentiment/pipeline-providers.ts",   "reason": "Plumbing — derivePipelineProviders is provenance routing, not classification." },
+    { "file": "src/lib/sentiment/nli-verifier.ts",         "reason": "Phase 19 component covered by 19-C-04 contradiction-detector card; reaffirmed in 20-Z-02 follow-up if scope grows." }
+  ]
+}
