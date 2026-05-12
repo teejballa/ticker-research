@@ -716,6 +716,34 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                       : 'Community sources unavailable'}
                   </span>
                 </div>
+                {/* Plan 20-A-01 — Crowded-consensus warning badge.
+                    Renders ONLY when (flag fires AND mode === 'on'). In 'shadow'
+                    or 'off' modes the badge is suppressed even if flag === true. */}
+                {sentiment_intelligence.crowded_consensus === true &&
+                  sentiment_intelligence.crowded_consensus_mode === 'on' && (
+                    <div
+                      role="alert"
+                      data-testid="crowded-consensus-badge"
+                      className="mt-3 px-4 py-2 rounded-md border border-error/40 bg-error/5 flex flex-col gap-1"
+                    >
+                      <span className="text-[10px] font-bold tracking-widest uppercase text-error">
+                        Crowded consensus
+                      </span>
+                      <span className="text-xs text-on-surface-variant leading-relaxed">
+                        High agreement on unusually high mention volume from a small number of authors.
+                        Historical base-rate of mean-reversion within 14d.
+                        {' '}
+                        <a
+                          href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3873189"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline text-on-surface-variant hover:text-on-surface"
+                        >
+                          Cookson &amp; Engelberg 2022
+                        </a>
+                      </span>
+                    </div>
+                  )}
               </div>
             )}
 
