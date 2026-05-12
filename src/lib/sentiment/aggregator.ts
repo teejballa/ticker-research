@@ -34,6 +34,12 @@ import {
 } from '@/lib/sentiment/dispersion';
 import { mentionZ } from '@/lib/sentiment/mention-z-stub';
 import { loadLatestCrowdedConsensusThresholds } from '@/lib/sentiment/crowded-consensus-config';
+import {
+  authorDisplayPrefix,
+  authorShareDistribution,
+  giniCoefficient,
+  messageCountsByAuthor,
+} from './gini';
 
 export type SentimentSource = 'stocktwits' | 'swaggystocks' | 'apewisdom';
 
@@ -301,4 +307,137 @@ export async function computeCrowdedConsensus(args: {
 
   const flag = crowdedConsensus(features, thresholds);
   return { flag, features, mode };
+}
+
+// ─── Plan 20-A-04 — Author-concentration via Gini ──────────────────────────
+/**
+ * Feature flag for the author-Gini computation. Three modes (off/shadow/on).
+ * Read directly from env (mirrors the SENTIMENT_DECAY_MODE pattern). Default
+ * 'off' so first deploys are dark.
+ */
+export type AuthorGiniMode = 'off' | 'shadow' | 'on';
+
+export function getAuthorGiniMode(): AuthorGiniMode {
+  const v = (process.env.FEATURE_AUTHOR_GINI ?? 'off').toLowerCase();
+  if (v === 'off' || v === 'shadow' || v === 'on') return v;
+  return 'off';
+}
+
+/** Below this many distinct authors, Gini is statistically meaningless on a
+ *  24h window — return null so the UI hides the sub-card.
+ *  Documented in HYPERPARAMETERS.md.  T-20-A-04-02. */
+export const AUTHOR_GINI_N_MIN = 5;
+
+/** Per-author down-weight when 24h share > per-ticker Q1.
+ *  Cookson & Engelberg 2020 literature default. */
+export const AUTHOR_GINI_DOWNWEIGHT = 0.5;
+
+/** Global fallback Q1 sentinel used when no AuthorShareCalibration row exists
+ *  for the ticker. Conservative — only fires on the very top tail. */
+export const AUTHOR_GINI_GLOBAL_Q1_FALLBACK = 0.25;
+
+export interface AuthorConcentrationResult {
+  gini_coefficient: number | null;
+  author_concentration: Array<{
+    author_hash_prefix: string;
+    share: number;
+    message_count: number;
+  }> | null;
+  /** Per-author down-weight multipliers ∈ {1.0, 0.5}.
+   *  Empty Map when down-weighting is off or no authors exceeded Q1. */
+  weight_multipliers: Map<string, number>;
+}
+
+/**
+ * Compute the author-concentration block for `ticker` over the rolling 24h
+ * window. Reads from SentimentObservation (20-Z-01) — PIT-safe via
+ * `fetched_at` (NEVER the upstream-claimed-timestamp — S2 / 20-Z-07).
+ *
+ * Returns:
+ *   - { gini=null, author_concentration=null, weight_multipliers=∅ }
+ *     when FEATURE_AUTHOR_GINI === 'off' (short-circuits the DB call)
+ *   - same when n_authors < AUTHOR_GINI_N_MIN (T-20-A-04-02)
+ *   - same when no observations in the window
+ *
+ * When FEATURE_AUTHOR_GINI === 'on' (or 'shadow'): looks up the latest
+ * AuthorShareCalibration for the ticker. Authors whose 24h share exceeds the
+ * Q1 threshold are flagged for down-weighting (multiplier = AUTHOR_GINI_DOWNWEIGHT).
+ */
+export async function computeAuthorConcentration(
+  ticker: string,
+  now: Date = new Date(),
+): Promise<AuthorConcentrationResult> {
+  const mode = getAuthorGiniMode();
+  if (mode === 'off') {
+    return {
+      gini_coefficient: null,
+      author_concentration: null,
+      weight_multipliers: new Map(),
+    };
+  }
+
+  // Lazy import — keep this module unit-testable without DATABASE_URL.
+  const { prisma } = await import('@/lib/db');
+
+  const since = new Date(now.getTime() - 24 * 3600 * 1000);
+  const obs = await prisma.sentimentObservation.findMany({
+    where: { ticker, fetched_at: { gte: since } },
+    select: { author_id: true, classifier_score: true },
+  });
+
+  if (obs.length === 0) {
+    return {
+      gini_coefficient: null,
+      author_concentration: null,
+      weight_multipliers: new Map(),
+    };
+  }
+
+  const counts = messageCountsByAuthor(obs);
+  const dist = authorShareDistribution(counts);
+  const nAuthors = counts.size;
+
+  if (nAuthors < AUTHOR_GINI_N_MIN || dist.length === 0) {
+    return {
+      gini_coefficient: null,
+      author_concentration: null,
+      weight_multipliers: new Map(),
+    };
+  }
+
+  const values = Array.from(counts.values());
+  const gini = giniCoefficient(values);
+
+  // Top-5 author shares with display-safe prefixes (defense-in-depth re-hash).
+  const top5 = dist.slice(0, 5).map((d) => ({
+    author_hash_prefix: authorDisplayPrefix(d.author_id),
+    share: d.share,
+    message_count: d.message_count,
+  }));
+
+  // Per-author weight multipliers (Q1-relative; Cookson 2020).
+  const weight_multipliers = new Map<string, number>();
+  const latestCal = await prisma.authorShareCalibration.findFirst({
+    where: { ticker },
+    orderBy: { computed_at: 'desc' },
+  });
+  const q1 = latestCal?.q1_author_share_pct ?? AUTHOR_GINI_GLOBAL_Q1_FALLBACK;
+  if (latestCal == null) {
+    console.warn(
+      `[20-A-04] No AuthorShareCalibration for ${ticker}; using global Q1=${AUTHOR_GINI_GLOBAL_Q1_FALLBACK}`,
+    );
+  }
+  for (const d of dist) {
+    if (d.share > q1) {
+      weight_multipliers.set(d.author_id, AUTHOR_GINI_DOWNWEIGHT);
+    } else {
+      weight_multipliers.set(d.author_id, 1.0);
+    }
+  }
+
+  return {
+    gini_coefficient: gini,
+    author_concentration: top5,
+    weight_multipliers,
+  };
 }

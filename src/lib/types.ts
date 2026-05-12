@@ -175,6 +175,24 @@ export interface SentimentIntelligenceSection extends SourceSection {
   } | null;
   /** 'off' | 'shadow' | 'on' — the value FEATURE_CROWDED_CONSENSUS read at compute time. */
   crowded_consensus_mode?: 'off' | 'shadow' | 'on';
+  // Plan 20-A-04 — Author-concentration via Gini. Optional/nullable so SourcePackage
+  // stays backward-compatible when FEATURE_AUTHOR_GINI is 'off' or 'shadow'.
+  /**
+   * Gini coefficient of message-counts-per-author over the rolling 24h window.
+   * ∈ [0, 1]; 0 = perfectly even, 1 = single author dominates.
+   * Null when n_authors < 5 (T-20-A-04-02 sparse-data sentinel).
+   */
+  gini_coefficient?: number | null;
+  /**
+   * Top-N author shares for the 24h window. UI renders top-5 as horizontal bars.
+   * `author_hash_prefix` is the first 8 chars of sha256(author_id) — raw handles
+   * are NEVER surfaced (T-20-A-04-01 PII defense; references 20-Z-01 allowlist).
+   */
+  author_concentration?: Array<{
+    author_hash_prefix: string; // 8 lowercase hex chars
+    share: number; // ∈ [0, 1]
+    message_count: number;
+  }> | null;
 }
 
 export interface ChartDataPoint {
@@ -462,6 +480,13 @@ export interface AnalysisResult {
       mention_z: number;
     } | null;
     crowded_consensus_mode?: 'off' | 'shadow' | 'on';
+    // Plan 20-A-04 — author-concentration via Gini.
+    gini_coefficient?: number | null;
+    author_concentration?: Array<{
+      author_hash_prefix: string;
+      share: number;
+      message_count: number;
+    }> | null;
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph
