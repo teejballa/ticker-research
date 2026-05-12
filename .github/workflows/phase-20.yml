@@ -1,0 +1,70 @@
+# .github/workflows/phase-20.yml
+#
+# Plan 20-Z-06 — Composite Phase-20 done gate (informational, non-blocking).
+#
+# Runs `npm run phase-20-status` on every PR + main push. CONTINUE-ON-ERROR is
+# true because the script is DESIGNED to exit non-zero until every Phase-20
+# artifact (model cards, lookahead test, brier metric, ECE, fairness audit,
+# telemetry, time-decay metric, source-tier table, …) has landed. Each
+# upstream plan owns the artifact a sub-check reads; this script never
+# computes a metric, only inspects.
+#
+# Gating happens organically: exit 0 is impossible until every Phase-20
+# numerical criterion is met, at which point Phase 20 ships.
+
+name: Phase 20 Done Gate (informational)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase-20-status.ts'
+      - 'scripts/lib/phase-20-checks/**'
+      - 'tests/phase-20-status.unit.test.ts'
+      - 'tests/integration/phase-20-status.e2e.test.ts'
+      - '.github/workflows/phase-20.yml'
+      - 'docs/cards/MODEL-CARD-*.md'
+      - 'docs/audits/phase-20-fairness.md'
+      - 'metrics/**'
+      - 'src/lib/features.ts'
+      - 'prisma/schema.prisma'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/phase-20-status.ts'
+      - 'scripts/lib/phase-20-checks/**'
+
+jobs:
+  status:
+    name: phase-20-status (continue-on-error)
+    runs-on: ubuntu-latest
+    # Informational only — exit non-zero is expected until Phase 20 ships.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run npm run phase-20-status (informational)
+        run: |
+          set +e
+          npm run phase-20-status
+          status=$?
+          echo "phase-20-status exit code: $status"
+          if [ "$status" = "0" ]; then
+            echo "::notice ::Phase 20 done gate is GREEN — every DoD condition met"
+          elif [ "$status" = "2" ]; then
+            echo "::notice ::Phase 20 done gate is PENDING — upstream artifacts still landing"
+          elif [ "$status" = "1" ]; then
+            echo "::warning ::Phase 20 done gate has FAIL conditions — investigate before ship"
+          else
+            echo "::warning ::Phase 20 done gate exited unexpectedly (status=$status)"
+          fi
+          # Always succeed (continue-on-error reinforces). Use status as a
+          # diagnostic, not a gate.
+          exit 0
