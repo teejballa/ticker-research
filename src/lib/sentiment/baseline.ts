@@ -1,4 +1,4 @@
-// @model-card: .planning/phases/20-real-sentiment-analysis/MODEL-CARD-mention-baseline.md
+// @model-card: docs/cards/MODEL-CARD-mention-baseline.md
 /**
  * Plan 20-A-02 — Robust mention-volume baseline (median + MAD).
  *
