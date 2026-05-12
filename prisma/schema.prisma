@@ -247,6 +247,29 @@ model SentimentObservation {
   @@map("sentiment_observations")
 }
 
+// ─── Phase 20-A-01 — Crowded-consensus calibration (GME-100% fix) ───
+// Persists the grid-searched (H_thresh, V_thresh, D_thresh) tuple maximizing
+// Brier Skill Score on the binary "crowded → underperformed SPY at 14d" claim
+// over the trailing 90d sentiment + price-outcome data. Aggregator reads the
+// LATEST row (cached 1h) at runtime — thresholds are NEVER hardcoded in TS.
+// Recalibrated monthly via /api/cron/calibrate-crowded-consensus.
+model CrowdedConsensusCalibration {
+  id                   String   @id @default(uuid())
+  computed_at          DateTime @default(now()) @db.Timestamptz
+  model_version        String // e.g. 'grid-search-v1'
+  H_thresh             Float // entropy ceiling
+  V_thresh             Float // mention-z floor
+  D_thresh             Float // gini floor (high gini = low diversity)
+  brier_skill_score    Float // 1 - BS_model / BS_climatology; >0 means we beat base rate
+  training_window_days Int // e.g. 90
+  n_examples           Int // sample size used in grid search
+  grid_search_log      Json // top-5 (H, V, D, score) tuples for audit
+  notes                String?  @db.Text
+
+  @@index([computed_at(sort: Desc), model_version], map: "idx_cc_calib_computed_at")
+  @@map("crowded_consensus_calibrations")
+}
+
 // ─── Phase 20-Z-03 — Telemetry (per-call observability for external providers) ───
 // Insert-only by production paths (only the retention cron deletes). Captures
 // wall-clock timing + status + cost for every external provider call routed
