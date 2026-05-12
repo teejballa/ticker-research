@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "aapl-bullish-2026-01",
+  "ticker": "AAPL",
+  "notes": "Clean bullish report with full numeric sourcing — candidate adds explicit forward-PT citation but ignores the bear case entirely. Tests high numeric_grounding + high citation_coverage with low contradiction_handling.",
+  "baseline_text": "AAPL trades at $185.42 (yahoo). P/E 28.3 (yahoo), 52w range $164-$199 (yahoo). EPS TTM $6.55 (yahoo). Bullish momentum on iPhone 17 cycle confirmed by analyst commentary (anthropic-search). StockTwits bull/bear: 70/30 (stocktwits).",
+  "candidate_text": "AAPL trades at $185.42 (yahoo). P/E 28.3 (yahoo), 52w range $164-$199 (yahoo). EPS TTM $6.55 (yahoo). Bullish momentum on iPhone 17 cycle confirmed by analyst commentary (anthropic-search). StockTwits bull/bear: 70/30 (stocktwits). Forward outlook: $200 PT consensus (anthropic-search). BUY.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 2,
+    "contradiction_handling": 1
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}
