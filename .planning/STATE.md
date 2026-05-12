@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-12T05:33:24.619Z"
+last_updated: "2026-05-12T22:07:43.408Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 1
@@ -27,7 +27,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
 Milestone: v2.0
 Phase: 20 (real-sentiment-analysis) — EXECUTING
-Plan: 7 of 29 (next: 20-Z-06)
+Plan: 8 of 29 (next: 20-Z-06)
 Status: Ready to execute
 Last activity: 2026-05-12
 Last completed: 20-Z-05 → LLM-as-judge eval harness — `src/lib/eval/judge.ts` calls Claude Opus 4.7 with five-dimension rubric (numeric_grounding · citation_coverage · narrative_coherence · hedging_quality · contradiction_handling) loaded from the 20-Z-04 prompt registry (id=`eval-judge-v1`, version=`v1`); hard-pinned `judge_model='claude-opus-4-7'`, `temperature=0`, no `cache_control` (T-20-Z-05-05); lazy-client pattern mirrors anthropic-search.ts; type-narrowed `opts.temperature?: 0` and `opts.cache?: false` so accidental looseness is a compile-time error. `scripts/eval-report.ts` CLI iterates `tests/golden-tickers/_human_labels/` (5 starter exemplars covering AAPL bull/bear, GME meme crowding, SPY neutral, PLTR mixed; per-dim variance 1.20-2.24 so Pearson well-defined), emits per-dimension Pearson r vs human scores + JSON + markdown; auto-engages `--dry-run` (deterministic sha256-seeded synthetic scoring) when `ANTHROPIC_API_KEY` is unset so CI runs cost zero tokens (T-20-Z-05-02). Sample-size warning fires at n<30 referencing 20-D-04 dependency. `npm run eval` wired in package.json; wall-clock ~2ms on starter set (target <60s). 13 unit tests with mocked Anthropic SDK + RUN_LIVE_JUDGE-gated integration test (skipped in `npm test`, opt-in via `RUN_LIVE_JUDGE=true`). PromptId union extended in `src/lib/prompts/registry.ts` with `'eval-judge-v1'`; rubric body lives at `src/lib/prompts/_v1/eval-judge-v1.md` with golden-snapshot drift protection from 20-Z-04. All 879 unit tests passing (+2 skipped, +3 todo), `npx tsc --noEmit` 0, `npm run check-prompts` 0. 4 atomic commits (b7c0c8a, cc46d21, c70cbcd, 41b3aae).
