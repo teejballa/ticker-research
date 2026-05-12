@@ -57,3 +57,44 @@ _Computed_at: pending — first calibration cron run lands the inaugural row. Li
 **Deferred-state note:** This plan ships under `FEATURES.mention_z_trending_mode = 'off'`. Cutover to `shadow` (and eventually `on`) requires the four criteria documented in `docs/cards/MODEL-CARD-mention-baseline.md` Metrics section: ≥30d nightly cron, ≥80% ticker coverage, IC ≥ 0.05, ≥1 cap_class threshold differs from default Z=2.0.
 
 Updated by: Plan 20-A-02 (2026-05-12).
+
+---
+
+## 20-A-03 — Per-source-class sentiment decay (λ in 1/day)
+
+Half-life formula: **t½ = ln(2) / λ**.
+
+| source_class | λ (per day) | half-life (days) | literature seed (h) | citation | tuned_at |
+|---|---|---|---|---|---|
+| retail | 0.6931 | 1.00 | 24 | Tetlock 2007 — J. Finance — pessimism predicts next-day returns then mean-reverts within 5 trading days | bootstrap |
+| news | 0.2310 | 3.00 | 72 | Loughran-McDonald 2011 J. Finance — news effects survive 1-2 weeks | bootstrap |
+| sec | 0.0990 | 7.00 | 168 | Loughran-McDonald 2011 — 10-K market response decays over 7-30d | bootstrap |
+| analyst | 0.1386 | 5.00 | 120 | Womack 1996 / Stickel 1992 — analyst-revision drift survives 1-2 weeks | bootstrap |
+| social-other | 0.1733 | 4.00 | 96 | Bridging seed between retail and news; calibration to override | bootstrap |
+
+**Calibration procedure** (CONTEXT.md line 105):
+1. `npx tsx scripts/tune-decay.ts` — grid search per class on rolling 90d window.
+2. Grid: `{seed × 0.5, ×0.75, ×1.0, ×1.25, ×1.5, ×2.0}`.
+3. Score: 20-day rolling ICIR of decayed aggregate vs forward 7-day alpha-vs-SPY.
+4. Gate: `n_observations >= 60` per class. ICIR uplift `>= 0.05` vs no-decay baseline.
+5. Cutover from `SENTIMENT_DECAY_MODE=shadow` to `=on` requires paired-bootstrap on Sharpe (1000 resamples) with 95% CI lower-bound > 0. Run `--bootstrap-cutover` to produce the report.
+6. Re-tune monthly via `/api/cron/tune-decay` (vercel.json).
+
+**Important** — this table is updated by `scripts/tune-decay.ts` after each successful run. The `bootstrap` value in `tuned_at` is replaced with the ISO timestamp of the run, and `literature seed` column is preserved as historical provenance.
+
+**Deferred-state note:** Cipher ships under `SENTIMENT_DECAY_MODE=off` by default. Shadow mode runs both paths in parallel; cutover to `on` requires the paired-bootstrap report above with 95% CI lower-bound > 0 on Sharpe.
+
+## 18-* — Per-signal-class learning-engine decay (λ in 1/day, t½ in days)
+
+Lives inline in `src/lib/learning.ts` HYPERPARAMETERS const (per CONTEXT D-19 — additive-only schema). See that file for current values. Re-tune via `npx tsx scripts/tune-lambda.ts`.
+
+| signal_class | lambda_days | tuned_at | source |
+|---|---|---|---|
+| diffusion | 60 | bootstrap | scripts/tune-lambda.ts |
+| technical | 60 | bootstrap | scripts/tune-lambda.ts |
+| insider | 60 | bootstrap | scripts/tune-lambda.ts |
+| institutional | 60 | bootstrap | scripts/tune-lambda.ts |
+
+> These two decay tables are intentionally separate — sentiment-message decay (per source class, t½ ≈ 1-7d) and learning-engine observation decay (per signal class, t½ ≈ 60d) are different domains with different calibration targets. Do not merge them. See `src/lib/sentiment/decay.ts` header for rationale.
+
+Updated by: Plan 20-A-03 (2026-05-12).
