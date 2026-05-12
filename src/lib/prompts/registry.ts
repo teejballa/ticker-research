@@ -36,7 +36,11 @@ export type PromptId =
   | 'gemini-smart-money-context-block'
   | 'gemini-cove-pass1-instruction'
   | 'gemini-citations-section'
-  | 'gemini-cycle-summary';
+  | 'gemini-cycle-summary'
+  // Plan 20-Z-05 — LLM-as-judge rubric for baseline-vs-candidate evals.
+  // The body lives at src/lib/prompts/_v1/eval-judge-v1.md. Loaded by
+  // src/lib/eval/judge.ts via getPrompt('eval-judge-v1', 'v1').
+  | 'eval-judge-v1';
 
 /** Template literal type — vN where N is a positive integer.
  *  Capped at v99 to keep the union finite for IDE autocomplete. */
