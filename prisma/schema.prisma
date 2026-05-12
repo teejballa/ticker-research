@@ -270,6 +270,27 @@ model CrowdedConsensusCalibration {
   @@map("crowded_consensus_calibrations")
 }
 
+// ─── Phase 20-A-03 — DecayCalibration history (append-only) ───
+// Persists every tune-decay run. NEVER updated — a re-tune writes a new row.
+// (source_class, computed_at) gives the time series of λ for each class.
+// model_version on this row equals the model_version stamped on the
+// SentimentObservation backfill rows that this calibration produced — that
+// is how we trace "row X under λ_v3 came from calibration run Y."
+model DecayCalibration {
+  id                      String   @id @default(uuid())
+  computed_at             DateTime @default(now()) @db.Timestamptz
+  source_class            String // 'retail' | 'news' | 'sec' | 'analyst' | 'social-other'
+  lambda_per_day          Float
+  half_life_days          Float
+  icir_uplift_vs_no_decay Float // signed; negative values are persisted, never silently dropped
+  training_window_days    Int // SAME across all classes within one tune-decay run (T-20-A-03-05)
+  n_observations          Int
+  model_version           String // backfill partition key — feeds SentimentObservation.model_version
+
+  @@index([source_class, computed_at(sort: Desc)], map: "idx_decaycal_class_at")
+  @@map("decay_calibrations")
+}
+
 // ─── Phase 20-A-02 — robust mention-volume baseline (median + MAD) ────────
 //
 // Per-ticker rolling 90d daily-mention-count baseline used to compute
@@ -282,16 +303,16 @@ model CrowdedConsensusCalibration {
 // the upstream-claimed-timestamp (PIT discipline per S2 / 20-Z-07).
 // mention_count_mad is already 1.4826-scaled (normal-equivalent σ).
 model MentionBaseline {
-  id                    String   @id @default(uuid())
-  ticker                String
-  cap_class             String // 'large_cap' | 'mid_cap' | 'small_cap' | 'unknown'
-  source_class          String // 'community' | 'news' | 'sec'
-  computed_at           DateTime @default(now()) @db.Timestamptz
-  window_start          DateTime @db.Timestamptz
-  window_end            DateTime @db.Timestamptz
-  mention_count_median  Float
-  mention_count_mad     Float // 1.4826-scaled (normal-equivalent σ)
-  n_observations        Int // number of date-buckets contributing
+  id                   String   @id @default(uuid())
+  ticker               String
+  cap_class            String // 'large_cap' | 'mid_cap' | 'small_cap' | 'unknown'
+  source_class         String // 'community' | 'news' | 'sec'
+  computed_at          DateTime @default(now()) @db.Timestamptz
+  window_start         DateTime @db.Timestamptz
+  window_end           DateTime @db.Timestamptz
+  mention_count_median Float
+  mention_count_mad    Float // 1.4826-scaled (normal-equivalent σ)
+  n_observations       Int // number of date-buckets contributing
 
   @@index([ticker, source_class, computed_at(sort: Desc)], map: "idx_mention_baseline_ticker_src_computed")
   @@map("mention_baselines")
