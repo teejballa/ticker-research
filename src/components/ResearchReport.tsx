@@ -708,6 +708,49 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                     </div>
                   </div>
                 )}
+                {/* Plan 20-A-04 — Top author concentration sub-card. Renders ONLY
+                    when (UI flag === 'on' AND gini_coefficient != null AND
+                    author_concentration != null). Hashed prefixes only — raw
+                    handles NEVER reach the rendered HTML (T-20-A-04-01). */}
+                {process.env.NEXT_PUBLIC_FEATURE_AUTHOR_GINI_UI === 'on' &&
+                  sentiment_intelligence.gini_coefficient != null &&
+                  sentiment_intelligence.author_concentration != null && (
+                    <div className="border-t border-surface-container-highest pt-2 mt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                          Top author concentration
+                        </span>
+                        <span className="text-[10px] font-mono text-on-surface-variant">
+                          Gini {sentiment_intelligence.gini_coefficient.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {sentiment_intelligence.author_concentration.slice(0, 5).map((a) => (
+                          <div
+                            key={a.author_hash_prefix}
+                            className="flex items-center gap-2 text-[11px] font-mono"
+                          >
+                            <span
+                              className="text-on-surface-variant w-20 truncate"
+                              data-author-hash-prefix={a.author_hash_prefix}
+                            >
+                              {a.author_hash_prefix}…
+                            </span>
+                            <div className="flex-1 bg-surface-container-highest rounded-full h-2 overflow-hidden">
+                              <div
+                                className="bg-tertiary h-full"
+                                style={{ width: `${Math.round(a.share * 100)}%` }}
+                                aria-label={`Author ${a.author_hash_prefix} contributed ${Math.round(a.share * 100)}% of messages (n=${a.message_count})`}
+                              />
+                            </div>
+                            <span className="w-12 text-right text-on-surface-variant">
+                              {Math.round(a.share * 100)}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 {/* Annotation row */}
                 <div className="border-t border-surface-container-highest pt-2 mt-2">
                   <span className="text-[11px] text-on-surface-variant">
