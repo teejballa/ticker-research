@@ -1,12 +1,14 @@
 ---
-classifier_id: mention-baseline
-version: v1
-status: shadow
-classifier_file: src/lib/sentiment/baseline.ts
-training_window: rolling 90d of SentimentObservation rows (production Neon)
-last_calibrated: pending  # first cron run lands inaugural calibration
+model_name: mention-baseline
+model_version: v1
+card_format: mitchell-2019
+last_validated: 2026-05-12
 retrain_cadence: P30D
-mitchell_2019: true
+author: tjameswalsh@icloud.com
+source_files:
+  - src/lib/sentiment/baseline.ts
+  - scripts/recompute-mention-baselines.ts
+  - scripts/calibrate-mention-z-threshold.ts
 ---
 
 # Model Card — Mention Volume Baseline (Plan 20-A-02)
