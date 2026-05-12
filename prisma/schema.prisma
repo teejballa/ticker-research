@@ -270,6 +270,33 @@ model CrowdedConsensusCalibration {
   @@map("crowded_consensus_calibrations")
 }
 
+// ─── Phase 20-A-02 — robust mention-volume baseline (median + MAD) ────────
+//
+// Per-ticker rolling 90d daily-mention-count baseline used to compute
+// mention_z = (today_count - median) / max(MAD, EPSILON). Stratified by
+// cap_class because small-caps spike easier than large-caps; per-class
+// Z_thresh is calibrated in HYPERPARAMETERS.md by Plan 20-A-02.
+//
+// Daily counts are derived from SentimentObservation rows GROUPED BY
+// (ticker, source_class, date(fetched_at)) — joins on fetched_at NEVER
+// the upstream-claimed-timestamp (PIT discipline per S2 / 20-Z-07).
+// mention_count_mad is already 1.4826-scaled (normal-equivalent σ).
+model MentionBaseline {
+  id                    String   @id @default(uuid())
+  ticker                String
+  cap_class             String // 'large_cap' | 'mid_cap' | 'small_cap' | 'unknown'
+  source_class          String // 'community' | 'news' | 'sec'
+  computed_at           DateTime @default(now()) @db.Timestamptz
+  window_start          DateTime @db.Timestamptz
+  window_end            DateTime @db.Timestamptz
+  mention_count_median  Float
+  mention_count_mad     Float // 1.4826-scaled (normal-equivalent σ)
+  n_observations        Int // number of date-buckets contributing
+
+  @@index([ticker, source_class, computed_at(sort: Desc)], map: "idx_mention_baseline_ticker_src_computed")
+  @@map("mention_baselines")
+}
+
 // ─── Phase 20-Z-03 — Telemetry (per-call observability for external providers) ───
 // Insert-only by production paths (only the retention cron deletes). Captures
 // wall-clock timing + status + cost for every external provider call routed
