@@ -1472,3 +1472,54 @@ function _chiSquareCDF(chi2: number, df: number): number {
   if (p > 1) return 1;
   return p;
 }
+
+// ─── Plan 20-A-05 — LearnedPattern.pattern_key agreement bucket ───
+//
+// Backward-compatibility-preserving extension to the pattern_key composite
+// used by LearnedPattern.findUnique({ signal_class, pattern_key, cap_class,
+// horizon_days }) lookups. Per the plan's <interfaces> contract:
+//
+//   buildPatternKey('echo-chamber-bull', 'mixed')   → 'echo-chamber-bull:agreement=mixed'
+//   buildPatternKey('echo-chamber-bull', 'aligned') → 'echo-chamber-bull:agreement=aligned'
+//   buildPatternKey('echo-chamber-bull', 'na')      → 'echo-chamber-bull'   (UNCHANGED)
+//   buildPatternKey('echo-chamber-bull')            → 'echo-chamber-bull'   (UNCHANGED)
+//
+// T-20-A-05-03 mitigation: legacy LearnedPattern rows (written before this
+// plan) have NO suffix — they continue to be matched by their original
+// pattern_key because buildPatternKey('base','na') === 'base'. The 'mixed'
+// and 'aligned' buckets start with empty Beta posteriors and re-learn from
+// new data per the documented 6-month re-evaluation cadence.
+
+export type AgreementBucket = 'mixed' | 'aligned' | 'na';
+
+const AGREEMENT_SUFFIX_RE = /:agreement=(mixed|aligned)$/;
+
+/**
+ * Extend an existing pattern_key with an agreement bucket suffix. Backward-
+ * compatible: 'na' OR an absent bucket returns the base key UNCHANGED.
+ */
+export function buildPatternKey(
+  base: string,
+  agreement_bucket?: AgreementBucket,
+): string {
+  if (!agreement_bucket || agreement_bucket === 'na') return base;
+  return `${base}:agreement=${agreement_bucket}`;
+}
+
+/**
+ * Inverse of buildPatternKey. Legacy keys (no ':agreement=' segment) resolve
+ * to bucket = 'na'. Used by engine-context read paths and dashboards to
+ * surface which agreement regime a learned prior accumulated under.
+ */
+export function parsePatternKey(
+  storedKey: string,
+): { base: string; agreement_bucket: AgreementBucket } {
+  const m = storedKey.match(AGREEMENT_SUFFIX_RE);
+  if (!m || m.index === undefined) {
+    return { base: storedKey, agreement_bucket: 'na' };
+  }
+  return {
+    base: storedKey.slice(0, m.index),
+    agreement_bucket: m[1] as AgreementBucket,
+  };
+}
