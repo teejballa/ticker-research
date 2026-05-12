@@ -72,6 +72,24 @@ export interface AggregatedSentiment {
   dispersion_features?: DispersionFeatures | null;
   /** 'off' | 'shadow' | 'on' — value of FEATURE_CROWDED_CONSENSUS at compute time. */
   crowded_consensus_mode?: 'off' | 'shadow' | 'on';
+  // ── Plan 20-A-02 — mention-volume z-score surfacing ──────────
+  /**
+   * Calibrated cross-platform mention-volume z-score against the per-ticker
+   * rolling 90d median + MAD baseline (see src/lib/sentiment/baseline.ts).
+   * Populated by upstream callers that hold ticker context; the pure
+   * aggregator function does not load this from the DB itself.
+   * null = baseline unavailable (sparse-data ticker, n<30) or upstream did
+   * not populate.
+   */
+  mention_z?: number | null;
+  /**
+   * mention_z > Z_thresh[cap_class] — the calibrated replacement for the
+   * GME-era stocktwits_is_trending heuristic. Populated upstream; the off
+   * path of FEATURE_MENTION_Z_TRENDING preserves the legacy boolean.
+   */
+  is_trending_v2?: boolean | null;
+  /** 'off' | 'shadow' | 'on' — value of FEATURE_MENTION_Z_TRENDING at compute time. */
+  mention_z_trending_mode?: 'off' | 'shadow' | 'on';
 }
 
 /**
