@@ -37,6 +37,8 @@
     "eval": "npx tsx scripts/eval-report.ts",
     "phase-20-status": "npx tsx scripts/phase-20-status.ts",
     "calibrate-crowded-consensus": "npx tsx scripts/calibrate-crowded-consensus.ts",
+    "calibrate-agreement": "npx tsx scripts/calibrate-agreement-threshold.ts",
+    "spot-check-agreement": "npx tsx scripts/spot-check-agreement.ts",
     "tune-decay": "npx tsx scripts/tune-decay.ts",
     "backfill-decay": "npx tsx scripts/backfill-decay-weights.ts"
   },
