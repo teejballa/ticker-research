@@ -9,9 +9,9 @@
  * PIT discipline (S2, T-20-A-01-01):
  *   - Joins SentimentObservation by `fetched_at` ONLY (the PIT-INVARIANT column).
  *   - PriceOutcome filtered by `days_after >= 14`.
- *   - The literal substring `published_at` MUST NOT appear in this file —
- *     enforced by the integration test grep gate (Test 4) AND
- *     `npm run check-lookahead`.
+ *   - The literal upstream-claimed-timestamp substring (banned identifier from
+ *     the SentimentObservation schema) MUST NOT appear in this file — enforced
+ *     by the integration test grep gate (Test 4) AND `npm run check-lookahead`.
  *
  * Search ranges (LITERAL — from CONTEXT.md line 103):
  *   H_thresh ∈ [0.3, 1.5] step 0.1   → 13 values

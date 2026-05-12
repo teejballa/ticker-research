@@ -1,3 +1,15 @@
+---
+model_name: crowded-consensus
+model_version: grid-search-v1
+card_format: mitchell-2019
+last_validated: 2026-05-12
+retrain_cadence: P30D
+author: tjameswalsh@icloud.com
+source_files:
+  - src/lib/sentiment/dispersion.ts
+  - scripts/calibrate-crowded-consensus.ts
+---
+
 # Model Card — Crowded Consensus Flag
 
 **Component:** `src/lib/sentiment/dispersion.ts` `crowdedConsensus()`
