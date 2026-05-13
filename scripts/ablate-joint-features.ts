@@ -117,9 +117,14 @@ function rowToJointFeatures(r: AblationDataRow): JointFeatures {
 /**
  * For a given train fold (set of row indices) and a key-builder function,
  * compute the per-bucket mean realized_alpha lookup, then score the test
- * fold and return its Sharpe-like statistic:
- *   Sharpe = mean(predicted * realized) / std(predicted * realized)
- * with a small epsilon floor on the denominator.
+ * fold and return its information-coefficient-like statistic: the Pearson
+ * correlation between predicted alpha (per-bucket train mean) and realized
+ * alpha on the test fold.
+ *
+ * This is the canonical IC metric used in financial ML and is monotone in
+ * predictive discrimination — strictly better predictions yield strictly
+ * higher IC. (A raw mean-product Sharpe is variance-penalized and can drop
+ * for a more-discriminating predictor.)
  */
 function foldSharpe(
   trainIdx: number[],
@@ -139,22 +144,40 @@ function foldSharpe(
       bucket.set(k, { sum: r.realized_alpha_7d, n: 1 });
     }
   }
-  const product: number[] = [];
+  const preds: number[] = [];
+  const realized: number[] = [];
   for (const i of testIdx) {
     const r = rows[i];
     const k = keyFor(r);
     const e = bucket.get(k);
     // Cold-start prior: 0 (no signal). Avoids leakage of unconditional mean.
     const pred = e ? e.sum / e.n : 0;
-    product.push(pred * r.realized_alpha_7d);
+    preds.push(pred);
+    realized.push(r.realized_alpha_7d);
   }
-  if (product.length === 0) return 0;
-  const mean =
-    product.reduce((a, b) => a + b, 0) / product.length;
-  let varSum = 0;
-  for (const x of product) varSum += (x - mean) ** 2;
-  const std = Math.sqrt(varSum / Math.max(1, product.length - 1));
-  return mean / (std + 1e-12);
+  const n = preds.length;
+  if (n < 2) return 0;
+  let sumP = 0;
+  let sumR = 0;
+  for (let i = 0; i < n; i++) {
+    sumP += preds[i];
+    sumR += realized[i];
+  }
+  const meanP = sumP / n;
+  const meanR = sumR / n;
+  let num = 0;
+  let varP = 0;
+  let varR = 0;
+  for (let i = 0; i < n; i++) {
+    const dp = preds[i] - meanP;
+    const dr = realized[i] - meanR;
+    num += dp * dr;
+    varP += dp * dp;
+    varR += dr * dr;
+  }
+  const denom = Math.sqrt(varP * varR);
+  if (denom < 1e-15) return 0;
+  return num / denom;
 }
 
 async function loadFromDb(_lookbackDays: number): Promise<AblationDataRow[]> {
