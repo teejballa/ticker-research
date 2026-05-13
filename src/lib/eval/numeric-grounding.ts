@@ -123,6 +123,21 @@ export function extractNumericSpans(text: string, section: ReportSection): Numer
       continue;
     }
 
+    // Skip calendar-period prefixes: "52-week", "52 week", "30-day", "10-Q".
+    // These are time-window labels, not financial figures.
+    const trailIdxForCal = match.index + raw.length;
+    const trailingWindow = text.slice(trailIdxForCal, Math.min(text.length, trailIdxForCal + 8)).toLowerCase();
+    if (/^[\s-]?(week|day|month|year|quarter|yr|qtr|q\b|k\b)/.test(trailingWindow) && !hasDollarPrefix && !suffixRaw) {
+      continue;
+    }
+
+    // Skip well-known index identifiers: "S&P 500", "Russell 2000", "FTSE 100".
+    // Pattern: number preceded (within 8 chars, ignoring whitespace) by a known index name.
+    const precedingWindow = text.slice(Math.max(0, match.index - 16), match.index).toLowerCase();
+    if (/(s&p|s & p|russell|ftse|nasdaq|nikkei|dax|hang seng|topix|stoxx)\s*$/.test(precedingWindow) && !hasDollarPrefix && !suffixRaw) {
+      continue;
+    }
+
     // Parse value: strip commas from integer body.
     const intClean = intBody.replace(/,/g, '');
     const numericText = decBody ? `${intClean}${decBody}` : intClean;

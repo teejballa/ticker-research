@@ -1,0 +1,27 @@
+{
+  "__recording": {
+    "recorded_at": "2026-05-13T00:00:00Z",
+    "prompt_versions": {
+      "gemini-research-brief-system": "v1",
+      "gemini-research-brief-user": "v1",
+      "gemini-engine-context-block-no-data": "v1",
+      "gemini-engine-context-block-active": "v1",
+      "gemini-technical-context-block": "v1",
+      "gemini-smart-money-context-block": "v1",
+      "gemini-cove-pass1-instruction": "v1",
+      "gemini-citations-section": "v1",
+      "gemini-cycle-summary": "v1"
+    },
+    "gemini_model_revision": "bootstrap-2026-05-13",
+    "temperature": 0,
+    "source_hash": "TO_BE_COMPUTED_BY_RECORDING_SCRIPT"
+  },
+  "executive_summary": "Apple trades at 28.5x P/E with a market cap of $3.66T, supported by EPS of $7.90 and consensus price target of $275.",
+  "investment_thesis": "The company posted revenue of $435.62B with a debt-to-equity ratio of 102.63. Bullish sentiment of 68% on StockTwits supports near-term momentum.",
+  "key_risks": "Bearish sentiment of 32% reflects concerns about valuation; current price of $248.96 sits below the 52-week high of $288.62.",
+  "valuation_context": "At 28.5x P/E with EPS of $7.90, the stock trades closer to its 52-week low of $169.21 than the high. Analyst consensus PT is $275.",
+  "future_projection": "Services momentum and a $275 consensus PT suggest continued upside, with 68% bullish sentiment on StockTwits.",
+  "business_description": "Apple sells consumer electronics and services globally with total revenue of $435.62B.",
+  "financial_analysis": "Revenue of $435.62B and EPS of $7.90 yield a P/E of 28.5x. Debt-to-equity of 102.63 indicates moderate leverage.",
+  "competitive_landscape": "Apple's market cap of $3.66T leads the consumer-electronics peer group."
+}

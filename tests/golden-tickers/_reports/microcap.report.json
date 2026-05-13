@@ -1,0 +1,27 @@
+{
+  "__recording": {
+    "recorded_at": "2026-05-13T00:00:00Z",
+    "prompt_versions": {
+      "gemini-research-brief-system": "v1",
+      "gemini-research-brief-user": "v1",
+      "gemini-engine-context-block-no-data": "v1",
+      "gemini-engine-context-block-active": "v1",
+      "gemini-technical-context-block": "v1",
+      "gemini-smart-money-context-block": "v1",
+      "gemini-cove-pass1-instruction": "v1",
+      "gemini-citations-section": "v1",
+      "gemini-cycle-summary": "v1"
+    },
+    "gemini_model_revision": "bootstrap-2026-05-13",
+    "temperature": 0,
+    "source_hash": "TO_BE_COMPUTED_BY_RECORDING_SCRIPT"
+  },
+  "executive_summary": "ACME trades at 18.5x P/E with a market cap of $185M and revenue of $95M.",
+  "investment_thesis": "EPS of 0.26 and consensus PT of $6 imply upside from the current $4.85.",
+  "key_risks": "Bearish sentiment of 48% and tight thin-volume trade in the 52-week range $2.18 to $9.62.",
+  "valuation_context": "Price of $4.85 sits near the lower half of the 52-week range. Consensus PT of $6.",
+  "future_projection": "Hitting consensus PT of $6 from $4.85 implies meaningful upside.",
+  "business_description": "Acme Microcap operates a niche specialty business with revenue of $95M.",
+  "financial_analysis": "Revenue of $95M with EPS of 0.26 and debt-to-equity of 0.62.",
+  "competitive_landscape": "Market cap of $185M classifies ACME as a micro-cap among peers."
+}

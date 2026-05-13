@@ -1,0 +1,27 @@
+{
+  "__recording": {
+    "recorded_at": "2026-05-13T00:00:00Z",
+    "prompt_versions": {
+      "gemini-research-brief-system": "v1",
+      "gemini-research-brief-user": "v1",
+      "gemini-engine-context-block-no-data": "v1",
+      "gemini-engine-context-block-active": "v1",
+      "gemini-technical-context-block": "v1",
+      "gemini-smart-money-context-block": "v1",
+      "gemini-cove-pass1-instruction": "v1",
+      "gemini-citations-section": "v1",
+      "gemini-cycle-summary": "v1"
+    },
+    "gemini_model_revision": "bootstrap-2026-05-13",
+    "temperature": 0,
+    "source_hash": "TO_BE_COMPUTED_BY_RECORDING_SCRIPT"
+  },
+  "executive_summary": "TSMC trades at 22.4x P/E with a market cap of $858B and consensus PT of $195.",
+  "investment_thesis": "Revenue of $90B and EPS of $7.38 anchor the AI-cycle thesis. Bullish sentiment of 78% on StockTwits.",
+  "key_risks": "Bearish sentiment of 22% and the 52-week range $102.18 to $189.42 reflect cycle risk.",
+  "valuation_context": "Price of $165.34 against a consensus PT of $195 implies upside.",
+  "future_projection": "If the AI cycle holds, consensus PT of $195 is achievable from the current $165.34.",
+  "business_description": "TSMC is the world's largest pure-play foundry with revenue of $90B.",
+  "financial_analysis": "Revenue of $90B and EPS of $7.38 yield a P/E of 22.4x. Debt-to-equity of 0.28.",
+  "competitive_landscape": "Market cap of $858B leads the foundry peer group."
+}
