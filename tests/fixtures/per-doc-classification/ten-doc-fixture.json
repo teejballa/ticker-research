@@ -1,0 +1,72 @@
+[
+  {
+    "doc_id": "fx-01",
+    "text": "AAPL Q4 EPS $2.18 beats $2.10 consensus; iPhone revenue +6% YoY.",
+    "source": "news",
+    "expected_aspects": ["earnings"],
+    "expected_polarity_sign": 1
+  },
+  {
+    "doc_id": "fx-02",
+    "text": "TSLA cuts FY guidance citing softer demand in China; delays Cybertruck high-volume ramp to H2.",
+    "source": "news",
+    "expected_aspects": ["guidance", "product"],
+    "expected_polarity_sign": -1
+  },
+  {
+    "doc_id": "fx-03",
+    "text": "FDA issues Complete Response Letter to BIIB on lecanemab follow-on indication; requires additional Phase 3.",
+    "source": "news",
+    "expected_aspects": ["regulatory"],
+    "expected_polarity_sign": -1
+  },
+  {
+    "doc_id": "fx-04",
+    "text": "Microsoft to acquire Activision Blizzard for $68.7B all-cash; expected close FY2024.",
+    "source": "news",
+    "expected_aspects": ["M&A"],
+    "expected_polarity_sign": 1
+  },
+  {
+    "doc_id": "fx-05",
+    "text": "Fed signals two more 25bp hikes; CRE pressure across regional banks deepens into 2026.",
+    "source": "news",
+    "expected_aspects": ["macro"],
+    "expected_polarity_sign": -1
+  },
+  {
+    "doc_id": "fx-06",
+    "text": "NVDA launches new H300 inference chip with 3x perf-per-watt over H100; preorders sold out for Q3.",
+    "source": "news",
+    "expected_aspects": ["product"],
+    "expected_polarity_sign": 1
+  },
+  {
+    "doc_id": "fx-07",
+    "text": "OXY CEO Vicki Hollub to step down at year end; board names interim CFO as acting CEO during search.",
+    "source": "news",
+    "expected_aspects": ["management"],
+    "expected_polarity_sign": 0
+  },
+  {
+    "doc_id": "fx-08",
+    "text": "GME short interest down 12% over the past two weeks; community posts on r/wallstreetbets show conviction-holders accumulating.",
+    "source": "community",
+    "expected_aspects": [],
+    "expected_polarity_sign": 1
+  },
+  {
+    "doc_id": "fx-09",
+    "text": "Severe thunderstorms expected across the Midwest this weekend; flash flood warnings in effect for several counties.",
+    "source": "news",
+    "expected_aspects": [],
+    "expected_polarity_sign": 0
+  },
+  {
+    "doc_id": "fx-10",
+    "text": "META beats Q2 EPS but issues weak Q3 ad guidance; ARPU softer in EU on Reality Labs cost overhang.",
+    "source": "news",
+    "expected_aspects": ["earnings", "guidance"],
+    "expected_polarity_sign": 0
+  }
+]
