@@ -41,6 +41,11 @@ export type PromptId =
   // The body lives at src/lib/prompts/_v1/eval-judge-v1.md. Loaded by
   // src/lib/eval/judge.ts via getPrompt('eval-judge-v1', 'v1').
   | 'eval-judge-v1'
+  // Plan 20-D-02 — LLM-judge qualitative-claim extractor for citation
+  // coverage. Body at src/lib/prompts/_v1/eval-claim-extraction-v1.md.
+  // Loaded by src/lib/eval/claim-extraction-llm.ts via
+  // getPrompt('eval-claim-extraction-v1', 'v1').
+  | 'eval-claim-extraction-v1'
   // Plan 20-B-01 — per-document sentiment + aspect classifier (cheap path,
   // Wave B baseline). Body at src/lib/prompts/_v1/gemini-per-doc-sentiment.md.
   // Loaded by classifyDocumentsBatch via renderPrompt('gemini-per-doc-sentiment').
