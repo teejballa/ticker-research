@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import {
   sentimentMomentumProduct,
   sentimentVolumeInteraction,
@@ -52,8 +54,6 @@ describe('joint-features (plan 20-C-05)', () => {
       // call Date.now, or Math.random. This test runs `import.meta.url`-style
       // discovery against the file path to make the assertion explicit.
       // Implementation: read the file via fs at test time.
-      const fs = require('fs') as typeof import('fs');
-      const path = require('path') as typeof import('path');
       const src = fs.readFileSync(
         path.resolve(__dirname, 'joint-features.ts'),
         'utf8',
