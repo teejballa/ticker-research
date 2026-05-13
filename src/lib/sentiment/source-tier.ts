@@ -14,11 +14,14 @@
  * rows ONLY. CI grep guard at .github/workflows/no-hand-curated-tier-weights.yml fails the
  * build on the explicit override-token names.
  */
-import { prisma } from '@/lib/db';
 import {
   SOURCE_TIER_HYPERPARAMETERS,
   type SourceTierConfig,
 } from './source-tier-hyperparameters';
+
+// NOTE: prisma is lazy-imported inside getWeightForSource() to keep this
+// module unit-testable without DATABASE_URL set (mirrors the
+// computeAuthorConcentration pattern in aggregator.ts).
 
 export interface PerSourceICRow {
   source_id: string;
@@ -142,6 +145,9 @@ export async function getWeightForSource(
   asOf: Date,
 ): Promise<number> {
   try {
+    // Lazy import — keep this module unit-testable without DATABASE_URL
+    // (db.ts throws at module load when DATABASE_URL is missing).
+    const { prisma } = await import('@/lib/db');
     const row = await prisma.sourceTier.findFirst({
       where: { source_id, computed_at: { lte: asOf } },
       orderBy: { computed_at: 'desc' },
