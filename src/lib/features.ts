@@ -37,6 +37,16 @@ const FLAG_NAMES = [
   'agreement_signal',
   // Plan 20-C-03 — Cresci-2019 bot filter + MinHash coordination detection
   'bot_filter',
+  // Plan 20-C-04 — Pump-and-dump cluster detector (Nam/Yang 2023 baseline).
+  // Computation flag: gates aggregator.computeManipulationWarning. Default
+  // 'off' via parseMode (env var absent) — operator flips to 'shadow' for the
+  // 30d FP-review gate, then 'on' after F1 ≥ 0.6 + 0 production FPs.
+  'pump_dump_detector',
+  // Plan 20-C-04 — UI banner gating. Separate from computation flag per
+  // CONTEXT.md S3 (UI rollout gated separately). NEXT_PUBLIC_ prefix is used
+  // at the render site for client-side visibility — this server-side flag is
+  // included for grep traceability + parity with bot_filter pattern.
+  'pump_dump_detector_ui',
   // Plan 20-B-01 — Gemini per-document sentiment + aspect classifier (cheap path).
   // Default 'shadow' is set by parseMode("shadow") wiring below + .env default.
   // Shadow lifecycle gated by frontmatter shadow_cutover_criteria in 20-B-01-PLAN.md.

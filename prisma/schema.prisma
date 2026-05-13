@@ -523,3 +523,29 @@ model SourceTier {
   @@index([source_id, computed_at(sort: Desc)], map: "idx_sourcetier_source_at")
   @@map("source_tiers")
 }
+
+// ─── Phase 20-C-04 — Pump-and-dump cluster detection (Nam/Yang 2023) ───
+// Every detector invocation (NOT just fires) persists a telemetry row so
+// operators can review FP rate during the 30d shadow gate. Insert-only;
+// 90d retention via Phase 27 cleanup. PIT-INVARIANT — readers MUST use
+// computed_at to align with the upstream feature snapshot (mention_z, gini)
+// that produced this row.
+model ManipulationWarning {
+  id                    String   @id @default(uuid())
+  ticker                String
+  // PIT-INVARIANT — readers MUST use computed_at to align with the upstream
+  // feature snapshot (mention_z, gini) that produced this row.
+  computed_at           DateTime @default(now()) @db.Timestamptz
+  mention_z             Float?
+  bull_pct              Float
+  gini                  Float?
+  mean_account_age_days Float?
+  cap_class             String
+  is_warning_fired      Boolean
+  matched_rules         String[]
+  rule_version          String
+
+  @@index([ticker, computed_at(sort: Desc)], map: "idx_manipwarn_ticker_computed_at")
+  @@index([is_warning_fired, computed_at(sort: Desc)], map: "idx_manipwarn_fired_computed_at")
+  @@map("manipulation_warnings")
+}
