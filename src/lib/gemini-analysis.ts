@@ -812,13 +812,25 @@ export async function runGeminiAnalysis(
   // expected to gate CoVe to high-stakes tickers in a follow-up wiring; for
   // now this layer just gates on the feature flag mode.
   const coveMode = FEATURES.cove_two_pass_mode;
-  return runWithShadow<AnalysisResult>(
+  const result = await runWithShadow<AnalysisResult>(
     'cove-two-pass',
     routed,
     () => runWithCove(ticker, pkg, routed),
     coveMode,
     { ticker },
   );
+
+  // Plan 20-B-01 — per-doc sentiment post-process pickup. The classifier ran
+  // upstream in collectAllData and attached results as `_per_document_sentiment`
+  // on the SourcePackage. Overwrite any LLM hallucination of this field with
+  // the authoritative classifier output (S5 pinned-versions: classifier-emitted
+  // records are the source of truth, never the analysis-prompt's reflection).
+  const perDocSidecar = (pkg as SourcePackage & { _per_document_sentiment?: import('@/lib/types').PerDocSentimentResult[] })
+    ._per_document_sentiment;
+  if (Array.isArray(perDocSidecar)) {
+    return { ...result, per_document_sentiment: perDocSidecar };
+  }
+  return result;
 }
 
 /**
