@@ -316,3 +316,41 @@ Per S1, every value traces to a CONTEXT.md acceptance criterion — none are han
 - **Recalibration cadence**: monthly cron. Operator review monthly via the SourceTier history surface + Phase 20-Z-03 telemetry.
 
 Updated by: Plan 20-B-04 (2026-05-13).
+
+---
+
+## per_aspect_aggregate (Plan 20-B-05)
+
+Source: hand-calibrated post-Phase-19 carry-over. Beta-prior strength is NOT
+grid-searched — α = β = 5 is the Cookson-style weak symmetric prior shared
+with `src/lib/sentiment/aggregator.ts`. Any change to these values requires
+a new `_v2/` model_version partition (S2 immutability).
+
+| Parameter | Value | Source | Notes |
+|---|---|---|---|
+| α (Beta prior — bull pseudo-count)   | 5 | `BETA_ALPHA` in `src/lib/sentiment/per-aspect-aggregate.ts` | Post-Phase-19 carry-over |
+| β (Beta prior — bear pseudo-count)   | 5 | `BETA_BETA` in `src/lib/sentiment/per-aspect-aggregate.ts`  | Symmetric — no directional prior |
+| N_DOCS_MIN (insufficient-signal cut) | 3 | `N_DOCS_MIN` in `src/lib/sentiment/per-aspect-aggregate.ts` | < 3 docs → bull_pct = null → UI '—' |
+| ASPECT_TAXONOMY                      | `[earnings, guidance, regulatory, M&A, macro, product, management]` | `src/lib/sentiment/aspects.ts` | Fixed 7-element taxonomy (CONTEXT.md line 113) |
+
+### Ship gate (cutover criteria — `'shadow'` → `'on'`)
+
+| Metric | Threshold | Source |
+|---|---|---|
+| **Cohen's κ (aspect agreement, macro-averaged)** | **≥ 0.6** | `scripts/eval-aspect-kappa.ts` + monthly `/api/cron/aspect-kappa-monitor` |
+| Fixture size | ≥ 50 docs | `tests/golden-tickers/_aspect_labels.json` (currently 10 seed docs — expand per `docs/runbooks/aspect-label-curation.md`) |
+| Consecutive monthly κ ≥ 0.6 runs | 2 | Operator decision — cron measures, does NOT enforce |
+
+- **Calibration source:** N/A — analytic aggregator over `gemini-per-doc-v1` outputs. No grid search.
+- **Eval harness:** `npx tsx scripts/eval-aspect-kappa.ts` — measures κ, writes `/tmp/aspect-kappa-<date>.json`, NEVER asserts a threshold.
+- **Recalibration cadence:** monthly κ measurement via `/api/cron/aspect-kappa-monitor` (`0 8 1 * *` UTC); quarterly fixture review per runbook.
+- **Cost:** ≤ $0.10 USD/month at fixture size = 50 docs (2 batched Gemini calls/month).
+
+**Deferred-state note:** Flag `FEATURE_PER_ASPECT_AGGREGATE` defaults to
+`'shadow'` per `SHADOW_DEFAULT_FLAGS` in `src/lib/features.ts` — the pipeline
+populates `AnalysisResult.per_aspect_sentiment` so the cutover scoring window
+can accumulate evidence before the operator flips the env var. Cutover to
+`'on'` requires the criteria above; the chip stack and research-brief block
+ship dark until then.
+
+Updated by: Plan 20-B-05 (2026-05-13).
