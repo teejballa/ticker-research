@@ -6,7 +6,7 @@
 // from the SourcePackage and renders them into a CITATIONS section. The LLM
 // SELECTS citations from this list — it never fabricates URLs (T-19-C-07-01).
 
-import type { SourcePackage, NewsItem, AnalystChange } from './types';
+import type { SourcePackage, NewsItem, AnalystChange, PerAspectSentimentEntry } from './types';
 import type { Citation } from './sentiment/citation-schema';
 import { sanitizeUrl } from './sentiment/citation-schema';
 // Plan 20-Z-04 — every Gemini-bound prompt section is a versioned (id, version)
@@ -74,6 +74,37 @@ function fmtPctPlain(val: number | null | undefined): string {
 function fmtNum(val: number | null | undefined): string {
   if (val === null || val === undefined) return 'N/A';
   return String(val);
+}
+
+// ---- Plan 20-B-05 — per-aspect breakdown helper ----
+
+/**
+ * Render the per-aspect breakdown block for the Gemini prompt.
+ * Replaces/supplements the existing single global bull% line when per_aspect
+ * is non-empty AND at least one entry has bull_pct != null. Returns '' when
+ * per_aspect is empty or all-null — callers must then fall back to the
+ * existing global sentiment line (which remains in the prompt either way).
+ *
+ * Output format example:
+ *   Per-aspect sentiment:
+ *     earnings: 75% bullish (n=12)
+ *     guidance: 50% bullish (n=4)
+ *     regulatory: insufficient data
+ *     M&A: insufficient data
+ *
+ * Aspects with bull_pct == null render the literal "insufficient data"
+ * (NEVER "0% bullish" — T-20-B-05-03: empty data must not communicate as
+ * zero bullishness).
+ */
+export function renderPerAspectBlock(perAspect: PerAspectSentimentEntry[] | undefined): string {
+  if (!perAspect || perAspect.length === 0) return '';
+  const hasAnySignal = perAspect.some((p) => p.bull_pct !== null);
+  if (!hasAnySignal) return '';
+  const lines = perAspect.map((p) => {
+    if (p.bull_pct === null) return `  ${p.aspect}: insufficient data`;
+    return `  ${p.aspect}: ${p.bull_pct.toFixed(0)}% bullish (n=${p.n_docs})`;
+  });
+  return `Per-aspect sentiment:\n${lines.join('\n')}\n\n`;
 }
 
 // ---- Public API ----
@@ -159,6 +190,20 @@ export function formatResearchBrief(pkg: SourcePackage): string {
       lines.push(`  - ${signal}`);
     }
   }
+  // Plan 20-B-05 — per-aspect breakdown precedes the global bull% line so
+  // Gemini can reason aspect-by-aspect (Cookson/Engelberg "averaging-out
+  // opposite signals" motivation). Reads the _per_aspect_sentiment sidecar
+  // attached in source-package.ts under FEATURE_PER_ASPECT_AGGREGATE.
+  // renderPerAspectBlock returns '' when empty/all-null → falls back to the
+  // existing global rendering below (graceful degradation per CONTEXT.md
+  // line 117 — "Falls back to global when no aspect-tagged signal").
+  const perAspectSidecar = (pkg as SourcePackage & { _per_aspect_sentiment?: PerAspectSentimentEntry[] })
+    ._per_aspect_sentiment;
+  const perAspectBlock = renderPerAspectBlock(perAspectSidecar);
+  if (perAspectBlock.length > 0) {
+    lines.push(perAspectBlock.trimEnd());
+  }
+
   // Post-Phase-19: cross-source aggregated bullishness with Beta(5,5) smoothing.
   // Always prefer this number over any single-source percentage when reasoning
   // about retail/community sentiment — it accounts for sample-size effects and
