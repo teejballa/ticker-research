@@ -24,6 +24,7 @@
     { "path": "/api/cron/tune-decay", "schedule": "0 6 1 * *" },
     { "path": "/api/cron/author-share-calibration", "schedule": "0 8 * * 1" },
     { "path": "/api/cron/agreement-calibration", "schedule": "0 6 1 * *" },
-    { "path": "/api/cron/per-source-ic", "schedule": "0 5 * * *" }
+    { "path": "/api/cron/per-source-ic", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/eval-brier", "schedule": "0 8 * * 1" }
   ]
 }
