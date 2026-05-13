@@ -84,7 +84,7 @@ test.describe('Phase 5 — History UI (HIST-02)', () => {
   test('history section visible on home page', async ({ page }) => {
     await waitForPageReady(page);
     await snap(page, 'p5-history-section.png');
-    await expect(page.locator('text=RESEARCH HISTORY')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=REPORTS').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('empty state shown when no reports', async ({ page }) => {

@@ -43,7 +43,7 @@ export default function ReportHistory() {
       {/* Section header */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[#f59e0b]/70 text-[10px]">&#9654;</span>
-        <span className="text-[#4d6f8a] text-[10px] font-bold tracking-[0.4em]">RESEARCH HISTORY</span>
+        <span className="text-[#4d6f8a] text-[10px] font-bold tracking-[0.4em]">REPORTS</span>
       </div>
 
       <div className="panel">

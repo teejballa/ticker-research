@@ -37,7 +37,7 @@ test.describe('1. Homepage', () => {
 
     // Brand — CIPHER appears in NavBar header
     await expect(page.locator('header').getByText('CIPHER').first()).toBeVisible();
-    await expect(page.locator('text=RESEARCH TERMINAL').first()).toBeVisible();
+    await expect(page.locator('header').getByRole('link', { name: 'Research' }).first()).toBeVisible();
 
     // Ticker tape with at least one symbol in footer
     await expect(page.locator('footer').getByText('AAPL').first()).toBeVisible();
@@ -80,13 +80,13 @@ test.describe('1. Homepage', () => {
 
     // Hero wordmark (in scroll scene)
     await expect(page.locator('text=CIPHER').first()).toBeVisible();
-    await expect(page.locator('text=Research before you trade').first()).toBeVisible();
+    await expect(page.locator('text=Source-cited research').first()).toBeVisible();
 
     // Pipeline steps (below fold — scroll to reveal)
     await page.evaluate(() => window.scrollTo(0, 5000));
     await page.waitForTimeout(500);
     await expect(page.locator('text=COLLECT').first()).toBeVisible();
-    await expect(page.locator('text=SYNTHESIZE').first()).toBeVisible();
+    await expect(page.locator('text=ANALYZE').first()).toBeVisible();
     await expect(page.locator('text=REPORT').first()).toBeVisible();
 
     // Market snapshot section
@@ -97,25 +97,20 @@ test.describe('1. Homepage', () => {
     // CTA section
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(500);
-    await expect(page.locator('text=Ready to see deeper').first()).toBeVisible();
-    await expect(page.locator('a', { hasText: 'Launch Research Terminal' }).first()).toBeVisible();
+    await expect(page.locator('text=Research a ticker').first()).toBeVisible();
 
     // Take full-page screenshot to visually confirm
     await page.screenshot({ path: '/tmp/e2e-01c-full-landing.png', fullPage: true });
     console.log('📸  /tmp/e2e-01c-full-landing.png');
   });
 
-  test('CTA "Launch Research Terminal" navigates to /terminal page', async ({ page }) => {
+  test('NavBar CTA "Research a ticker" navigates to /terminal page', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 
-    // Scroll to CTA section
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500);
-
-    // Click the CTA link
-    const ctaLink = page.locator('a', { hasText: 'Launch Research Terminal' });
+    // Click the NavBar CTA link (always visible in the fixed header)
+    const ctaLink = page.locator('header a', { hasText: 'Research a ticker' }).first();
     await expect(ctaLink).toBeVisible();
     await ctaLink.click();
 
@@ -127,13 +122,13 @@ test.describe('1. Homepage', () => {
     console.log('✓ CTA navigates to /terminal');
   });
 
-  test('/terminal page has search input and Research Now heading', async ({ page }) => {
+  test('/terminal page has search input and headline', async ({ page }) => {
     await page.goto('/terminal');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1200);
 
     // Page heading
-    await expect(page.locator('h1', { hasText: 'Research Now' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Research a ticker' })).toBeVisible();
 
     // Ticker search input
     const input = page.locator('input[placeholder*="TICKER"], input[placeholder*="ticker"]').first();

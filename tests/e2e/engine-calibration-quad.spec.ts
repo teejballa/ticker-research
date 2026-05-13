@@ -153,7 +153,7 @@ test.describe('EngineCalibrationPanel — Phase 17-04 QuadClassPanel', () => {
     // Engine panel renders in legacy diffusion-only layout
     const enginePanel = page.locator('[data-testid="engine-calibration-panel"]');
     await expect(enginePanel).toBeVisible();
-    await expect(enginePanel).toContainText('Engine Calibration');
+    await expect(enginePanel).toContainText('Calibration vs. S&P 500');
 
     // No AgreementBadge on legacy path
     await expect(page.locator('[data-testid="agreement-badge"]')).toHaveCount(0);

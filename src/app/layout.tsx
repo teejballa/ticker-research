@@ -19,8 +19,39 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cipher — AI Financial Research Terminal",
-  description: "Source-grounded equity intelligence with transparent, traceable analysis powered by Anthropic and Gemini",
+  metadataBase: new URL('https://cipher.tools'),
+  title: {
+    default: 'Cipher — Source-cited equity research',
+    template: '%s | Cipher',
+  },
+  description:
+    'Cited equity research on any ticker. Sentiment, bull and bear drivers, forward outlook, and a recommendation calibrated against the S&P 500 — with every claim linked to a source.',
+  keywords: [
+    'equity research',
+    'stock analysis',
+    'stock forecast',
+    'fundamental research',
+    'analyst estimates',
+    'bull case bear case',
+    'price target',
+    'institutional ownership',
+    'insider transactions',
+  ],
+  openGraph: {
+    title: 'Cipher — Source-cited equity research',
+    description:
+      'Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500. Every claim linked to a source.',
+    url: 'https://cipher.tools',
+    siteName: 'Cipher',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Cipher — Source-cited equity research',
+    description:
+      'Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500.',
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

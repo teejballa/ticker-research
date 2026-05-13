@@ -14,9 +14,9 @@ import NavBar from '@/components/NavBar';
 import { PatternsTable, type PatternRow } from './components/PatternsTable';
 
 export const metadata = {
-  title: 'Research Insights — Cipher',
+  title: 'Research dashboard',
   description:
-    'Live behavioral finance research: how community sentiment predicts price movement.',
+    'Cipher\'s live track record by signal class: how each pattern has performed against the S&P 500, with credible intervals and out-of-sample Brier scores.',
 };
 
 // Server component — runs on each request. dynamic='force-dynamic' ensures the

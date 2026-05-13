@@ -115,7 +115,7 @@ export default function Home() {
             style={{ opacity: anim.heroAlpha, transform: `translateY(${-anim.progress * 80}px)` }}
           >
             <div className="text-[11px] tracking-[0.4em] font-bold text-primary uppercase opacity-60 mb-4">
-              AI · EQUITY · INTELLIGENCE
+              Equity research · Cited
             </div>
             <div
               className="scene-hero-wordmark font-black text-primary-fixed leading-none mb-12"
@@ -127,7 +127,7 @@ export default function Home() {
               className="text-on-surface-variant font-bold text-lg md:text-xl max-w-2xl mx-auto text-center px-4"
               style={{ opacity: anim.subAlpha }}
             >
-              Research before you trade. Institutional-grade equity synthesis powered by source-grounded intelligence.
+              Source-cited research on any ticker. Sentiment, drivers, outlook, and a recommendation calibrated against the S&amp;P 500.
             </p>
           </div>
 
@@ -177,13 +177,13 @@ export default function Home() {
                   href="/auth/signin"
                   className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
                 >
-                  Sign In to Get Started →
+                  Sign in
                 </Link>
                 <Link
                   href="/insights"
                   className="block w-full text-center bg-secondary-container text-on-secondary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
                 >
-                  Go to Research Insights →
+                  Research dashboard
                 </Link>
               </div>
             ) : isWebMode && session ? (
@@ -192,13 +192,13 @@ export default function Home() {
                   href="/dashboard"
                   className="block w-full text-center bg-primary-container text-on-primary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
                 >
-                  Go to Dashboard →
+                  Open dashboard
                 </Link>
                 <Link
                   href="/insights"
                   className="block w-full text-center bg-secondary-container text-on-secondary-container font-bold py-3 px-6 text-sm tracking-wider hover:opacity-90 transition-opacity rounded"
                 >
-                  Go to Research Insights →
+                  Research dashboard
                 </Link>
               </div>
             ) : (
@@ -228,19 +228,19 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                n: '01', phase: 'Phase_01', label: 'COLLECT',
+                n: '01', phase: 'Step_01', label: 'COLLECT',
                 borderClass: 'border-primary-container', colorClass: 'text-primary', barColorClass: 'bg-primary', barWidthClass: 'w-2/3',
-                desc: 'Aggregates real-time SEC filings, earnings call transcripts, Yahoo Finance data, and global news into a unified raw data stream.',
+                desc: 'SEC filings, earnings transcripts, market data, news, and community discussion — pulled in parallel from six sources.',
               },
               {
-                n: '02', phase: 'Phase_02', label: 'SYNTHESIZE',
+                n: '02', phase: 'Step_02', label: 'ANALYZE',
                 borderClass: 'border-secondary', colorClass: 'text-secondary', barColorClass: 'bg-secondary', barWidthClass: 'w-1/2',
-                desc: 'Multi-model intelligence extracts bull/bear theses, risk factors, and institutional sentiment shifts via advanced AI synthesis.',
+                desc: 'A reasoning model reads the source pack and extracts the bull case, bear case, and risk factors — each tied to the document it came from.',
               },
               {
-                n: '03', phase: 'Phase_03', label: 'REPORT',
+                n: '03', phase: 'Step_03', label: 'REPORT',
                 borderClass: 'border-tertiary', colorClass: 'text-tertiary', barColorClass: 'bg-tertiary', barWidthClass: 'w-1/4',
-                desc: 'Generates high-fidelity investment memos with Buy/Hold/Sell assessment, confidence level, and direct source citations.',
+                desc: 'A structured memo: recommendation with confidence, forward outlook with price-target context, and every claim linked to its source.',
               },
             ].map((s) => (
               <div key={s.n} className={`bg-surface-container p-8 border-l-2 ${s.borderClass} relative group overflow-hidden`}>
@@ -306,7 +306,7 @@ export default function Home() {
         {/* Intelligence Stack */}
         <section className="py-24 border-b border-outline-variant/10">
           <div className="max-w-4xl mx-auto px-6 text-center">
-            <h4 className="text-[10px] tracking-[0.3em] font-mono text-outline mb-10 uppercase">Aggregated Intelligence Layers</h4>
+            <h4 className="text-[10px] tracking-[0.3em] font-mono text-outline mb-10 uppercase">Data &amp; model stack</h4>
             <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale">
               {['CLAUDE', 'GEMINI', 'Yahoo! Finance'].map((name) => (
                 <div key={name} className="font-black text-xl tracking-tighter">{name}</div>
@@ -318,30 +318,30 @@ export default function Home() {
         {/* How It Works */}
         <section className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-4xl font-black tracking-tight mb-4">A Professional Terminal for Everyone</h2>
-            <p className="text-on-surface-variant max-w-xl mx-auto">Cipher bridges the gap between retail accessibility and institutional depth.</p>
+            <h2 className="text-4xl font-black tracking-tight mb-4">Research that shows its work</h2>
+            <p className="text-on-surface-variant max-w-xl mx-auto">Every conclusion in a Cipher report links to the filing, transcript, or article it came from.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-outline-variant/10">
             <div className="bg-surface p-12 group">
               <div className="w-12 h-12 rounded bg-primary-container/10 flex items-center justify-center mb-8 group-hover:bg-primary-container transition-colors">
                 <span className="material-symbols-outlined text-primary group-hover:text-on-primary-container">database</span>
               </div>
-              <h3 className="text-2xl font-bold mb-4">Deep Context Mining</h3>
-              <p className="text-on-surface-variant leading-relaxed text-sm mb-6">Our engines don&apos;t just search — they read. We analyze thousands of pages of filings to find the footnotes that move markets.</p>
+              <h3 className="text-2xl font-bold mb-4">Primary sources, not summaries</h3>
+              <p className="text-on-surface-variant leading-relaxed text-sm mb-6">Cipher reads 10-Ks, 10-Qs, 8-Ks, and earnings transcripts directly. Bull and bear points cite the exact filing they came from.</p>
               <div className="flex gap-4">
+                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">SEC_EDGAR</span>
                 <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">YAHOO_FINANCE</span>
-                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">ANTHROPIC_SEARCH</span>
               </div>
             </div>
             <div className="bg-surface p-12 group">
               <div className="w-12 h-12 rounded bg-secondary/10 flex items-center justify-center mb-8 group-hover:bg-secondary transition-colors">
                 <span className="material-symbols-outlined text-secondary group-hover:text-on-secondary">insights</span>
               </div>
-              <h3 className="text-2xl font-bold mb-4">Thematic Synthesis</h3>
-              <p className="text-on-surface-variant leading-relaxed text-sm mb-6">Connect dots across industries. Understand how a semiconductor shortage impacts automotive margins instantly.</p>
+              <h3 className="text-2xl font-bold mb-4">Calibrated against the market</h3>
+              <p className="text-on-surface-variant leading-relaxed text-sm mb-6">Each recommendation carries a confidence level back-tested against the S&amp;P 500 — so a &ldquo;bullish&rdquo; call comes with its historical hit rate.</p>
               <div className="flex gap-4">
-                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">GEMINI_AI</span>
-                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">CLAUDE_AI</span>
+                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">CALIBRATION</span>
+                <span className="text-[10px] font-mono text-outline px-2 py-1 bg-surface-container rounded">VS_SPY</span>
               </div>
             </div>
           </div>
@@ -350,11 +350,11 @@ export default function Home() {
         {/* CTA */}
         <section className="py-40 bg-primary-container relative overflow-hidden">
           <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-5xl md:text-6xl font-black text-on-primary-container tracking-tighter mb-8 italic">
-              Ready to see deeper?
+            <h2 className="text-5xl md:text-6xl font-black text-on-primary-container tracking-tighter mb-8">
+              Research a ticker.
             </h2>
             <p className="text-on-primary-container/80 text-xl mb-12 max-w-xl mx-auto">
-              Source-grounded equity intelligence with transparent, traceable analysis.
+              A structured memo with sources, drivers, outlook, and a calibrated recommendation — in under a minute.
             </p>
             {isWebMode && session ? (
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -362,13 +362,13 @@ export default function Home() {
                   href="/dashboard"
                   className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
                 >
-                  Go to Dashboard →
+                  Open dashboard
                 </Link>
                 <Link
                   href="/insights"
                   className="bg-secondary text-on-secondary font-bold px-10 py-5 rounded shadow-xl hover:opacity-90 transition-all active:scale-95 inline-block"
                 >
-                  Go to Research Insights →
+                  Research dashboard
                 </Link>
               </div>
             ) : isWebMode ? (
@@ -377,13 +377,13 @@ export default function Home() {
                   href="/auth/signin"
                   className="bg-surface text-primary font-bold px-10 py-5 rounded shadow-xl hover:bg-surface-bright transition-all active:scale-95 inline-block"
                 >
-                  Sign In to Get Started →
+                  Sign in
                 </Link>
                 <Link
                   href="/insights"
                   className="bg-secondary text-on-secondary font-bold px-10 py-5 rounded shadow-xl hover:opacity-90 transition-all active:scale-95 inline-block"
                 >
-                  Go to Research Insights →
+                  Research dashboard
                 </Link>
               </div>
             ) : (

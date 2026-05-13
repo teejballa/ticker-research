@@ -20,13 +20,13 @@ function SignInContent() {
             className="text-xs font-bold tracking-widest uppercase mb-3"
             style={{ color: '#f59e0b', fontSize: '11px', letterSpacing: '0.25em' }}
           >
-            CIPHER // WELCOME
+            Cipher / Sign in
           </div>
           <p
             className="text-xs leading-relaxed"
             style={{ color: 'rgba(223,226,235,0.55)', fontSize: '12px' }}
           >
-            Create a free account or sign in to access your personal research workspace.
+            Sign in to generate research reports and keep your history.
           </p>
         </div>
 
@@ -55,7 +55,7 @@ function SignInContent() {
             (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(245,158,11,0.5)';
           }}
         >
-          [ SIGN IN / CREATE ACCOUNT ]
+          Continue with Google
         </button>
 
         {/* Social proof */}
@@ -63,15 +63,15 @@ function SignInContent() {
           className="text-center text-[10px]"
           style={{ color: 'rgba(223,226,235,0.25)' }}
         >
-          Takes 30 seconds · No credit card required
+          Free · No credit card
         </p>
 
         {/* Step preview */}
         <div className="space-y-2 pt-1" style={{ borderTop: '1px solid #1a2d42' }}>
           {[
-            'Verify with Google',
-            'Connect your research engine',
-            'Access your dashboard',
+            'Sign in with Google',
+            'Generate your first report',
+            'Review and export',
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-3">
               <span className="text-xs tabular-nums" style={{ color: 'rgba(245,158,11,0.4)' }}>

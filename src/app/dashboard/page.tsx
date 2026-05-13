@@ -73,7 +73,7 @@ export default function DashboardPage() {
                 {userName} —
               </h1>
               <p className="text-on-surface-variant text-sm">
-                Here&apos;s your research workspace.
+                Pick up where you left off, or research a new ticker below.
               </p>
             </div>
             {/* Market status badge */}
@@ -95,7 +95,7 @@ export default function DashboardPage() {
         <div className="border-b border-outline-variant/10 bg-surface-container/30">
           <div className="max-w-6xl mx-auto px-6 py-6">
             <div className="text-[10px] font-bold tracking-[0.35em] text-outline uppercase mb-3">
-              New Research
+              New report
             </div>
             <TickerSearch />
             <div className="mt-3 flex items-center gap-3 flex-wrap">

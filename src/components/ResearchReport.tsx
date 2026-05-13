@@ -288,11 +288,11 @@ function SmartMoneyIntelligence({
             account_balance
           </span>
           <h3 className="text-[11px] font-bold tracking-widest uppercase text-secondary">
-            Smart Money Intelligence
+            Institutional &amp; Insider Activity
           </h3>
         </div>
         <span className="text-[10px] text-on-surface-variant">
-          What institutions and insiders did with this name in the last filing window.
+          13F flows and Form 4 transactions from the most recent filing window.
         </span>
       </div>
 
@@ -636,7 +636,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-sm text-tertiary">monitoring</span>
-                    <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">Sentiment Intelligence</h3>
+                    <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">Sentiment Snapshot</h3>
                   </div>
                   {sentiment_intelligence.stocktwits_is_trending && (
                     <span className="text-[10px] font-bold tracking-widest uppercase text-tertiary">TRENDING</span>
@@ -826,7 +826,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               {/* Bullish */}
               <div className="space-y-3">
                 <h4 className="text-[10px] font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">trending_up</span> Growth Catalysts
+                  <span className="material-symbols-outlined text-sm">trending_up</span> Bull Case
                 </h4>
                 <div className="space-y-2">
                   {bullish_signals.map((s, i) => (
@@ -845,7 +845,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               {/* Bearish */}
               <div className="space-y-3">
                 <h4 className="text-[10px] font-bold tracking-widest uppercase text-error flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">trending_down</span> Risk Vectors
+                  <span className="material-symbols-outlined text-sm">trending_down</span> Bear Case
                 </h4>
                 <div className="space-y-2">
                   {bearish_signals.map((s, i) => (
@@ -921,7 +921,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
 
             {/* Strategic Assessment: Fill Bars */}
             <div className="bg-surface-container p-6 rounded-lg space-y-6">
-              <h3 className="text-[11px] font-bold tracking-widest uppercase text-on-surface-variant">Strategic Assessment</h3>
+              <h3 className="text-[11px] font-bold tracking-widest uppercase text-on-surface-variant">Recommendation</h3>
               <div className="space-y-5">
                 {[
                   { label: 'BUY',  value: assessment.buy_pct,  barClass: 'bg-secondary' },
@@ -1022,7 +1022,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           <section className="space-y-6">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
-              <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">Community Intelligence</h2>
+              <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">Community Discussion</h2>
               <div className="flex-1 h-px bg-surface-container" />
               <span className="text-[10px] text-on-surface-variant/60">
                 {community_highlights.length} {community_highlights.length === 1 ? 'source' : 'sources'} analyzed
@@ -1176,8 +1176,8 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
         {/* Sources Section */}
         <section className="space-y-4">
           <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-            Verified Intelligence Sources
-            <span className="ml-2 font-mono text-tertiary">[{sources_used.length} indexed]</span>
+            Sources
+            <span className="ml-2 font-mono text-tertiary">[{sources_used.length} cited]</span>
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {sources_used.map((src, i) => (

@@ -53,7 +53,7 @@ export default function Terminal() {
               opacity: ready ? undefined : 0,
             }}
           >
-            AI · EQUITY · INTELLIGENCE
+            Equity research · Cited
           </div>
 
           {/* Wordmark */}
@@ -75,7 +75,7 @@ export default function Terminal() {
               transition: 'opacity 0.5s ease 0.15s',
             }}
           >
-            Research Now
+            Research a ticker
           </h1>
 
           {/* Subtitle */}
@@ -85,7 +85,7 @@ export default function Terminal() {
               transition: 'opacity 0.5s ease 0.2s',
             }}
           >
-            Enter a ticker symbol to begin source-grounded equity analysis.
+            Enter a symbol to generate a cited research report.
           </p>
 
           {/* Search */}

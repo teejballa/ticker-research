@@ -197,7 +197,7 @@ test.describe('SmartMoneyIntelligence — Phase 17-04 AC4 Asymmetric', () => {
     await expect(smiSection).toBeVisible();
 
     // Header present
-    await expect(smiSection).toContainText('Smart Money Intelligence');
+    await expect(smiSection).toContainText('Institutional & Insider Activity');
 
     // Insider Activity sub-card is visible AND has data
     const insiderCard = smiSection.locator('[data-testid="insider-activity-card"]');
@@ -241,7 +241,7 @@ test.describe('SmartMoneyIntelligence — Phase 17-04 AC4 Asymmetric', () => {
     await expect(smiSection).toBeVisible();
 
     // Header still present even when both null
-    await expect(smiSection).toContainText('Smart Money Intelligence');
+    await expect(smiSection).toContainText('Institutional & Insider Activity');
 
     // Single placeholder text
     await expect(smiSection).toContainText('No recent smart money activity to report.');
