@@ -44,7 +44,8 @@
     "eval-bot-fp": "npx tsx scripts/eval-bot-fp.ts",
     "gen-bot-fixtures": "npx tsx scripts/gen-bot-fixtures.ts",
     "ablate-joint-features": "npx tsx scripts/ablate-joint-features.ts",
-    "eval-fpb-per-doc": "npx tsx scripts/eval-fpb-per-doc.ts"
+    "eval-fpb-per-doc": "npx tsx scripts/eval-fpb-per-doc.ts",
+    "check-finbert-sha": "npx tsx scripts/check-finbert-sha.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
