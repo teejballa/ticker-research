@@ -86,8 +86,20 @@ export default async function SentimentHealthPage() {
       <NavBar />
       <main className="max-w-6xl mx-auto px-6 py-10">
         <h1 className="text-3xl font-bold mb-2">Provider health</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mb-6">
+        <p className="text-zinc-500 dark:text-zinc-400 mb-2">
           Latency, error rate, and cost per provider over the last 24 hours.
+        </p>
+        {/* Plan 20-C-02 — link tile to the Brier calibration dashboard. */}
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+          See also:{' '}
+          <a
+            href="/insights/calibration"
+            className="underline hover:text-zinc-300"
+            data-testid="link-to-calibration"
+          >
+            /insights/calibration
+          </a>{' '}
+          — weekly Brier + CORP reliability per classifier_version.
         </p>
         {rows.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
