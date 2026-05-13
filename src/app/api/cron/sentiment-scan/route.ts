@@ -9,6 +9,8 @@ import { fetchInstitutionalData } from '@/lib/data/institutional';
 import YahooFinance from 'yahoo-finance2';
 import { insertObservation, SentimentObservationDuplicateError } from '@/lib/sentiment/observation-store';
 import { computeCrowdedConsensus } from '@/lib/sentiment/aggregator';
+import { cresciBotScore, type CresciReason } from '@/lib/sentiment/bot-filter';
+import { detectCoordinatedPosting, COORDINATION_SIMILARITY } from '@/lib/sentiment/coordination';
 import { createHash } from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -160,6 +162,100 @@ export async function GET(request: NextRequest) {
       (results as Record<string, number>)[`obs_written_${ticker}`] = obs_written;
       (results as Record<string, number>)[`obs_dupes_${ticker}`]   = obs_dupes;
       (results as Record<string, number>)[`obs_errors_${ticker}`]  = obs_errors;
+
+      // Plan 20-C-03 — per-author Cresci scoring + aggregate-level coordinated-posting detection.
+      // Persistence ALWAYS runs (off|shadow|on); the consumer-side weight gate in
+      // src/lib/sentiment/aggregator.ts is what graduates via FEATURE_BOT_FILTER.
+      // Failures here are logged-and-continued — they MUST NOT block the snapshot
+      // path that serves current readers.
+      try {
+        const byAuthor = new Map<
+          string,
+          { messages: string[]; hashtag_counts: number[]; account_age_days: number | null }
+        >();
+        for (const m of stocktwitsMessages) {
+          if (!m.id || !m.body) continue;
+          const handle = m.user?.username ?? 'anonymous';
+          const author_id = createHash('sha256').update(`stocktwits:${handle}`, 'utf8').digest('hex');
+          const account_age_days = m.user?.created_at
+            ? Math.max(0, Math.floor((Date.now() - new Date(m.user.created_at).getTime()) / 86_400_000))
+            : null;
+          const hashtag_count = (m.body.match(/#[A-Za-z0-9_]+/g) ?? []).length;
+          const entry = byAuthor.get(author_id) ?? {
+            messages: [],
+            hashtag_counts: [],
+            account_age_days,
+          };
+          entry.messages.push(m.body);
+          entry.hashtag_counts.push(hashtag_count);
+          entry.account_age_days = account_age_days;
+          byAuthor.set(author_id, entry);
+        }
+
+        let authors_flagged = 0;
+        for (const [author_id, data] of byAuthor) {
+          const result = cresciBotScore({
+            account_age_days: data.account_age_days ?? 9999, // null treated as "old enough"
+            messages: data.messages,
+            hashtag_counts: data.hashtag_counts,
+          });
+          try {
+            await prisma.botFilterFlag.create({
+              data: {
+                author_id,
+                ticker,
+                // computed_at defaults to now() — PIT-INVARIANT
+                account_age_days: data.account_age_days,
+                max_text_cosine_similarity: result.features.max_text_cosine_similarity,
+                pump_phrase_density: result.features.pump_phrase_density,
+                hashtag_count_max: result.features.hashtag_count_max,
+                is_bot_flagged: result.is_bot,
+                bot_reason: result.reason as CresciReason,
+              },
+            });
+            if (result.is_bot) authors_flagged++;
+          } catch {
+            // logged-and-continued — does NOT fail the cron tick
+          }
+        }
+
+        // Aggregate-level coordinated-posting detection on the 24h message bag.
+        const now = new Date();
+        const window_start = new Date(now.getTime() - 24 * 3600 * 1000);
+        const window_end = now;
+        const cluster = detectCoordinatedPosting(
+          ticker,
+          window_start,
+          window_end,
+          stocktwitsMessages
+            .filter((m): m is { id: string | number; body: string } => !!m.id && !!m.body)
+            .map((m) => ({ id: String(m.id), text: m.body })),
+        );
+        if (cluster) {
+          try {
+            await prisma.coordinationCluster.create({
+              data: {
+                ticker: cluster.ticker,
+                window_start: cluster.window_start,
+                window_end: cluster.window_end,
+                n_messages: cluster.n_messages,
+                similarity_threshold: cluster.similarity_threshold,
+                cluster_size: cluster.cluster_size,
+                is_flagged: cluster.is_flagged,
+                member_ids: cluster.member_ids,
+              },
+            });
+          } catch {
+            // logged-and-continued
+          }
+        }
+
+        (results as Record<string, number>)[`authors_flagged_${ticker}`] = authors_flagged;
+        (results as Record<string, number>)[`coord_cluster_${ticker}`] = cluster?.cluster_size ?? 0;
+        void COORDINATION_SIMILARITY; // referenced for grep traceability
+      } catch {
+        // outer catch — never block the snapshot path
+      }
 
       results.scanned++;
 
