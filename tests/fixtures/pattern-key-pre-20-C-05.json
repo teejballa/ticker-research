@@ -1,0 +1,10 @@
+{
+  "comment": "Plan 20-C-05 golden master — pre-extension canonical pattern-key form. Asserts that buildJointFeaturePatternKey({sentimentType, capClass, direction}, mode='off') returns this byte-identical string. Per T-20-C-05-05 (Tampering — LearnedPattern key extension corrupts existing priors).",
+  "inputs": {
+    "sentimentType": "news",
+    "capClass": "large",
+    "direction": "bull"
+  },
+  "expected_primaryKey": "news:large:bull",
+  "expected_shadowKey": null
+}

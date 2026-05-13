@@ -1523,3 +1523,109 @@ export function parsePatternKey(
     agreement_bucket: m[1] as AgreementBucket,
   };
 }
+
+// ─── Plan 20-C-05 — JOINT_FEATURES_MODE + additive pattern-key extension ───
+//
+// Joint-feature ablation gate (see plan 20-C-05). Four sentiment-interaction
+// features are bucketed and hashed into the pattern key when the flag is 'on'.
+// Default 'off' on merge — the monthly ablation cron flips to 'shadow' on
+// first run, and only the 3-month rolling CI lower-bound > 0 verdict can flip
+// 'shadow' → 'on'.
+//
+// Backward compatibility (T-20-C-05-05): with mode='off', the function
+// returns a key BYTE-IDENTICAL to the pre-plan canonical form.
+
+import * as _crypto_jf from 'crypto';
+
+export type JointFeaturesMode = 'off' | 'shadow' | 'on';
+
+/** Reads JOINT_FEATURES_MODE env var; defaults to 'off' (safe default). */
+export function getJointFeaturesMode(): JointFeaturesMode {
+  const raw = process.env.JOINT_FEATURES_MODE ?? 'off';
+  if (raw === 'off' || raw === 'shadow' || raw === 'on') return raw;
+  throw new Error(
+    `JOINT_FEATURES_MODE: invalid value ${JSON.stringify(raw)} — must be 'off' | 'shadow' | 'on'`,
+  );
+}
+
+/**
+ * Quantile breakpoints for joint-feature bucketing (5 buckets each).
+ * These are literature-default seeds — empirical calibration is a follow-up
+ * (see HYPERPARAMETERS.md "Joint-feature quantile breakpoints (20-C-05)").
+ */
+export const JOINT_FEATURE_BUCKETS = {
+  sentimentMomentumProduct: [-0.05, -0.01, 0.01, 0.05],
+  sentimentVolumeInteraction: [-2, -0.5, 0.5, 2],
+  deltaSentiment3d: [-0.3, -0.1, 0.1, 0.3],
+  sentimentDispersion: [0.1, 0.2, 0.3, 0.4],
+} as const;
+
+function _bucketOf(value: number, breakpoints: readonly number[]): number {
+  // returns index in [0, breakpoints.length] (5 buckets for 4 breakpoints)
+  let i = 0;
+  for (; i < breakpoints.length; i++) {
+    if (value < breakpoints[i]) return i;
+  }
+  return i;
+}
+
+export interface JointFeatures {
+  sentimentMomentumProduct: number;
+  sentimentVolumeInteraction: number;
+  deltaSentiment3d: number;
+  sentimentDispersion: number;
+}
+
+export interface JointFeaturePatternKey {
+  primaryKey: string;
+  shadowKey?: string;
+}
+
+/**
+ * Build the (sentiment_type × cap_class × direction) pattern key, optionally
+ * extended with joint-feature buckets behind the JOINT_FEATURES_MODE flag.
+ *
+ *   mode='off'    → primaryKey = '{sentimentType}:{capClass}:{direction}'
+ *                   (byte-identical to pre-plan canonical form; no shadowKey)
+ *   mode='shadow' → primaryKey unchanged from 'off'; shadowKey adds joint hash
+ *                   (parallel evaluation — both buckets receive observations)
+ *   mode='on'     → primaryKey includes joint-feature hash (post-3-month gate)
+ *
+ * Joint features are quantized into 5 fixed-quantile buckets each, then the
+ * 4-bucket tuple is sha1-hashed and prefix-12 hexified for log readability.
+ * New buckets seed with uniform priors (α=β=1) at the LearnedPattern row level.
+ */
+export function buildJointFeaturePatternKey(args: {
+  sentimentType: string;
+  capClass: string;
+  direction: 'bull' | 'bear';
+  jointFeatures?: JointFeatures;
+  mode?: JointFeaturesMode;
+}): JointFeaturePatternKey {
+  const mode = args.mode ?? getJointFeaturesMode();
+  const base = `${args.sentimentType}:${args.capClass}:${args.direction}`;
+
+  if (mode === 'off' || !args.jointFeatures) {
+    return { primaryKey: base };
+  }
+
+  const jf = args.jointFeatures;
+  const buckets = [
+    _bucketOf(jf.sentimentMomentumProduct, JOINT_FEATURE_BUCKETS.sentimentMomentumProduct),
+    _bucketOf(jf.sentimentVolumeInteraction, JOINT_FEATURE_BUCKETS.sentimentVolumeInteraction),
+    _bucketOf(jf.deltaSentiment3d, JOINT_FEATURE_BUCKETS.deltaSentiment3d),
+    _bucketOf(jf.sentimentDispersion, JOINT_FEATURE_BUCKETS.sentimentDispersion),
+  ];
+  const bucketHash = _crypto_jf
+    .createHash('sha1')
+    .update(buckets.join(','))
+    .digest('hex')
+    .slice(0, 12);
+  const withJoint = `${base}::joint::${bucketHash}`;
+
+  if (mode === 'shadow') {
+    return { primaryKey: base, shadowKey: withJoint };
+  }
+  // mode === 'on'
+  return { primaryKey: withJoint };
+}
