@@ -143,6 +143,62 @@ export async function runCoVe(args: {
 }
 
 /**
+ * Plan 20-D-03 — score-returning sibling to nliVerify().
+ *
+ * The 19-C-08 nliVerify() returns ONLY the top label (entail | contradict |
+ * neutral | null) — sufficient for the report-level CoVe pass. The 20-D-03
+ * per-claim verifier needs the top-label probability ALSO so it can enforce
+ * the strict 0.7 score thresholds documented in HYPERPARAMETERS.md
+ * (per_claim_verifier section).
+ *
+ * Behavior contract:
+ *   - Endpoint unset → { label: 'neutral', score: null } (detection-only safe-default; bit-identical to nliVerify).
+ *   - Token unset    → { label: 'neutral', score: null }
+ *   - HF throws      → { label: null, score: null } (graceful degrade; UPSTREAM verifier treats null as 'null' verdict).
+ *   - Success        → { label, score } where score ∈ [0, 1] is the top-label probability.
+ *
+ * SECURITY: do not log the endpoint URL on error (T-19-C-08-01). Mirrors nliVerify.
+ */
+export interface NliVerdictWithScore {
+  label: NliLabel | null;
+  score: number | null;
+}
+
+export async function nliVerifyWithScore(
+  claim: string,
+  evidence: string,
+): Promise<NliVerdictWithScore> {
+  const endpoint = process.env.HF_DISTILBERT_MNLI_ENDPOINT;
+  if (!endpoint) return { label: 'neutral', score: null };
+
+  try {
+    const { HfInference } = await import('@huggingface/inference');
+    const token = process.env.HF_INFERENCE_TOKEN;
+    if (!token) return { label: 'neutral', score: null };
+    const client = new HfInference(token);
+
+    const out = await client.textClassification({
+      model: endpoint,
+      inputs: `${claim} [SEP] ${evidence}`,
+    });
+    const arr = (Array.isArray(out) ? out : [out]) as Array<{ label: string; score: number }>;
+    if (arr.length === 0) return { label: 'neutral', score: null };
+    let best = arr[0];
+    for (const r of arr) if (r.score > best.score) best = r;
+    const lower = best.label.toLowerCase();
+    const label: NliLabel = lower.startsWith('entail')
+      ? 'entail'
+      : lower.startsWith('contradict')
+        ? 'contradict'
+        : 'neutral';
+    return { label, score: best.score };
+  } catch {
+    // SECURITY: do not log the endpoint URL (T-19-C-08-01).
+    return { label: null, score: null };
+  }
+}
+
+/**
  * Direct NLI verifier entry point.
  *
  * 19-C-10 introduced a placeholder NLI shim at src/lib/sentiment/nli-verifier.ts
