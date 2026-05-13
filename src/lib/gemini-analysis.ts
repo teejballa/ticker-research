@@ -86,11 +86,23 @@ export const AnalysisResultSchema = z.object({
   bullish_signals: z.array(z.object({
     signal: z.string(),
     source_citation: z.string(),
+    // Plan 20-D-03 — per-claim CoVe verdict; optional for backward compat.
+    verified: z.enum(['true', 'false', 'null']).optional(),
   })).min(1).max(5),
   bearish_signals: z.array(z.object({
     signal: z.string(),
     source_citation: z.string(),
+    // Plan 20-D-03 — per-claim CoVe verdict; optional for backward compat.
+    verified: z.enum(['true', 'false', 'null']).optional(),
   })).min(1).max(5),
+  // Plan 20-D-03 — Structured risks list parallel to legacy `key_risks` string.
+  // Optional; legacy `key_risks` field preserved verbatim. Each risk carries
+  // an optional per-claim `verified` field driven by the same NLI verifier.
+  risks: z.array(z.object({
+    description: z.string(),
+    source_citation: z.string().optional(),
+    verified: z.enum(['true', 'false', 'null']).optional(),
+  })).max(7).optional(),
   assessment: z.object({
     buy_pct: z.number(),
     hold_pct: z.number(),
@@ -855,6 +867,73 @@ export async function runGeminiAnalysis(
   if (Array.isArray(perAspectSidecar)) {
     out = { ...out, per_aspect_sentiment: perAspectSidecar };
   }
+
+  // ── Plan 20-D-03 — Per-claim CoVe verification (post-Zod, pre-return) ───
+  //
+  // Three-mode contract:
+  //   off    → bypass entirely; out.bullish_signals[*].verified stays undefined.
+  //            Bit-identical to pre-plan behavior.
+  //   shadow → verdicts computed + merged onto in-memory AnalysisResult. Persists
+  //            via Report.analysis JSONB (the canonical shadow surface for this
+  //            high-cardinality output — see Task 4 sub-decision). UI badge gate
+  //            (NEXT_PUBLIC_FEATURE_PER_CLAIM_VERIFIED) keeps the (?) hidden.
+  //   on     → verdicts merged + UI badge renders for verified ∈ {false, null}.
+  //
+  // Belt-and-suspender: try/catch swallows verifier failure so a partial HF
+  // outage NEVER aborts the user-facing report (T-20-D-03-04 + the 19-C-08
+  // runWithCove precedent).
+  const perClaimMode = FEATURES.per_claim_verified_mode;
+  if (perClaimMode !== 'off') {
+    try {
+      const { verifyClaimsBatch } = await import('@/lib/eval/per-claim-verifier');
+      const bullishSignals = out.bullish_signals ?? [];
+      const bearishSignals = out.bearish_signals ?? [];
+      const risksList = ((out as AnalysisResult & { risks?: import('@/lib/types').AnalysisRisk[] }).risks) ?? [];
+      const signals = [
+        ...bullishSignals.map((s, i) => ({
+          id: `bullish-${i}`,
+          description: s.signal,
+          supporting_evidence: s.source_citation,
+        })),
+        ...bearishSignals.map((s, i) => ({
+          id: `bearish-${i}`,
+          description: s.signal,
+          supporting_evidence: s.source_citation,
+        })),
+        ...risksList.map((r, i) => ({
+          id: `risks-${i}`,
+          description: r.description,
+          supporting_evidence: r.source_citation,
+        })),
+      ];
+      if (signals.length > 0) {
+        const verdicts = await verifyClaimsBatch(signals, pkg);
+        const mergedBullish = bullishSignals.map((s, i) => {
+          const v = verdicts.get(`bullish-${i}`);
+          return v ? { ...s, verified: v } : s;
+        });
+        const mergedBearish = bearishSignals.map((s, i) => {
+          const v = verdicts.get(`bearish-${i}`);
+          return v ? { ...s, verified: v } : s;
+        });
+        const mergedRisks = risksList.length > 0
+          ? risksList.map((r, i) => {
+              const v = verdicts.get(`risks-${i}`);
+              return v ? { ...r, verified: v } : r;
+            })
+          : undefined;
+        out = {
+          ...out,
+          bullish_signals: mergedBullish,
+          bearish_signals: mergedBearish,
+          ...(mergedRisks !== undefined ? { risks: mergedRisks } : {}),
+        };
+      }
+    } catch {
+      // Belt-and-suspender — never abort the report on verifier failure.
+    }
+  }
+
   return out;
 }
 

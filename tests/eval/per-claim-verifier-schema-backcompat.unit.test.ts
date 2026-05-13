@@ -5,7 +5,12 @@
 // fixture (zero `verified` fields anywhere) WITHOUT Zod failure AND without
 // inventing a `verified` field on output.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Stub prisma + Firecrawl + AI SDK transitive imports so loading the
+// AnalysisResultSchema doesn't require DATABASE_URL or other live env vars.
+vi.mock('@/lib/db', () => ({ prisma: {} }));
+
 import { AnalysisResultSchema } from '@/lib/gemini-analysis';
 import preFixture from '../fixtures/pre-20-D-03-analysis-result.json';
 
