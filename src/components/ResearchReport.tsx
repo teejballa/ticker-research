@@ -10,6 +10,7 @@ import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 import EngineCalibrationPanel from '@/components/EngineCalibrationPanel';
 import TechnicalSignalsCard from '@/components/TechnicalSignalsCard';
+import { PerAspectChips } from '@/components/PerAspectChips';
 
 interface ResearchReportProps {
   analysisResult: AnalysisResult;
@@ -718,6 +719,16 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                     </div>
                   );
                 })()}
+                {/* Plan 20-B-05 — Per-aspect bull% chip stack.
+                    Gated behind NEXT_PUBLIC_FEATURE_PER_ASPECT_AGGREGATE so
+                    the chip stack ships dark until 20-B-01 per-doc classifier
+                    populates analysisResult.per_aspect_sentiment. Empty-aspect
+                    chips render '—' (NOT '0%') — see PerAspectChips. */}
+                {process.env.NEXT_PUBLIC_FEATURE_PER_ASPECT_AGGREGATE === 'on' &&
+                  analysisResult.per_aspect_sentiment != null &&
+                  analysisResult.per_aspect_sentiment.length > 0 && (
+                    <PerAspectChips entries={analysisResult.per_aspect_sentiment} />
+                  )}
                 {/* Per-source breakdown — visible when ≥1 source contributed */}
                 {sentiment_intelligence.sentiment_components && sentiment_intelligence.sentiment_components.length > 0 && (
                   <div className="border-t border-surface-container-highest pt-2 mt-2">
