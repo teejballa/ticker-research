@@ -725,7 +725,12 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                       Per-source breakdown
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
-                      {sentiment_intelligence.sentiment_components.map((c) => (
+                      {sentiment_intelligence.sentiment_components.map((c) => {
+                        // Plan 20-B-04 — show 'wt: X.XX' when source-tier weight differs from 1.0
+                        // by >= weight_diff_display_threshold (0.01). Hides cold-start visual noise.
+                        const tierW = sentiment_intelligence.tier_weights_applied?.[c.source];
+                        const showTierW = tierW != null && Math.abs(tierW - 1.0) >= 0.01;
+                        return (
                         <div key={c.source} className="flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
                           <span>{c.source}</span>
                           <span>
@@ -733,9 +738,18 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                               {c.bullish_pct}%
                             </span>
                             <span className="text-on-surface-variant ml-2">n={c.raw_mention_count}</span>
+                            {showTierW && (
+                              <span
+                                className="text-on-surface-variant ml-2"
+                                data-testid={`source-tier-weight-${c.source}`}
+                              >
+                                wt: {tierW!.toFixed(2)}
+                              </span>
+                            )}
                           </span>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     {/* Plan 20-A-05 — Agreement chip. Renders the agreement_score
                         numeric (or '—' when null). Visible whenever the
