@@ -1,5 +1,18 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: disclaimer-footer@v1 1`] = `
+{
+  "description": "|",
+  "id": "disclaimer-footer",
+  "template": "This research is for educational purposes only and does not constitute personalized investment advice, investment recommendation, or solicitation. Past performance does not guarantee future results. Consult a licensed financial advisor before making investment decisions. Data sources current as of {{data_as_of_timestamp}}.
+",
+  "variables": [
+    "data_as_of_timestamp",
+  ],
+  "version": "v1",
+}
+`;
+
 exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: eval-claim-extraction-v1@v1 1`] = `
 {
   "description": "Plan 20-D-02 LLM-judge claim extractor. Claude Opus 4.7 extracts QUALITATIVE claims from one section of an equity research report. Used by src/lib/eval/claim-extraction-llm.ts as Algorithm B of the hybrid citation-coverage metric. Output is STRICT JSON {claims:[{text, section, start_char, end_char, kind}]}.",
@@ -519,6 +532,20 @@ INSTRUCTIONS:
     "horizon_rows",
     "combined_logistic_pct",
     "agreement",
+  ],
+  "version": "v1",
+}
+`;
+
+exports[`registry — golden snapshot of every (id, version) tuple > golden snapshot: price-target-hedge@v1 1`] = `
+{
+  "description": "|",
+  "id": "price-target-hedge",
+  "template": "Price target reflects analyst consensus or model-implied range as of {{data_as_of_timestamp}}; not a forecast or recommendation. {{ci_band_or_implied_range}}
+",
+  "variables": [
+    "data_as_of_timestamp",
+    "ci_band_or_implied_range",
   ],
   "version": "v1",
 }

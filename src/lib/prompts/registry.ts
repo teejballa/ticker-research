@@ -49,7 +49,16 @@ export type PromptId =
   // Plan 20-B-01 — per-document sentiment + aspect classifier (cheap path,
   // Wave B baseline). Body at src/lib/prompts/_v1/gemini-per-doc-sentiment.md.
   // Loaded by classifyDocumentsBatch via renderPrompt('gemini-per-doc-sentiment').
-  | 'gemini-per-doc-sentiment';
+  | 'gemini-per-doc-sentiment'
+  // Plan 20-D-05 — regulatory-hygiene disclaimer footer rendered in
+  // ResearchReport.tsx on every report. Body at
+  // src/lib/prompts/_v1/disclaimer-footer.md. Loaded via
+  // renderPrompt('disclaimer-footer', { data_as_of_timestamp }).
+  | 'disclaimer-footer'
+  // Plan 20-D-05 — hedging qualifier rendered adjacent to any price_target.
+  // Body at src/lib/prompts/_v1/price-target-hedge.md. Loaded via
+  // renderPrompt('price-target-hedge', { data_as_of_timestamp, ci_band_or_implied_range }).
+  | 'price-target-hedge';
 
 /** Template literal type — vN where N is a positive integer.
  *  Capped at v99 to keep the union finite for IDE autocomplete. */
