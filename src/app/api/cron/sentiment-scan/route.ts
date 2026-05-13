@@ -11,6 +11,7 @@ import { insertObservation, SentimentObservationDuplicateError } from '@/lib/sen
 import { computeCrowdedConsensus } from '@/lib/sentiment/aggregator';
 import { cresciBotScore, type CresciReason } from '@/lib/sentiment/bot-filter';
 import { detectCoordinatedPosting, COORDINATION_SIMILARITY } from '@/lib/sentiment/coordination';
+import { runPerMessagePass, type PerMessagePassMode } from '@/lib/sentiment/per-message-pass';
 import { createHash } from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -255,6 +256,47 @@ export async function GET(request: NextRequest) {
         void COORDINATION_SIMILARITY; // referenced for grep traceability
       } catch {
         // outer catch — never block the snapshot path
+      }
+
+      // Plan 20-B-02 — per-message FinBERT pass when message_volume > 50.
+      // Gated by PER_MESSAGE_PASS_MODE env (off | shadow | on). Each classification
+      // persists as a SentimentObservation row (20-Z-01) with classifier_version
+      // 'finbert-prosus-{sha8}'. Consumer reads land in 20-A-03 / 20-B-04.
+      // Failure mode is logged-and-continue — must NOT block the snapshot path.
+      const perMessageMode = (process.env.PER_MESSAGE_PASS_MODE ?? 'off') as PerMessagePassMode;
+      if (perMessageMode !== 'off' && stocktwitsMessages.length > 50) {
+        try {
+          const pmResult = await runPerMessagePass({
+            ticker,
+            messages: stocktwitsMessages
+              .filter((m): m is typeof m & { id: string | number; body: string } => !!m.id && !!m.body)
+              .map((m) => {
+                const handle = m.user?.username ?? 'anonymous';
+                const account_age_days = m.user?.created_at
+                  ? Math.max(0, Math.floor((Date.now() - new Date(m.user.created_at).getTime()) / 86_400_000))
+                  : null;
+                return {
+                  message_id: String(m.id),
+                  body: m.body,
+                  author_handle: handle,
+                  published_at: m.created_at ? new Date(m.created_at) : null,
+                  author_features: {
+                    account_age_days,
+                    follower_count: m.user?.followers ?? null,
+                    is_verified: m.user?.identity ? m.user.identity === 'Official' : null,
+                    message_count_30d: m.user?.ideas ?? null,
+                  },
+                };
+              }),
+          }, perMessageMode);
+          console.log(`[cron:sentiment-scan] per-message pass for ${ticker}:`, pmResult);
+          (results as Record<string, number>)[`pm_primary_${ticker}`] = pmResult.primary_path_count;
+          (results as Record<string, number>)[`pm_secondary_${ticker}`] = pmResult.secondary_path_count;
+          (results as Record<string, number>)[`pm_tertiary_${ticker}`] = pmResult.tertiary_path_count;
+          (results as Record<string, number>)[`pm_capped_${ticker}`] = pmResult.cost_capped_count;
+        } catch (err) {
+          console.error(`[cron:sentiment-scan] per-message pass failed for ${ticker}:`, err);
+        }
       }
 
       results.scanned++;
