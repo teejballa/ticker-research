@@ -17,6 +17,8 @@ import {
   type PromptId,
   type PromptVersion,
 } from '@/lib/prompts/registry';
+import { renderPrompt } from '@/lib/prompts/render';
+import { PromptVarMissingError } from '@/lib/prompts/render';
 
 describe('registry — getPrompt + listPrompts contract', () => {
   it('getPrompt("gemini-research-brief-system") returns RegisteredPrompt with version v1, non-empty template, deprecated_at:null', () => {
@@ -141,5 +143,51 @@ describe('registry — getPrompt + listPrompts contract', () => {
       // ISO-8601 datetime — minimum YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ
       expect(p.created_at).toMatch(/^\d{4}-\d{2}-\d{2}/);
     }
+  });
+
+  // ── Plan 20-D-05 — disclaimer-footer + price-target-hedge registration ─────
+  it('getPrompt("disclaimer-footer") returns RegisteredPrompt with version v1, variables: [data_as_of_timestamp], non-empty template, deprecated_at:null', () => {
+    const p = getPrompt('disclaimer-footer');
+    expect(p.id).toBe('disclaimer-footer');
+    expect(p.version).toBe('v1');
+    expect(p.template.length).toBeGreaterThan(0);
+    expect(p.deprecated_at).toBeNull();
+    expect([...p.variables]).toEqual(['data_as_of_timestamp']);
+  });
+
+  it('getPrompt("price-target-hedge") returns RegisteredPrompt with version v1, variables: [data_as_of_timestamp, ci_band_or_implied_range]', () => {
+    const p = getPrompt('price-target-hedge');
+    expect(p.id).toBe('price-target-hedge');
+    expect(p.version).toBe('v1');
+    expect(p.template.length).toBeGreaterThan(0);
+    expect(p.deprecated_at).toBeNull();
+    expect([...p.variables]).toEqual(['data_as_of_timestamp', 'ci_band_or_implied_range']);
+  });
+
+  it('renderPrompt("disclaimer-footer", { data_as_of_timestamp }) substitutes the placeholder', () => {
+    const out = renderPrompt('disclaimer-footer', { data_as_of_timestamp: '2026-05-11' });
+    expect(out).toContain('as of 2026-05-11');
+    expect(out).toContain('educational purposes only');
+    expect(out).not.toContain('{{');
+  });
+
+  it('renderPrompt("price-target-hedge", ...) substitutes both placeholders', () => {
+    const out = renderPrompt('price-target-hedge', {
+      data_as_of_timestamp: '2026-05-11',
+      ci_band_or_implied_range: '± $5.20 (95% CI)',
+    });
+    expect(out).toContain('as of 2026-05-11');
+    expect(out).toContain('± $5.20 (95% CI)');
+    expect(out).not.toContain('{{');
+  });
+
+  it('renderPrompt("disclaimer-footer", {}) throws PromptVarMissingError', () => {
+    expect(() => renderPrompt('disclaimer-footer', {})).toThrowError(PromptVarMissingError);
+  });
+
+  it('listPrompts() includes both new (id, version) tuples for 20-D-05', () => {
+    const ids = listPrompts().map((e) => `${e.id}@${e.version}`);
+    expect(ids).toContain('disclaimer-footer@v1');
+    expect(ids).toContain('price-target-hedge@v1');
   });
 });
