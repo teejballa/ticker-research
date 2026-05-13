@@ -1,0 +1,45 @@
+name: No hand-curated tier weights (Phase 20 §S1)
+
+# Plan 20-B-04 — enforces S1 (no hand-picked parameters) for the source-tier
+# weighting layer. Fails the workflow on any commit that introduces an env-var
+# override token. The token names are explicitly NOT environment variables in
+# the production code path — they are the canary names whose appearance would
+# signal a manual-override attempt.
+#
+# Self-references in this workflow file + the integration test file are excluded
+# from the guard by design (the file paths are filtered in the matcher).
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+
+jobs:
+  grep-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on SOURCE_WEIGHT_OVERRIDE / HARD_CODED_TIER / HAND_CURATED_TIER tokens
+        run: |
+          set -e
+          # grep -c outputs 'file:N' lines; sum entries where N>0, excluding the
+          # integration test that NAMES the tokens to detect them.
+          OUT=$(grep -REc 'SOURCE_WEIGHT_OVERRIDE|HARD_CODED_TIER|HAND_CURATED_TIER' src/ tests/ scripts/ || true)
+          TOTAL=$(echo "$OUT" \
+            | grep -v 'source-tier-recompute.integration.test.ts' \
+            | awk -F: '{s+=$2} END {print s+0}')
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "S1 violation: hand-curated tier weight tokens found:"
+            grep -REn 'SOURCE_WEIGHT_OVERRIDE|HARD_CODED_TIER|HAND_CURATED_TIER' src/ tests/ scripts/ \
+              | grep -v 'source-tier-recompute.integration.test.ts' || true
+            exit 1
+          fi
+          echo "S1 OK: no hand-curated tier weight tokens in src/ tests/ scripts/"

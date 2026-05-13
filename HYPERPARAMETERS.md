@@ -293,3 +293,26 @@ acceptance criterion or a documented threat-model mitigation — none are hand-p
 - **Recalibration cadence**: ECE re-fit monthly via 20-B-03 temperature scaling (planned). Prompt review quarterly.
 
 Updated by: Plan 20-B-01 (2026-05-13).
+
+## Phase 20-B-04 — Source-tier weighting (data-driven, capped softmax of per-source IC)
+
+Calibrated and operator-reviewable hyperparameters for the monthly source-tier recompute
+(`src/lib/sentiment/source-tier-hyperparameters.ts`, Zod-validated at module load).
+Per S1, every value traces to a CONTEXT.md acceptance criterion — none are hand-picked.
+
+| Parameter                       | Default        | Rationale                                                                                  | Source                       |
+|---------------------------------|----------------|--------------------------------------------------------------------------------------------|------------------------------|
+| `cap_min`                       | 0.5            | Floor — no source fully suppressed; preserves audit signal                                  | CONTEXT.md §20-B-04 spec     |
+| `cap_max`                       | 5.0            | Ceiling — no source fully dominant; bounds adversarial inflation (T-28-001 manipulation)    | CONTEXT.md §20-B-04 spec     |
+| `n_min_observations`            | 30             | Sources below this default to weight=1.0 (cold start); T-20-B-04-02 gaming defense          | CONTEXT.md §20-B-04 spec     |
+| `validation_window_days`        | 90             | Rolling-90d IC against forward 7d alpha-vs-SPY (consumed from 20-C-01)                      | CONTEXT.md §20-B-04 spec     |
+| `cron_schedule`                 | `0 7 1 * *`    | Monthly, 1h after 20-A-03 tune-decay (avoid simultaneous Neon load)                         | Plan 20-B-04                 |
+| `weight_diff_display_threshold` | 0.01           | UI shows `wt: X.XX` only when `|w-1| >= this`; hides cold-start visual noise                | Plan 20-B-04                 |
+
+- **Schema**: `prisma/schema.prisma` `model SourceTier` (append-only history; composite index `(source_id, computed_at DESC)`).
+- **Feature flag**: `SOURCE_TIER_MODE` ∈ `{off, shadow, on}`; default `'off'` until 20-C-01 has accumulated ≥30d of IC AND paired-bootstrap on validation Sharpe returns 95% CI lower-bound > 0 (Hard Cleanup Gate criterion 4).
+- **Cross-wave dependency**: reads `PerSourceIC` table owned by 20-C-01. When that table is missing or empty, recompute exits 0 with diagnostic and aggregator falls back to default weight=1.0 per source (T-20-B-04-03).
+- **CI guard**: `.github/workflows/no-hand-curated-tier-weights.yml` fails the workflow on any `SOURCE_WEIGHT_OVERRIDE` / `HARD_CODED_TIER` / `HAND_CURATED_TIER` token in `src/ tests/ scripts/` (S1 enforcement).
+- **Recalibration cadence**: monthly cron. Operator review monthly via the SourceTier history surface + Phase 20-Z-03 telemetry.
+
+Updated by: Plan 20-B-04 (2026-05-13).
