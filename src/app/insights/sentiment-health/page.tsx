@@ -7,6 +7,11 @@
 
 import NavBar from '@/components/NavBar';
 import { ProviderTile } from './components/ProviderTile';
+import { CalibrationTile } from './components/CalibrationTile';
+import {
+  resolveFinBERTClassifierVersion,
+  resolveGeminiPerDocClassifierVersion,
+} from '@/lib/sentiment/temperature-runtime';
 
 export const metadata = {
   title: 'Provider health',
@@ -154,6 +159,16 @@ export default async function SentimentHealthPage() {
         </p>
         {/* Plan 20-B-06 — degradation_rate_24h tile (T-20-B-06-04 observability). */}
         <DegradationRateTile rate={degradation_rate_24h} />
+
+        {/* Plan 20-B-03 — per-classifier temperature-calibration tiles. */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Calibration (Plan 20-B-03)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CalibrationTile classifierVersion={resolveFinBERTClassifierVersion()} />
+            <CalibrationTile classifierVersion={resolveGeminiPerDocClassifierVersion('v1')} />
+          </div>
+        </section>
+
         {rows.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             No telemetry yet. Providers appear here after the first instrumented call.

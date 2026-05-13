@@ -95,12 +95,20 @@ Per-document polarity + aspect classification for news + community items, top-N 
 - **Per ticker per cron tick:** ≤ $0.05 USD.
 - **Token-rate basis:** `GEMINI_TOKEN_RATES = { input: $0.000125 / token, output: $0.000375 / token }` pinned 2026-Q1. Cost recorded per call in `ProviderCallLog.cost_usd`.
 
+## Calibration — *Plan 20-B-03* (Temperature scaling)
+
+- **Procedure**: single-scalar temperature T fit on merged FPB held-out + production-labeled (20-Z-05) validation set via bounded golden-section search minimising NLL (Guo et al. 2017 §3.1). Bounds T ∈ [0.1, 10.0] from `CALIBRATION_BOUNDS`. Bin count 10. 5-fold CV for `cv_ece_mean ± cv_ece_std`.
+- **classifier_version**: `gemini-per-doc-v{N}` where N is the 20-Z-04 prompt registry version (currently `v1`). A registry bump invalidates calibration history per T-20-B-03-04 and triggers an auto-refit on the next monthly cron run.
+- **Where T applies at runtime**: post-Gemini batch in `classifyDocumentsBatch` — 2-class synthetic logits `{log(c), log(1-c)}` are T-scaled and the new max-class probability replaces the emitted confidence; polarity sign is preserved.
+- **Gating**: `SENTIMENT_TEMP_SCALING_MODE` (`off`/`shadow`/`on`); ships at `shadow` by default. Cutover to `on` requires `cv_ece_mean_post < 0.05` AND `brier_post < 0.24` (CONTEXT.md line 115 verbatim).
+- **Initial state**: T=1.0 (identity) until first calibration run lands a row. See `HYPERPARAMETERS.md §Temperature Scaling` for the latest persisted T.
+
 ## References
 
 - Malo, P., Sinha, A., Korhonen, P., Wallenius, J., Takala, P. (2014). "Good debt or bad debt: Detecting semantic orientations in economic texts." *Journal of the Association for Information Science and Technology*, 65(4), 782–796.
 - Araci, D. (2019). "FinBERT: Financial sentiment analysis with pre-trained language models." arXiv:1908.10063.
 - Mitchell, M. et al. (2019). "Model cards for model reporting." *Proceedings of the Conference on Fairness, Accountability, and Transparency (FAT*)*.
-- Guo, C., Pleiss, G., Sun, Y., Weinberger, K. Q. (2017). "On calibration of modern neural networks." *ICML*.
+- Guo, C., Pleiss, G., Sun, Y., Weinberger, K. Q. (2017). "On calibration of modern neural networks." *ICML*. https://arxiv.org/abs/1706.04599
 
 ## Links
 

@@ -354,3 +354,39 @@ can accumulate evidence before the operator flips the env var. Cutover to
 ship dark until then.
 
 Updated by: Plan 20-B-05 (2026-05-13).
+
+---
+
+## §Temperature Scaling (Plan 20-B-03)
+
+Per-classifier scalar temperature T fit on held-out FPB + ≥500 production-labeled
+docs via bounded golden-section search minimising NLL (Guo et al. 2017).
+Bounds: T ∈ [0.1, 10.0]. ECE bin count: 10. 5-fold CV for cv_ece_mean ± cv_ece_std.
+Refit cadence: monthly cron at `/api/cron/calibrate-temperature` (`0 7 2 * *`)
+AND on classifier_version change (T-20-B-03-04 auto-refit-on-version-change).
+
+| classifier_version                 | T (seed) | T (calibrated) | ECE_post | Brier_post | n_val | computed_at | status         |
+|------------------------------------|----------|----------------|----------|------------|-------|-------------|----------------|
+| finbert-prosus-4556d130            | 1.0      | (TBD)          | (TBD)    | (TBD)      | (TBD) | (TBD)       | (TBD — seed)   |
+| gemini-per-doc-v1                  | 1.0      | (TBD)          | (TBD)    | (TBD)      | (TBD) | (TBD)       | (TBD — seed)   |
+
+**Ship gate**: `cv_ece_mean_post < 0.05` AND `brier_post < 0.24` per-classifier
+before `SENTIMENT_TEMP_SCALING_MODE` flips from `shadow` to `on`. Calibration
+history is APPEND-ONLY in the `TemperatureCalibration` table — this file
+mirrors the LATEST row for each classifier_version.
+
+**Validation set**: `data/datasets/financial-phrasebank.csv` (Malo et al. 2014;
+Araci 2019 partition; CC-BY-NC-SA-3.0; 3,453 labeled sentences) PLUS ≥500
+production-labeled docs from 20-Z-05. When `n_production_samples < 500`, runs
+are flagged `status='degraded'` and the ship gate is skipped (T-20-B-03-01
+mitigation).
+
+**Calibration source**: `scripts/calibrate-temperature.ts` and shared core
+`scripts/calibrate-temperature-core.ts`; cron entrypoint
+`src/app/api/cron/calibrate-temperature/route.ts`.
+
+**Reference**: Guo, C., Pleiss, G., Sun, Y., & Weinberger, K. Q. (2017).
+"On Calibration of Modern Neural Networks." ICML 2017.
+https://arxiv.org/abs/1706.04599
+
+Updated by: Plan 20-B-03 (2026-05-13).
