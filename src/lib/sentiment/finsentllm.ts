@@ -106,13 +106,70 @@ export const classifyMistralFin = (text: string) => classifyVia('mistral-fin-7b'
  * persists ProviderCallLog rows so `/insights/sentiment-health` renders a
  * `finbert-hf` provider tile with non-zero data after one shadow-mode cron tick.
  *
+ * Plan 20-B-03 — temperature scaling integration, gated by SENTIMENT_TEMP_SCALING_MODE:
+ *   - off    (default): byte-for-byte legacy behaviour; no DB read.
+ *   - shadow: compute BOTH raw + T-scaled; return raw; T-scaled emitted as a
+ *     debug breadcrumb via the result.error field for 20-Z-03 offline analysis.
+ *   - on:     T-scale logits before reduceLabels.
+ *
  * Cost basis: CONTEXT.md line 67 — `$0.033/hr CPU × ~80 inferences/hr ≈ $0.0001/call`.
- * Signature preserved (`(text: string) => Promise<SentimentScore>`); the
- * underlying `classifyVia` still returns the null-sentinel on error per D-33.
  */
 export const classifyFinBERT = (text: string): Promise<SentimentScore> =>
   withTelemetry(
     'finbert-hf',
-    () => classifyVia('finbert', 'HF_FINBERT_ENDPOINT', text),
+    async () => {
+      // Lazy-require the temperature-runtime helpers so that legacy 'off' mode
+      // does NOT incur any DB read or extra import cost.
+      const mode = process.env.SENTIMENT_TEMP_SCALING_MODE || 'off';
+      if (mode === 'off') {
+        return classifyVia('finbert', 'HF_FINBERT_ENDPOINT', text);
+      }
+
+      // Inline the HF call so we can intercept the raw post-softmax probs
+      // upstream of reduceLabels — needed for T-scaling.
+      try {
+        const endpoint = process.env.HF_FINBERT_ENDPOINT;
+        if (!endpoint) throw new Error('HF_FINBERT_ENDPOINT not set');
+        const client = getClient();
+        const out = await client.textClassification({ model: endpoint, inputs: text });
+        const arr = Array.isArray(out) ? out : [out];
+        const rawProbs = (arr as Array<{ label: string; score: number }>);
+
+        const raw = reduceLabels(rawProbs);
+        const rawScore: SentimentScore = { score: raw.score, confidence: raw.confidence, model: 'finbert' };
+
+        const runtime = await import('./temperature-runtime');
+        const classifier_version = runtime.resolveFinBERTClassifierVersion();
+        const { T } = await runtime.loadTemperatureFor(classifier_version);
+
+        // Short-circuit when T=1.0 (identity — missing-row fallback path).
+        if (T === 1.0) return rawScore;
+
+        // Convert post-softmax probs → logits → T-scale → re-derive {pos,neg,max}.
+        const probs = rawProbs.map((r) => r.score);
+        const logits = runtime.probsToLogits(probs);
+        const scaledProbs = runtime.applyTemperature(logits, T);
+        const scaledArr: Array<{ label: string; score: number }> = rawProbs.map((r, i) => ({
+          label: r.label,
+          score: scaledProbs[i] ?? r.score,
+        }));
+        const scaled = reduceLabels(scaledArr);
+
+        if (mode === 'shadow') {
+          // Return RAW; emit T-scaled as a debug breadcrumb. Existing behaviour preserved.
+          return {
+            ...rawScore,
+            error: JSON.stringify({
+              shadow_temperature: { T, classifier_version, scaled_score: scaled.score, scaled_confidence: scaled.confidence },
+            }),
+          };
+        }
+        // mode === 'on'
+        return { score: scaled.score, confidence: scaled.confidence, model: 'finbert' };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { score: null, confidence: null, model: 'finbert', error: msg };
+      }
+    },
     { cost_usd_estimator: () => 0.0001 },
   );
