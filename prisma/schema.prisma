@@ -131,6 +131,36 @@ model LearnedPattern {
   @@map("learned_patterns")
 }
 
+// ─── Phase 20-B-03 — Temperature scaling calibration history (append-only) ───
+// APPEND-ONLY: every refit INSERTs a new row; NEVER UPDATE. Runtime reads the
+// latest row by `computed_at desc` for the matching classifier_version. Backtest
+// callers can replay any historical T by joining on `computed_at <= snapshot_time`.
+// classifier_version pins the upstream classifier (e.g. 'finbert-prosus-<sha>',
+// 'gemini-per-doc-v1'); a classifier upgrade triggers an auto-refit
+// (T-20-B-03-04 — auto-refit-on-version-change). status enum:
+// 'ship-eligible' | 'shadow' | 'degraded' | 'nonconvergent'.
+model TemperatureCalibration {
+  id                     String   @id @default(cuid())
+  classifier_version     String // e.g. 'finbert-prosus-<sha>' or 'gemini-per-doc-v1'
+  computed_at            DateTime @default(now()) @db.Timestamptz
+  temperature            Float // fit T in [0.1, 10.0]; 1.0 = identity (uncalibrated)
+  ece_pre_scaling        Float
+  ece_post_scaling       Float
+  brier_pre_scaling      Float
+  brier_post_scaling     Float
+  cv_ece_mean            Float
+  cv_ece_std             Float
+  n_validation_samples   Int
+  n_fpb_samples          Int
+  n_production_samples   Int
+  validation_window_days Int // typically 90 — production-label collection window
+  status                 String // 'ship-eligible' | 'shadow' | 'degraded' | 'nonconvergent'
+  notes                  String? // free-text — e.g. 'auto-refit on classifier_version change'
+
+  @@index([classifier_version, computed_at])
+  @@map("temperature_calibrations")
+}
+
 model LearningEvent {
   id           String   @id @default(uuid())
   occurred_at  DateTime @default(now()) @db.Timestamptz
