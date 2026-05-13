@@ -181,7 +181,7 @@ export async function runPerMessagePass(
   if (input.messages.length <= VOLUME_GATE) return zeroResult();
 
   const counters = zeroResult();
-  let todayCount = await readTodayClassifiedCount(input.ticker);
+  const todayCount = await readTodayClassifiedCount(input.ticker);
 
   for (const message of input.messages) {
     if (todayCount + counters.classified_count >= COST_CAP_MESSAGES_PER_TICKER_PER_DAY) {

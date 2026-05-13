@@ -174,20 +174,27 @@ describe('runPerMessagePass — 3-tier fallback chain', () => {
     expect(firstCall.classifier_version).toBe('finbert-prosus-4556d130');
   });
 
-  it('both tiers fail → tertiary_path_count=100, classifier_version=-null suffix', async () => {
+  it('both upstream tiers fail → tier-3 L&M (Plan 20-B-06) classifier_version=loughran-mcdonald-2011', async () => {
+    // Plan 20-B-06 replaced the previous null-sentinel tertiary tier with the
+    // Loughran-McDonald lexicon. When FinBERT-HF and @xenova local both null
+    // out, L&M now runs and persists rows with classifier_version pinned to
+    // 'loughran-mcdonald-2011'. The null-sentinel path is only reachable if
+    // classifyByLM itself throws (defensive tier 4).
     classifyFinBERTMock.mockResolvedValue({ score: null, confidence: null, model: 'finbert', error: 'a' });
     classifyFinBERTLocalMock.mockResolvedValue({ score: null, confidence: null, model: 'finbert', error: 'b' });
     const result = await runPerMessagePass(
       { ticker: 'AAPL', messages: makeMessages(100) },
       'shadow',
     );
+    // L&M tier ran for all 100 messages, all persisted.
     expect(result.tertiary_path_count).toBe(100);
-    expect(result.null_count).toBe(100);
-    expect(insertObservationMock).toHaveBeenCalledTimes(100); // ALL still persist
+    expect(result.null_count).toBe(0); // null sentinel not reached
+    expect(insertObservationMock).toHaveBeenCalledTimes(100);
     const firstCall = insertObservationMock.mock.calls[0][0];
-    expect(firstCall.classifier_score).toBeNull();
-    expect(firstCall.classifier_version).toBe('finbert-prosus-4556d130-null');
-    expect(firstCall.model_version).toBe('finbert-prosus-4556d130-v1');
+    // L&M score is a finite number (bag-of-words match on "Message" / "body" likely 0).
+    expect(typeof firstCall.classifier_score).toBe('number');
+    expect(firstCall.classifier_version).toBe('loughran-mcdonald-2011');
+    expect(firstCall.model_version).toBe('loughran-mcdonald-2011');
   });
 });
 
