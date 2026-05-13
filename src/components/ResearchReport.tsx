@@ -942,6 +942,28 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                         {s.source_citation && (
                           <span className="block text-[10px] text-on-surface-variant mt-0.5">[{s.source_citation}]</span>
                         )}
+                        {/* Plan 20-D-03 — per-claim CoVe (?) badge.
+                            Gated on NEXT_PUBLIC_FEATURE_PER_CLAIM_VERIFIED === 'on' AND
+                            verified ∈ {'false', 'null'}. Clean default (no badge on 'true'
+                            or undefined) per T-20-D-03-03. Tooltip text per S10 uses
+                            factual-contradiction language, NOT investment-advice language. */}
+                        {process.env.NEXT_PUBLIC_FEATURE_PER_CLAIM_VERIFIED === 'on' &&
+                          s.verified !== undefined &&
+                          s.verified !== 'true' && (
+                          <span
+                            data-testid="per-claim-verified-badge"
+                            role="img"
+                            aria-label={s.verified === 'false'
+                              ? 'Source data contradicts this claim'
+                              : 'Insufficient source data to verify'}
+                            title={s.verified === 'false'
+                              ? 'Source data contradicts this claim'
+                              : 'Insufficient source data to verify'}
+                            className="inline-flex items-center justify-center w-4 h-4 ml-1 text-[10px] font-bold text-on-surface-variant bg-surface-container-high rounded-full cursor-help"
+                          >
+                            ?
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -960,6 +982,24 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                         <span className="text-xs"><Md text={s.signal} /></span>
                         {s.source_citation && (
                           <span className="block text-[10px] text-on-surface-variant mt-0.5">[{s.source_citation}]</span>
+                        )}
+                        {/* Plan 20-D-03 — per-claim CoVe (?) badge — bearish parity with bullish block. */}
+                        {process.env.NEXT_PUBLIC_FEATURE_PER_CLAIM_VERIFIED === 'on' &&
+                          s.verified !== undefined &&
+                          s.verified !== 'true' && (
+                          <span
+                            data-testid="per-claim-verified-badge"
+                            role="img"
+                            aria-label={s.verified === 'false'
+                              ? 'Source data contradicts this claim'
+                              : 'Insufficient source data to verify'}
+                            title={s.verified === 'false'
+                              ? 'Source data contradicts this claim'
+                              : 'Insufficient source data to verify'}
+                            className="inline-flex items-center justify-center w-4 h-4 ml-1 text-[10px] font-bold text-on-surface-variant bg-surface-container-high rounded-full cursor-help"
+                          >
+                            ?
+                          </span>
                         )}
                       </div>
                     </div>
