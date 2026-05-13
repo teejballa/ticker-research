@@ -26,6 +26,7 @@
     { "path": "/api/cron/agreement-calibration", "schedule": "0 6 1 * *" },
     { "path": "/api/cron/per-source-ic", "schedule": "0 5 * * *" },
     { "path": "/api/cron/eval-brier", "schedule": "0 8 * * 1" },
-    { "path": "/api/cron/joint-feature-ablation", "schedule": "0 6 1 * *" }
+    { "path": "/api/cron/joint-feature-ablation", "schedule": "0 6 1 * *" },
+    { "path": "/api/cron/source-tier-recompute", "schedule": "0 7 1 * *" }
   ]
 }
