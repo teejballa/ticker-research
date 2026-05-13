@@ -24,3 +24,11 @@ None of these affect telemetry plumbing. The `withTelemetry('gemini', ...)`
 wrapper composes around `generateText` exactly as the plan requires, and the
 cost estimator reads `usage.inputTokens` / `usage.outputTokens` off the SDK
 return shape — both work regardless of how Anthropic is imported.
+
+## 20-B-05 — Out-of-scope items found during execution
+
+- `src/lib/gemini-analysis.ts` line 12 — direct Anthropic SDK import (pre-existing). Migrate to `@ai-sdk/anthropic`.
+- `src/lib/gemini-analysis.ts` lines 34, 45, 686 — model slugs use hyphens not dots (pre-existing).
+- `src/lib/gemini-analysis.ts` line 50 — provider API key bypass (pre-existing). Migrate to OIDC.
+
+All pre-existing, NOT introduced by 20-B-05. File this under follow-up.

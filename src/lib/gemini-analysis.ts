@@ -842,10 +842,20 @@ export async function runGeminiAnalysis(
   // records are the source of truth, never the analysis-prompt's reflection).
   const perDocSidecar = (pkg as SourcePackage & { _per_document_sentiment?: import('@/lib/types').PerDocSentimentResult[] })
     ._per_document_sentiment;
+  // Plan 20-B-05 — per-aspect sidecar pickup. aggregateByAspect ran in
+  // source-package.ts under FEATURE_PER_ASPECT_AGGREGATE. Same trust boundary
+  // as engine_calibration / per_document_sentiment: authoritative numerics
+  // overwrite any LLM hallucination of this field.
+  const perAspectSidecar = (pkg as SourcePackage & { _per_aspect_sentiment?: import('@/lib/types').PerAspectSentimentEntry[] })
+    ._per_aspect_sentiment;
+  let out: AnalysisResult = result;
   if (Array.isArray(perDocSidecar)) {
-    return { ...result, per_document_sentiment: perDocSidecar };
+    out = { ...out, per_document_sentiment: perDocSidecar };
   }
-  return result;
+  if (Array.isArray(perAspectSidecar)) {
+    out = { ...out, per_aspect_sentiment: perAspectSidecar };
+  }
+  return out;
 }
 
 /**
