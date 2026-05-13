@@ -596,6 +596,15 @@ export interface AnalysisResult {
     // next to per-source 'n=N' when |weight - 1.0| >= weight_diff_display_threshold.
     tier_weights_applied?: Record<string, number>;
     tier_mode?: 'off' | 'shadow' | 'on';
+    // Plan 20-C-04 — Pump-and-dump cluster detector (Nam/Yang 2023).
+    // 5-condition AND-gate verdict. Optional/nullable: 'off' or out-of-scope
+    // cap_class returns null; ResearchReport gates the banner separately on
+    // NEXT_PUBLIC_FEATURE_PUMP_DUMP_DETECTOR_UI === 'on' AND is_warning === true.
+    manipulation_warning?: {
+      is_warning: boolean;
+      matched_rules: string[];
+      rule_version: string;
+    } | null;
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph

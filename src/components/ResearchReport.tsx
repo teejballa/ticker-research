@@ -3,6 +3,7 @@
 // src/components/ResearchReport.tsx
 // Cipher research report — Stitch 12-column layout.
 
+import { useState } from 'react';
 import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, formatPrice } from '@/lib/formatters';
 import type { AnalysisResult, MarketSnapshot, InstitutionalSnapshot, InsiderSnapshot, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import { FEATURES } from '@/lib/features';
@@ -11,6 +12,10 @@ import FooterTicker from '@/components/FooterTicker';
 import EngineCalibrationPanel from '@/components/EngineCalibrationPanel';
 import TechnicalSignalsCard from '@/components/TechnicalSignalsCard';
 import { PerAspectChips } from '@/components/PerAspectChips';
+import {
+  dismissBanner as dismissManipulationBanner,
+  isDismissed as isManipulationBannerDismissed,
+} from '@/components/manipulation-banner-dismiss';
 
 interface ResearchReportProps {
   analysisResult: AnalysisResult;
@@ -435,6 +440,23 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     window.print();
   }
 
+  // ── Plan 20-C-04 — Pump-and-dump manipulation banner ────────
+  // Dismissal state is a client-only counter; toggling it forces a re-read of
+  // localStorage via isManipulationBannerDismissed(ticker) on the next render.
+  // The initial `false` matches the SSR no-window branch of the helper so the
+  // banner renders consistently on first paint, then hydrates.
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const manipulationWarning = sentiment_intelligence?.manipulation_warning;
+  const showManipulationBanner =
+    process.env.NEXT_PUBLIC_FEATURE_PUMP_DUMP_DETECTOR_UI === 'on'
+    && manipulationWarning?.is_warning === true
+    && !bannerDismissed
+    && !isManipulationBannerDismissed(ticker);
+  function handleDismissManipulationBanner() {
+    dismissManipulationBanner(ticker);
+    setBannerDismissed(true);
+  }
+
   const s = market_snapshot;
   const confidencePct = confidenceToPercent(confidence_level);
   const confidenceBlocks = Math.round(confidencePct / 10);
@@ -524,6 +546,47 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
 
   return (
     <div className="bg-surface text-on-surface font-body selection:bg-primary/30 min-h-screen pb-12">
+      {/* Plan 20-C-04 — Pump-and-dump manipulation warning banner.
+          Renders at the TOP of the report (before NavBar) so a user sees the
+          non-advisory warning before any sentiment-bearing content. Gated by
+          NEXT_PUBLIC_FEATURE_PUMP_DUMP_DETECTOR_UI=on AND the aggregator's
+          manipulation_warning.is_warning === true AND 24h-localStorage dismissal
+          unset. Copy is FIXED (T-20-C-04-01) — Playwright asserts zero
+          occurrences of forbidden substrings ['buy','sell','advise','recommend','should'].
+          role=alert + aria-live=polite for screen-reader announcement without
+          stealing focus. */}
+      {showManipulationBanner && (
+        <div
+          role="alert"
+          aria-live="polite"
+          data-banner="manipulation-warning"
+          data-testid="manipulation-warning-banner"
+          className="w-full bg-red-700 text-white px-4 py-3 flex items-center gap-3 border-b-2 border-red-900"
+        >
+          <span className="text-xl" aria-hidden="true">⚠</span>
+          <div className="flex-1 text-sm">
+            Possible market manipulation pattern detected (Nam/Yang 2023).
+            This warning does NOT constitute investment advice.
+            {' '}
+            <a
+              href="/docs/model-cards/pump-dump-detector"
+              className="underline hover:no-underline"
+            >
+              Methodology
+            </a>
+            .
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss manipulation warning for 24 hours"
+            onClick={handleDismissManipulationBanner}
+            className="text-white hover:bg-red-800 rounded px-2 py-1"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <NavBar
         ticker={ticker}
         companyName={company_name}
