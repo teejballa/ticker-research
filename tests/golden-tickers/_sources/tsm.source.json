@@ -1,0 +1,67 @@
+{
+  "ticker": "TSM",
+  "company_name": "Taiwan Semiconductor Manufacturing Co.",
+  "exchange": "NYSE",
+  "security_type": "adr",
+  "assembled_at": "2026-05-13T00:00:00Z",
+  "market_data": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "price": 165.34,
+    "volume": 14200000,
+    "market_cap": 858000000000,
+    "fifty_two_week_high": 189.42,
+    "fifty_two_week_low": 102.18,
+    "percent_change_today": 0.008,
+    "exchange": "NYSE"
+  },
+  "fundamentals": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "pe_ratio": 22.4,
+    "eps": 7.38,
+    "revenue": 90000000000,
+    "debt_to_equity": 0.28,
+    "profit_margin": 0.385
+  },
+  "news": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "items": [
+      {
+        "headline": "TSMC reports strong AI chip demand",
+        "url": "https://example.com/tsm-news-1",
+        "published_date": "2026-05-09",
+        "source": "FT"
+      }
+    ]
+  },
+  "analyst_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "consensus": "Buy",
+    "avg_price_target": 195,
+    "analyst_count": 31,
+    "recent_changes": []
+  },
+  "sec_filing_summary": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "most_recent_10k": null,
+    "most_recent_10q": null,
+    "filing_dates": { "10k": null, "10q": null }
+  },
+  "social_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "overall_tone": "bullish",
+    "signals": [],
+    "sources_checked": ["stocktwits"]
+  },
+  "collection_errors": [],
+  "supplementary_market_data": { "sources": [] },
+  "sentiment_intelligence": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "stocktwits_bull_pct": 78,
+    "stocktwits_bear_pct": 22,
+    "stocktwits_message_count": 968,
+    "stocktwits_is_trending": true,
+    "reddit_tone": "bullish",
+    "put_call_ratio": 0.58,
+    "put_call_interpretation": "bullish"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "ticker": "SPY",
+  "company_name": "SPDR S&P 500 ETF Trust",
+  "exchange": "NYSEARCA",
+  "security_type": "etf",
+  "assembled_at": "2026-05-13T00:00:00Z",
+  "market_data": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "price": 538.42,
+    "volume": 68500000,
+    "market_cap": 538000000000,
+    "fifty_two_week_high": 565.16,
+    "fifty_two_week_low": 432.18,
+    "percent_change_today": 0.0035,
+    "exchange": "NYSEARCA"
+  },
+  "fundamentals": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "pe_ratio": null,
+    "eps": null,
+    "revenue": null,
+    "debt_to_equity": null,
+    "profit_margin": null
+  },
+  "news": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "items": [
+      {
+        "headline": "S&P 500 closes at record high",
+        "url": "https://example.com/spy-news-1",
+        "published_date": "2026-05-10",
+        "source": "MarketWatch"
+      }
+    ]
+  },
+  "analyst_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "consensus": null,
+    "avg_price_target": null,
+    "analyst_count": null,
+    "recent_changes": []
+  },
+  "sec_filing_summary": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "most_recent_10k": null,
+    "most_recent_10q": null,
+    "filing_dates": { "10k": null, "10q": null }
+  },
+  "social_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "overall_tone": "neutral",
+    "signals": [],
+    "sources_checked": []
+  },
+  "collection_errors": [],
+  "supplementary_market_data": { "sources": [] },
+  "sentiment_intelligence": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "stocktwits_bull_pct": 58,
+    "stocktwits_bear_pct": 42,
+    "stocktwits_message_count": 2150,
+    "stocktwits_is_trending": false,
+    "reddit_tone": "neutral",
+    "put_call_ratio": 1.12,
+    "put_call_interpretation": "neutral"
+  }
+}

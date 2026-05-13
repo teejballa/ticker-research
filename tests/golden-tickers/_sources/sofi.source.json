@@ -1,0 +1,67 @@
+{
+  "ticker": "SOFI",
+  "company_name": "SoFi Technologies Inc.",
+  "exchange": "NASDAQ",
+  "security_type": "equity",
+  "assembled_at": "2026-05-13T00:00:00Z",
+  "market_data": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "price": 12.85,
+    "volume": 32100000,
+    "market_cap": 14200000000,
+    "fifty_two_week_high": 16.23,
+    "fifty_two_week_low": 6.42,
+    "percent_change_today": 0.024,
+    "exchange": "NASDAQ"
+  },
+  "fundamentals": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "pe_ratio": null,
+    "eps": 0.08,
+    "revenue": 2350000000,
+    "debt_to_equity": 0.45,
+    "profit_margin": 0.038
+  },
+  "news": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "items": [
+      {
+        "headline": "SoFi posts first GAAP profit",
+        "url": "https://example.com/sofi-news-1",
+        "published_date": "2026-05-06",
+        "source": "WSJ"
+      }
+    ]
+  },
+  "analyst_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "consensus": "Buy",
+    "avg_price_target": 15,
+    "analyst_count": 18,
+    "recent_changes": []
+  },
+  "sec_filing_summary": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "most_recent_10k": null,
+    "most_recent_10q": null,
+    "filing_dates": { "10k": null, "10q": null }
+  },
+  "social_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "overall_tone": "bullish",
+    "signals": [],
+    "sources_checked": ["stocktwits"]
+  },
+  "collection_errors": [],
+  "supplementary_market_data": { "sources": [] },
+  "sentiment_intelligence": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "stocktwits_bull_pct": 74,
+    "stocktwits_bear_pct": 26,
+    "stocktwits_message_count": 1820,
+    "stocktwits_is_trending": false,
+    "reddit_tone": "bullish",
+    "put_call_ratio": 0.65,
+    "put_call_interpretation": "bullish"
+  }
+}
