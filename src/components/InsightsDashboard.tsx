@@ -234,9 +234,9 @@ const OVERVIEW_TAB_FRIENDLY_TITLE: Record<string, string> = {
 
 const OVERVIEW_TAB_BLURB: Record<string, string> = {
   'diffusion-library': 'How often a story catching fire in a niche corner of the internet before the mainstream sees it has actually predicted a price move.',
-  'live-map': 'Tickers right now where niche communities are talking before the mainstream — Cipher will grade these once the next week of price action lands.',
-  'technical-library': 'Every chart pattern Cipher tracks (breakouts, pullbacks, golden crosses, etc.) and how often each one has worked.',
-  'horizon-brier': 'How accurate the chart-pattern calls are at 3, 7, 14, 30, 60, and 90 days out — a way to see if Cipher is better at short or long forecasts.',
+  'live-map': 'Tickers right now where niche communities are talking before the mainstream. Each one will be graded once the next week of price action lands.',
+  'technical-library': 'Every chart pattern tracked here (breakouts, pullbacks, golden crosses) and how often each one has worked.',
+  'horizon-brier': 'How accurate the chart-pattern calls are at 3, 7, 14, 30, 60, and 90 days out — a check on whether short or long horizons are more reliable.',
   'institutional-library': 'When the largest funds buy or sell, what tends to happen to the stock afterward — broken down by ticker size.',
   'insider-library': 'When company insiders (executives, directors) trade their own stock, what the price typically does over the next few weeks.',
 };
@@ -341,7 +341,7 @@ function friendlyFamilyLabel(sc: string): string {
 
 function buildOverviewHeadline(top: ThesisFamily | null): string {
   if (!top || !top.top_pattern) {
-    return 'Cipher is still gathering enough graded predictions to surface a strongest learned link. Check back as the engine records more outcomes.';
+    return 'Not enough graded outcomes yet to surface a strongest learned link. Check back as more outcomes complete.';
   }
   const tp = top.top_pattern;
   const pct = Math.round(tp.mean * 100);
@@ -433,10 +433,10 @@ export function InsightsDashboard() {
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="border border-outline-variant/30 bg-surface-container-low/40 p-12 text-center">
           <div className="text-[10px] tracking-[0.4em] text-outline uppercase font-mono mb-3">
-            Initializing Research Layer
+            Loading
           </div>
           <div className="text-on-surface-variant text-sm font-mono animate-pulse">
-            Loading sentiment cohort data…
+            Fetching pattern data…
           </div>
         </div>
       </div>
@@ -500,10 +500,10 @@ export function InsightsDashboard() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-secondary" />
               </span>
               <span className="text-[10px] tracking-[0.4em] text-secondary font-mono uppercase font-bold">
-                Engine Live
+                Live
               </span>
               <span className="text-[10px] tracking-[0.3em] text-outline font-mono uppercase border-l border-outline-variant/30 pl-3">
-                Self-Updating · No Human Intervention
+                Updated from graded outcomes
               </span>
             </div>
             <div className="flex items-center gap-4 text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
@@ -823,7 +823,7 @@ export function InsightsDashboard() {
                     {OVERVIEW_TAB_BLURB[t.id] ?? 'Explore the patterns.'}
                   </div>
                   <div className="text-primary text-xs font-mono tracking-widest uppercase mt-1">
-                    Open →
+                    View
                   </div>
                 </button>
               ))}
@@ -843,12 +843,12 @@ export function InsightsDashboard() {
               What changed this month
             </div>
             <h2 className="text-on-surface text-2xl md:text-3xl font-black tracking-tight mb-3">
-              Cipher updated its mind on{' '}
+              Confidence shifted on{' '}
               <span className="text-primary tabular-nums">{data.engine_changes.length}</span>{' '}
               {data.engine_changes.length === 1 ? 'pattern' : 'patterns'}
             </h2>
             <p className="text-on-surface-variant text-sm leading-relaxed">
-              Each card is a real shift in how the engine reads the market. Green means it grew more confident a pattern works; red means less. Every shift comes from outcomes Cipher watched play out — never from anyone tweaking it by hand.
+              Each card shows a calibration shift on one pattern. Green means confidence rose; red means it fell. Shifts come from graded outcomes — never from manual tuning.
             </p>
           </div>
 
@@ -1092,14 +1092,14 @@ export function InsightsDashboard() {
           <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
             <div>
               <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
-                Engine Memory
+                Calibration log
               </div>
               <h2 className="text-on-surface text-lg font-bold tracking-tight">
-                Auto-updating research log
+                Pattern updates &amp; drift alerts
               </h2>
               <p className="text-on-surface-variant text-xs mt-2 max-w-2xl leading-relaxed">
-                Every belief update, drift alert, and cycle summary as it happens. No human
-                writes these — the engine narrates its own learning.
+                Every confidence update, drift alert, and cycle summary as it happens. Entries
+                are appended automatically from graded outcomes.
               </p>
             </div>
             <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">

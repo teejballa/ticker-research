@@ -1018,7 +1018,7 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
 
       {/* Footer note — verbatim per UI-SPEC (both phases) */}
       <p className="mt-4 text-[10px] text-on-surface-variant tracking-wide leading-relaxed">
-        ↳ This prediction will be auto-verified at 3, 7, 14, 30, 60, and 90 days. The engine&apos;s posterior updates online — re-running this report after the next learning cycle may show different numbers. <strong className="text-on-surface">30 days is the primary horizon.</strong>
+        This prediction is verified at 3, 7, 14, 30, 60, and 90 days. Posterior probabilities update automatically as outcomes complete, so re-running this report after the next calibration cycle may show different numbers. <strong className="text-on-surface">30 days is the primary horizon.</strong>
       </p>
     </section>
   );
