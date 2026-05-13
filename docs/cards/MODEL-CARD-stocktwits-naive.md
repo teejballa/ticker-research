@@ -97,3 +97,14 @@ source_files:
 - **Cadence** (matches frontmatter `retrain_cadence`): P180D (180 days). No retraining — vendor flow. Cadence governs RE-VALIDATION: spot-check 50 random recent messages quarterly to confirm vendor tag direction still matches a manual reader's judgment.
 - **Trigger conditions**: vendor publishes a tag-semantics change note; OR rolling 30-day IC drops by more than 0.05 absolute; OR Cresci-2019 bot-share metric (not yet shipped) flags >15% on a watchlist ticker.
 - **Owner**: Cipher project owner (tjameswalsh@icloud.com).
+
+<!-- FAIRNESS-AUDIT-START audit_id=782ed807-f789-47cc-b9d6-6801cde1d60a audit_date=2026-05-11 classifier_version=finbert-prosus -->
+## Fairness Audit — Known Limitations
+
+Audit window: rolling 90 days ending 2026-05-11. n=100.
+
+Flagged limitations (Brier > 0.27 OR ECE > 0.10):
+- cap_class=micro: Brier=0.330, ECE=0.300, n=100 (audit 782ed807-f789-47cc-b9d6-6801cde1d60a 2026-05-11)
+
+See [reports/fairness-audit-2026-05-11.md](../../reports/fairness-audit-2026-05-11.md) for the full segment table.
+<!-- FAIRNESS-AUDIT-END -->

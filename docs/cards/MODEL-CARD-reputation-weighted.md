@@ -93,3 +93,14 @@ source_files:
 - **Cadence** (matches frontmatter `retrain_cadence`): P90D (90 days). Revisit Beta prior strength + WEIGHT_CAP after each Phase-20 Wave-A calibration cycle.
 - **Trigger conditions**: any of 20-A-01 / 20-A-02 / 20-B-04 lands → mandatory model_version bump + last_validated reset. Otherwise: rolling 30-day aggregate IC drops by more than 0.05 absolute → manual review.
 - **Owner**: Cipher project owner (tjameswalsh@icloud.com).
+
+<!-- FAIRNESS-AUDIT-START audit_id=782ed807-f789-47cc-b9d6-6801cde1d60a audit_date=2026-05-11 classifier_version=finbert-prosus -->
+## Fairness Audit — Known Limitations
+
+Audit window: rolling 90 days ending 2026-05-11. n=100.
+
+Flagged limitations (Brier > 0.27 OR ECE > 0.10):
+- cap_class=micro: Brier=0.330, ECE=0.300, n=100 (audit 782ed807-f789-47cc-b9d6-6801cde1d60a 2026-05-11)
+
+See [reports/fairness-audit-2026-05-11.md](../../reports/fairness-audit-2026-05-11.md) for the full segment table.
+<!-- FAIRNESS-AUDIT-END -->
