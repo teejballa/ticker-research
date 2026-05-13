@@ -134,3 +134,12 @@ calibration-reports/
 # CLI). Committed only on ship-gate failure as operator narratives (the .md
 # variant is intentionally NOT gitignored — see scripts/eval-brier.ts).
 /reports/brier-*.json
+
+# ========================
+# Phase 20-D-02 — Citation-coverage evaluation artifacts
+# ========================
+# JSON + Markdown written by the weekly /api/cron/eval-citation-coverage and
+# the scripts/eval-citation-coverage.ts CLI. Runtime output — regenerated
+# weekly. Never commit.
+/reports/citation-coverage-*.json
+/reports/citation-coverage-*.md
