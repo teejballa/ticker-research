@@ -36,17 +36,24 @@ describe('classifyByLM — confidence floor (T-20-B-06-03)', () => {
 });
 
 describe('classifyByLM — canonical sentences (CONTEXT.md line 118)', () => {
-  it('"revenue beat earnings expectations" → score > 0', async () => {
-    const r = await classifyByLM('revenue beat earnings expectations');
+  // NOTE on fixtures: L&M 2011 deliberately EXCLUDES generic words like
+  // "revenue", "beat", "earnings", "lawsuit", "cost", "liability" — that is
+  // the paper's central finding ("a Liability is not a Liability in
+  // finance"). The spec line was illustrative; the dictionary's actual
+  // flagged words are finance-specific. We exercise the same three polarity
+  // contracts (positive / negative / neutral) using words L&M actually flags.
+
+  it('positive sentence ("strong improvement in profitable gains") → score > 0', async () => {
+    const r = await classifyByLM('strong improvement in profitable gains');
     expect(r.score).toBeGreaterThan(0);
   });
 
-  it('"lawsuit costs increase liability" → score < 0', async () => {
-    const r = await classifyByLM('lawsuit costs increase liability');
+  it('negative sentence ("weak losses hurt decline") → score < 0', async () => {
+    const r = await classifyByLM('weak losses hurt decline');
     expect(r.score).toBeLessThan(0);
   });
 
-  it('"the price is $50" → score === 0', async () => {
+  it('neutral / no-polarity input ("the price is $50") → score === 0', async () => {
     const r = await classifyByLM('the price is $50');
     expect(r.score).toBe(0);
   });
@@ -74,9 +81,11 @@ describe('classifyByLM — tokenization', () => {
   });
 
   it('apostrophes within contractions handled consistently', async () => {
-    const r = await classifyByLM("company's lawsuit hurts liability");
+    // "litigation" is litigious-flagged (not strictly negative); "hurt" is L&M-negative;
+    // the test asserts the apostrophe doesn't shatter "company's" into garbage AND that
+    // a clearly-negative L&M word still scores negative.
+    const r = await classifyByLM("company's litigation hurt margins");
     expect(typeof r.score).toBe('number');
-    // Should still find at least one polarity word given "lawsuit" + "liability"
     expect(r.score).toBeLessThan(0);
   });
 });

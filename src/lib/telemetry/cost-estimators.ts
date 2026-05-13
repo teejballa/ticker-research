@@ -20,7 +20,8 @@ export type ProviderId =
   | 'firecrawl'
   | 'gemini'
   | 'finbert-hf'
-  | 'apewisdom';
+  | 'apewisdom'
+  | 'lm-fallback'; // Plan 20-B-06 — Loughran-McDonald last-resort fallback (in-process; $0 marginal)
 
 // Per-provider per-call USD cost constants. CITED above. Quarterly review per T-20-Z-03-03.
 //   gemini   — https://ai.google.dev/pricing (Gemini 2.5 Flash via Vercel AI Gateway, 2026-Q1)
@@ -38,6 +39,7 @@ export const COST_PER_CALL_USD: Record<ProviderId, number> = {
   'gemini': 0, // computed via cost_usd_estimator + GEMINI_TOKEN_RATES
   'finbert-hf': 0.0001,
   'apewisdom': 0,
+  'lm-fallback': 0, // in-process bag-of-words; $0 marginal cost (Plan 20-B-06)
 };
 
 export const GEMINI_TOKEN_RATES = {
