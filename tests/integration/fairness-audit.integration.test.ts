@@ -217,10 +217,20 @@ describe.skipIf(!HAS_DB)('20-C-06 Task 8 — live-Neon FairnessAuditReport persi
       // table missing → skip DB assertion (still validates idempotency)
     }
 
-    // Restore ALL cards to pre-test state
+    // Restore ALL cards to pre-test state + cleanup the test-generated report
     for (const [p, content] of beforeAll.entries()) {
       fs.writeFileSync(p, content, 'utf-8');
     }
     void beforeContent; // referenced for clarity above
+    // The audit also rewrote reports/fairness-audit-2026-05-11.md — restore
+    // it from git so the committed bootstrap report stays intact.
+    try {
+      const { execSync } = await import('node:child_process');
+      execSync('git checkout reports/fairness-audit-2026-05-11.md', {
+        stdio: 'ignore',
+      });
+    } catch {
+      // best-effort cleanup; ignore if git unavailable
+    }
   });
 });
