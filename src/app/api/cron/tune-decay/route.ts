@@ -27,13 +27,10 @@ import {
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes — grid search may take a while
 
-// Re-export constants for static analysis / tests
-export {
-  SOURCE_CLASSES,
-  MIN_N_OBSERVATIONS,
-  ICIR_UPLIFT_GATE,
-  DEFAULT_WINDOW_DAYS,
-};
+// Note: SOURCE_CLASSES / MIN_N_OBSERVATIONS / ICIR_UPLIFT_GATE / DEFAULT_WINDOW_DAYS
+// used to be re-exported from this file for tests, but Next.js App Router only
+// allows specific named route exports. Import them directly from
+// `scripts/tune-decay` instead.
 
 export async function GET(request: NextRequest) {
   // Auth — same pattern as sentiment-scan/route.ts
