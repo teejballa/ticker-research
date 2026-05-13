@@ -154,3 +154,47 @@ a literature citation or rule derivation.
 - Benjamini, Y., & Hochberg, Y. (1995). "Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing." *J. Royal Statistical Society B* 57(1): 289–300.
 
 Updated by: Plan 20-C-01 (2026-05-12).
+
+---
+
+## Phase 20-C-02 — Brier Calibration
+
+Source: `src/lib/stats/brier.ts` `brierScore()` + `brierDecomposition()` +
+`src/lib/stats/isotonic.ts` `isotonicRegression()` +
+`corpReliabilityDiagram()`. Weekly evaluation harness:
+`scripts/eval-brier.ts` driven by `/api/cron/eval-brier` writes
+`reports/brier-{YYYY-MM-DD}.json` (always; gitignored) and
+`reports/brier-{YYYY-MM-DD}.md` (only on ship-gate failure; committed as
+operator artifact). Per S1, every value below has a literature citation
+or rule derivation.
+
+| Parameter | Value | Source |
+|-----------|-------|--------|
+| Ship-gate threshold (Brier) | `0.24` | CONTEXT.md §S1 line 125 verbatim |
+| Random-classifier baseline | `0.25` | Brier 1950: BS = ō·(1−ō) = 0.5·0.5 on balanced base rate |
+| Minimum n per classifier_version | `100` | Niculescu-Mizil & Caruana 2005 §4 — isotonic regression stability floor |
+| Base-rate imbalance window | `|base_rate − 0.5| < 0.1` | T-20-C-02-01 defensive constant (majority-class trivial Brier ≤ 0.05 at base_rate=0.95) |
+| Murphy decomposition n_bins (per_bin histogram only) | `10` | Guo et al. 2017 ICML calibration convention |
+| CORP recalibrated-curve grid | `200 points` over [min(p), max(p)] | Dimitriadis-Gneiting-Jordan 2021 §3 dense-grid plotting recommendation |
+| CORP histogram bins | `20` | Multimodal-defense histogram-under-the-curve (T-20-C-02-04) |
+| Cron schedule | `0 8 * * 1` (Mondays 08:00 UTC) | Plan 20-C-02 weekly cadence; staggered after daily 20-Z-03 retention crons |
+| Decomposition identity tolerance | `1e-9` | Floating-point representable across f64; T-20-C-02-03 |
+| Reference example tolerance | `1e-6` | Bröcker-Smith 2007 §2 worked example |
+
+**Remediation decision rule** (script header in `scripts/eval-brier.ts`):
+- `reliability >= 0.5 × brier` → `REMEDIATE_BY_TEMPERATURE_SCALING` (miscalibration dominates — 20-B-03 owns the fix)
+- `resolution < uncertainty / 4` → `REMEDIATE_BY_DROPPING_CLASSIFIER` (no discriminative skill)
+- Otherwise (or first run) → `ACCEPT_AS_BASELINE`
+
+**Recalibration cadence:** weekly via `/api/cron/eval-brier` (`'0 8 * * 1'` UTC).
+**Cutover criteria** (consumer integration, future): 20-B-03 reads `reports/brier-*.json` for its Brier co-gate. 20-C-06 reads the same JSON to stratify by `cap_class`.
+
+**Citations:**
+- Brier, G. W. (1950). "Verification of forecasts expressed in terms of probability." *Monthly Weather Review* 78(1): 1–3.
+- Murphy, A. H. (1973). "A new vector partition of the probability score." *J. Applied Meteorology* 12(4): 595–600.
+- Bröcker, J., & Smith, L. A. (2007). "Increasing the reliability of reliability diagrams." *Weather and Forecasting* 22(3): 651–661.
+- Barlow, R. E., & Brunk, H. D. (1972). "The isotonic regression problem and its dual." *JASA* 67(337): 140–147.
+- Dimitriadis, T., Gneiting, T., & Jordan, A. I. (2021). "Stable reliability diagrams for probabilistic classifiers." *PNAS* 118(8). doi:10.1073/pnas.2016191118.
+- Niculescu-Mizil, A., & Caruana, R. (2005). "Predicting good probabilities with supervised learning." *ICML 2005*.
+
+Updated by: Plan 20-C-02 (2026-05-12).
