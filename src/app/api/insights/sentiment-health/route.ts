@@ -32,6 +32,10 @@ export async function GET() {
       generated_at: new Date().toISOString(),
       window_hours: 24,
       providers: [],
+      // Plan 20-B-06 T-20-B-06-04 — degradation_rate_24h is the share of NLP
+      // classifier calls (finbert-hf, xenova-local, lm-fallback) that took the
+      // L&M last-resort fallback path. Sustained >5% → upstream system breakage.
+      degradation_rate_24h: 0,
     });
   }
 
@@ -81,9 +85,26 @@ export async function GET() {
     };
   });
 
+  // Plan 20-B-06 T-20-B-06-04 — degradation_rate_24h.
+  // Denominator restricted to NLP-classifier providers so a quiet day for
+  // yahoo/finnhub doesn't dilute the rate.
+  const degradationRows = await prisma.$queryRawUnsafe<
+    Array<{ rate: number | null }>
+  >(`
+    SELECT
+      COUNT(*) FILTER (WHERE provider_id = 'lm-fallback')::float
+        / NULLIF(COUNT(*), 0) AS rate
+    FROM "provider_call_logs"
+    WHERE started_at >= NOW() - INTERVAL '24 hours'
+      AND provider_id IN ('finbert-hf', 'lm-fallback')
+      AND status = 'ok'
+  `);
+  const degradation_rate_24h = degradationRows[0]?.rate ?? 0;
+
   return NextResponse.json({
     generated_at: new Date().toISOString(),
     window_hours: 24,
     providers,
+    degradation_rate_24h,
   });
 }
