@@ -428,3 +428,44 @@ model AgreementCalibration {
   @@index([computed_at(sort: Desc)], map: "idx_agreement_calib_computed_at")
   @@map("agreement_calibrations")
 }
+
+// ─── Phase 20-C-03 — Cresci-2019 bot filter + coordination detection ───
+// BotFilterFlag rows are immutable per-author-per-cron-tick scoring records.
+// CoordinationCluster rows are immutable per-ticker-per-24h-window cluster records.
+// Both are point-in-time: `computed_at` is when WE computed the score, never an
+// upstream-claimed timestamp (S2). Backfills or re-scores create NEW rows —
+// never UPDATE existing ones (T-20-Z-01-04 immutability convention propagated).
+model BotFilterFlag {
+  id                         String   @id @default(uuid())
+  author_id                  String // sha256("{source}:{handle}") — same as 20-Z-01
+  ticker                     String // ticker that triggered the recompute
+  // PIT-INVARIANT — never join on a vendor-reported timestamp for backtests
+  computed_at                DateTime @default(now()) @db.Timestamptz
+  account_age_days           Int?
+  max_text_cosine_similarity Float
+  pump_phrase_density        Float
+  hashtag_count_max          Int
+  is_bot_flagged             Boolean
+  bot_reason                 String // CresciReason enum string
+
+  @@index([author_id, computed_at(sort: Desc)], map: "idx_botflag_author_computed_at")
+  @@index([ticker, computed_at(sort: Desc)], map: "idx_botflag_ticker_computed_at")
+  @@map("bot_filter_flags")
+}
+
+model CoordinationCluster {
+  id                   String   @id @default(uuid())
+  ticker               String
+  window_start         DateTime @db.Timestamptz
+  window_end           DateTime @db.Timestamptz
+  // PIT-INVARIANT
+  computed_at          DateTime @default(now()) @db.Timestamptz
+  n_messages           Int
+  similarity_threshold Float
+  cluster_size         Int
+  is_flagged           Boolean
+  member_ids           Json // string[]
+
+  @@index([ticker, window_start(sort: Desc)], map: "idx_coordcluster_ticker_window")
+  @@map("coordination_clusters")
+}
