@@ -99,3 +99,14 @@ source_files:
 - **Cadence** (matches frontmatter `retrain_cadence`): P90D (90 days). HF endpoint SHA pin = "we don't retrain"; the cadence governs SHA RE-VALIDATION. Operator runs `curl -s $HF_FINBERT_ENDPOINT/info` quarterly to confirm pinned SHA has not been bumped without our knowledge.
 - **Trigger conditions**: ECE > 0.05 per Plan 20-B-03 monitor → forced refresh + re-pin to current SHA; OR ProsusAI publishes a new tagged release → manual review + re-pin decision.
 - **Owner**: Cipher project owner (tjameswalsh@icloud.com).
+
+<!-- FAIRNESS-AUDIT-START audit_id=782ed807-f789-47cc-b9d6-6801cde1d60a audit_date=2026-05-11 classifier_version=finbert-prosus -->
+## Fairness Audit — Known Limitations
+
+Audit window: rolling 90 days ending 2026-05-11. n=100.
+
+Flagged limitations (Brier > 0.27 OR ECE > 0.10):
+- cap_class=micro: Brier=0.330, ECE=0.300, n=100 (audit 782ed807-f789-47cc-b9d6-6801cde1d60a 2026-05-11)
+
+See [reports/fairness-audit-2026-05-11.md](../../reports/fairness-audit-2026-05-11.md) for the full segment table.
+<!-- FAIRNESS-AUDIT-END -->
