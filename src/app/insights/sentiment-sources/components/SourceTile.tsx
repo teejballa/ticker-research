@@ -4,7 +4,7 @@
 // asterisks, n_observations, NW lag, and conditionally a BELOW THRESHOLD or
 // AUTO-DOWN-WEIGHT badge.
 
-import type { SourceHorizonTile } from '@/app/api/insights/sentiment-sources/route';
+import type { SourceHorizonTile } from '@/app/api/insights/sentiment-sources/_helpers';
 
 interface SourceTileProps {
   source_id: string;

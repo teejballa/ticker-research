@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 
-import { fetchCalibrationPayload } from '@/app/api/insights/calibration/route';
+import { fetchCalibrationPayload } from '@/app/api/insights/calibration/_helpers';
 
 import { BrierTile } from './components/BrierTile';
 import { ReliabilityDiagram } from './components/ReliabilityDiagram';
