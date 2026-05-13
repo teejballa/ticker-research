@@ -240,6 +240,10 @@ model SentimentObservation {
   author_id                String // hashed handle: sha256("{source}:{handle}")
   author_features_snapshot Json // allowlisted fields only — see DAO + T-20-Z-01-01
   model_version            String // backfill partition key
+  // Phase 20-B-01 — ADDITIVE: subset of ASPECT_TAGS (7-element fixed taxonomy in src/lib/sentiment/aspects.ts).
+  // Empty default for backfill rows shipped by 20-Z-01 before this column existed. A prompt v2 that
+  // changes the taxonomy MUST insert under a NEW model_version per S2 immutability.
+  aspects                  String[] @default([])
 
   @@unique([ticker, message_id, model_version], map: "sentobs_ticker_msg_modelver_uq")
   @@index([ticker, fetched_at(sort: Desc)], map: "idx_sentobs_ticker_fetched_at")
