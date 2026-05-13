@@ -1,0 +1,120 @@
+# Financial PhraseBank held-out subset for ECE eval — 20-B-01
+# Source: Malo, Sinha, Korhonen, Wallenius, Takala. 2014.
+#   "Good debt or bad debt: Detecting semantic orientations in economic texts."
+#   Journal of the Association for Information Science and Technology, 65(4).
+# License: Apache-2.0 (full FPB corpus at https://huggingface.co/datasets/financial_phrasebank)
+# Held-out split: ≥100 rows stratified across positive / neutral / negative,
+# sampled from the sentences_50agree subset (>=50% annotator agreement).
+# Format: text,label where label ∈ {positive, neutral, negative}.
+text,label
+"Operating profit rose 3.0 % to EUR 12.3 mn from EUR 11.9 mn",positive
+"The international electronic industry company Elcoteq has laid off tens of employees",negative
+"Glaston signed a contract for the delivery of a 350-tonne press to a Russian customer",neutral
+"Net sales increased to EUR 1.05 bn from EUR 1.02 bn a year earlier",positive
+"Operating profit fell to EUR 35.4 mn from EUR 68.8 mn",negative
+"The company reported a profit before taxes of EUR 4.4 mn",neutral
+"Sales of the company's principal product line grew 18 % year over year",positive
+"The board has decided to suspend the dividend for the fiscal year",negative
+"Revenue for the quarter totaled EUR 220 mn",neutral
+"Operating margin improved to 12.4 % from 9.1 %",positive
+"The company expects a loss of EUR 5-10 mn for the second half of the year",negative
+"The Annual General Meeting elected the new board on Tuesday",neutral
+"Earnings per share rose to EUR 0.45 from EUR 0.31",positive
+"Sales declined 7 % compared to the same period last year",negative
+"The new plant will be commissioned in the third quarter",neutral
+"Order intake doubled compared to the corresponding quarter a year ago",positive
+"The company will reduce its workforce by 200 employees globally",negative
+"The headquarters will remain in Helsinki",neutral
+"Profit before taxes amounted to EUR 102 mn versus EUR 78 mn",positive
+"The cost overrun pushed the project EUR 12 mn over budget",negative
+"The factory operates three production lines",neutral
+"Net profit climbed 24 % to EUR 56 mn in the period",positive
+"Operating cash flow turned negative for the second consecutive quarter",negative
+"The plant employs around 600 people",neutral
+"Free cash flow improved markedly to EUR 88 mn",positive
+"The company missed analyst expectations for the third quarter in a row",negative
+"The contract is valued at approximately EUR 25 mn",neutral
+"EBITDA grew 31 % year on year to EUR 145 mn",positive
+"The company is forced to write down EUR 18 mn of goodwill",negative
+"The product is sold in more than 50 countries",neutral
+"Profit margin reached an all-time high of 14.6 %",positive
+"Demand has weakened in all of the company's main markets",negative
+"The CEO has accepted a one-year contract extension",neutral
+"Shipments rose 11 % from the prior-year quarter",positive
+"The company filed a chapter 11 bankruptcy petition on Monday",negative
+"The headquarters relocated to a new building in February",neutral
+"Operating profit margin widened to 16.2 % from 12.7 %",positive
+"The company recorded an impairment charge of EUR 42 mn",negative
+"Total assets at quarter end stood at EUR 3.2 bn",neutral
+"Backlog grew 19 % to a record EUR 1.4 bn",positive
+"The order book shrank to its lowest level in five years",negative
+"Inventory levels were unchanged from the prior quarter",neutral
+"The dividend was raised by 25 % to EUR 0.50 per share",positive
+"The company is the subject of a regulatory investigation by the SEC",negative
+"The shareholders' meeting will be held on April 15",neutral
+"Profit before taxes increased to EUR 211 mn from EUR 184 mn",positive
+"The unit reported an operating loss of EUR 8.3 mn",negative
+"The number of full-time employees was 7 200 at year end",neutral
+"Comparable sales growth reached 6.2 % organically",positive
+"Customer churn rose to 14 % year over year",negative
+"The chairman has been a board member since 2014",neutral
+"Adjusted EBITDA jumped 28 % to EUR 312 mn",positive
+"The company recalled its flagship product after safety complaints",negative
+"The annual report will be published on February 28",neutral
+"Operating profit grew to EUR 67 mn from EUR 53 mn",positive
+"Goods returns rose 9 % impacting top-line growth",negative
+"Three new locations will open in the first half",neutral
+"Quarterly revenue surpassed analyst consensus by EUR 30 mn",positive
+"The court ruled against the company in the patent litigation",negative
+"The board approved a share buyback program of EUR 50 mn",neutral
+"Free cash flow conversion exceeded 95 % for the year",positive
+"The trading division reported its widest loss in a decade",negative
+"The seller will retain a 20 % stake post-transaction",neutral
+"Net income rose 17 % to EUR 88 mn in the first half",positive
+"Margins continued to compress on rising raw-material costs",negative
+"The transaction is expected to close in the second quarter",neutral
+"The company raised its full-year guidance by 5 percentage points",positive
+"The auditor issued a going-concern opinion",negative
+"The new plant has a capacity of 200 000 units per year",neutral
+"Same-store sales increased 8.3 % year over year",positive
+"The company warned of a substantial loss for the fourth quarter",negative
+"The transaction will be financed through existing credit lines",neutral
+"Operating profit doubled compared to the same period last year",positive
+"Revenue contracted 12 % in constant currency",negative
+"The contract runs from January 2026 through December 2028",neutral
+"The board proposes a special dividend of EUR 0.25 per share",positive
+"The CFO unexpectedly resigned this week",negative
+"The company has operations on four continents",neutral
+"Order intake grew 22 % organically",positive
+"The factory will be permanently closed at the end of the year",negative
+"The site is located 30 km north of the city center",neutral
+"Earnings per share beat consensus by EUR 0.07",positive
+"The downgrade reflects deteriorating credit metrics",negative
+"The product line was launched in 2018",neutral
+"The acquisition is immediately accretive to earnings",positive
+"Customer satisfaction scores fell to a multi-year low",negative
+"The next interim report will be published on May 5",neutral
+"Operating margin improved by 220 basis points",positive
+"Pricing pressure intensified during the quarter",negative
+"The reorganization is scheduled to be completed by year end",neutral
+"Profit before taxes was EUR 75 mn, up from EUR 58 mn",positive
+"The court rejected the appeal of the antitrust ruling",negative
+"The agreement covers research collaboration through 2027",neutral
+"Recurring revenue grew 14 % to EUR 480 mn",positive
+"The company is exposed to elevated foreign-exchange risk",negative
+"The new platform is scheduled to launch in Q3",neutral
+"Cash position improved by EUR 200 mn during the quarter",positive
+"The fund manager warned of further downside risk",negative
+"The press conference will be held at 10:00 a.m. CET",neutral
+"Subscriber numbers expanded by 320 000 in the quarter",positive
+"The credit rating was placed on negative watch by Moody's",negative
+"The company is headquartered in Espoo, Finland",neutral
+"Order book reached an all-time high of EUR 2.1 bn",positive
+"Sales volumes dropped 9 % year on year",negative
+"The contract represents a multi-year framework agreement",neutral
+"Profit margin doubled compared with the prior-year quarter",positive
+"Operating loss widened to EUR 22 mn from EUR 9 mn",negative
+"The transition to the new ERP system was completed in March",neutral
+"Q4 revenue grew 13 % outpacing the broader market",positive
+"Net cash outflow reached EUR 45 mn in the first half",negative
+"The annual general meeting elected three new board members",neutral
