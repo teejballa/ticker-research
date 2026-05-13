@@ -64,6 +64,10 @@ build/
 !.planning/*.json
 !.planning/**/*.json
 
+# Plan 20-B-01 — held-out eval datasets MUST be physically present in the repo
+# (Mitchell-2019 model card reproducibility + the FPB ECE ship gate).
+!data/eval/*.csv
+
 # ========================
 # Editor / IDE files
 # ========================

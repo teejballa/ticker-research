@@ -478,6 +478,11 @@ export interface AnalysisResult {
   confidence_level: 'Low' | 'Medium' | 'High';
   confidence_explanation: string;
   price_target?: string | null;  // analyst-consensus price target or range — optional for backward compat (D-10)
+  // Plan 20-B-01 — per-document sentiment + aspect classification.
+  // Optional+default[] so the field is additive; populated by the per-doc
+  // classifier upstream and overwritten post-generation in runGeminiAnalysis.
+  // Consumed by 20-B-05 per-aspect aggregator.
+  per_document_sentiment?: PerDocSentimentResult[];
   executive_summary?: string;   // One-paragraph institutional thesis
   investment_thesis?: string;   // Bull case narrative (2-3 sentences)
   key_risks?: string;           // Bear case narrative (2-3 sentences)
