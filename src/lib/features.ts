@@ -37,6 +37,10 @@ const FLAG_NAMES = [
   'agreement_signal',
   // Plan 20-C-03 — Cresci-2019 bot filter + MinHash coordination detection
   'bot_filter',
+  // Plan 20-B-01 — Gemini per-document sentiment + aspect classifier (cheap path).
+  // Default 'shadow' is set by parseMode("shadow") wiring below + .env default.
+  // Shadow lifecycle gated by frontmatter shadow_cutover_criteria in 20-B-01-PLAN.md.
+  'per_doc_sentiment',
 ] as const;
 
 type FlagName = typeof FLAG_NAMES[number];
@@ -68,11 +72,22 @@ function parseMode(envValue: string | undefined, varName: string): FeatureMode {
   throw new Error(`${varName} must be one of: false, shadow, true (got: ${envValue})`);
 }
 
+// Plan 20-B-01 — per_doc_sentiment defaults to 'shadow' when env var is absent.
+// Default-shadow flags do NOT block the main analysis but DO write artifacts
+// (SentimentObservation rows + AnalysisResult.per_document_sentiment) so the
+// cutover scoring window can begin accumulating evidence before any cron flip.
+const SHADOW_DEFAULT_FLAGS: ReadonlySet<FlagName> = new Set<FlagName>([
+  'per_doc_sentiment',
+]);
+
 export function resolveFeatures(): Features {
   const out = {} as Features;
   for (const name of FLAG_NAMES) {
     const envVar = envVarFor(name);
-    const mode = parseMode(process.env[envVar], envVar);
+    const rawEnv = process.env[envVar];
+    const mode = rawEnv == null && SHADOW_DEFAULT_FLAGS.has(name)
+      ? ('shadow' as FeatureMode)
+      : parseMode(rawEnv, envVar);
     (out as Record<string, unknown>)[`${name}_mode`] = mode;
     (out as Record<string, unknown>)[`${name}_enabled`] = mode === 'on';
   }
