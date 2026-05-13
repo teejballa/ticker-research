@@ -425,3 +425,37 @@ remain attributable to the threshold set in force at write-time.
   https://arxiv.org/pdf/2301.11403
 
 Updated by: Plan 20-C-04 (2026-05-13).
+
+---
+
+## Fairness Audit (Plan 20-C-06)
+
+Plan: 20-C-06 — Stratified fairness/bias audit by cap_class, sector, geography, ticker_age.
+
+| Constant                        | Value | Origin / Citation                                                       |
+| ------------------------------- | ----- | ----------------------------------------------------------------------- |
+| `BRIER_LIMITATION_THRESHOLD`    | 0.27  | CONTEXT.md line 129 spec absolute — Brier > 0.27 → flagged limitation   |
+| `ECE_LIMITATION_THRESHOLD`      | 0.10  | CONTEXT.md line 129 spec absolute — ECE > 0.10 → flagged limitation     |
+| `MIN_SEGMENT_SIZE`              | 30    | Central Limit Theorem standard — segments below are flagged low-confidence (`insufficient_data=true`) and the `is_limitation` gate is forced to false |
+| `GICS_SECTORS`                  | 11-literal union (Energy, Materials, Industrials, Consumer Discretionary, Consumer Staples, Health Care, Financials, Information Technology, Communication Services, Utilities, Real Estate) | MSCI/S&P GICS Standard (2023) — single source of truth in `src/lib/sentiment/fairness-types.ts` |
+| Cache TTL (ticker-metadata)     | 30 days | Staleness defense — refreshes via yahoo-finance2 wrapped in `withTelemetry` |
+| Audit cadence                   | `'0 8 3 * *'` (monthly, 3rd at 08:00 UTC) + auto-trigger on classifier retrain | Staggered after 20-A-03 (`0 6 1 * *`) and 20-B-03 (`0 7 2 * *`) crons |
+
+### S1 exemption — spec-mandated, NOT hand-picked
+
+The three numerical thresholds above (0.27, 0.10, 30) are spec absolutes from CONTEXT.md line 129 and the CLT. They are:
+
+- NOT calibrated by Claude
+- NOT runtime-tunable via env var
+- NOT learned via cross-validation
+
+Per CONTEXT.md §S1 ("no hand-picked parameters"), this section documents the explicit S1 exemption: these are external-spec absolutes, not author choices. The Benjamini-Hochberg FDR q-value (T-20-C-06-05) is computed across all segments for informational telemetry, but the `is_limitation` ship-flag uses the raw threshold per the spec.
+
+### Pipeline
+
+1. `scripts/audit-fairness.ts` joins `SentimentSnapshot` with `PriceOutcome` over rolling 90d window (`days_after=7`).
+2. Per `classifier_version`, stratifies across 4 dimensions and calls `auditFairness()`.
+3. `auditFairness()` imports `brierScore` from `src/lib/stats/brier.ts` (20-C-02 primitive) and `expectedCalibrationError` from `src/lib/sentiment/calibration.ts` (20-B-03 primitive). NEVER reimplements either.
+4. Emits markdown report (`reports/fairness-audit-{YYYY-MM-DD}.md`), inserts `FairnessAuditReport` row, idempotently rewrites delimited section in every `docs/cards/MODEL-CARD-*.md`.
+
+Updated by: Plan 20-C-06 (2026-05-13).
