@@ -47,6 +47,24 @@ FEATURE_BOT_FILTER='on'.
 
 <!-- SPOT-CHECK-LOG -->
 
+## eval-bot-fp run @ 2026-05-13T06:37:21.834Z
+
+| metric | value |
+|---|---|
+| tp | 50 |
+| fp | 0 |
+| tn | 50 |
+| fn | 0 |
+| fp_rate | 0.0000 |
+| precision | 1.0000 |
+| recall | 1.0000 |
+
+FP by reason: {"young_account":{"fp":0,"tp":13},"high_self_similarity":{"fp":0,"tp":13},"pump_density":{"fp":0,"tp":12},"hashtag_spam":{"fp":0,"tp":12},"clean":{"fp":0,"tp":0}}
+
+Gate: fp_rate ≤ 0.05 → PASS
+
+
+
 ## eval-bot-fp run @ 2026-05-13T06:35:06.910Z
 
 | metric | value |
