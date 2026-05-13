@@ -11,6 +11,7 @@ import type { AnalysisResult } from '@/lib/types';
 
 // ── Canonical fixture ───────────────────────────────────────────────────────
 const canonicalAnalysis: AnalysisResult = {
+  ticker: 'AAPL',
   company_name: 'Apple Inc.',
   analyzed_at: '2026-05-11T17:00:00Z',
   market_sentiment: 'bullish',
@@ -27,7 +28,7 @@ const canonicalAnalysis: AnalysisResult = {
     { name: 'Anthropic Web Search', key_fact: 'Analyst summary', url: '' },
   ],
   source_warnings: [],
-} as AnalysisResult;
+} as unknown as AnalysisResult;
 
 // "Clean" rendered HTML — all 4 RequiredElements present.
 function buildCleanHtml(): string {
