@@ -158,6 +158,21 @@ export const AnalysisResultSchema = z.object({
     .optional()
     .default([]),
 
+  // Plan 20-B-05 — per-aspect Beta-smoothed bull% (chip stack source).
+  // Authored by aggregateByAspect() in source-package.ts; the LLM does NOT
+  // contribute this field (post-process overwrite mirrors engine_calibration).
+  // Zod accepts shadow-mode runs; off-mode wires an empty array.
+  per_aspect_sentiment: z
+    .array(
+      z.object({
+        aspect: z.enum(ASPECT_TAGS),
+        bull_pct: z.number().min(0).max(100).nullable(),
+        n_docs: z.number().int().nonnegative(),
+        confidence_mean: z.number().min(0).max(1),
+      }),
+    )
+    .optional(),
+
   // Engine calibration block — Gemini contributes only the alignment/disagreement
   // strings (4 of them, post-Phase-16; 8 total post-Phase-17). All numeric fields
   // are overwritten post-generation with authoritative values from getEngineContextForTicker.
