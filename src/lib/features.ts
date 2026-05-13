@@ -41,6 +41,11 @@ const FLAG_NAMES = [
   // Default 'shadow' is set by parseMode("shadow") wiring below + .env default.
   // Shadow lifecycle gated by frontmatter shadow_cutover_criteria in 20-B-01-PLAN.md.
   'per_doc_sentiment',
+  // Plan 20-B-05 — per-aspect aggregation (bull% chip stack + research-brief
+  // aspect breakdown). Env var: FEATURE_PER_ASPECT_AGGREGATE. Default 'shadow'
+  // even when env var is absent (SHADOW_DEFAULT_FLAGS below) — additive in
+  // shadow; cutover to 'on' gated by 4 criteria in 20-B-05-PLAN.md frontmatter.
+  'per_aspect_aggregate',
 ] as const;
 
 type FlagName = typeof FLAG_NAMES[number];
@@ -78,6 +83,10 @@ function parseMode(envValue: string | undefined, varName: string): FeatureMode {
 // cutover scoring window can begin accumulating evidence before any cron flip.
 const SHADOW_DEFAULT_FLAGS: ReadonlySet<FlagName> = new Set<FlagName>([
   'per_doc_sentiment',
+  // Plan 20-B-05 — additive per-aspect aggregator defaults to shadow so the
+  // pipeline starts populating AnalysisResult.per_aspect_sentiment for the κ
+  // cutover scoring window even before the operator flips the env var.
+  'per_aspect_aggregate',
 ]);
 
 export function resolveFeatures(): Features {
@@ -102,3 +111,9 @@ export const FEATURES: Features = resolveFeatures();
 // (aggregator weight gate + UI subtext) and lets the eval scripts type-check.
 export type BotFilterMode = FeatureMode;
 export const BOT_FILTER_MODE: BotFilterMode = FEATURES.bot_filter_mode;
+
+// ── Plan 20-B-05 — per-aspect aggregation flag (explicit re-export) ────
+// Same shape as BotFilterMode above — generated via FLAG_NAMES; this re-export
+// keeps FEATURE_PER_ASPECT_AGGREGATE grep-traceable for source-package wiring,
+// research-brief prompt insertion, and PerAspectChips UI gating.
+export const FEATURE_PER_ASPECT_AGGREGATE: FeatureMode = FEATURES.per_aspect_aggregate_mode;

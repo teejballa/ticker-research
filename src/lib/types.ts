@@ -17,6 +17,19 @@ export interface PerDocSentimentResult {
   aspects: import('./sentiment/aspects').AspectTag[]; // ⊆ ASPECT_TAGS
 }
 
+/**
+ * Plan 20-B-05 — per-aspect Beta-smoothed bull%. One entry per AspectTag in
+ * the fixed 7-element ASPECT_TAGS taxonomy. `bull_pct == null` ⇒ insufficient
+ * signal (n_docs < N_DOCS_MIN=3) — UI renders '—' (em-dash), NOT '0%', per
+ * T-20-B-05-03 (empty data must not be communicated as zero bullishness).
+ */
+export interface PerAspectSentimentEntry {
+  aspect: import('./sentiment/aspects').AspectTag;
+  bull_pct: number | null;
+  n_docs: number;
+  confidence_mean: number;
+}
+
 // Security type classification for adaptive prompt branching (Phase 7).
 // Populated by detectSecurityType() before collectAllData runs.
 export type SecurityType = 'equity' | 'spac' | 'etf' | 'adr' | 'preferred' | 'crypto' | 'unknown';
@@ -493,6 +506,13 @@ export interface AnalysisResult {
   // classifier upstream and overwritten post-generation in runGeminiAnalysis.
   // Consumed by 20-B-05 per-aspect aggregator.
   per_document_sentiment?: PerDocSentimentResult[];
+  // Plan 20-B-05 — per-aspect Beta-smoothed bull% (chip stack on Sentiment
+  // Intelligence card + research-brief.ts prompt aspect breakdown). Populated
+  // by aggregateByAspect() over per_document_sentiment in source-package and
+  // post-process-written here (LLM does NOT author this field — same trust
+  // boundary as engine_calibration). Optional for back-compat with reports
+  // persisted before 20-B-05 landed.
+  per_aspect_sentiment?: PerAspectSentimentEntry[];
   executive_summary?: string;   // One-paragraph institutional thesis
   investment_thesis?: string;   // Bull case narrative (2-3 sentences)
   key_risks?: string;           // Bear case narrative (2-3 sentences)
