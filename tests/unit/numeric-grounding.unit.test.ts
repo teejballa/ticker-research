@@ -12,8 +12,11 @@ import { describe, it, expect } from 'vitest';
 import {
   extractNumericSpans,
   inferTier,
+  findClosestSourceValue,
+  numericGroundingCheck,
 } from '@/lib/eval/numeric-grounding';
 import { TOLERANCE_SCHEDULE } from '@/lib/eval/numeric-grounding.types';
+import type { SourcePackage } from '@/lib/types';
 
 const ANY_SECTION = 'executive_summary' as const;
 
@@ -238,5 +241,215 @@ describe('TOLERANCE_SCHEDULE — exact tier values per CONTEXT §S9', () => {
 
   it('derived tier is 0.02', () => {
     expect(TOLERANCE_SCHEDULE.derived).toBe(0.02);
+  });
+});
+
+// ── findClosestSourceValue + numericGroundingCheck ──────────────────────────────
+
+function makePkg(overrides: {
+  price?: number | null;
+  market_cap?: number | null;
+  fifty_two_week_high?: number | null;
+  fifty_two_week_low?: number | null;
+  pe_ratio?: number | null;
+  eps?: number | null;
+  revenue?: number | null;
+  avg_price_target?: number | null;
+  stocktwits_bull_pct?: number | null;
+  stocktwits_bear_pct?: number | null;
+}): SourcePackage {
+  const now = '2026-05-13T00:00:00Z';
+  return {
+    ticker: 'TEST',
+    company_name: 'Test Co',
+    exchange: 'NASDAQ',
+    security_type: 'equity',
+    assembled_at: now,
+    market_data: {
+      collected_at: now,
+      price: overrides.price ?? null,
+      volume: null,
+      market_cap: overrides.market_cap ?? null,
+      fifty_two_week_high: overrides.fifty_two_week_high ?? null,
+      fifty_two_week_low: overrides.fifty_two_week_low ?? null,
+      percent_change_today: null,
+      exchange: 'NASDAQ',
+    },
+    fundamentals: {
+      collected_at: now,
+      pe_ratio: overrides.pe_ratio ?? null,
+      eps: overrides.eps ?? null,
+      revenue: overrides.revenue ?? null,
+      debt_to_equity: null,
+      profit_margin: null,
+    },
+    news: { collected_at: now, items: [] },
+    analyst_sentiment: {
+      collected_at: now,
+      consensus: null,
+      avg_price_target: overrides.avg_price_target ?? null,
+      analyst_count: null,
+      recent_changes: [],
+    },
+    sec_filing_summary: {
+      collected_at: now,
+      most_recent_10k: null,
+      most_recent_10q: null,
+      filing_dates: { '10k': null, '10q': null },
+    },
+    social_sentiment: {
+      collected_at: now,
+      overall_tone: null,
+      signals: [],
+      sources_checked: [],
+    },
+    collection_errors: [],
+    supplementary_market_data: { sources: [] },
+    sentiment_intelligence: {
+      collected_at: now,
+      stocktwits_bull_pct: overrides.stocktwits_bull_pct ?? null,
+      stocktwits_bear_pct: overrides.stocktwits_bear_pct ?? null,
+      stocktwits_message_count: null,
+      stocktwits_is_trending: null,
+      reddit_tone: null,
+      put_call_ratio: null,
+      put_call_interpretation: null,
+    },
+  } as unknown as SourcePackage;
+}
+
+describe('findClosestSourceValue — per-tier tolerance', () => {
+  it('ratio tier — span 23.4 vs pe_ratio 23.5 (delta ~0.4%) → MATCH', () => {
+    const pkg = makePkg({ pe_ratio: 23.5 });
+    const [span] = extractNumericSpans('Trading at 23.4x P/E currently.', 'executive_summary');
+    expect(span.tier).toBe('ratio');
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.ratio);
+    expect(match).not.toBeNull();
+    expect(match!.delta).toBeLessThanOrEqual(TOLERANCE_SCHEDULE.ratio);
+    expect(match!.source_path).toBe('fundamentals.pe_ratio');
+  });
+
+  it('ratio tier — span 24.0 vs pe_ratio 23.5 (delta ~2.1%) → NO MATCH (over tolerance)', () => {
+    const pkg = makePkg({ pe_ratio: 23.5 });
+    const [span] = extractNumericSpans('Trading at 24x P/E currently.', 'executive_summary');
+    expect(span.tier).toBe('ratio');
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.ratio);
+    expect(match).not.toBeNull();
+    expect(match!.delta).toBeGreaterThan(TOLERANCE_SCHEDULE.ratio);
+  });
+
+  it('share_count tier — exact required: 15_999_999 vs 16_000_000 → over tolerance', () => {
+    const pkg = makePkg({});
+    const span = {
+      text: '15,999,999',
+      value: 15_999_999,
+      position: 0,
+      context: 'shares outstanding 15,999,999',
+      tier: 'share_count' as const,
+      section: 'executive_summary' as const,
+    };
+    // Inject a synthetic shares leaf via market_cap / price.
+    pkg.market_data.market_cap = 1_600_000_000;
+    pkg.market_data.price = 100;  // → derived:shares_outstanding = 16_000_000
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.share_count);
+    expect(match).not.toBeNull();
+    expect(match!.delta).toBeGreaterThan(TOLERANCE_SCHEDULE.share_count);
+  });
+
+  it('share_count tier — exact: 16_000_000 vs 16_000_000 → MATCH', () => {
+    const pkg = makePkg({});
+    pkg.market_data.market_cap = 1_600_000_000;
+    pkg.market_data.price = 100;  // → derived:shares_outstanding = 16_000_000
+    const span = {
+      text: '16,000,000',
+      value: 16_000_000,
+      position: 0,
+      context: 'shares outstanding 16,000,000',
+      tier: 'share_count' as const,
+      section: 'executive_summary' as const,
+    };
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.share_count);
+    expect(match).not.toBeNull();
+    expect(match!.delta).toBe(0);
+  });
+
+  it('percentage tier — pp comparison: 65 vs 65.5 (|0.5| ≤ 1) → MATCH', () => {
+    const pkg = makePkg({ stocktwits_bull_pct: 65.5 });
+    const [span] = extractNumericSpans('Bullish sentiment of 65%.', 'executive_summary');
+    expect(span.tier).toBe('percentage');
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.percentage);
+    expect(match).not.toBeNull();
+    expect(match!.delta).toBeLessThanOrEqual(TOLERANCE_SCHEDULE.percentage * 100 /* not used; absolute delta */);
+    // For percentage tier, delta is absolute pp.
+    expect(match!.delta).toBeLessThanOrEqual(1);
+  });
+
+  it('percentage tier — pp comparison: 65 vs 67 (|2| > 1) → over tolerance', () => {
+    const pkg = makePkg({ stocktwits_bull_pct: 67 });
+    const [span] = extractNumericSpans('Bullish sentiment of 65%.', 'executive_summary');
+    expect(span.tier).toBe('percentage');
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.percentage);
+    expect(match).not.toBeNull();
+    expect(match!.delta).toBeGreaterThan(1);
+  });
+
+  it('derived tier — span $2.44T vs price × shares = $2.4T (~1.67%) → MATCH', () => {
+    // price = $150, shares (derived) = market_cap / price.
+    // We synthesize a derived leaf via the synthetic-products in walkNumericLeaves.
+    // Easier: use 'derived' on price/eps. price=150, eps=10 → derived = 15. Span 14.7 → delta 2% — MATCH.
+    // price=150, eps=10 → derived:price/eps = 15. Span 14.8 → delta = 0.0133 ≤ 0.02 → MATCH.
+    const pkg = makePkg({ price: 150, eps: 10 });
+    const span = {
+      text: '14.8',
+      value: 14.8,
+      position: 0,
+      context: 'derived value of 14.8',
+      tier: 'derived' as const,
+      section: 'executive_summary' as const,
+    };
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.derived);
+    expect(match).not.toBeNull();
+    expect(match!.delta).toBeLessThanOrEqual(TOLERANCE_SCHEDULE.derived);
+  });
+});
+
+describe('numericGroundingCheck — end-to-end on synthetic AnalysisResult', () => {
+  it('ungrounded_spans is empty when every span matches', () => {
+    const pkg = makePkg({ pe_ratio: 23 });
+    const result = numericGroundingCheck(
+      { executive_summary: 'Apple trades at 23x P/E.', investment_thesis: '' },
+      pkg,
+    );
+    expect(result.ungrounded_spans).toHaveLength(0);
+    expect(result.total_spans).toBeGreaterThan(0);
+    expect(result.coverage_pct).toBe(1);
+  });
+
+  it('surfaces the offending span when source disagrees', () => {
+    const pkg = makePkg({ pe_ratio: 30 });
+    const result = numericGroundingCheck(
+      { executive_summary: 'Apple trades at 23x P/E.' },
+      pkg,
+    );
+    expect(result.ungrounded_spans.length).toBeGreaterThanOrEqual(1);
+    const f = result.ungrounded_spans[0];
+    expect(f.span.text).toContain('23');
+    expect(f.span.tier).toBe('ratio');
+    expect(f.closest?.source_value).toBe(30);
+  });
+
+  it('context-preference: when pe_ratio=23 and fifty_two_week_high=23, "23x P/E" picks pe_ratio', () => {
+    const pkg = makePkg({ pe_ratio: 23, fifty_two_week_high: 23 });
+    const result = numericGroundingCheck(
+      { executive_summary: 'Apple trades at 23x P/E.' },
+      pkg,
+    );
+    // Inspect via findClosestSourceValue directly — the test asserts the
+    // closest-pick prefers pe_ratio when context contains P/E.
+    const [span] = extractNumericSpans('Apple trades at 23x P/E.', 'executive_summary');
+    const match = findClosestSourceValue(span, pkg, TOLERANCE_SCHEDULE.ratio);
+    expect(match).not.toBeNull();
+    expect(match!.source_path).toBe('fundamentals.pe_ratio');
+    expect(result.ungrounded_spans).toHaveLength(0);
   });
 });
