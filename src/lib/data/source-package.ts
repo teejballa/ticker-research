@@ -580,11 +580,73 @@ export async function collectAllData(
     FEATURES.exa_primary_mode,
   ]);
 
-  return runWithShadow(
+  const pkg = await runWithShadow(
     'source-package-merge',
     () => buildSourcePackageOldLadder(ticker, companyName, exchange, securityType),
     () => buildSourcePackageNewLadder(ticker, companyName, exchange, securityType),
     mode,
     { ticker },
   );
+
+  // ── Plan 20-B-01 — per-doc sentiment classification under FEATURE_PER_DOC_SENTIMENT ──
+  // 'off' branch: no classifier call, no persistence, no AnalysisResult field write.
+  // 'shadow' branch (default): classifier runs, SentimentObservation rows persist,
+  //   AnalysisResult.per_document_sentiment populated — but no downstream consumer is
+  //   activated yet (20-B-05 lands the consumer). Cutover to 'on' is gated by the
+  //   shadow_cutover_criteria in 20-B-01-PLAN.md frontmatter.
+  // 'on' branch: same as shadow plus downstream activation when 20-B-05 ships.
+  //
+  // Attached as a sidecar property on the returned package; runGeminiAnalysis
+  // reads it post-generation and writes it onto AnalysisResult.per_document_sentiment.
+  if (FEATURES.per_doc_sentiment_mode !== 'off') {
+    try {
+      const { selectTopDocs } = await import('@/lib/sentiment/select-top-docs');
+      const { classifyDocumentsBatch } = await import('@/lib/sentiment/per-doc-classifier');
+      const { insertObservation } = await import('@/lib/sentiment/observation-store');
+      const docs = selectTopDocs(pkg);
+      if (docs.length > 0) {
+        const perDocResults = await classifyDocumentsBatch(docs, { ticker });
+        // Attach for downstream Gemini-analysis post-process pickup (no SourcePackage shape change).
+        (pkg as SourcePackage & { _per_document_sentiment?: typeof perDocResults }).
+          _per_document_sentiment = perDocResults;
+        // Fire-and-forget persistence — never blocks the user-facing analysis.
+        // Each result becomes one SentimentObservation row (classifier_version=model_version='gemini-per-doc-v1').
+        void Promise.allSettled(
+          perDocResults.map(async (r) => {
+            const docInput = docs.find((d) => d.doc_id === r.doc_id);
+            if (!docInput) return;
+            try {
+              await insertObservation({
+                ticker,
+                source: docInput.source === 'news' ? 'news' : 'reddit',
+                message_id: r.doc_id,
+                raw_body: docInput.text,
+                classifier_version: 'gemini-per-doc-v1',
+                classifier_score: r.polarity,
+                model_version: 'gemini-per-doc-v1',
+                decay_weight: null,
+                author_id: 'unknown',
+                author_features_snapshot: {
+                  account_age_days: null,
+                  follower_count: null,
+                  is_verified: null,
+                  message_count_30d: null,
+                },
+                aspects: r.aspects,
+              });
+            } catch {
+              // Duplicate or transient — observation-store throws on (ticker, message_id, model_version)
+              // collision per 20-Z-01 immutability. Swallow: per-doc classifier output is
+              // additive and the row already exists under this model_version.
+            }
+          }),
+        );
+      }
+    } catch {
+      // Defensive: pipeline must not fail if per-doc step trips. Shadow mode is
+      // diagnostic only until cutover.
+    }
+  }
+
+  return pkg;
 }

@@ -46,6 +46,10 @@ export interface SentimentObservationInput {
   fetched_at?: Date;
   // LOOKAHEAD-OK: DAO input field — published_at is informational only (Plan 20-Z-01 schema marker); never used in backtest joins. The PIT join key is fetched_at. Static-check exemption granted because this is a WRITE-side type, not a query.
   published_at?: Date | null;
+  // Plan 20-B-01 — fixed 7-element AspectTag taxonomy (subset). Empty default for
+  // pre-20-B-01 callers; 20-B-01 per-doc classifier populates this column directly.
+  // Widening the taxonomy requires a new model_version per S2 immutability.
+  aspects?: string[];
 }
 
 export class SentimentObservationDuplicateError extends Error {
@@ -116,6 +120,8 @@ export async function insertObservation(
         author_id: input.author_id,
         author_features_snapshot: input.author_features_snapshot as unknown as Prisma.InputJsonValue,
         model_version: input.model_version,
+        // Plan 20-B-01 — empty default if caller omits; otherwise persisted as text[].
+        aspects: input.aspects ?? [],
       },
       select: { id: true },
     });
