@@ -109,9 +109,53 @@ export async function GET(request: Request) {
     }
   }
 
+  // Plan 20-B-06 T-20-B-06-04 — degradation_alert block.
+  // Sustained NLP fallback rate > 5% over last 24h indicates upstream system
+  // breakage (HF endpoint outage, @xenova OOM). Denominator restricted to
+  // NLP-classifier providers so quiet days for other providers don't dilute.
+  const degradationResult = await prisma.$queryRawUnsafe<
+    Array<{ rate: number | null; total: bigint | number; lm: bigint | number }>
+  >(`
+    SELECT
+      COUNT(*) FILTER (WHERE provider_id = 'lm-fallback')::float
+        / NULLIF(COUNT(*), 0) AS rate,
+      COUNT(*)::bigint AS total,
+      COUNT(*) FILTER (WHERE provider_id = 'lm-fallback')::bigint AS lm
+    FROM "provider_call_logs"
+    WHERE started_at >= NOW() - INTERVAL '24 hours'
+      AND provider_id IN ('finbert-hf', 'lm-fallback')
+      AND status = 'ok'
+  `);
+  const DEGRADATION_THRESHOLD = 0.05; // CONTEXT.md spec — 5%
+  const degradationRate = degradationResult[0]?.rate ?? 0;
+  let degradationAlert:
+    | {
+        type: 'degradation_alert';
+        message: string;
+        severity: 'warning';
+        rate: number;
+        threshold: number;
+      }
+    | null = null;
+  if (degradationRate > DEGRADATION_THRESHOLD) {
+    const msg =
+      `NLP fallback rate ${(degradationRate * 100).toFixed(1)}% exceeds ` +
+      `${(DEGRADATION_THRESHOLD * 100).toFixed(0)}% threshold over last 24h. ` +
+      `Check /insights/sentiment-health for failing upstream (HF endpoint, @xenova).`;
+    degradationAlert = {
+      type: 'degradation_alert',
+      message: msg,
+      severity: 'warning',
+      rate: degradationRate,
+      threshold: DEGRADATION_THRESHOLD,
+    };
+    console.warn(`[cost-budget-check] degradation_alert ${msg}`);
+  }
+
   return NextResponse.json({
     generated_at: new Date().toISOString(),
     threshold_multiplier: 1.5,
     alerts,
+    degradation_alert: degradationAlert,
   });
 }

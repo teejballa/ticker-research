@@ -29,8 +29,14 @@ interface ProviderRow {
   cost_per_call_usd_24h: number;
 }
 
-async function load(): Promise<ProviderRow[]> {
-  if (!process.env.DATABASE_URL) return [];
+interface PageData {
+  rows: ProviderRow[];
+  /** Plan 20-B-06 — share of NLP-classifier calls that fell to L&M lexicon over last 24h. */
+  degradation_rate_24h: number;
+}
+
+async function load(): Promise<PageData> {
+  if (!process.env.DATABASE_URL) return { rows: [], degradation_rate_24h: 0 };
   // Dynamic import — same pattern as /insights/page.tsx — keeps @/lib/db
   // (which throws on missing DATABASE_URL) out of static analysis paths.
   const { prisma } = await import('@/lib/db');
@@ -62,7 +68,7 @@ async function load(): Promise<ProviderRow[]> {
     GROUP BY provider_id
     ORDER BY provider_id
   `);
-  return rows.map((r) => {
+  const mappedRows: ProviderRow[] = rows.map((r) => {
     const n = Number(r.count_24h);
     return {
       provider_id: r.provider_id,
@@ -77,10 +83,55 @@ async function load(): Promise<ProviderRow[]> {
       cost_per_call_usd_24h: n > 0 ? (r.total_cost ?? 0) / n : 0,
     };
   });
+
+  // Plan 20-B-06 — degradation_rate_24h tile. Same SQL as
+  // /api/insights/sentiment-health route so JSON + UI agree.
+  const degRows = await prisma.$queryRawUnsafe<Array<{ rate: number | null }>>(`
+    SELECT
+      COUNT(*) FILTER (WHERE provider_id = 'lm-fallback')::float
+        / NULLIF(COUNT(*), 0) AS rate
+    FROM "provider_call_logs"
+    WHERE started_at >= NOW() - INTERVAL '24 hours'
+      AND provider_id IN ('finbert-hf', 'lm-fallback')
+      AND status = 'ok'
+  `);
+  const degradation_rate_24h = degRows[0]?.rate ?? 0;
+
+  return { rows: mappedRows, degradation_rate_24h };
+}
+
+/**
+ * Plan 20-B-06 — degradation_rate_24h tile.
+ *
+ *   green if rate ≤ 1%
+ *   amber if rate ≤ 5%
+ *   red   if rate >  5%   (= T-20-B-06-04 cost-budget cron alert threshold)
+ */
+function DegradationRateTile({ rate }: { rate: number }) {
+  const pct = rate * 100;
+  const color =
+    pct <= 1
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : pct <= 5
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-red-600 dark:text-red-400';
+  return (
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 mb-6">
+      <div className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        NLP fallback rate (last 24h)
+      </div>
+      <div className={`text-4xl font-bold ${color}`} data-testid="degradation-rate-24h">
+        {pct.toFixed(1)}%
+      </div>
+      <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+        L&apos;m-fallback share of (finbert-hf + lm-fallback) successful NLP calls. Alert at &gt; 5%.
+      </div>
+    </div>
+  );
 }
 
 export default async function SentimentHealthPage() {
-  const rows = await load();
+  const { rows, degradation_rate_24h } = await load();
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <NavBar />
@@ -101,6 +152,8 @@ export default async function SentimentHealthPage() {
           </a>{' '}
           — weekly Brier + CORP reliability per classifier_version.
         </p>
+        {/* Plan 20-B-06 — degradation_rate_24h tile (T-20-B-06-04 observability). */}
+        <DegradationRateTile rate={degradation_rate_24h} />
         {rows.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             No telemetry yet. Providers appear here after the first instrumented call.
