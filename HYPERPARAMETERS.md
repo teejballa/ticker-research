@@ -459,3 +459,38 @@ Per CONTEXT.md §S1 ("no hand-picked parameters"), this section documents the ex
 4. Emits markdown report (`reports/fairness-audit-{YYYY-MM-DD}.md`), inserts `FairnessAuditReport` row, idempotently rewrites delimited section in every `docs/cards/MODEL-CARD-*.md`.
 
 Updated by: Plan 20-C-06 (2026-05-13).
+
+---
+
+## Citation Coverage (Plan 20-D-02)
+
+Plan: 20-D-02 — Citation-coverage metric (hybrid regex + LLM-judge, build-blocking ≥80% gate).
+
+| Constant                   | Value | Origin / Citation                                                                 |
+| -------------------------- | ----- | --------------------------------------------------------------------------------- |
+| `COVERAGE_OVERALL_MIN`     | 80    | CONTEXT.md §S8 ship gate — overall per-ticker `coverage_pct` floor                |
+| `COVERAGE_SECTION_MIN`     | 60    | CONTEXT.md §S9 — per-populated-section floor; lower than overall because sparse-source sections (sources_used, engine_calibration) often have few claims |
+| `ANCHOR_WINDOW_CHARS`      | 50    | Rule A — citation anchor proximity window (±N chars from claim start_char)        |
+| `KEYWORD_OVERLAP_MIN`      | 0.5   | Rule B — bag-of-words cosine threshold for claim ↔ citation match when no anchor |
+| `COSINE_DEDUPE_THRESHOLD`  | 0.85  | mergeClaimSets dedupe threshold for regex ∪ LLM extractor outputs                 |
+| `KAPPA_SHIP_GATE`          | 0.7   | Inter-method agreement floor (regex vs LLM) on the 100-claim labeled set; documented but enforcement script + labeled set deferred to a follow-up plan |
+| Schedule                   | `'0 9 * * 0'` (Sunday 09:00 UTC, weekly) | `/api/cron/eval-citation-coverage` writes the rolling per-ticker × per-section breakdown |
+
+### S1 exemption — spec-mandated, NOT hand-picked
+
+`COVERAGE_OVERALL_MIN = 80` and `COVERAGE_SECTION_MIN = 60` are spec absolutes from CONTEXT.md §S8/§S9. They are:
+
+- NOT calibrated by Claude
+- NOT runtime-tunable via env var
+- NOT learned via cross-validation
+
+The `ANCHOR_WINDOW_CHARS`, `KEYWORD_OVERLAP_MIN`, and `COSINE_DEDUPE_THRESHOLD` are heuristic constants documented inline in `src/lib/eval/citation-coverage.types.ts`. Tightening any of them is a policy change requiring an updated synthetic-injection regression baseline.
+
+### Pipeline
+
+1. `scripts/eval-citation-coverage.ts` walks `tests/golden-tickers/_reports/*.report.json`.
+2. For each fixture: split into `ReportSection`-keyed chunks → `extractClaimsRegex` (always) ∪ `extractClaimsLLM` when `RUN_LLM_CLAIM_EXTRACTION=true` → `mergeClaimSets` → `extractCitationAnchors` → `citationCoverage`.
+3. Emits `reports/citation-coverage-{YYYY-MM-DD}.{json,md}`. With `--ci` flag, exits non-zero when ANY fixture-with-citations falls below the floors.
+4. Fixtures missing `citations_v2` (pre-19-C-07 bootstrapped reports) are skipped rather than failed — the gate runs once 20-D-04 re-records the fixtures with citations populated.
+
+Updated by: Plan 20-D-02 (2026-05-13).
