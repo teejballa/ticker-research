@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  // Plan 20-C-04: spec lives at tests/playwright/ per plan path; existing
+  // specs live under tests/e2e/. Both directories are discovered.
+  testDir: './tests',
+  testMatch: ['e2e/**/*.spec.ts', 'playwright/**/*.spec.ts'],
   timeout: 10 * 60 * 1000, // 10 min — full pipeline tests are slow
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost:3000',
