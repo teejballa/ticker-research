@@ -113,3 +113,11 @@ shadow-reports/
 # being created at the repo root.
 # ========================
 calibration-reports/
+
+# ========================
+# Phase 20-C-02 — Brier evaluation artifacts
+# ========================
+# JSON written by the weekly /api/cron/eval-brier (and the scripts/eval-brier.ts
+# CLI). Committed only on ship-gate failure as operator narratives (the .md
+# variant is intentionally NOT gitignored — see scripts/eval-brier.ts).
+/reports/brier-*.json
