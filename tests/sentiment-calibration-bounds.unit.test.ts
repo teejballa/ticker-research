@@ -32,8 +32,7 @@ describe('20-B-03 Task 1 — calibration-hyperparameters', () => {
     'use strict';
     expect(Object.isFrozen(CALIBRATION_BOUNDS)).toBe(true);
     expect(() => {
-      // @ts-expect-error — runtime mutation attempt on frozen const
-      (CALIBRATION_BOUNDS as Record<string, number>).T_MIN = 0.01;
+      (CALIBRATION_BOUNDS as unknown as Record<string, number>).T_MIN = 0.01;
     }).toThrow();
   });
 

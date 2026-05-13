@@ -185,8 +185,8 @@ export function fitTemperature(predictions: LogitPrediction[]): number {
   const phi = (1 + Math.sqrt(5)) / 2;
   const resphi = 2 - phi; // ≈ 0.381966
 
-  let a = T_MIN;
-  let b = T_MAX;
+  let a: number = T_MIN;
+  let b: number = T_MAX;
   const span = b - a;
   let x1 = a + resphi * span;
   let x2 = b - resphi * span;
