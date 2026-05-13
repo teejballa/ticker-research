@@ -269,3 +269,27 @@ script can run end-to-end on day one.
   all agreeing — see `/api/cron/joint-feature-ablation` and `reports/`.
 
 Updated by: Plan 20-C-05 (2026-05-12).
+
+---
+
+## 20-B-01: Gemini per-document sentiment classifier
+
+Constants for the Wave-B cheap-path per-doc classifier (`src/lib/sentiment/per-doc-classifier.ts`,
+`src/lib/sentiment/select-top-docs.ts`). Per S1, every value traces to a CONTEXT.md
+acceptance criterion or a documented threat-model mitigation — none are hand-picked.
+
+| Constant                  | Value                                                                          | Source / rationale                                                                                                       |
+|---------------------------|--------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| ASPECT_TAGS               | `['earnings','guidance','regulatory','M&A','macro','product','management']`   | CONTEXT.md line 113 — fixed 7-element taxonomy; closed enum; locked via Zod + golden snapshot                            |
+| ECE_SHIP_GATE             | 0.15                                                                           | CONTEXT.md line 113 acceptance — FPB held-out subset; 10-bin binned ECE per Guo et al. 2017                              |
+| TOP_NEWS                  | 20                                                                             | Per-ticker top-news cap (T-20-B-01-02 cost defense)                                                                      |
+| TOP_COMMUNITY             | 10                                                                             | Per-ticker top-community cap (T-20-B-01-02 cost defense)                                                                 |
+| COST_CAP_DOCS_PER_TICKER  | 30                                                                             | TOP_NEWS + TOP_COMMUNITY hard cap; baseline for the 20-Z-03 1.5× rolling cost alerter                                    |
+| MAX_TEXT_CHARS            | 2000                                                                           | Per-doc text truncation to bound prompt size; chosen so 30 docs fit comfortably under Gemini input window                |
+
+- **Prompt pin**: `gemini-per-doc-sentiment@v1` (registered via 20-Z-04).
+- **Classifier pin**: `classifier_version = model_version = 'gemini-per-doc-v1'`.
+- **Feature flag**: `FEATURE_PER_DOC_SENTIMENT` ∈ `{off, shadow, on}`; default `'shadow'`.
+- **Recalibration cadence**: ECE re-fit monthly via 20-B-03 temperature scaling (planned). Prompt review quarterly.
+
+Updated by: Plan 20-B-01 (2026-05-13).
