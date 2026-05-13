@@ -690,3 +690,101 @@ export async function computeAuthorConcentration(
     weight_multipliers,
   };
 }
+
+// ─── Plan 20-C-04 — Pump-and-dump cluster detector (Nam/Yang 2023) ───
+//
+// Composes existing 20-A-02 mention_z + 20-A-04 gini + 20-Z-01 author age +
+// cap_class through the 5-condition AND-predicate in pump-dump-detector.ts.
+// Persists EVERY invocation (not just fires) to ManipulationWarning for the
+// 30d operator-FP-review shadow gate. PIT-safe via fetched_at (S2).
+
+import { prisma } from '@/lib/db';
+import type { CapClass } from '@/lib/diffusion-trace';
+import {
+  detectManipulation,
+  PUMP_DUMP_THRESHOLDS,
+  RULE_VERSION as PUMP_DUMP_RULE_VERSION,
+} from './pump-dump-detector';
+
+export interface ManipulationWarningBlock {
+  is_warning: boolean;
+  matched_rules: string[];
+  rule_version: string;
+}
+
+/**
+ * Compose existing 20-A-02 mention_z + 20-A-04 gini + 20-Z-01 author age +
+ * cap_class into PumpDumpFeatures, run detectManipulation, persist a
+ * ManipulationWarning row (EVERY invocation — not just fires; FP review
+ * during the 30d shadow gate), return the block.
+ *
+ *  - Returns null when FEATURES.pump_dump_detector_mode === 'off'.
+ *  - Returns { is_warning: false, matched_rules: [], rule_version } when
+ *    cap_class is out of scope (large/mid/unknown). Early-exits with NO DB
+ *    write — detector is small-cap-scoped per Nam/Yang.
+ *  - Reads mean_account_age_days from SentimentObservation.author_features_snapshot
+ *    over the rolling 24h window — joined on fetched_at, NEVER published_at
+ *    (S2 PIT safety, enforced by 20-Z-07 lookahead-bias regression).
+ */
+export async function computeManipulationWarning(args: {
+  ticker: string;
+  cap_class: CapClass;
+  bull_pct: number;
+  mention_z: number | null;
+  gini: number | null;
+  now?: Date;
+}): Promise<ManipulationWarningBlock | null> {
+  if (FEATURES.pump_dump_detector_mode === 'off') return null;
+
+  const now = args.now ?? new Date();
+
+  // Early exit: out-of-scope cap_class — return non-firing block, NO DB write.
+  if (!PUMP_DUMP_THRESHOLDS.cap_class_set.has(args.cap_class)) {
+    return { is_warning: false, matched_rules: [], rule_version: PUMP_DUMP_RULE_VERSION };
+  }
+
+  // Read mean_account_age_days from SentimentObservation.author_features_snapshot
+  // over the rolling 24h window — PIT-safe via fetched_at (S2).
+  const since = new Date(now.getTime() - 24 * 3600 * 1000);
+  const obs = await prisma.sentimentObservation.findMany({
+    where: { ticker: args.ticker, fetched_at: { gte: since } },
+    select: { author_features_snapshot: true },
+  });
+  const ages: number[] = [];
+  for (const o of obs) {
+    const snap = o.author_features_snapshot as { account_age_days?: number } | null;
+    if (snap && typeof snap.account_age_days === 'number' && Number.isFinite(snap.account_age_days)) {
+      ages.push(snap.account_age_days);
+    }
+  }
+  const mean_account_age_days = ages.length > 0
+    ? ages.reduce((s, v) => s + v, 0) / ages.length
+    : null;
+
+  const features = {
+    mention_z: args.mention_z,
+    bull_pct: args.bull_pct,
+    gini: args.gini,
+    mean_account_age_days,
+    cap_class: args.cap_class,
+  };
+  const result = detectManipulation(features);
+
+  // INSERT-only — every invocation persists telemetry, not just fires.
+  // Operator reviews FP rate during the 30d shadow gate via /insights.
+  await prisma.manipulationWarning.create({
+    data: {
+      ticker: args.ticker,
+      mention_z: features.mention_z,
+      bull_pct: features.bull_pct,
+      gini: features.gini,
+      mean_account_age_days: features.mean_account_age_days,
+      cap_class: features.cap_class,
+      is_warning_fired: result.is_warning,
+      matched_rules: result.matched_rules,
+      rule_version: result.rule_version,
+    },
+  });
+
+  return result;
+}
