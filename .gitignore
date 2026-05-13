@@ -68,6 +68,10 @@ build/
 # (Mitchell-2019 model card reproducibility + the FPB ECE ship gate).
 !data/eval/*.csv
 
+# Plan 20-B-06 — L&M Master Dictionary is a static reference asset (committed,
+# not generated). classifier_version reproducibility from commit SHA.
+!data/lexicons/*.csv
+
 # ========================
 # Editor / IDE files
 # ========================
