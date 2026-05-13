@@ -40,7 +40,11 @@ export type PromptId =
   // Plan 20-Z-05 — LLM-as-judge rubric for baseline-vs-candidate evals.
   // The body lives at src/lib/prompts/_v1/eval-judge-v1.md. Loaded by
   // src/lib/eval/judge.ts via getPrompt('eval-judge-v1', 'v1').
-  | 'eval-judge-v1';
+  | 'eval-judge-v1'
+  // Plan 20-B-01 — per-document sentiment + aspect classifier (cheap path,
+  // Wave B baseline). Body at src/lib/prompts/_v1/gemini-per-doc-sentiment.md.
+  // Loaded by classifyDocumentsBatch via renderPrompt('gemini-per-doc-sentiment').
+  | 'gemini-per-doc-sentiment';
 
 /** Template literal type — vN where N is a positive integer.
  *  Capped at v99 to keep the union finite for IDE autocomplete. */
