@@ -339,22 +339,28 @@ function friendlyFamilyLabel(sc: string): string {
   return FRIENDLY_FAMILY_LABEL[sc] ?? sc;
 }
 
-function buildOverviewHeadline(top: ThesisFamily | null): string {
-  if (!top || !top.top_pattern) {
-    return 'Not enough graded outcomes yet to surface a strongest learned link. Check back as more outcomes complete.';
+function buildOverviewHeadline(
+  families: ThesisFamily[],
+  topSc: string | null | undefined,
+): string {
+  if (families.length === 0) {
+    return 'Not enough graded outcomes yet to surface what each signal has been doing. Check back as more outcomes complete.';
   }
-  const tp = top.top_pattern;
-  const pct = Math.round(tp.mean * 100);
-  const pattern = humanizePattern(tp.pattern_key);
-  const cap = humanizeCap(tp.cap_class);
-  const horizon = humanizeHorizon(tp.horizon_days);
-  let strength: string;
-  if (pct >= 60) strength = 'strongly tended to follow through';
-  else if (pct >= 53) strength = 'usually followed through';
-  else if (pct >= 47) strength = 'has been a coin flip';
-  else if (pct >= 40) strength = 'usually faded';
-  else strength = 'strongly tended to fade';
-  return `The strongest link Cipher has learned so far: when ${pattern}, ${cap} have ${strength} over the next ${horizon} — about ${pct}% of the time across ${tp.n} graded call${tp.n === 1 ? '' : 's'}.`;
+  // Fixed reading order so sentiment leads and every family gets a clause.
+  const order: Record<string, number> = { diffusion: 0, technical: 1, institutional: 2, insider: 3 };
+  const sorted = [...families].sort(
+    (a, b) => (order[a.signal_class] ?? 99) - (order[b.signal_class] ?? 99),
+  );
+  const totalN = families.reduce((s, f) => s + f.n, 0);
+  const clauses = sorted.map(
+    f => `${friendlyFamilyLabel(f.signal_class).toLowerCase()} at ${Math.round(f.mean * 100)}%`,
+  );
+  const list = clauses.length === 1
+    ? clauses[0]
+    : `${clauses.slice(0, -1).join(', ')}, and ${clauses[clauses.length - 1]}`;
+  const top = families.find(f => f.signal_class === topSc) ?? sorted[0];
+  const topLabel = friendlyFamilyLabel(top.signal_class).toLowerCase();
+  return `Across ${totalN} graded call${totalN === 1 ? '' : 's'}, ${list} follow through in the expected direction — ${topLabel} is the strongest link Cipher has learned so far.`;
 }
 
 function buildFamilySublabel(f: ThesisFamily): string {
@@ -696,7 +702,7 @@ export function InsightsDashboard() {
       {activeTab === 'overview' && (() => {
         const families = data.thesis.families ?? [];
         const topFam = families.find(f => f.signal_class === data.thesis.top_family) ?? null;
-        const headline = buildOverviewHeadline(topFam);
+        const headline = buildOverviewHeadline(families, data.thesis.top_family);
         return <>
           {/* Plain-English intro — the page leads with what this thing actually is */}
           <section className="mb-12 max-w-3xl">

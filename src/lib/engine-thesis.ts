@@ -124,19 +124,23 @@ export function buildNarrative(families: ThesisFamily[]): string {
   if (families.length === 0) {
     return 'Cipher is still gathering outcomes. No signal family has reached the three-trade minimum yet.';
   }
+  // Fixed reading order so sentiment leads and every family gets a clause.
+  const order: Record<SignalClass, number> = {
+    diffusion: 0, technical: 1, institutional: 2, insider: 3,
+  };
+  const sorted = [...families].sort((a, b) => order[a.signal_class] - order[b.signal_class]);
+  const totalN = families.reduce((s, f) => s + f.n, 0);
   const ranked = [...families].sort((a, b) =>
     (b.mean - 0.5) * Math.log10(b.n + 1) - (a.mean - 0.5) * Math.log10(a.n + 1),
   );
   const top = ranked[0];
-  const rest = ranked.slice(1);
-  const topVerb = pctVerb(top.mean);
-  const topPct = Math.round(top.mean * 100);
-  const head = `Across ${top.n} resolved outcomes, ${top.label.toLowerCase()} ${topVerb} (${topPct}% win-rate).`;
-  if (rest.length === 0) return head;
-  const tail = rest
-    .map(f => `${f.label.toLowerCase()} sits at ${Math.round(f.mean * 100)}% over ${f.n}`)
-    .join('; ');
-  return `${head} For context, ${tail}. Cipher only revises this view when a family's posterior moves by 5+ percentage points on at least ten new outcomes.`;
+  const clauses = sorted.map(
+    f => `${f.label.toLowerCase()} at ${Math.round(f.mean * 100)}% over ${f.n}`,
+  );
+  const list = clauses.length === 1
+    ? clauses[0]
+    : `${clauses.slice(0, -1).join(', ')}, and ${clauses[clauses.length - 1]}`;
+  return `Across ${totalN} resolved outcomes, ${list}. ${top.label} ${pctVerb(top.mean)} most reliably — Cipher revises this view only when a family's posterior moves 5+ points on ten new outcomes.`;
 }
 
 function findFamily(snap: EngineThesisSnapshot, sc: SignalClass): ThesisFamily | undefined {
