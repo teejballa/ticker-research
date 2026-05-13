@@ -32,23 +32,23 @@ function classifyError(message: string): 'session-expired' | 'container-unreacha
 
 const ERROR_COPY: Record<string, { message: string; cta: string; ctaHref: string }> = {
   'session-expired': {
-    message: 'Research engine session expired — please sign in again to continue.',
-    cta: 'RECONNECT →',
+    message: 'Your session expired. Sign in again to continue.',
+    cta: 'Sign in',
     ctaHref: '/dashboard',
   },
   'container-unreachable': {
-    message: 'Analysis server unreachable. This is temporary — please try again.',
-    cta: 'RETRY ANALYSIS →',
+    message: 'Analysis service unreachable. Try again in a moment.',
+    cta: 'Retry',
     ctaHref: '',
   },
   'timeout': {
-    message: 'Analysis is taking longer than expected. Your research will resume — or try again.',
-    cta: 'RETRY ANALYSIS →',
+    message: 'Analysis is taking longer than expected. You can wait or retry.',
+    cta: 'Retry',
     ctaHref: '',
   },
   'unknown': {
-    message: 'Analysis failed. If this continues, reconnect your account.',
-    cta: 'RECONNECT →',
+    message: 'Analysis failed. If this continues, sign in again.',
+    cta: 'Sign in',
     ctaHref: '/dashboard',
   },
 };
@@ -98,9 +98,9 @@ function toVisualStep(pipelineStepIndex: number): number {
 }
 
 const STEP_LABELS = [
-  'Collecting market data',
-  'Gathering news & filings',
-  'Synthesizing intelligence',
+  'Pulling market data',
+  'Gathering filings & news',
+  'Reading sources & extracting drivers',
   'Generating report',
 ];
 

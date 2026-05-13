@@ -42,7 +42,7 @@ describe('EngineCalibrationPanel', () => {
   it('renders cycle count, pattern, cap class, and ACTIVE badge', () => {
     render(<EngineCalibrationPanel calibration={ACTIVE_CALIBRATION} />);
     expect(screen.getByTestId('engine-calibration-panel')).toBeTruthy();
-    expect(screen.getByText('Engine Calibration')).toBeTruthy();
+    expect(screen.getByText(/Calibration vs\. S&P 500/)).toBeTruthy();
     expect(screen.getByText('Cycle 47')).toBeTruthy();
     expect(screen.getByText(/NICHE LEADS/)).toBeTruthy();
     expect(screen.getByText(/LARGE CAP/)).toBeTruthy();

@@ -936,10 +936,10 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
           </span>
           <div>
             <h3 className="text-[11px] font-bold tracking-widest uppercase text-tertiary">
-              Engine Calibration
+              Calibration vs. S&amp;P 500
             </h3>
             <p className="text-[12px] text-on-surface-variant mt-0.5 leading-snug max-w-xl">
-              Four independent signal sources on this stock and how confident the engine is in each one.
+              Historical alpha for four independent signal classes on this ticker, and confidence in each.
             </p>
           </div>
         </div>

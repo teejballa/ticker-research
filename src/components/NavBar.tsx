@@ -51,7 +51,7 @@ export default function NavBar({
       ? userEmail.slice(0, 21) + '...'
       : userEmail
     : null;
-  const navIdentityText = displayEmail ? `CONNECTED AS ${displayEmail}` : 'user@cipher.io';
+  const navIdentityText = displayEmail ?? '';
 
   return (
     <>
@@ -62,15 +62,20 @@ export default function NavBar({
             CIPHER
           </Link>
           <nav className="hidden md:flex items-center gap-4">
-            <span className="text-sm font-bold text-primary-container tracking-tight">RESEARCH TERMINAL</span>
+            <Link
+              href="/terminal"
+              className="text-sm font-bold text-on-surface/70 hover:bg-surface-container hover:text-on-surface transition-colors duration-200 px-2 py-1"
+            >
+              Research
+            </Link>
             <Link
               href="/insights"
               className="text-sm font-bold text-on-surface/50 hover:bg-surface-container hover:text-secondary transition-colors duration-200 px-2 py-1"
             >
-              INSIGHTS
+              Insights
             </Link>
-            <span className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1 cursor-default">NYSE</span>
-            <span className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1 cursor-default">NASDAQ</span>
+            <span className="text-sm font-bold text-on-surface/30 px-2 py-1 cursor-default">NYSE</span>
+            <span className="text-sm font-bold text-on-surface/30 px-2 py-1 cursor-default">NASDAQ</span>
           </nav>
         </div>
         <div className="flex items-center gap-4">
@@ -85,21 +90,21 @@ export default function NavBar({
               onClick={() => setDrawerOpen(true)}
               className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
             >
-              ACCOUNT
+              Account
             </button>
           ) : (
             <Link
               href="/auth/signin"
               className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
             >
-              SIGN IN
+              Sign in
             </Link>
           )}
           <Link
             href={userEmail ? '/terminal' : '/auth/signin'}
             className="bg-primary-container text-on-primary-container px-3 py-1 text-xs font-bold rounded hover:bg-primary transition-colors active:scale-95 duration-100"
           >
-            Analyze a Ticker →
+            Research a ticker
           </Link>
           <div className="flex items-center gap-2 text-on-surface/50">
             <span className="material-symbols-outlined text-sm">schedule</span>
@@ -138,20 +143,20 @@ export default function NavBar({
             {onNewResearch && (
               <button
                 onClick={onNewResearch}
-                className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
+                className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
               >
                 <span className="material-symbols-outlined text-base">arrow_back</span>
-                NEW RESEARCH
+                New report
               </button>
             )}
             <div className="w-px h-4 bg-outline-variant/30" />
             {onExportPdf && (
               <button
                 onClick={onExportPdf}
-                className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
+                className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
               >
                 <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-                EXPORT PDF
+                Export PDF
               </button>
             )}
           </div>

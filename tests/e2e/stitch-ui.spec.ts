@@ -78,7 +78,7 @@ test.describe('Stitch UI — Landing Page', () => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(600);
 
-    await expect(page.locator('text=Ready to see deeper')).toBeVisible();
+    await expect(page.locator('text=Research a ticker').first()).toBeVisible();
     await snap(page, 'stitch-cta.png');
   });
 

@@ -108,12 +108,11 @@ test.describe('Report UI — Stitch Design', () => {
     await snap(page, 'report-ui-08-desktop.png');
   });
 
-  test('all report sections visible — Growth Catalysts and Risk Vectors', async ({ page }) => {
+  test('all report sections visible — Bull Case and Bear Case', async ({ page }) => {
     await loadReport(page, MOCK_REPORT_URL);
 
-    // Stitch report uses "Growth Catalysts" and "Risk Vectors" labels
-    await expect(page.locator('text=Growth Catalysts').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Risk Vectors').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Bull Case').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Bear Case').first()).toBeVisible({ timeout: 5000 });
 
     await snap(page, 'report-ui-09-all-sections.png');
   });

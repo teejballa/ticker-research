@@ -136,7 +136,7 @@ test.describe('EngineCalibrationPanel — Phase 16 dual-class layout', () => {
     // Engine panel still renders (legacy diffusion-only layout)
     const enginePanel = page.locator('[data-testid="engine-calibration-panel"]');
     await expect(enginePanel).toBeVisible();
-    await expect(enginePanel).toContainText('Engine Calibration');
+    await expect(enginePanel).toContainText('Calibration vs. S&P 500');
 
     // Dual-class shell must NOT render — agreement badge absent
     await expect(page.locator('[data-testid="agreement-badge"]')).toHaveCount(0);
