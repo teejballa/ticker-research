@@ -15,7 +15,7 @@ import { NextResponse } from 'next/server';
 import { computeBaselinesForAllTickers } from '@/../scripts/recompute-mention-baselines';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 480; // 8 min — matches plan's wall-clock ceiling
+export const maxDuration = 300; // 5 min — Vercel Hobby plan ceiling
 
 export async function GET(request: Request) {
   const auth = request.headers.get('authorization');
