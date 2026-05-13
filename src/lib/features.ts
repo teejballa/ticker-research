@@ -56,6 +56,13 @@ const FLAG_NAMES = [
   // even when env var is absent (SHADOW_DEFAULT_FLAGS below) — additive in
   // shadow; cutover to 'on' gated by 4 criteria in 20-B-05-PLAN.md frontmatter.
   'per_aspect_aggregate',
+  // Plan 20-D-03 — per-claim CoVe verification + UI (?) badge.
+  // Env var: FEATURE_PER_CLAIM_VERIFIED. Default 'off'. Cutover to 'shadow'
+  // then 'on' gated by the 4 numerical criteria in 20-D-03-PLAN.md frontmatter
+  // (shadow_lifecycle.cutover_criteria). Client-side UI gate uses
+  // NEXT_PUBLIC_FEATURE_PER_CLAIM_VERIFIED for the badge render at the
+  // ResearchReport.tsx render site.
+  'per_claim_verified',
 ] as const;
 
 type FlagName = typeof FLAG_NAMES[number];
