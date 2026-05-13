@@ -588,6 +588,11 @@ export async function collectAllData(
     { ticker },
   );
 
+  // ── Plan 20-B-05 — per-aspect aggregation under FEATURE_PER_ASPECT_AGGREGATE ──
+  // Sidecar property `_per_aspect_sentiment` attached after the 20-B-01 per-doc
+  // classifier populates `_per_document_sentiment`. runGeminiAnalysis reads it
+  // post-generation and writes it onto AnalysisResult.per_aspect_sentiment
+  // (LLM does NOT author this field — mirrors engine_calibration trust boundary).
   // ── Plan 20-B-01 — per-doc sentiment classification under FEATURE_PER_DOC_SENTIMENT ──
   // 'off' branch: no classifier call, no persistence, no AnalysisResult field write.
   // 'shadow' branch (default): classifier runs, SentimentObservation rows persist,
@@ -646,6 +651,33 @@ export async function collectAllData(
       // Defensive: pipeline must not fail if per-doc step trips. Shadow mode is
       // diagnostic only until cutover.
     }
+  }
+
+  // ── Plan 20-B-05 — per-aspect aggregation ─────────────────────────────────
+  // Compute per_aspect_sentiment from the _per_document_sentiment sidecar
+  // attached by the 20-B-01 block above. The aggregator is pure functions —
+  // no DB, no network. Off-mode wires an explicit empty array so downstream
+  // consumers can grep-distinguish "feature off" from "no per-doc results".
+  // Shadow/on: aggregateByAspect over per-doc results; emits one entry per
+  // AspectTag in the fixed taxonomy (n_docs==0 aspects appear with bull_pct=null).
+  try {
+    const perAspectMode = FEATURES.per_aspect_aggregate_mode;
+    if (perAspectMode === 'off') {
+      (pkg as SourcePackage & { _per_aspect_sentiment?: import('@/lib/types').PerAspectSentimentEntry[] })
+        ._per_aspect_sentiment = [];
+    } else {
+      const { aggregateByAspect } = await import('@/lib/sentiment/per-aspect-aggregate');
+      const perDocSidecar = (pkg as SourcePackage & { _per_document_sentiment?: import('@/lib/types').PerDocSentimentResult[] })
+        ._per_document_sentiment ?? [];
+      // aggregateByAspect typing accepts PerDocResult { doc_id, polarity, confidence, aspects } —
+      // PerDocSentimentResult is structurally identical.
+      const perAspect = aggregateByAspect(perDocSidecar);
+      (pkg as SourcePackage & { _per_aspect_sentiment?: import('@/lib/types').PerAspectSentimentEntry[] })
+        ._per_aspect_sentiment = perAspect;
+    }
+  } catch {
+    // Defensive: aggregation must not poison the pipeline. Worst case downstream
+    // sees no per_aspect_sentiment field and renders the existing global chip.
   }
 
   return pkg;
