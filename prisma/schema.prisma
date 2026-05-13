@@ -161,6 +161,33 @@ model TemperatureCalibration {
   @@map("temperature_calibrations")
 }
 
+// ─── Phase 20-C-06 — Fairness audit append-only history ───
+// APPEND-ONLY: every audit run INSERTs a new row; NEVER UPDATE. Each row
+// records a single (classifier_version, computed_at) audit pass. The
+// json_payload column contains the full FairnessReport[] array (one row per
+// (dimension × segment)) so downstream phases can replay any historical
+// audit without rerunning the script.
+//
+// Cron writes monthly ('0 8 3 * *') + auto-trigger on classifier retrain
+// (TemperatureCalibration row insertion → force-run regardless of cadence,
+// T-20-C-06-04). Composite index on (classifier_version, computed_at DESC)
+// for efficient latest-row lookups by the dashboard / model-card sync.
+model FairnessAuditReport {
+  id                    String   @id @default(uuid())
+  classifier_version    String // 'finbert-prosus-<sha>' | 'gemini-per-doc-v1' | 'stocktwits-naive-v1' | 'reputation-weighted-v1'
+  computed_at           DateTime @default(now()) @db.Timestamptz
+  report_path           String // e.g. 'reports/fairness-audit-2026-05-11.md'
+  json_payload          Json // FairnessReport[] (one row per (dimension × segment))
+  n_predictions_total   Int
+  n_segments_evaluated  Int
+  n_limitations_flagged Int
+  audit_window_days     Int // typically 90
+  source_table          String // 'sentiment_snapshots' | 'sentiment_observations'
+
+  @@index([classifier_version, computed_at(sort: Desc)], map: "idx_fairness_audit_classifier_at")
+  @@map("fairness_audit_reports")
+}
+
 model LearningEvent {
   id           String   @id @default(uuid())
   occurred_at  DateTime @default(now()) @db.Timestamptz
