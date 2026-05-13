@@ -12,6 +12,8 @@ import { COST_PER_CALL_USD, type ProviderId } from './cost-estimators';
 import { classifyError, type TelemetryErrorClass } from './error-classifier';
 import { recordCallAsync } from './provider-call-log';
 
+// Plan 20-B-06 — the ProviderId union below (re-exported from cost-estimators)
+// includes 'lm-fallback' so withTelemetry('lm-fallback', ...) is type-safe.
 export type { ProviderId } from './cost-estimators';
 export type { TelemetryErrorClass } from './error-classifier';
 
