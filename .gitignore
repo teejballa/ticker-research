@@ -72,6 +72,11 @@ build/
 # not generated). classifier_version reproducibility from commit SHA.
 !data/lexicons/*.csv
 
+# Plan 20-B-03 — Financial PhraseBank CSV is research input data, NOT a generated
+# artifact (Malo et al. 2014, Araci 2019 partition; CC-BY-NC-SA-3.0). Required
+# for temperature-scaling calibration reproducibility.
+!data/datasets/*.csv
+
 # ========================
 # Editor / IDE files
 # ========================
