@@ -1,4 +1,5 @@
 // src/lib/sentiment/per-doc-classifier.ts
+// @model-card: docs/cards/MODEL-CARD-gemini-per-doc.md
 // Plan 20-B-01 — Gemini per-document sentiment + aspect classifier.
 //
 // One batched Gemini call per ticker (NOT one per doc) defends T-20-B-01-02
