@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, formatPrice } from '@/lib/formatters';
+import { renderPrompt } from '@/lib/prompts/render';
 import type { AnalysisResult, MarketSnapshot, InstitutionalSnapshot, InsiderSnapshot, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import { FEATURES } from '@/lib/features';
 import NavBar from '@/components/NavBar';
@@ -605,13 +606,15 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           <span className="tabular-nums font-mono">{formatTimestamp(analyzed_at)}</span>
         </div>
 
-        {/* Financial Disclaimer */}
+        {/* Financial Disclaimer — 20-D-05 regulatory hygiene (S10).
+            Body is sourced from src/lib/prompts/_v1/disclaimer-footer.md via the
+            20-Z-04 prompt registry. Edits require a _v2/ bump per registry rules. */}
         <section className="border-l-4 border-tertiary bg-surface-container-low p-4 flex gap-4 items-start">
           <span className="material-symbols-outlined text-tertiary text-lg shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
           <div>
             <h4 className="text-[11px] font-bold tracking-widest uppercase text-tertiary mb-1">Financial Disclaimer</h4>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              This AI-generated research report is for informational purposes only. Information is sourced from real-time market data and historical filings. Cipher does not provide financial advice. Consult with a certified professional before making investment decisions.
+              {renderPrompt('disclaimer-footer', { data_as_of_timestamp: analyzed_at.slice(0, 10) })}
             </p>
           </div>
         </section>
@@ -1139,6 +1142,50 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
               </div>
             )}
 
+            {/* Price Target block — 20-D-05 regulatory hygiene (S10).
+                Raw numbers are never acceptable on their own; every price_target
+                is rendered with EITHER a conformal CI band (19-C-12 forward-ref,
+                when the AnalysisResult exposes conformal_ci) OR the literal
+                "(implied range)" qualifier. Hedge body sourced from the
+                20-Z-04 registry via renderPrompt('price-target-hedge'). */}
+            {analysisResult.price_target != null && (
+              <div className="bg-surface-container-high p-5 rounded-lg" data-testid="price-target-block">
+                <h3 className="text-[11px] font-bold tracking-widest uppercase text-on-surface-variant mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm text-tertiary">target</span>
+                  Price Target
+                </h3>
+                <p className="text-sm font-mono text-on-surface mb-2" data-testid="price-target-value">
+                  {analysisResult.price_target}
+                </p>
+                {(() => {
+                  const dataAsOfDate = analyzed_at.slice(0, 10);
+                  // 19-C-12 forward-ref: prefer conformal CI when present, else literal "(implied range)".
+                  // Field is not yet on the AnalysisResult schema — guarded via runtime cast.
+                  const ci = (analysisResult as unknown as {
+                    conformal_ci?: { lower: number; upper: number; coverage: number };
+                  }).conformal_ci;
+                  let hedgeStr: string;
+                  if (
+                    ci != null &&
+                    typeof ci.lower === 'number' &&
+                    typeof ci.upper === 'number' &&
+                    typeof ci.coverage === 'number'
+                  ) {
+                    const halfWidth = ((ci.upper - ci.lower) / 2).toFixed(2);
+                    const coveragePct = Math.round(ci.coverage * 100);
+                    hedgeStr = `\u00b1 $${halfWidth} (${coveragePct}% CI)`;
+                  } else {
+                    hedgeStr = '(implied range)';
+                  }
+                  const body = renderPrompt('price-target-hedge', {
+                    data_as_of_timestamp: dataAsOfDate,
+                    ci_band_or_implied_range: hedgeStr,
+                  });
+                  return <p className="text-[11px] text-on-surface-variant leading-tight">{body}</p>;
+                })()}
+              </div>
+            )}
+
             {/* Source Warnings */}
             {source_warnings.length > 0 && (
               <div className="bg-surface-container-low border-l-2 border-error p-4 rounded-r">
@@ -1325,19 +1372,32 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             <span className="ml-2 font-mono text-tertiary">[{sources_used.length} cited]</span>
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {sources_used.map((src, i) => (
-              <div
-                key={i}
-                data-testid={`source-item-${i}`}
-                className="bg-surface-container-low border-l-2 border-tertiary p-4 hover:-translate-y-0.5 transition-all duration-300"
-              >
-                <span className="font-mono text-tertiary text-xs block mb-1">{String(i + 1).padStart(2, '0')}</span>
-                <h5 className="text-xs font-bold mb-1">{src.name}</h5>
-                {src.key_fact && (
-                  <p className="text-[10px] text-on-surface-variant leading-snug">{src.key_fact}</p>
-                )}
-              </div>
-            ))}
+            {sources_used.map((src, i) => {
+              // 20-D-05 — per-source "as of YYYY-MM-DD" timestamp. Prefer the
+              // citations_v2 per-citation date_retrieved when present (true
+              // per-source provenance); fall back to the report-level
+              // analyzed_at (coarser, but the audit accepts either). Note:
+              // citations_v2 and sources_used may not be index-aligned —
+              // citations_v2 is a citation log; sources_used is a curated list.
+              // When not aligned, the fallback applies.
+              const perSourceDate =
+                analysisResult.citations_v2?.[i]?.date_retrieved?.slice(0, 10) ??
+                analyzed_at.slice(0, 10);
+              return (
+                <div
+                  key={i}
+                  data-testid={`source-item-${i}`}
+                  className="bg-surface-container-low border-l-2 border-tertiary p-4 hover:-translate-y-0.5 transition-all duration-300"
+                >
+                  <span className="font-mono text-tertiary text-xs block mb-1">{String(i + 1).padStart(2, '0')}</span>
+                  <h5 className="text-xs font-bold mb-1">{src.name}</h5>
+                  {src.key_fact && (
+                    <p className="text-[10px] text-on-surface-variant leading-snug">{src.key_fact}</p>
+                  )}
+                  <p className="text-[10px] text-on-surface-variant/70 mt-1">as of {perSourceDate}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -1354,6 +1414,33 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             </p>
           </section>
         )}
+
+        {/* Source list footer — 20-D-05 regulatory hygiene (S10).
+            Compact source-list footer renders adjacent to the existing
+            Verified Intelligence Sources cards above. The audit greps
+            data-testid="sources-footer-list" + at least one <li> child. */}
+        <section className="border-t border-surface-container-high pt-6 mt-12">
+          <h4 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/70 mb-3">
+            Source List
+          </h4>
+          <ul data-testid="sources-footer-list" className="space-y-1 text-[10px] text-on-surface-variant/80">
+            {sources_used.map((src, i) => {
+              const perSourceDate =
+                analysisResult.citations_v2?.[i]?.date_retrieved?.slice(0, 10) ??
+                analyzed_at.slice(0, 10);
+              return (
+                <li key={`footer-${i}`} className="flex items-baseline gap-2">
+                  <span className="font-mono text-tertiary">{String(i + 1).padStart(2, '0')}.</span>
+                  <span className="flex-1">{src.name}</span>
+                  {src.url && (
+                    <a href={src.url} className="text-tertiary hover:underline truncate max-w-xs">{src.url}</a>
+                  )}
+                  <span className="text-on-surface-variant/60">as of {perSourceDate}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
       </main>
 
