@@ -302,12 +302,15 @@ export function walkNumericLeaves(pkg: SourcePackage): NumericLeaf[] {
   if (pkg.market_data?.market_cap != null && pkg.fundamentals?.revenue != null && pkg.fundamentals.revenue !== 0) {
     push('derived:market_cap/revenue', pkg.market_data.market_cap / pkg.fundamentals.revenue, null);
   }
-  if (pkg.fundamentals?.revenue != null && pkg.market_data?.market_cap != null && pkg.market_data.market_cap !== 0) {
-    // Implicit shares = market_cap / price; revenue_per_share = revenue / shares.
-    if (pkg.market_data?.price != null && pkg.market_data.price !== 0) {
-      const shares = pkg.market_data.market_cap / pkg.market_data.price;
-      if (Number.isFinite(shares) && shares > 0) {
-        push('derived:shares_outstanding', shares, null);
+  // Implicit shares outstanding = market_cap / price (works without revenue).
+  if (
+    pkg.market_data?.market_cap != null && pkg.market_data.market_cap !== 0 &&
+    pkg.market_data?.price != null && pkg.market_data.price !== 0
+  ) {
+    const shares = pkg.market_data.market_cap / pkg.market_data.price;
+    if (Number.isFinite(shares) && shares > 0) {
+      push('derived:shares_outstanding', shares, null);
+      if (pkg.fundamentals?.revenue != null) {
         push('derived:revenue_per_share', pkg.fundamentals.revenue / shares, null);
       }
     }
