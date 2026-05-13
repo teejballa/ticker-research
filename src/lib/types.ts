@@ -234,6 +234,16 @@ export interface SentimentIntelligenceSection extends SourceSection {
   /** Convenience boolean — true when latest CoordinationCluster row in 24h
    *  is_flagged === true. Mirrors bot_filter_summary.coordinated_posting. */
   coordinated_posting?: boolean;
+  // ── Plan 20-B-04 — per-source tier weights applied to the aggregate ─────────
+  /**
+   * Per-source tier multiplier looked up from the SourceTier table
+   * (latest computed_at <= asOf). Populated by aggregateCommunitySentimentTierAware.
+   * Empty object when SOURCE_TIER_MODE === 'off'. UI renders 'wt: X.XX' next to
+   * the per-source 'n=N' label when |weight - 1.0| >= weight_diff_display_threshold.
+   */
+  tier_weights_applied?: Record<string, number>;
+  /** 'off' | 'shadow' | 'on' — value of SOURCE_TIER_MODE at compute time. */
+  tier_mode?: 'off' | 'shadow' | 'on';
 }
 
 export interface ChartDataPoint {
@@ -543,6 +553,11 @@ export interface AnalysisResult {
       coordinated_posting: boolean;
     } | null;
     coordinated_posting?: boolean;
+    // Plan 20-B-04 — per-source tier weights applied to the aggregate.
+    // Populated by aggregateCommunitySentimentTierAware. UI renders 'wt: X.XX'
+    // next to per-source 'n=N' when |weight - 1.0| >= weight_diff_display_threshold.
+    tier_weights_applied?: Record<string, number>;
+    tier_mode?: 'off' | 'shadow' | 'on';
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph

@@ -390,6 +390,117 @@ export function getDecayMode(): SentimentDecayMode {
   return 'off';
 }
 
+// ─── Plan 20-B-04 — Source-tier weighting branch (shadow lifecycle) ─────────
+// SOURCE_TIER_MODE ∈ {off, shadow, on}
+//   off    → baseline aggregateCommunitySentiment only (current production behavior);
+//            tier_weights_applied is an empty object
+//   shadow → baseline numbers ARE returned as the authoritative aggregate;
+//            tier weights are LOOKED UP and surfaced (so UI/telemetry can compare)
+//            but the bull_pct number is the baseline (NOT tier-adjusted)
+//   on     → tier multiplier is applied to each component's weight:
+//                w'_i = w_i × getWeightForSource(source_i)
+//            aggregate bull_pct = Beta-smoothed weighted mean over w'_i
+//
+// Cutover from shadow → on requires (per Hard Cleanup Gate criterion 4):
+//   (a) ≥30d of SourceTier history per source AND
+//   (b) paired-bootstrap on validation Sharpe of tier-weighted vs unweighted
+//       aggregate with 95% CI lower-bound > 0 (1000 resamples).
+//
+// Cold-start fallback: missing SourceTier row → getWeightForSource returns 1.0
+// (degrades to off behavior for that source).
+import { getWeightForSource } from './source-tier';
+
+export type SourceTierMode = 'off' | 'shadow' | 'on';
+
+export interface TierAwareAggregatorOptions {
+  /** Overrides SOURCE_TIER_MODE env var when provided. */
+  mode?: SourceTierMode;
+  /** Cutoff date for getWeightForSource SourceTier lookup; defaults to now(). */
+  asOf?: Date;
+}
+
+/** Reads SOURCE_TIER_MODE env var; defaults to 'off' (safe default for first deploy). */
+export function getSourceTierMode(): SourceTierMode {
+  const v = (process.env.SOURCE_TIER_MODE ?? 'off').toLowerCase();
+  if (v === 'off' || v === 'shadow' || v === 'on') return v;
+  // Unknown values fail closed → 'off'
+  return 'off';
+}
+
+function resolveTierMode(opts?: TierAwareAggregatorOptions): SourceTierMode {
+  if (opts?.mode) return opts.mode;
+  return getSourceTierMode();
+}
+
+/**
+ * Tier-aware variant of `aggregateCommunitySentiment`.
+ *
+ * Preserves the baseline `aggregateCommunitySentiment` signature unchanged
+ * (called internally). When `mode === 'off'`, returns identical numbers with
+ * `tier_weights_applied = {}`. When `mode === 'on'`, recomputes the Beta-
+ * smoothed weighted mean using `w'_i = w_i × tier_weight_i`. When `mode ===
+ * 'shadow'`, returns the BASELINE numbers but surfaces the tier weights so
+ * the UI / telemetry can compare without changing the report-facing aggregate.
+ */
+export async function aggregateCommunitySentimentTierAware(
+  inputs: AggregatorInputs,
+  options?: TierAwareAggregatorOptions,
+): Promise<
+  AggregatedSentiment & {
+    tier_weights_applied: Record<string, number>;
+    tier_mode: SourceTierMode;
+  }
+> {
+  const mode = resolveTierMode(options);
+  const baseline = aggregateCommunitySentiment(inputs);
+
+  if (mode === 'off') {
+    return { ...baseline, tier_weights_applied: {}, tier_mode: mode };
+  }
+
+  const asOf = options?.asOf ?? new Date();
+  const tier_weights_applied: Record<string, number> = {};
+  // Compute tier-adjusted numerator/denominator for the Beta-smoothed mean.
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const c of baseline.components) {
+    const tier = await getWeightForSource(c.source, asOf);
+    tier_weights_applied[c.source] = tier;
+    const adjW = c.weight * tier;
+    weightedSum += c.bullish_pct * adjW;
+    totalWeight += adjW;
+  }
+  // Beta(α=5, β=5) prior — equivalent to 10 pseudo-mentions at 50% bullish.
+  // Constants mirror PRIOR_ALPHA / PRIOR_BETA above (kept local to avoid
+  // export churn on a private constant).
+  const PRIOR_ALPHA_LOCAL = 5;
+  const PRIOR_BETA_LOCAL = 5;
+  const num = weightedSum + PRIOR_ALPHA_LOCAL * 100;
+  const den = totalWeight + PRIOR_ALPHA_LOCAL + PRIOR_BETA_LOCAL;
+  const tierAdjustedBull = Math.max(0, Math.min(100, num / den));
+  const tierAdjustedBullRounded = Math.round(tierAdjustedBull * 100) / 100;
+  const tierAdjustedBearRounded =
+    Math.round((100 - tierAdjustedBull) * 100) / 100;
+
+  if (mode === 'shadow') {
+    // Return baseline aggregate; surface tier weights for telemetry/UI inspection.
+    return {
+      ...baseline,
+      tier_weights_applied,
+      tier_mode: mode,
+    };
+  }
+
+  // mode === 'on' — return tier-adjusted aggregate as authoritative
+  return {
+    ...baseline,
+    aggregated_bull_pct: tierAdjustedBullRounded,
+    aggregated_bear_pct: tierAdjustedBearRounded,
+    tier_weights_applied,
+    tier_mode: mode,
+  };
+}
+
 // ─── Plan 20-A-01 — crowded_consensus flag (GME-100% fix) ──────────────────────
 /**
  * Compute the crowded_consensus flag + the 4-feature dispersion vector.
