@@ -63,9 +63,27 @@ describe('registry — getPrompt + listPrompts contract', () => {
     ).toThrowError(PromptVersionUnknownError);
   });
 
-  it('listPrompts() returns ≥9 tuples (8 PromptIds × v1 + 1 extra cove-pass1 v2)', () => {
+  it('listPrompts() returns ≥10 tuples (8 PromptIds × v1 + 1 extra cove-pass1 v2 + 20-B-01 per-doc)', () => {
     const entries = listPrompts();
-    expect(entries.length).toBeGreaterThanOrEqual(9);
+    expect(entries.length).toBeGreaterThanOrEqual(10);
+  });
+
+  // ── Plan 20-B-01 — gemini-per-doc-sentiment registration ────────────────
+  it('getPrompt("gemini-per-doc-sentiment") returns RegisteredPrompt with version v1, non-empty template, deprecated_at:null', () => {
+    const p = getPrompt('gemini-per-doc-sentiment');
+    expect(p.id).toBe('gemini-per-doc-sentiment');
+    expect(p.version).toBe('v1');
+    expect(p.template.length).toBeGreaterThan(0);
+    expect(p.deprecated_at).toBeNull();
+    expect([...p.variables]).toEqual(['docs_json']);
+  });
+
+  it('getPrompt("gemini-per-doc-sentiment","v1") body contains the literal OFF-TOPIC CLAUSE and all 7 aspect names', () => {
+    const p = getPrompt('gemini-per-doc-sentiment', 'v1');
+    expect(p.template).toContain('OFF-TOPIC CLAUSE');
+    for (const aspect of ['earnings', 'guidance', 'regulatory', 'M&A', 'macro', 'product', 'management']) {
+      expect(p.template).toContain(aspect);
+    }
   });
 
   it('listPrompts() entries are sorted by id ASC then version ASC', () => {
@@ -98,6 +116,7 @@ describe('registry — getPrompt + listPrompts contract', () => {
       'gemini-cove-pass1-instruction',
       'gemini-citations-section',
       'gemini-cycle-summary',
+      'gemini-per-doc-sentiment',
     ];
     const seen = new Set(listPrompts().map((e) => e.id));
     for (const id of expected) {
