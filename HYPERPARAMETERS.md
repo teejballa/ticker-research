@@ -241,3 +241,31 @@ Quarterly review against the trailing 90d StockTwits sample per
   Datasets" 2nd ed., Ch. 3 (Finding Similar Items).
 
 Updated by: Plan 20-C-03 (2026-05-12).
+
+---
+
+## Joint-feature quantile breakpoints (20-C-05)
+
+Source: literature-default seeds for the four joint sentiment-interaction
+features used in the JOINT_FEATURES_MODE pattern-key extension. 5 buckets
+per feature (4 breakpoints, half-open intervals). **Calibration: pending;
+see 20-C-05 roadmap.** Empirical recalibration against trailing-90d
+distribution is a follow-up plan — these defaults exist so the ablation
+script can run end-to-end on day one.
+
+| Feature                       | Breakpoints                  |
+|-------------------------------|------------------------------|
+| sentimentMomentumProduct      | -0.05, -0.01, 0.01, 0.05     |
+| sentimentVolumeInteraction    | -2.0, -0.5, 0.5, 2.0         |
+| deltaSentiment3d              | -0.3, -0.1, 0.1, 0.3         |
+| sentimentDispersion           | 0.1, 0.2, 0.3, 0.4           |
+
+- **Flag:** JOINT_FEATURES_MODE ∈ {off, shadow, on}; default 'off' on merge.
+- **Bucketing path:** `_bucketOf(value, breakpoints)` in `src/lib/learning.ts`.
+- **Hash:** `sha1(bucket_tuple).slice(0,12)` — short hex for log readability.
+- **New-bucket priors:** α=β=1 (uniform) — additive only, existing rows
+  retain semantics under mode='off' (T-20-C-05-05).
+- **Promotion gate:** 95% CI lower-bound > 0 AND 3 consecutive monthly runs
+  all agreeing — see `/api/cron/joint-feature-ablation` and `reports/`.
+
+Updated by: Plan 20-C-05 (2026-05-12).
