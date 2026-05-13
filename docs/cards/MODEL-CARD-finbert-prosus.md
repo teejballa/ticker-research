@@ -102,3 +102,12 @@ source_files:
 - **Cadence** (matches frontmatter `retrain_cadence`): P90D (90 days). HF endpoint SHA pin = "we don't retrain"; the cadence governs SHA RE-VALIDATION. Operator runs `npm run check-finbert-sha` quarterly to confirm pinned SHA has not been bumped by ProsusAI without our knowledge.
 - **Trigger conditions**: ECE > 0.05 per Plan 20-B-03 monitor → forced refresh + re-pin to current SHA; OR ProsusAI publishes a new tagged release → manual review + re-pin decision (bump `FINBERT_PINNED_SHA8` AND `model_version` suffix `-v1` → `-v2`).
 - **Owner**: Cipher project owner (tjameswalsh@icloud.com).
+
+## 13. Calibration — *Plan 20-B-03* (Temperature scaling)
+
+- **Procedure**: single-scalar temperature T fit on merged FPB held-out + production-labeled (20-Z-05) validation set via bounded golden-section search minimising NLL (Guo et al. 2017 §3.1; scipy.optimize.minimize_scalar(method='bounded') analog). Bounds T ∈ [0.1, 10.0] from `CALIBRATION_BOUNDS`. Bin count 10. 5-fold CV for `cv_ece_mean ± cv_ece_std`.
+- **Where T comes from at runtime**: latest `TemperatureCalibration` row keyed by `classifier_version='finbert-prosus-<sha>'`, 5-min in-process cache via `src/lib/sentiment/temperature-runtime.ts#loadTemperatureFor`.
+- **Gating**: `SENTIMENT_TEMP_SCALING_MODE` (`off`/`shadow`/`on`); ships at `shadow` by default. Cutover to `on` requires `cv_ece_mean_post < 0.05` AND `brier_post < 0.24` (CONTEXT.md line 115 verbatim).
+- **Auto-refit-on-version-change** (T-20-B-03-04): cron `/api/cron/calibrate-temperature` (`0 7 2 * *`) inserts a NEW append-only row whenever the pinned SHA changes — historical T is preserved.
+- **Initial state**: T=1.0 (identity) until first calibration run lands a row. See `HYPERPARAMETERS.md §Temperature Scaling` for the latest persisted T.
+- **Reference**: Guo, C., Pleiss, G., Sun, Y., & Weinberger, K. Q. (2017). "On Calibration of Modern Neural Networks." ICML 2017. https://arxiv.org/abs/1706.04599
