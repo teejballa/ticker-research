@@ -5,6 +5,7 @@
 
 import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, formatPrice } from '@/lib/formatters';
 import type { AnalysisResult, MarketSnapshot, InstitutionalSnapshot, InsiderSnapshot, InstitutionalBucket, InsiderBucket } from '@/lib/types';
+import { FEATURES } from '@/lib/features';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 import EngineCalibrationPanel from '@/components/EngineCalibrationPanel';
@@ -656,6 +657,22 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                       </span>
                     )}
                 </div>
+                {/* Plan 20-C-03 — bot-filter subtext.
+                    Renders ONLY when FEATURE_BOT_FILTER === 'on' AND counts > 0.
+                    Amber signals advisory, NOT silencing (T-20-C-03-05). Flagged
+                    messages REMAIN displayed in any per-message list rendered below. */}
+                {FEATURES.bot_filter_mode === 'on'
+                  && sentiment_intelligence.bot_filter_summary
+                  && ((sentiment_intelligence.bot_filter_summary.authors_flagged > 0)
+                      || (sentiment_intelligence.bot_filter_summary.messages_flagged_coordinated > 0)) && (
+                    <p
+                      data-testid="bot-filter-subtext"
+                      className="mt-2 text-xs text-amber-600"
+                    >
+                      {sentiment_intelligence.bot_filter_summary.authors_flagged} authors flagged as bots;{' '}
+                      {sentiment_intelligence.bot_filter_summary.messages_flagged_coordinated} messages flagged as coordinated
+                    </p>
+                  )}
                 {(() => {
                   // Post-Phase-19 — prefer the cross-source aggregated number
                   // (Beta-smoothed, multi-venue) over the raw StockTwits %.
