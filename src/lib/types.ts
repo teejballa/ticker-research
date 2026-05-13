@@ -3,6 +3,20 @@
 // All data collection functions return types defined here.
 // DATA-07: every section includes collected_at (ISO 8601 timestamp).
 
+// ── Plan 20-B-01 — re-exports for the fixed 7-element AspectTag taxonomy.
+// Single source of truth lives in src/lib/sentiment/aspects.ts; 20-B-05 and
+// downstream UI consumers import from here.
+export { ASPECT_TAGS, isAspectTag } from './sentiment/aspects';
+export type { AspectTag } from './sentiment/aspects';
+
+/** Plan 20-B-01 — per-document classifier output shape (one record per input doc). */
+export interface PerDocSentimentResult {
+  doc_id: string;
+  polarity: number; // ∈ [-1, +1]
+  confidence: number; // ∈ [0, 1]
+  aspects: import('./sentiment/aspects').AspectTag[]; // ⊆ ASPECT_TAGS
+}
+
 // Security type classification for adaptive prompt branching (Phase 7).
 // Populated by detectSecurityType() before collectAllData runs.
 export type SecurityType = 'equity' | 'spac' | 'etf' | 'adr' | 'preferred' | 'crypto' | 'unknown';
