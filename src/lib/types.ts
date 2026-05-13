@@ -328,6 +328,26 @@ export interface SupplementaryMarketData {
 export interface AnalysisSignal {
   signal: string;
   source_citation: string;
+  // ── Plan 20-D-03 — per-claim CoVe verification verdict ──────────────────
+  /**
+   * 'true'  → NLI entailment   > 0.7 against SourcePackage evidence
+   * 'false' → NLI contradiction > 0.7 against SourcePackage evidence
+   * 'null'  → insufficient evidence (NLI neutral / threw / endpoint unset / score ≤ 0.7)
+   * undefined → pre-plan persisted report OR FEATURE_PER_CLAIM_VERIFIED === 'off'
+   *
+   * Backward-compatible by construction: every pre-plan persisted AnalysisResult
+   * in Neon round-trips through the Zod schema with the field absent.
+   */
+  verified?: 'true' | 'false' | 'null';
+}
+
+// ── Plan 20-D-03 — Structured risks parallel to legacy `key_risks` string ──
+// Optional sibling on AnalysisResult; legacy `key_risks` paragraph preserved.
+// Each risk gains the same optional `verified` field as bullish/bearish signals.
+export interface AnalysisRisk {
+  description: string;
+  source_citation?: string;
+  verified?: 'true' | 'false' | 'null';
 }
 
 export interface BuySellBreakdown {
@@ -534,6 +554,11 @@ export interface AnalysisResult {
   executive_summary?: string;   // One-paragraph institutional thesis
   investment_thesis?: string;   // Bull case narrative (2-3 sentences)
   key_risks?: string;           // Bear case narrative (2-3 sentences)
+  // Plan 20-D-03 — optional structured risks list parallel to the free-text
+  // `key_risks` paragraph. Both fields ship side-by-side; legacy `key_risks`
+  // string is NOT touched. Each risk gains the same per-claim `verified` field
+  // as bullish_signals/bearish_signals so the UI (?) badge can render against it.
+  risks?: AnalysisRisk[];
   valuation_context?: string;   // Cheap/fair/expensive vs P/E history and analyst target
   catalyst_watch?: CatalystEvent[];  // Upcoming events that could move the stock
   sources_used: AnalysisSource[];

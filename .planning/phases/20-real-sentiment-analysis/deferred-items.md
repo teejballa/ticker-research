@@ -32,3 +32,16 @@ return shape — both work regardless of how Anthropic is imported.
 - `src/lib/gemini-analysis.ts` line 50 — provider API key bypass (pre-existing). Migrate to OIDC.
 
 All pre-existing, NOT introduced by 20-B-05. File this under follow-up.
+
+## 20-D-03 deferred (pre-existing, out of scope)
+
+- `src/lib/gemini-analysis.ts` line 12: direct Anthropic SDK import for Pool-B
+  niche discovery (web_search_20250305 tool — Anthropic-native, NOT available
+  through AI Gateway per the existing inline comment). Migrating off the direct
+  SDK requires re-architecting the Pool-B niche discovery path; out of scope for
+  20-D-03 (per-claim verifier extension).
+- `src/lib/gemini-analysis.ts` lines 34, 45, 698: model slug hyphenation in
+  pre-existing strings (claude-haiku-4.5 etc.). Pre-existing convention;
+  changing would break the inflight calls. Out of scope for 20-D-03.
+- `src/lib/gemini-analysis.ts` line 50: `new Anthropic()` direct client — same
+  Pool-B reason as above. Out of scope for 20-D-03.
