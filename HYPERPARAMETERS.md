@@ -198,3 +198,46 @@ or rule derivation.
 - Niculescu-Mizil, A., & Caruana, R. (2005). "Predicting good probabilities with supervised learning." *ICML 2005*.
 
 Updated by: Plan 20-C-02 (2026-05-12).
+
+---
+
+## bot_filter (Plan 20-C-03)
+
+Source: literal thresholds from Cresci et al. 2019 §3.2 + Nam & Yang 2023 §4.1
++ Broder 1997 / Leskovec-Rajaraman-Ullman Ch. 3.4 (MinHash + banding LSH).
+Quarterly review against the trailing 90d StockTwits sample per
+`docs/cards/MODEL-CARD-bot-filter.md` §Maintenance.
+
+| param                          | value | source                                            |
+| ------------------------------ | ----- | ------------------------------------------------- |
+| MIN_ACCOUNT_AGE_DAYS           | 30    | Cresci 2019 §3.2                                  |
+| MAX_SELF_SIMILARITY            | 0.5   | Cresci 2019 §3.2                                  |
+| MAX_PUMP_DENSITY               | 0.1   | Cresci 2019 Table 2                               |
+| MAX_HASHTAG_COUNT              | 5     | Cresci 2019 §3.2                                  |
+| MINHASH_NUM_PERM               | 128   | Broder 1997 / LRU Ch. 3.4                         |
+| LSH_BANDS                      | 16    | bands × rows = num_perm (16 × 8 = 128)            |
+| LSH_ROWS                       | 8     | threshold ≈ (1/16)^(1/8) ≈ 0.707                  |
+| COORDINATION_SIMILARITY        | 0.7   | LRU Ch. 3.4 closed-form                           |
+| COORDINATION_MIN_CLUSTER_SIZE  | 50    | T-20-C-03-04 mitigation (FP-protection)           |
+| FP_GATE                        | 0.05  | Plan 20-C-03 acceptance criterion                 |
+
+- **PUMP_PHRASES list (9 entries):** `to the moon`, `rocket`, `100x`,
+  `moonshot`, `bagholder`, `yolo`, `tendies`, `rip`, `lambo` — derived from
+  Cresci 2019 Table 2 + WSB slang corpus 2020-2024. Versioned via this
+  register; updates require a new model_version under 20-Z-01.
+- **Recalibration cadence:** quarterly review (model card §Maintenance);
+  immediate recalibration triggered when `npm run eval-bot-fp` reports
+  fp_rate > 0.05 on the 100-author labeled set.
+
+**Citations:**
+- Cresci, S., Lillo, F., Regoli, D., Tardelli, S., & Tesconi, M. (2019).
+  "Cashtag piggybacking: Uncovering spam and bot activity in stock
+  microblogs on Twitter." *ACM TWEB* 13(2).
+- Nam, S., & Yang, J. (2023). "Detecting pump-and-dump schemes on financial
+  social media." *Decision Support Systems* 165.
+- Broder, A. (1997). "On the resemblance and containment of documents."
+  *IEEE SEQUENCES*.
+- Leskovec, J., Rajaraman, A., & Ullman, J. (2014). "Mining of Massive
+  Datasets" 2nd ed., Ch. 3 (Finding Similar Items).
+
+Updated by: Plan 20-C-03 (2026-05-12).

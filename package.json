@@ -40,7 +40,9 @@
     "calibrate-agreement": "npx tsx scripts/calibrate-agreement-threshold.ts",
     "spot-check-agreement": "npx tsx scripts/spot-check-agreement.ts",
     "tune-decay": "npx tsx scripts/tune-decay.ts",
-    "backfill-decay": "npx tsx scripts/backfill-decay-weights.ts"
+    "backfill-decay": "npx tsx scripts/backfill-decay-weights.ts",
+    "eval-bot-fp": "npx tsx scripts/eval-bot-fp.ts",
+    "gen-bot-fixtures": "npx tsx scripts/gen-bot-fixtures.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
