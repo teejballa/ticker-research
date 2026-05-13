@@ -390,3 +390,38 @@ mitigation).
 https://arxiv.org/abs/1706.04599
 
 Updated by: Plan 20-B-03 (2026-05-13).
+
+---
+
+## pump_dump_detector (Plan 20-C-04)
+
+Source: literal thresholds from Nam, S., & Yang, J. (2023). "Detecting
+pump-and-dump schemes on financial social media." *Decision Support Systems*
+165. https://arxiv.org/pdf/2301.11403 — reported F1 = 0.67, sensitivity = 85%,
+specificity = 99% on confirmed P&D events. The 5-condition AND-predicate is
+pure-math and rule-based (no ML); thresholds are NEVER hand-tuned — every
+value below traces to Nam/Yang 2023 §4 verbatim. RULE_VERSION (`pdd-v1.0`)
+bumps on every threshold change so historical `ManipulationWarning` rows
+remain attributable to the threshold set in force at write-time.
+
+| Parameter                | Value         | Source / rationale                                                                 |
+| ------------------------ | ------------- | ---------------------------------------------------------------------------------- |
+| `mention_z_min`          | 5             | Nam & Yang 2023 §4 — strict-greater on 20-A-02 cap-class mention z-score          |
+| `bull_pct_min`           | 95            | Nam & Yang 2023 §4 — strict-greater on bull_pct (0-100 scale)                     |
+| `gini_min`               | 0.7           | Nam & Yang 2023 §4 — strict-greater on 20-A-04 author concentration Gini          |
+| `account_age_max_days`   | 90            | Nam & Yang 2023 §4 — strict-less on 20-Z-01 mean account_age_days                 |
+| `cap_class_set`          | `{small_cap}` | Nam & Yang 2023 §4 {micro, small} → Cipher CapClass enum (cited in detector file) |
+| `RULE_VERSION`           | `pdd-v1.0`    | Bumps on threshold edits; persists per-row to enable PIT replay of past warnings  |
+
+- **Predicate** (5-AND gate, returns false on any null input — NEVER default-on fire):
+  `mention_z > 5 && bull_pct > 95 && gini > 0.7 && mean_account_age_days < 90 && cap_class ∈ {small_cap}`
+- **Eval harness:** `npx tsx scripts/eval-pump-dump-synthetic.ts` runs balanced 500-per-class synthetic eval; CLI exits 1 when F1 < 0.6 OR specificity < 0.95.
+- **Recalibration cadence:** weekly synthetic eval via `/api/cron/eval-pump-dump-synthetic` (`'0 9 * * 2'` UTC — Tuesdays 09:00, staggered against 20-A-04 Monday + 20-A-02 nightly crons). Threshold review on F1 < 0.6 OR specificity < 0.95 regression.
+- **Cutover criteria (shadow → on):** ≥30d shadow + F1 ≥ 0.6 AND specificity ≥ 0.95 on synthetic eval AND zero false-positive complaints from operator review. UI banner remains dismissable by user (24h TTL via localStorage).
+
+**Citations:**
+- Nam, S., & Yang, J. (2023). "Detecting pump-and-dump schemes on financial
+  social media." *Decision Support Systems* 165.
+  https://arxiv.org/pdf/2301.11403
+
+Updated by: Plan 20-C-04 (2026-05-13).
