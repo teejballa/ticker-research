@@ -1,4 +1,4 @@
-// @model-card: docs/cards/MODEL-CARD-finbert.md
+// @model-card: docs/cards/MODEL-CARD-finbert-prosus.md
 // src/lib/sentiment/finsentllm.ts
 //
 // FinSentLLM clients per CONTEXT decision D-33.
@@ -35,6 +35,22 @@ export interface SentimentScore {
   error?: string;
 }
 
+/**
+ * Plan 20-B-02 — first 8 hex chars of the pinned ProsusAI/finbert commit SHA.
+ *
+ * Verified 2026-05-13 by GETting https://huggingface.co/api/models/ProsusAI/finbert
+ * (model.sha = `4556d13015211d73dccd3fdd39d39232506f3e43`).
+ *
+ * Re-pin procedure (T-20-B-02-05 mitigation):
+ *   1. Bump this constant to the new SHA's first 8 hex chars.
+ *   2. Bump `MODEL_VERSION` suffix in src/lib/sentiment/per-message-pass.ts
+ *      from `-v1` to `-v2` so 20-Z-01 composite unique enforces clean
+ *      partitioning of historical SentimentObservation rows.
+ *   3. Re-run `npm run check-finbert-sha` to confirm the new value matches
+ *      HF main.
+ */
+export const FINBERT_PINNED_SHA8 = '4556d130';
+
 function getClient(): HfInference {
   const token = process.env.HF_INFERENCE_TOKEN;
   if (!token) throw new Error('HF_INFERENCE_TOKEN not set');
@@ -69,13 +85,7 @@ async function classifyVia(
     const endpoint = process.env[endpointEnv];
     if (!endpoint) throw new Error(`${endpointEnv} not set`);
     const client = getClient();
-    // Plan 20-Z-03: wrap HF FinBERT/FinGPT/Mistral-fin endpoint calls with
-    // withTelemetry. All three share provider_id 'finbert-hf' (same HF
-    // Inference Endpoint billing surface — per-model cost is identical).
-    const out = await withTelemetry(
-      'finbert-hf',
-      () => client.textClassification({ model: endpoint, inputs: text }),
-    );
+    const out = await client.textClassification({ model: endpoint, inputs: text });
     const arr = Array.isArray(out) ? out : [out];
     const { score, confidence } = reduceLabels(arr as Array<{ label: string; score: number }>);
     return { score, confidence, model };
@@ -88,4 +98,21 @@ async function classifyVia(
 
 export const classifyFinGPT     = (text: string) => classifyVia('fingpt-v3',      'HF_FINGPT_ENDPOINT', text);
 export const classifyMistralFin = (text: string) => classifyVia('mistral-fin-7b', 'HF_MISTRAL_FIN_ENDPOINT', text);
-export const classifyFinBERT    = (text: string) => classifyVia('finbert',        'HF_FINBERT_ENDPOINT', text);
+
+/**
+ * Plan 20-B-02 — FinBERT per-message backstop wrapped in 20-Z-03 telemetry.
+ *
+ * `withTelemetry('finbert-hf', ..., { cost_usd_estimator: () => 0.0001 })`
+ * persists ProviderCallLog rows so `/insights/sentiment-health` renders a
+ * `finbert-hf` provider tile with non-zero data after one shadow-mode cron tick.
+ *
+ * Cost basis: CONTEXT.md line 67 — `$0.033/hr CPU × ~80 inferences/hr ≈ $0.0001/call`.
+ * Signature preserved (`(text: string) => Promise<SentimentScore>`); the
+ * underlying `classifyVia` still returns the null-sentinel on error per D-33.
+ */
+export const classifyFinBERT = (text: string): Promise<SentimentScore> =>
+  withTelemetry(
+    'finbert-hf',
+    () => classifyVia('finbert', 'HF_FINBERT_ENDPOINT', text),
+    { cost_usd_estimator: () => 0.0001 },
+  );
