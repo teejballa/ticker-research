@@ -109,22 +109,22 @@ export default async function InsightsPage() {
             <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
               <div>
                 <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
-                  ESS Pattern Library
+                  Pattern library
                 </div>
                 <h2 className="text-on-surface text-lg font-bold tracking-tight">
-                  Effective sample size · time-decayed credible intervals
+                  Time-decayed credible intervals by pattern
                 </h2>
                 <p className="text-on-surface-variant text-xs mt-2 max-w-2xl leading-relaxed">
-                  ESS reflects the time-weighted information content per cell — sparse-but-recent
-                  cells tighten faster than sparse-but-old cells (CORE-ML-03). Raw N is preserved
-                  as a debug column per D-12. Cells flagged{' '}
+                  Each row is a learned pattern with its 95% credible interval. Recent outcomes carry
+                  more weight than old ones, so sparse-but-recent cells tighten faster than sparse-but-old
+                  cells. Cells flagged{' '}
                   <code className="font-mono text-tertiary">EXPLORATORY-WATCH</code> show a recovery
-                  counter; once 14 clear days accumulate AND ESS≥30, the next cron tick re-flips
-                  the cell to ACTIVE (D-09 step 4).
+                  counter; after 14 clear days and enough effective sample size, the cell re-flips
+                  to ACTIVE.
                 </p>
               </div>
               <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-                {essRows.length} cells · 95% CI from weighted α/β
+                {essRows.length} cells · 95% CI
               </span>
             </div>
             <div className="p-3 md:p-4">

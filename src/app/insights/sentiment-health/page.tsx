@@ -9,8 +9,9 @@ import NavBar from '@/components/NavBar';
 import { ProviderTile } from './components/ProviderTile';
 
 export const metadata = {
-  title: 'Sentiment Health — Cipher',
+  title: 'Provider health',
   description: 'Per-provider latency, cost, and reliability over the last 24 hours.',
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = 'force-dynamic';
@@ -84,13 +85,13 @@ export default async function SentimentHealthPage() {
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <NavBar />
       <main className="max-w-6xl mx-auto px-6 py-10">
-        <h1 className="text-3xl font-bold mb-2">Sentiment Health</h1>
+        <h1 className="text-3xl font-bold mb-2">Provider health</h1>
         <p className="text-zinc-500 dark:text-zinc-400 mb-6">
-          Per-provider latency / error / cost over the last 24 hours.
+          Latency, error rate, and cost per provider over the last 24 hours.
         </p>
         {rows.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No telemetry yet — providers will appear here after the first wrapped call lands.
+            No telemetry yet. Providers appear here after the first instrumented call.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

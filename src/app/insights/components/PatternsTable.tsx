@@ -69,7 +69,7 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="text-[10px] tracking-[0.4em] text-outline uppercase font-mono py-12 text-center">
-        No learned patterns yet — the engine writes its first row after the first 7-day outcome resolves.
+        No patterns yet. The first row populates after the initial 7-day outcome resolves.
       </div>
     );
   }

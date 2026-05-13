@@ -54,6 +54,27 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+const ORGANIZATION_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Cipher',
+  url: 'https://cipher.tools',
+  description:
+    'Source-cited equity research. Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500.',
+} as const;
+
+const WEBSITE_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Cipher',
+  url: 'https://cipher.tools',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: 'https://cipher.tools/research/{ticker}',
+    'query-input': 'required name=ticker',
+  },
+} as const;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="dark bg-surface">
@@ -61,6 +82,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_LD) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_LD) }}
         />
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-[family-name:var(--font-inter)] antialiased bg-surface text-on-surface`}>
