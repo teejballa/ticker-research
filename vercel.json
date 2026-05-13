@@ -30,6 +30,7 @@
     { "path": "/api/cron/source-tier-recompute", "schedule": "0 7 1 * *" },
     { "path": "/api/cron/aspect-kappa-monitor", "schedule": "0 8 1 * *" },
     { "path": "/api/cron/calibrate-temperature", "schedule": "0 7 2 * *" },
-    { "path": "/api/cron/eval-pump-dump-synthetic", "schedule": "0 9 * * 2" }
+    { "path": "/api/cron/eval-pump-dump-synthetic", "schedule": "0 9 * * 2" },
+    { "path": "/api/cron/fairness-audit", "schedule": "0 8 3 * *" }
   ]
 }
