@@ -64,6 +64,19 @@ export interface RunFairnessAuditOptions {
   auditDate?: Date;
   /** Pre-supplied predictions (test injection); bypasses DB read. */
   injectedPredictions?: ClassifierPrediction[];
+  /**
+   * Pre-supplied ticker metadata (test injection); bypasses yahoo-finance2.
+   * When set, getTickerMetadata is NOT called for these tickers.
+   */
+  injectedTickerMeta?: Map<
+    string,
+    {
+      cap_class: CapClass;
+      sector: GICSSector | 'Unknown';
+      country: string | 'Unknown';
+      listing_date: Date | null;
+    }
+  >;
 }
 
 export interface RunFairnessAuditResult {
@@ -388,7 +401,15 @@ export async function runFairnessAudit(
   }
 
   // 2. Resolve ticker metadata
-  const lookup = await buildTickerLookup(predictions);
+  let lookup: Map<string, Awaited<ReturnType<typeof getTickerMetadata>>>;
+  if (opts.injectedTickerMeta) {
+    lookup = new Map();
+    for (const [t, m] of opts.injectedTickerMeta.entries()) {
+      lookup.set(t, { ...m, fetched_at: audit_date_obj });
+    }
+  } else {
+    lookup = await buildTickerLookup(predictions);
+  }
   // Inject SYNTH_MICRO bootstrap metadata directly if used
   if (isBootstrap && !lookup.has('SYNTH_MICRO')) {
     lookup.set('SYNTH_MICRO', {
