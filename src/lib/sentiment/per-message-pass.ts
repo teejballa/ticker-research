@@ -49,6 +49,7 @@ export interface PerMessagePassMessage {
   message_id: string;
   body: string;
   author_handle: string;
+  // LOOKAHEAD-OK: input-shape field. Carries upstream-claimed StockTwits timestamp into the DAO write only; the DAO writes it to an informational-only schema column (// PIT-INVARIANT marker on prisma/schema.prisma forbids backtest joins). The PIT join key is fetched_at, defaulted by Prisma at write time.
   published_at: Date | null;
   author_features: AuthorFeaturesSnapshot;
 }
@@ -114,6 +115,7 @@ async function persist(
       decay_weight: null,                     // 20-A-03 populates later
       author_id: `stocktwits:${message.author_handle}`,
       author_features_snapshot: message.author_features,
+      // LOOKAHEAD-OK: write-side passthrough into the 20-Z-01 DAO; the DAO writes published_at to an informational-only schema column (// PIT-INVARIANT marker forbids backtest joins). The PIT join key is fetched_at, defaulted by Prisma.
       published_at: message.published_at,
     });
     return true;

@@ -279,6 +279,7 @@ export async function GET(request: NextRequest) {
                   message_id: String(m.id),
                   body: m.body,
                   author_handle: handle,
+                  // LOOKAHEAD-OK: passthrough of upstream-claimed StockTwits timestamp into PerMessagePassInput; the 20-Z-01 DAO writes it to an informational-only schema column (// PIT-INVARIANT marker on prisma/schema.prisma forbids backtest joins). The PIT join key is fetched_at, defaulted by Prisma.
                   published_at: m.created_at ? new Date(m.created_at) : null,
                   author_features: {
                     account_age_days,
