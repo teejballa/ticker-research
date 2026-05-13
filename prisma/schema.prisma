@@ -243,7 +243,7 @@ model SentimentObservation {
   // Phase 20-B-01 — ADDITIVE: subset of ASPECT_TAGS (7-element fixed taxonomy in src/lib/sentiment/aspects.ts).
   // Empty default for backfill rows shipped by 20-Z-01 before this column existed. A prompt v2 that
   // changes the taxonomy MUST insert under a NEW model_version per S2 immutability.
-  aspects                  String[] @default([])
+  aspects                  String[]  @default([])
 
   @@unique([ticker, message_id, model_version], map: "sentobs_ticker_msg_modelver_uq")
   @@index([ticker, fetched_at(sort: Desc)], map: "idx_sentobs_ticker_fetched_at")
@@ -472,4 +472,24 @@ model CoordinationCluster {
 
   @@index([ticker, window_start(sort: Desc)], map: "idx_coordcluster_ticker_window")
   @@map("coordination_clusters")
+}
+
+// ─── Phase 20-B-04 — Source-tier weighting (data-driven; capped softmax of per-source IC) ───
+// Append-only history. Each monthly recompute INSERTS new rows; the aggregator reads the
+// LATEST row per source_id via getWeightForSource(). Old rows are NEVER updated. Cold-start
+// sources (n_observations < 30 OR mean_ic_90d == null) are persisted with weight = 1.0
+// and is_cold_start tracked implicitly via mean_ic_90d == null. Cap bounds [0.5, 5.0] are
+// configurable in src/lib/sentiment/source-tier-hyperparameters.ts.
+model SourceTier {
+  id                     String   @id @default(uuid())
+  source_id              String // matches CipherSource union from 20-A-03 source-class.ts
+  computed_at            DateTime @default(now()) @db.Timestamptz
+  mean_ic_90d            Float? // null for cold-start sources (preserved for audit)
+  weight                 Float // ∈ [cap_min, cap_max] OR exactly 1.0 for cold-start
+  n_observations         Int // count of (ticker, day) IC rows used in the softmax bucket
+  validation_window_days Int // typically 90; logged for audit when cap is recalibrated
+  model_version          String // partition key — same convention as 20-Z-01 / 20-A-03
+
+  @@index([source_id, computed_at(sort: Desc)], map: "idx_sourcetier_source_at")
+  @@map("source_tiers")
 }
