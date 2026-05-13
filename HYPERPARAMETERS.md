@@ -123,3 +123,34 @@ weekly `scripts/calibrate-author-share-thresholds.ts` cron writing to the
 **Citation:** Cookson, J. A., & Engelberg, J. (2020). "Echo Chambers." *Review of Financial Studies*. https://doi.org/10.1093/rfs/hhaa027
 
 Updated by: Plan 20-A-04 (2026-05-12).
+
+---
+
+## Phase 20-C-01 — Per-source rolling ICIR with Newey-West significance
+
+Source: `src/lib/sentiment/per-source-ic.ts` `computePerSourceIC()` +
+daily `scripts/compute-per-source-ic.ts` cron writing to the `PerSourceIC`
+table. Lags and thresholds are NEVER hand-set (S1) — every value below has
+a literature citation or rule derivation.
+
+| Parameter | Value | Source |
+|-----------|-------|--------|
+| Rolling window | 20 days | CONTEXT.md §20-C-01 verbatim |
+| Newey-West lag (7d horizon) | 5 | Newey-West 1987 rule L = floor(4·(T/100)^(2/9)), T ≈ 100 |
+| Newey-West lag (30d horizon) | 10 | Newey-West 1987 rule, longer overlap |
+| BH-FDR α | 0.05 | Benjamini-Hochberg 1995 default |
+| n_min_observations (cold-start) | 20 | CONTEXT.md §20-C-01 verbatim |
+| Cross-sectional N min per day | 5 | Spearman instability below this; model card §OOD |
+| Auto-down-weight ICIR threshold | 0.3 | CONTEXT.md §20-C-01 verbatim |
+| Auto-down-weight consecutive windows | 2 | CONTEXT.md §20-C-01 verbatim |
+| Cron schedule | `0 5 * * *` | 1h before alpha-decay-watch (06:00 UTC) |
+| `model_version` | `per-source-ic-v1` | Bump on algorithm change; old rows preserved |
+
+- **Recalibration cadence:** daily via `/api/cron/per-source-ic` (`'0 5 * * *'` UTC).
+- **Cutover criteria:** ≥7 days of dashboard data accumulated AND 20-B-04 SourceTier recompute reading from `PerSourceIC` (forward-reference; this plan ships the SIGNAL only).
+
+**Citations:**
+- Newey, W. K., & West, K. D. (1987). "A Simple, Positive Semi-Definite, Heteroskedasticity and Autocorrelation Consistent Covariance Matrix." *Econometrica* 55(3): 703–708.
+- Benjamini, Y., & Hochberg, Y. (1995). "Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing." *J. Royal Statistical Society B* 57(1): 289–300.
+
+Updated by: Plan 20-C-01 (2026-05-12).
