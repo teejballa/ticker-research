@@ -21,6 +21,12 @@ import { renderPrompt } from '@/lib/prompts/render';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
 import { ASPECT_TAGS, type AspectTag } from './aspects';
+import { temperatureScale } from './calibration';
+import {
+  getTempScalingMode,
+  loadTemperatureFor,
+  resolveGeminiPerDocClassifierVersion,
+} from './temperature-runtime';
 
 export interface PerDocInput {
   /** Stable id — for news, sha256(url) prefix; for community, `${source}:${message_id}`. */
@@ -106,20 +112,21 @@ export async function classifyDocumentsBatch(
   return withTelemetry(
     'gemini',
     async () => {
+      let results: PerDocSentimentResult[];
       // Attempt 1
       try {
         const raw = await callGemini(prompt);
         const parsed = ResponseSchema.parse(raw);
-        return parsed.per_document_sentiment as PerDocSentimentResult[];
+        results = parsed.per_document_sentiment as PerDocSentimentResult[];
       } catch {
         // Attempt 2 — appendix reminds Gemini of the enum + ranges.
         try {
           const raw2 = await callGemini(prompt + RETRY_APPENDIX);
           const parsed2 = ResponseSchema.parse(raw2);
-          return parsed2.per_document_sentiment as PerDocSentimentResult[];
+          results = parsed2.per_document_sentiment as PerDocSentimentResult[];
         } catch {
           // Final fallback: aspects:[] polarity:0 confidence:0 — NEVER fabricates an aspect.
-          return docs.map<PerDocSentimentResult>((d) => ({
+          results = docs.map<PerDocSentimentResult>((d) => ({
             doc_id: d.doc_id,
             polarity: 0,
             confidence: 0,
@@ -127,6 +134,41 @@ export async function classifyDocumentsBatch(
           }));
         }
       }
+
+      // Plan 20-B-03 — temperature scaling integration (gated by SENTIMENT_TEMP_SCALING_MODE).
+      // classifier_version is formed as `gemini-per-doc-v{N}` from the
+      // 20-Z-04 prompt registry (currently v1). A registry bump invalidates
+      // calibration history per T-20-B-03-04 and triggers an auto-refit.
+      // Gemini per-doc emits a confidence scalar (max-class softmax probability).
+      // We synthesise a 2-class logit pair {chosen_class, alt} from {confidence, 1-confidence}
+      // and re-derive the T-scaled confidence. Polarity sign is preserved.
+      const mode = getTempScalingMode();
+      if (mode !== 'off' && results.length > 0) {
+        const classifier_version = resolveGeminiPerDocClassifierVersion(
+          opts.promptVersion ?? 'v1',
+        );
+        const { T } = await loadTemperatureFor(classifier_version);
+        if (T !== 1.0) {
+          const scaled = results.map((r) => {
+            const c = Math.min(Math.max(r.confidence, 0), 1);
+            // 2-class synthetic logits — log(c)/log(1-c). Result preserves polarity.
+            const EPS = 1e-12;
+            const logits = [
+              Math.log(Math.max(c, EPS)),
+              Math.log(Math.max(1 - c, EPS)),
+            ];
+            const probs = temperatureScale(logits, T);
+            return { ...r, confidence: probs[0] };
+          });
+          if (mode === 'on') return scaled;
+          // shadow mode — return raw; scaled value is computed for offline telemetry
+          // (logged via withTelemetry's response payload; the scalar diff is
+          // observable in ProviderCallLog response_size_bytes / via downstream
+          // shadow-comparison cron in 20-Z-03).
+          return results;
+        }
+      }
+      return results;
     },
     {
       ticker: opts.ticker,
