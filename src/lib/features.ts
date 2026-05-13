@@ -35,6 +35,8 @@ const FLAG_NAMES = [
   'mention_z_trending',
   // Plan 20-A-05 — cross-platform agreement signal + MIXED · LOW AGREEMENT badge
   'agreement_signal',
+  // Plan 20-C-03 — Cresci-2019 bot filter + MinHash coordination detection
+  'bot_filter',
 ] as const;
 
 type FlagName = typeof FLAG_NAMES[number];
@@ -78,3 +80,10 @@ export function resolveFeatures(): Features {
 }
 
 export const FEATURES: Features = resolveFeatures();
+
+// ── Plan 20-C-03 — Bot-filter three-mode flag (explicit re-export) ─────
+// Generated as FEATURES.bot_filter_mode via the FLAG_NAMES tuple above; this
+// type alias + re-export keeps grep-traceability for "BotFilterMode" callers
+// (aggregator weight gate + UI subtext) and lets the eval scripts type-check.
+export type BotFilterMode = FeatureMode;
+export const BOT_FILTER_MODE: BotFilterMode = FEATURES.bot_filter_mode;

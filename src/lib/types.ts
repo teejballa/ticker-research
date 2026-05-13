@@ -208,6 +208,18 @@ export interface SentimentIntelligenceSection extends SourceSection {
    * Always false when agreement_score is null.
    */
   low_agreement_warning?: boolean;
+  // ── Plan 20-C-03 — bot-filter / coordinated-posting surfaces ────────
+  /** Snapshot of bot-filter aggregation for the SentimentIntelligenceCard
+   *  subtext. Populated regardless of FEATURE_BOT_FILTER mode; UI gates
+   *  rendering on mode==='on' AND counts > 0. */
+  bot_filter_summary?: {
+    authors_flagged: number;
+    messages_flagged_coordinated: number;
+    coordinated_posting: boolean;
+  } | null;
+  /** Convenience boolean — true when latest CoordinationCluster row in 24h
+   *  is_flagged === true. Mirrors bot_filter_summary.coordinated_posting. */
+  coordinated_posting?: boolean;
 }
 
 export interface ChartDataPoint {
@@ -505,6 +517,13 @@ export interface AnalysisResult {
     // Plan 20-A-05 — cross-platform agreement signal.
     agreement_score?: number | null;
     low_agreement_warning?: boolean;
+    // Plan 20-C-03 — bot-filter / coordinated-posting surfaces.
+    bot_filter_summary?: {
+      authors_flagged: number;
+      messages_flagged_coordinated: number;
+      coordinated_posting: boolean;
+    } | null;
+    coordinated_posting?: boolean;
   };
   community_highlights?: CommunityHighlight[];   // per-community structured findings
   community_analysis?: string;                   // Gemini-written narrative paragraph

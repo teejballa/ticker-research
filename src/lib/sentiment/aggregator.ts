@@ -115,6 +115,48 @@ export interface AggregatedSentiment {
   low_agreement_warning?: boolean;
   /** 'off' | 'shadow' | 'on' — value of FEATURE_AGREEMENT_SIGNAL at compute time. */
   agreement_signal_mode?: 'off' | 'shadow' | 'on';
+  // ── Plan 20-C-03 — Cresci bot filter + coordinated-posting warning ────
+  /**
+   * coordinated_posting === true when the latest CoordinationCluster row
+   * for the ticker within the 24h window has is_flagged === true.
+   * Populated by upstream callers that hold the row context; the pure
+   * aggregator function does not load this from the DB itself.
+   */
+  coordinated_posting?: boolean;
+  /** Bot-filter summary surfaced to the UI subtext. Populated regardless
+   *  of FEATURE_BOT_FILTER mode so 'shadow' callers can still inspect. */
+  bot_filter_summary?: BotFilterSummary | null;
+  /** 'off' | 'shadow' | 'on' — value of FEATURE_BOT_FILTER at compute time. */
+  bot_filter_mode?: 'off' | 'shadow' | 'on';
+}
+
+// ── Plan 20-C-03 — Bot-filter summary surfaced to UI + downstream consumers ─
+export interface BotFilterSummary {
+  /** Count of distinct author_ids with is_bot_flagged=true in the 24h window. */
+  authors_flagged: number;
+  /** cluster_size from the latest CoordinationCluster row in the 24h window. */
+  messages_flagged_coordinated: number;
+  /** is_flagged of the latest CoordinationCluster row (mirrors coordinated_posting). */
+  coordinated_posting: boolean;
+}
+
+/**
+ * Apply the bot-filter weight gate to an upstream `mention_count`.
+ * When `FEATURE_BOT_FILTER === 'on'`, the caller pre-filters by author_id
+ * and reduces the effective mention_count by the count of bot-flagged authors.
+ * Otherwise the count passes through unchanged (off/shadow modes).
+ *
+ * The aggregator works on aggregate `SourceInput`s — per-message gating is the
+ * CALLER's responsibility. This helper centralizes the count math so the
+ * weight delta is auditable. T-20-C-03-05: filter affects WEIGHT, not VISIBILITY.
+ */
+export function applyBotFilterToCount(
+  count: number,
+  n_flagged: number,
+  mode: 'off' | 'shadow' | 'on',
+): number {
+  if (mode !== 'on') return count;
+  return Math.max(0, count - n_flagged);
 }
 
 /**
