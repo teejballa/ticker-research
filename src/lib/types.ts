@@ -257,6 +257,24 @@ export interface SentimentIntelligenceSection extends SourceSection {
   tier_weights_applied?: Record<string, number>;
   /** 'off' | 'shadow' | 'on' — value of SOURCE_TIER_MODE at compute time. */
   tier_mode?: 'off' | 'shadow' | 'on';
+  // ── Plan 20-C-04 — Pump-and-dump cluster detector (Nam/Yang 2023) ───
+  /**
+   * 5-condition AND-gate verdict over (mention_z, bull_pct, gini, author age,
+   * cap_class). Optional/nullable so SourcePackage stays backward-compatible
+   * when FEATURE_PUMP_DUMP_DETECTOR is 'off' OR cap_class is out of scope OR
+   * any upstream feature is null. UI banner gated separately by
+   * NEXT_PUBLIC_FEATURE_PUMP_DUMP_DETECTOR_UI (CONTEXT.md S3).
+   *
+   * matched_rules enumerates which of the 5 sub-conditions individually
+   * fired — populated even when is_warning=false for FP-rate review during
+   * the 30d shadow gate. rule_version is the pdd-v{major}.{minor} constant
+   * in force at write-time; bumps on every threshold change.
+   */
+  manipulation_warning?: {
+    is_warning: boolean;
+    matched_rules: string[];
+    rule_version: string;
+  } | null;
 }
 
 export interface ChartDataPoint {
