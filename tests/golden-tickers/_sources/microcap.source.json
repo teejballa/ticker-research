@@ -1,0 +1,67 @@
+{
+  "ticker": "ACME",
+  "company_name": "Acme Microcap Corp.",
+  "exchange": "NASDAQ",
+  "security_type": "equity",
+  "assembled_at": "2026-05-13T00:00:00Z",
+  "market_data": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "price": 4.85,
+    "volume": 425000,
+    "market_cap": 185000000,
+    "fifty_two_week_high": 9.62,
+    "fifty_two_week_low": 2.18,
+    "percent_change_today": -0.031,
+    "exchange": "NASDAQ"
+  },
+  "fundamentals": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "pe_ratio": 18.5,
+    "eps": 0.26,
+    "revenue": 95000000,
+    "debt_to_equity": 0.62,
+    "profit_margin": 0.055
+  },
+  "news": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "items": [
+      {
+        "headline": "Acme Microcap announces partnership",
+        "url": "https://example.com/microcap-news-1",
+        "published_date": "2026-05-07",
+        "source": "PR Newswire"
+      }
+    ]
+  },
+  "analyst_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "consensus": "Hold",
+    "avg_price_target": 6,
+    "analyst_count": 2,
+    "recent_changes": []
+  },
+  "sec_filing_summary": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "most_recent_10k": null,
+    "most_recent_10q": null,
+    "filing_dates": { "10k": null, "10q": null }
+  },
+  "social_sentiment": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "overall_tone": "neutral",
+    "signals": [],
+    "sources_checked": ["stocktwits"]
+  },
+  "collection_errors": [],
+  "supplementary_market_data": { "sources": [] },
+  "sentiment_intelligence": {
+    "collected_at": "2026-05-13T00:00:00Z",
+    "stocktwits_bull_pct": 52,
+    "stocktwits_bear_pct": 48,
+    "stocktwits_message_count": 85,
+    "stocktwits_is_trending": false,
+    "reddit_tone": "neutral",
+    "put_call_ratio": 0.95,
+    "put_call_interpretation": "neutral"
+  }
+}
