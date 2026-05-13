@@ -1,0 +1,41 @@
+{
+  "executive_summary": "Pre-plan synthetic AnalysisResult fixture. Used to assert 20-D-03 schema extension is backward-compatible.",
+  "investment_thesis": "Synthetic thesis text.",
+  "key_risks": "Synthetic risk text — note the legacy free-text string IS preserved by 20-D-03; the new optional structured `risks` array ships SIDE-BY-SIDE.",
+  "valuation_context": "Synthetic valuation prose.",
+  "catalyst_watch": [],
+  "market_sentiment": "neutral",
+  "sentiment_reasoning": "Synthetic reasoning.",
+  "bullish_signals": [
+    { "signal": "Revenue grew 45% YoY", "source_citation": "Finnhub fundamentals" },
+    { "signal": "Operating margin expanded to 18%", "source_citation": "Yahoo fundamentals" },
+    { "signal": "Cash balance up 22% sequentially", "source_citation": "Q3 10-Q" }
+  ],
+  "bearish_signals": [
+    { "signal": "Customer concentration in top 3 accounts", "source_citation": "10-K risk factors" },
+    { "signal": "Inventory growth outpacing sales", "source_citation": "balance sheet" },
+    { "signal": "Insider selling accelerated last 90d", "source_citation": "Form 4 filings" }
+  ],
+  "assessment": {
+    "buy_pct": 50,
+    "hold_pct": 30,
+    "sell_pct": 20,
+    "buy_rationale": "Synthetic.",
+    "hold_rationale": "Synthetic.",
+    "sell_rationale": "Synthetic."
+  },
+  "confidence_level": "Medium",
+  "confidence_explanation": "Synthetic confidence prose.",
+  "price_target": "$100",
+  "sources_used": [
+    { "name": "Yahoo Finance", "key_fact": "Price + fundamentals" },
+    { "name": "Finnhub", "key_fact": "Fallback fields" }
+  ],
+  "source_warnings": [],
+  "business_description": "",
+  "financial_analysis": "",
+  "competitive_landscape": "",
+  "future_projection": "",
+  "community_highlights": [],
+  "community_analysis": ""
+}
