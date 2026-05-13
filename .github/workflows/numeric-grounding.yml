@@ -1,0 +1,47 @@
+# .github/workflows/numeric-grounding.yml
+#
+# Plan 20-D-01 — Numeric-grounding regression gate.
+#
+# Runs on every PR that touches the report-generation surface or the matcher
+# itself. Required-for-merge status flipped separately by the operator in
+# branch-protection settings (see tests/golden-tickers/RUNBOOK.md §5).
+
+name: Numeric Grounding Regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/gemini-analysis.ts'
+      - 'src/lib/research-brief.ts'
+      - 'src/lib/prompts/**'
+      - 'src/components/ResearchReport.tsx'
+      - 'src/lib/eval/**'
+      - 'tests/golden-tickers/**'
+      - 'tests/integration/numeric-grounding.regression.test.ts'
+      - 'tests/integration/numeric-grounding.synthetic-injection.test.ts'
+      - 'tests/unit/numeric-grounding.unit.test.ts'
+      - 'scripts/check-numeric-grounding.ts'
+      - 'scripts/record-frozen-report.ts'
+      - '.github/workflows/numeric-grounding.yml'
+  push:
+    branches: [main]
+
+jobs:
+  numeric-grounding-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: Prisma generate
+        run: npx prisma generate
+      - name: Check numeric grounding (CLI gate)
+        run: npm run check-numeric-grounding
+      - name: Run integration regression + synthetic-injection
+        run: npx vitest run --config vitest.integration.config.ts tests/integration/numeric-grounding.regression.test.ts tests/integration/numeric-grounding.synthetic-injection.test.ts
+      - name: Run matcher unit tests
+        run: npx vitest run tests/unit/numeric-grounding.unit.test.ts
