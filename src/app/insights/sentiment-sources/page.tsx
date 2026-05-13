@@ -4,7 +4,7 @@
 // dashboard. Server component; calls the JSON endpoint's payload function
 // directly to avoid an HTTP roundtrip.
 
-import { fetchSentimentSourcesPayload } from '@/app/api/insights/sentiment-sources/route';
+import { fetchSentimentSourcesPayload } from '@/app/api/insights/sentiment-sources/_helpers';
 import { SourceTile } from './components/SourceTile';
 
 export const dynamic = 'force-dynamic';

@@ -110,7 +110,7 @@ describe('20-C-01 — per-source IC integration', () => {
         });
 
         const { fetchSentimentSourcesPayload } = await import(
-          '@/app/api/insights/sentiment-sources/route'
+          '@/app/api/insights/sentiment-sources/_helpers'
         );
         const payload = await fetchSentimentSourcesPayload();
         const stocktwits = payload.sources.find((s) => s.source_id === 'stocktwits');
@@ -173,7 +173,7 @@ describe('20-C-01 — per-source IC integration', () => {
         });
 
         const { fetchSentimentSourcesPayload } = await import(
-          '@/app/api/insights/sentiment-sources/route'
+          '@/app/api/insights/sentiment-sources/_helpers'
         );
         const payload = await fetchSentimentSourcesPayload();
         const reddit = payload.sources.find((s) => s.source_id === 'reddit');
@@ -264,7 +264,7 @@ describe('20-C-01 — per-source IC integration', () => {
     async (ctx) => {
       if (!(await tableExists())) return ctx.skip();
       const { fetchSentimentSourcesPayload } = await import(
-        '@/app/api/insights/sentiment-sources/route'
+        '@/app/api/insights/sentiment-sources/_helpers'
       );
       const payload = await fetchSentimentSourcesPayload();
       expect(payload.sources.length).toBe(6);
