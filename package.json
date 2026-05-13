@@ -46,7 +46,8 @@
     "ablate-joint-features": "npx tsx scripts/ablate-joint-features.ts",
     "eval-fpb-per-doc": "npx tsx scripts/eval-fpb-per-doc.ts",
     "check-finbert-sha": "npx tsx scripts/check-finbert-sha.ts",
-    "check-lm-lexicon-age": "npx tsx scripts/check-lm-lexicon-age.ts"
+    "check-lm-lexicon-age": "npx tsx scripts/check-lm-lexicon-age.ts",
+    "audit-fairness": "npx tsx scripts/audit-fairness.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
