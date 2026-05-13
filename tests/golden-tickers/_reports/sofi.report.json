@@ -1,0 +1,27 @@
+{
+  "__recording": {
+    "recorded_at": "2026-05-13T00:00:00Z",
+    "prompt_versions": {
+      "gemini-research-brief-system": "v1",
+      "gemini-research-brief-user": "v1",
+      "gemini-engine-context-block-no-data": "v1",
+      "gemini-engine-context-block-active": "v1",
+      "gemini-technical-context-block": "v1",
+      "gemini-smart-money-context-block": "v1",
+      "gemini-cove-pass1-instruction": "v1",
+      "gemini-citations-section": "v1",
+      "gemini-cycle-summary": "v1"
+    },
+    "gemini_model_revision": "bootstrap-2026-05-13",
+    "temperature": 0,
+    "source_hash": "TO_BE_COMPUTED_BY_RECORDING_SCRIPT"
+  },
+  "executive_summary": "SoFi posts revenue of $2.35B with market cap of $14.2B and consensus PT of $15.",
+  "investment_thesis": "EPS of 0.08 marks the first GAAP profit; bullish sentiment of 74% on StockTwits supports the long thesis.",
+  "key_risks": "Bearish sentiment of 26% and the 52-week range $6.42 to $16.23 reflect volatility.",
+  "valuation_context": "Price of $12.85 sits near consensus PT of $15. Debt-to-equity of 0.45 is modest.",
+  "future_projection": "Hitting the consensus PT of $15 implies upside from $12.85.",
+  "business_description": "SoFi offers online lending and banking with revenue of $2.35B.",
+  "financial_analysis": "Revenue of $2.35B with EPS of 0.08 and debt-to-equity of 0.45.",
+  "competitive_landscape": "Market cap of $14.2B versus larger neobank peers."
+}

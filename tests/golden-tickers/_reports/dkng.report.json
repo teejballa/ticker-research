@@ -1,0 +1,27 @@
+{
+  "__recording": {
+    "recorded_at": "2026-05-13T00:00:00Z",
+    "prompt_versions": {
+      "gemini-research-brief-system": "v1",
+      "gemini-research-brief-user": "v1",
+      "gemini-engine-context-block-no-data": "v1",
+      "gemini-engine-context-block-active": "v1",
+      "gemini-technical-context-block": "v1",
+      "gemini-smart-money-context-block": "v1",
+      "gemini-cove-pass1-instruction": "v1",
+      "gemini-citations-section": "v1",
+      "gemini-cycle-summary": "v1"
+    },
+    "gemini_model_revision": "bootstrap-2026-05-13",
+    "temperature": 0,
+    "source_hash": "TO_BE_COMPUTED_BY_RECORDING_SCRIPT"
+  },
+  "executive_summary": "DraftKings trades at a market cap of $20.5B with revenue of $4.2B. Consensus PT of $52 implies upside from the current price of $42.18.",
+  "investment_thesis": "Top-line revenue of $4.2B and bullish sentiment of 62% on StockTwits anchor the long thesis.",
+  "key_risks": "EPS of -0.62 reflects ongoing losses; debt-to-equity of 1.85 indicates leverage. Bearish sentiment of 38% on social.",
+  "valuation_context": "Price of $42.18 sits between the 52-week low of $28.34 and high of $53.61. Consensus PT of $52 leans bullish.",
+  "future_projection": "If DraftKings hits the consensus PT of $52, the move from $42.18 implies meaningful upside.",
+  "business_description": "DraftKings operates online sports betting and iGaming with revenue of $4.2B.",
+  "financial_analysis": "Revenue of $4.2B with EPS of -0.62 and debt-to-equity of 1.85.",
+  "competitive_landscape": "DraftKings' market cap of $20.5B places it among the top US sports-betting operators."
+}

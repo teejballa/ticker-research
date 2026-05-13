@@ -1,0 +1,27 @@
+{
+  "__recording": {
+    "recorded_at": "2026-05-13T00:00:00Z",
+    "prompt_versions": {
+      "gemini-research-brief-system": "v1",
+      "gemini-research-brief-user": "v1",
+      "gemini-engine-context-block-no-data": "v1",
+      "gemini-engine-context-block-active": "v1",
+      "gemini-technical-context-block": "v1",
+      "gemini-smart-money-context-block": "v1",
+      "gemini-cove-pass1-instruction": "v1",
+      "gemini-citations-section": "v1",
+      "gemini-cycle-summary": "v1"
+    },
+    "gemini_model_revision": "bootstrap-2026-05-13",
+    "temperature": 0,
+    "source_hash": "TO_BE_COMPUTED_BY_RECORDING_SCRIPT"
+  },
+  "executive_summary": "GameStop's market cap of $7.9B sits well below the 52-week high; current price is $18.45 versus a high of $64.83.",
+  "investment_thesis": "Revenue of $5.2B and a 92% bull-sentiment skew on StockTwits drive the meme-rally thesis.",
+  "key_risks": "Bearish sentiment of just 8% signals a crowded long; put-call ratio of 1.45 leans bearish.",
+  "valuation_context": "Price of $18.45 sits between the 52-week low of $9.95 and high of $64.83. Consensus PT is $15.",
+  "future_projection": "Consensus PT of $15 implies downside from the current $18.45.",
+  "business_description": "GameStop operates video-game retail with revenue of $5.2B.",
+  "financial_analysis": "Revenue of $5.2B with EPS of -0.18 and debt-to-equity of 0.12.",
+  "competitive_landscape": "GameStop's market cap of $7.9B trails the broader specialty-retail peer group."
+}
