@@ -1,0 +1,72 @@
+[
+  {
+    "doc_id": "seed-001-aapl-earnings-beat",
+    "source": "news",
+    "text": "Apple reported Q3 2026 earnings of $1.78 per share, beating consensus of $1.65. Revenue rose 8% year-over-year to $89.5B, driven by iPhone strength.",
+    "human_aspects": ["earnings"],
+    "notes": "Pure earnings beat — single aspect."
+  },
+  {
+    "doc_id": "seed-002-aapl-guidance-raise",
+    "source": "news",
+    "text": "Apple raised full-year 2026 guidance, now expecting revenue growth of 9-11% versus prior guidance of 5-7%. Management cited resilient demand in Services and Wearables.",
+    "human_aspects": ["guidance", "management"],
+    "notes": "Guidance raise authored by management — dual aspect."
+  },
+  {
+    "doc_id": "seed-003-msft-acquisition",
+    "source": "news",
+    "text": "Microsoft announced today that it has agreed to acquire cybersecurity firm Wiz for $32 billion in cash. The deal is expected to close in calendar Q4 2026 subject to regulatory approval.",
+    "human_aspects": ["M&A", "regulatory"],
+    "notes": "M&A announcement with explicit regulatory contingency."
+  },
+  {
+    "doc_id": "seed-004-fed-rate-decision",
+    "source": "news",
+    "text": "The Federal Reserve held the benchmark federal funds rate at 4.25-4.50% on Wednesday. Chair Powell signaled the FOMC remains data-dependent on the path of inflation.",
+    "human_aspects": ["macro"],
+    "notes": "Pure macro / monetary-policy doc."
+  },
+  {
+    "doc_id": "seed-005-nvda-product-launch",
+    "source": "news",
+    "text": "Nvidia unveiled its next-generation Blackwell Ultra GPU at GTC 2026. The chip delivers 2.5x the inference throughput of Hopper at the same power envelope, with shipments beginning Q1 2027.",
+    "human_aspects": ["product"],
+    "notes": "Product-launch announcement — single aspect."
+  },
+  {
+    "doc_id": "seed-006-tsla-ceo-departure",
+    "source": "news",
+    "text": "Tesla's chief financial officer Vaibhav Taneja announced his resignation effective end of quarter. The board has begun a search for a permanent replacement; an interim CFO has been named.",
+    "human_aspects": ["management"],
+    "notes": "Executive departure — management aspect."
+  },
+  {
+    "doc_id": "seed-007-sec-filing-10k",
+    "source": "news",
+    "text": "Meta Platforms filed its annual report on Form 10-K with the SEC, disclosing $3.4B in legal contingencies related to ongoing antitrust litigation in the EU.",
+    "human_aspects": ["regulatory"],
+    "notes": "SEC filing — regulatory aspect."
+  },
+  {
+    "doc_id": "seed-008-mixed-earnings-guidance",
+    "source": "news",
+    "text": "Alphabet beat Q2 earnings expectations with EPS of $1.95 vs $1.82 consensus but lowered full-year cloud-revenue guidance citing slower enterprise spend.",
+    "human_aspects": ["earnings", "guidance"],
+    "notes": "Earnings beat paired with guidance cut — dual aspect."
+  },
+  {
+    "doc_id": "seed-009-community-bullish",
+    "source": "community",
+    "text": "Just loaded up on $AMD calls. Earnings next week and the AI tailwind is undeniable. This is going to $250.",
+    "human_aspects": ["earnings"],
+    "notes": "Community retail post anchored on earnings."
+  },
+  {
+    "doc_id": "seed-010-off-topic-weather",
+    "source": "news",
+    "text": "Severe thunderstorms are expected across the Midwest this weekend, with potential for hail and tornadoes in eastern Kansas.",
+    "human_aspects": [],
+    "notes": "Off-topic guard — should return empty aspects[]."
+  }
+]
