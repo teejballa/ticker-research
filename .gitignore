@@ -143,3 +143,14 @@ calibration-reports/
 # weekly. Never commit.
 /reports/citation-coverage-*.json
 /reports/citation-coverage-*.md
+
+# ========================
+# Phase 20-D-03 — Per-claim verification baseline artifacts
+# ========================
+# JSON written by scripts/measure-claim-verification.ts. The first run produces
+# the canonical baseline file `reports/per-claim-verification-baseline-{date}.json`
+# which IS the artifact of this plan and SHOULD be committed manually when
+# captured against the 20-D-04 golden-ticker SourcePackages. Transient dev
+# runs (different dates) are ignored — re-bless requires manual `git add -f`.
+/reports/per-claim-verification-baseline-*.json
+!/reports/per-claim-verification-baseline-blessed.json

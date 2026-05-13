@@ -51,7 +51,8 @@
     "check-lm-lexicon-age": "npx tsx scripts/check-lm-lexicon-age.ts",
     "audit-fairness": "npx tsx scripts/audit-fairness.ts",
     "eval-citation-coverage": "npx tsx scripts/eval-citation-coverage.ts",
-    "check-citation-coverage": "npx tsx scripts/eval-citation-coverage.ts --ci"
+    "check-citation-coverage": "npx tsx scripts/eval-citation-coverage.ts --ci",
+    "measure-claim-verification": "npx tsx scripts/measure-claim-verification.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
