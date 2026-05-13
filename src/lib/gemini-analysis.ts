@@ -44,6 +44,8 @@ import { GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
 // registry. renderPrompt() substitutes {{var}} placeholders + throws on
 // missing required vars or leftover placeholders (T-20-Z-04-03).
 import { renderPrompt } from '@/lib/prompts/render';
+// Plan 20-B-01 — fixed 7-element AspectTag taxonomy for per-doc classifier output.
+import { ASPECT_TAGS } from '@/lib/sentiment/aspects';
 
 // Reads ANTHROPIC_API_KEY from process.env automatically.
 const anthropicClient = new Anthropic();
@@ -137,6 +139,24 @@ export const AnalysisResultSchema = z.object({
   // is appropriate, and we don't want a Zod failure to block the entire
   // analysis on this enrichment.
   verification_claims: z.array(z.string()).max(5).optional(),
+
+  // Plan 20-B-01 — per-document sentiment + aspect classification.
+  // Optional + default [] so the field is additive; off-flag branch writes
+  // an empty array. Populated by classifyDocumentsBatch via
+  // src/lib/sentiment/per-doc-classifier.ts before runGeminiAnalysis runs,
+  // then post-process-written here (overwrites any LLM hallucination).
+  // Consumed downstream by 20-B-05 per-aspect aggregator.
+  per_document_sentiment: z
+    .array(
+      z.object({
+        doc_id: z.string().min(1),
+        polarity: z.number().min(-1).max(1),
+        confidence: z.number().min(0).max(1),
+        aspects: z.array(z.enum(ASPECT_TAGS)).max(7),
+      }),
+    )
+    .optional()
+    .default([]),
 
   // Engine calibration block — Gemini contributes only the alignment/disagreement
   // strings (4 of them, post-Phase-16; 8 total post-Phase-17). All numeric fields
