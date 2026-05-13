@@ -494,3 +494,44 @@ The `ANCHOR_WINDOW_CHARS`, `KEYWORD_OVERLAP_MIN`, and `COSINE_DEDUPE_THRESHOLD` 
 4. Fixtures missing `citations_v2` (pre-19-C-07 bootstrapped reports) are skipped rather than failed — the gate runs once 20-D-04 re-records the fixtures with citations populated.
 
 Updated by: Plan 20-D-02 (2026-05-13).
+
+---
+
+## per_claim_verifier (Plan 20-D-03)
+
+Per-claim CoVe verification thresholds — applied by
+`src/lib/eval/per-claim-verifier.ts` against the score-returning sibling
+`nliVerifyWithScore` in `src/lib/reasoning/cove.ts` (Plan 20-D-03 Task 2). The
+underlying NLI model is 19-C-08's `distilbert-mnli` (28/30 fixture accuracy
+on `tests/fixtures/nli-eval-labels.tsv`) — this plan does NOT re-evaluate the
+NLI model choice.
+
+| Parameter                       | Value | Range / basis                                                              |
+|---------------------------------|-------|----------------------------------------------------------------------------|
+| `entailment_score_threshold`    | 0.70  | HF text-classification top-label "high confidence" convention              |
+| `contradiction_score_threshold` | 0.70  | Same — strict symmetric threshold; conservative-default principle           |
+| `max_claim_chars`               | 500   | Inherited from 19-C-08 `MAX_CLAIM_LEN`                                     |
+| `max_evidence_chars`            | 5000  | Inherited from 19-C-08 `MAX_EVIDENCE_LEN`                                  |
+| `nli_model`                     | `distilbert-mnli` | Upstream from 19-C-08 fixture decision (not re-evaluated here) |
+
+- **Verdict mapping** (verifyClaimPerSignal):
+  - `label === 'entail'`     AND `score > 0.70` → `'true'`
+  - `label === 'contradict'` AND `score > 0.70` → `'false'`
+  - else (neutral / threw / endpoint unset / score ≤ 0.70) → `'null'` (conservative default)
+- **Why 0.70** (Plan 20-D-03 threat model T-20-D-03-01 / T-20-D-03-02): below
+  this threshold collapses to `'null'` ("Insufficient source data to verify"),
+  never to `'true'` or `'false'`. The UI badge framing for `'null'` is
+  informational, not accusatory — and the `'false'` framing is factual
+  contradiction language, not investment-advice language (S10).
+- **Recalibration cadence**: re-evaluate after ≥200 shadow comparisons OR 90
+  days, whichever first. Same convention as 19-C-08 fixture footer. The
+  20-D-03-FOLLOWUP-CUTOVER plan will tune these thresholds if the baseline
+  measurement against the 20-D-04 golden tickers shows `null` rate > 60%
+  (T-20-D-03-03 mitigation — over-conservative verdicts erode feature trust).
+- **Measurement**: `npm run measure-claim-verification` writes
+  `reports/per-claim-verification-baseline-{YYYY-MM-DD}.json` per-ticker ×
+  per-section verdict-count breakdown. The first blessed baseline (after
+  20-D-04 ships real golden-ticker SourcePackages) becomes the canonical
+  reference at `reports/per-claim-verification-baseline-blessed.json`.
+
+Updated by: Plan 20-D-03 (2026-05-13).
