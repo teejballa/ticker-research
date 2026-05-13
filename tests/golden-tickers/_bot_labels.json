@@ -1,0 +1,802 @@
+[
+  {
+    "author_id_hash": "cd0ffff69ed39db272e97fd1a8a2c78a2d0f6b6dd922d7d471aa76f5e718f1b0",
+    "ticker_sampled": "GME",
+    "label": "bot",
+    "notes": "Account age 5d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "f5e734b06841f2b7101f304431943d0af9f9d7e5abbf9b74b98cc90296e936e5",
+    "ticker_sampled": "AMC",
+    "label": "bot",
+    "notes": "Account age 6d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "88224564ad6d943d631e84fe49f117a22784b368f43d85edbb05bbe3a2d54839",
+    "ticker_sampled": "TSLA",
+    "label": "bot",
+    "notes": "Account age 7d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "2841aa6824a372ca5c12890ed8ced65ac1e99757bf7027eda9ffac7caaff1903",
+    "ticker_sampled": "AAPL",
+    "label": "bot",
+    "notes": "Account age 8d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "576a1dd6516466090de063c6914e4e9a9983e775cc99164c69434a8d4723f89a",
+    "ticker_sampled": "NVDA",
+    "label": "bot",
+    "notes": "Account age 9d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "0f5f7c8a7e541d90cf8144010d11a7640c46351f4f831def40703fba88e392bf",
+    "ticker_sampled": "MSFT",
+    "label": "bot",
+    "notes": "Account age 10d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "8a6468082fb55778d5ecdb9a47c2bfd4d218271ecfa69f8ec773251370a5ddc6",
+    "ticker_sampled": "AMZN",
+    "label": "bot",
+    "notes": "Account age 11d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "258e2917fe62b6ee8232a96f77fb746e6eebe8747b7912bc431e20e30e3dee7a",
+    "ticker_sampled": "META",
+    "label": "bot",
+    "notes": "Account age 12d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "c30f1a1a038bbe76b6c098090a5f6ffcad7b03e47bbe839833b2887eac5c107b",
+    "ticker_sampled": "GOOG",
+    "label": "bot",
+    "notes": "Account age 13d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "47393e8bda838bca67001e325ab450cde14348966b5b9bc31e1fcdc9e63fac7b",
+    "ticker_sampled": "SPY",
+    "label": "bot",
+    "notes": "Account age 14d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "955c6da113367718c67ffcaf08cac624c4eb646538e6d11c915b61740df3cedf",
+    "ticker_sampled": "GME",
+    "label": "bot",
+    "notes": "Account age 15d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "0db9e849ede94eb6b198f0b3ca18818351311708d5d8ec39f1c2bd9e95ddeed7",
+    "ticker_sampled": "AMC",
+    "label": "bot",
+    "notes": "Account age 16d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "03daafea9603665916ae89a99e45a78451ae15acb163062ba3fc09a8d45b5eac",
+    "ticker_sampled": "TSLA",
+    "label": "bot",
+    "notes": "Account age 17d, generic shilling content",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "4b6be39bd6f700766eb2a2d127e796042e5e5469fa6dd4c12be3ff2e6ec03e62",
+    "ticker_sampled": "AAPL",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to AAPL",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "5bf93df595047f84f562f8c0e328ab5ef7e9a04a0113f3a2e41b62e9d75d6471",
+    "ticker_sampled": "NVDA",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to NVDA",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "169f8ed7a2773831f2718513d6758874dedd0995b4dfcfb58b6090281a102d7e",
+    "ticker_sampled": "MSFT",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to MSFT",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "0234494d43ad5de5171a838e3df2ff2b2bc8bbbf3d400638877a36e17576af16",
+    "ticker_sampled": "AMZN",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to AMZN",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "37b886feb79a6d5a28371a7b1d694a6b78aedad21de83175409da3957303aa43",
+    "ticker_sampled": "META",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to META",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "01d2e4b4093153d69b6c435b4eeda77eb92cff879d5d0ddf0ca225924782ec66",
+    "ticker_sampled": "GOOG",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to GOOG",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "5d024185f507963c6dd2396d36c282bd3864df1426a800b97e915dae827c086c",
+    "ticker_sampled": "SPY",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to SPY",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "2a88010613ee75b6c67ce147466c6abf7e94101d41788183935d70f9b089bcab",
+    "ticker_sampled": "GME",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to GME",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "25df9fd4c4b2ef9fe0b1b18c17749a748e4f596e1f13ea033df5149d200dafba",
+    "ticker_sampled": "AMC",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to AMC",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "fe723c8fe1e15c7b1b8818dcc1cb365d87dca10637b1b2f35b7249be459f3a3f",
+    "ticker_sampled": "TSLA",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to TSLA",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "b2bfab4c67a2fa61b68647a0e66efd023455b8f7e52132f24eb7f43ce23383a5",
+    "ticker_sampled": "AAPL",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to AAPL",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e22dda67266240c89b56586730a8147a3c4aa2830e669bbb311336599df5acd1",
+    "ticker_sampled": "NVDA",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to NVDA",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "c0876ae62f789590cbb2c9d7286f902deafc22b2a34c8553bc12e3369d263468",
+    "ticker_sampled": "MSFT",
+    "label": "bot",
+    "notes": "200d account but 3+ near-identical posts to MSFT",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e5bd92d764b2a3a7e773f1164bd1d5f84420f313e0af97e8aa2fdf43d38e869f",
+    "ticker_sampled": "AMZN",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "a2cc800b6117623511bd943ca37df5d242969fa30eb96b1a4ccf5d122fc5950e",
+    "ticker_sampled": "META",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "c39c984f7c37d77b148ad72d1b8ec6644018a9903e39df8ecc0f722c3312005a",
+    "ticker_sampled": "GOOG",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "c00deabd3264a052ad42e28736034166d03bb9d06b99e23c8146b5d8b3897cb4",
+    "ticker_sampled": "SPY",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "567632d2f510ed090a38aa04f401c5543d871f776491d055eeadc837d1c3a96e",
+    "ticker_sampled": "GME",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "402e7656d59fcaacdbe760a7c7532ab24695ce0e855c4fcac04c6817ed7d172a",
+    "ticker_sampled": "AMC",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "0f0c40fd6b75af6c1f2679033077bdf0f7a305d389830b513806f5c90354e747",
+    "ticker_sampled": "TSLA",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "311d6ec643f2250ac63ba77156c8a63369e019496265f62863ecbb1b8df92e9c",
+    "ticker_sampled": "AAPL",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e56cfd4ba985acc41a9fef46a270cb2323af77086b9f4c1b68479ebcf75cc728",
+    "ticker_sampled": "NVDA",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "b7c5bdc5991aa8ef2e1bab63da6f2eddb9e37b3e14fa58071e5654030a7049f2",
+    "ticker_sampled": "MSFT",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "1cfad7de4af37787ba365ff5bd1ec7c4d37f369feb8aa0800827dea3c06db146",
+    "ticker_sampled": "AMZN",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "446367f16519861a5cacdca82bda691e8e30339c3931310a43a905227a674372",
+    "ticker_sampled": "META",
+    "label": "bot",
+    "notes": "200d account, pump-phrase density above threshold",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "85297aa121974e4099bc37a701fe7b026cdb2f13f0212e9fe5510a912137a421",
+    "ticker_sampled": "GOOG",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "836fafe37f4f7fb8e34b472268d848565d5be4dfc85e1096227107cdec3d54fc",
+    "ticker_sampled": "SPY",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "ca7ca65f77baec0fa99896dc4ebe801870148d959ce8b047546003c12ae26ecd",
+    "ticker_sampled": "GME",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e246b952b9bed1a8de94b90bba2221cbcec3dd7157907e705b059811b3d8fbd5",
+    "ticker_sampled": "AMC",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "084b9c09defee7c928906c2ac60e6cb91df24283ad573c4ff2ab23b5e9d56cd4",
+    "ticker_sampled": "TSLA",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "21d427d311c9b1a91e9f0631cb55f550023d4fe7dee1cd10898848196f6a2995",
+    "ticker_sampled": "AAPL",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "c802457febb31e0acdf84c5fbe7b3960da8859fe9f3ae93897289bb4ddaf3397",
+    "ticker_sampled": "NVDA",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "c2438365ca4bc7f5876f856428f3f2b6a08b0382aab12528305584bb73c1df93",
+    "ticker_sampled": "MSFT",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "1505d93331be359c2d3e7bf219b8230ccf239dff49ad770fe11e355b3d9515dd",
+    "ticker_sampled": "AMZN",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "7704080c3e57ece36be6773472102ac2500c0b2f07ed515b21f076d8fbbe2075",
+    "ticker_sampled": "META",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "1ecb3891a4f947cc83f6f9fe4bffc716dee464d1fb05b2797f4a009cbfbac6ca",
+    "ticker_sampled": "GOOG",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "f974e224a32181342eba65425f6c6130ba092b170c64ddef67baa44abff05771",
+    "ticker_sampled": "SPY",
+    "label": "bot",
+    "notes": "200d account but 8+ hashtags per post",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "5752a6c729bb83f556a58a52e37a9c62c183f0b3266bfe189005e40b3ba79def",
+    "ticker_sampled": "GME",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "69c69f81962a560e0bb13226320b8399f163b6522d95cdedfa180d3489ffcd7d",
+    "ticker_sampled": "AMC",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "fb68e53ec82880570d7da4e6307cd8b33303d4d95a5170c2c5e5d3515f54aa2b",
+    "ticker_sampled": "TSLA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "a1c6fc20623926ee17732a598c5024dd1d6b0a36d918d5714303359f79df32ee",
+    "ticker_sampled": "AAPL",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "d582195c56b0c84754c304e46a0f890db66fa5c5f4a874033156fa2532e97ebd",
+    "ticker_sampled": "NVDA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e02dfccb42867ec1f1553d4507b43d9e9dcb76293d19cf9a6b68e07477a6f652",
+    "ticker_sampled": "MSFT",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "ea0182432a4d8d35a580546a8111024341e47e555ab87190040adf0d24e408f6",
+    "ticker_sampled": "AMZN",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "107920d6b4128c0725fe550fb9df8ab65754c4bd52b2264aceb1274b2775d438",
+    "ticker_sampled": "META",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "065e1a2e1a4ce0b92790b194f7e0dbceae8292159cb950682ae7bd9a514474ec",
+    "ticker_sampled": "GOOG",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e7d2f796e6d0b9291d530a912d742a3def12ecab525af818bf430a24f421bc34",
+    "ticker_sampled": "SPY",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "b87e1aae6f107ec5a2486d422baec2f169c6bb3da10acaf8a7a21c952681a327",
+    "ticker_sampled": "GME",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "954201230117036434b42f7c5c5dda750344509f5ea0a17f0a6a4b4a1797e9f0",
+    "ticker_sampled": "AMC",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "05eea72658909555171971f7c3ace2ca136911f9717ee6d1bb04316942eda13b",
+    "ticker_sampled": "TSLA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "3f61926a9b22c993524d74abf9273d0a07cbe31435211e8dbd89e16e5c03d950",
+    "ticker_sampled": "AAPL",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "79ab8bd34e290fdfa7645cafb886c75c80438e4285a62cff05372a6d540ed42c",
+    "ticker_sampled": "NVDA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "1eabd3029b15f163f137f0798a6a075146542aedc1070bebc9317652faa32a7d",
+    "ticker_sampled": "MSFT",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "65df1f8cbbb227b32fc5f092eb587f324952cb97d124f34c78b60ac937899709",
+    "ticker_sampled": "AMZN",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "9a7ad28beeba794e95ff907897248ab61327a31b09f838e04e6c994a9f9968d8",
+    "ticker_sampled": "META",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "b6dcbc1114bc2e995a807e9cb365ab7c62db73489a69d3b87fae569e935b8b9a",
+    "ticker_sampled": "GOOG",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "8f5d4c17c1d7773fa224fd37c5cf3f9a7f93ac8ee93059cdff9943da8b14c786",
+    "ticker_sampled": "SPY",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e5f5207fddbcee9ca51db5fb14ad70d54192552d3b100b3b182f6ec9144350af",
+    "ticker_sampled": "GME",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e254f208266d06e5df9239e0b93b9e1d0b45c6ee3d14a2fc7831d131042b3a87",
+    "ticker_sampled": "AMC",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e1859045f83ade5189c23e6ae92b26f6652b97deaa168fcd0ce66bcb7f3608b6",
+    "ticker_sampled": "TSLA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "c5afd64d7a96ab78856c00ed1d6e178d99122b3035a2e0e976144685c06f40f0",
+    "ticker_sampled": "AAPL",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "8c006f1e9961e02b7e8d8e81a27412d4bcfc2d1a2ec278b95aa8448434b6eccb",
+    "ticker_sampled": "NVDA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "eacaaf58750cab99cc5eb185cef4944640528e5717dcdcfcfbd9d9ab65647f97",
+    "ticker_sampled": "MSFT",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "962e6cd34f374722cf15d3b18ce43ff774907626cf5c9132a5f3512a2bef70a1",
+    "ticker_sampled": "AMZN",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "23baa87788b182d716c610553dd59abd76d52028b2641e176b3598a7e664b975",
+    "ticker_sampled": "META",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "df9906c8a964a44b6606ddea771025adc44c73f21c4cd48b81fc906285725da2",
+    "ticker_sampled": "GOOG",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "354af7bdcdefbd730ae777d155095eb1d702271ff254f3eaa1e573ce65c80fa4",
+    "ticker_sampled": "SPY",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "15d95344611eae7ef1da124eb7ca1b8aebe09e1d2093516deb410e554524aee9",
+    "ticker_sampled": "GME",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "fa49b6dfd2c765007afe3233d6b2a82886f579d690a93e4bf4dc47dc16ba59ba",
+    "ticker_sampled": "AMC",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "d59eca96859d88f7c1dcd5a35a1ed2bfe85db0908bc7f70c267250d5319a8623",
+    "ticker_sampled": "TSLA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "2023136dbe46f2f45c68ac1157bcc1d941306616534b9ba64ca4b53af1e00c47",
+    "ticker_sampled": "AAPL",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "223ebbfea552bed7f19aa6fe6d01339f769be3fc6cb5b68fbb5d0fc4eaf41dc3",
+    "ticker_sampled": "NVDA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "a6b62e4e7afd366d7db93877c352a361e47c013ced74ff3374b2a4173984e4f3",
+    "ticker_sampled": "MSFT",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "07ef51a46ce5197092979df9171fe92aa5fb3c4e5f72b97998b7b8ff1afcb60c",
+    "ticker_sampled": "AMZN",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "937292c77c1edcca2be6939d75e2147d7b59622b2c0080727dde84e952c635f2",
+    "ticker_sampled": "META",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "a2e24c2a6349f1a30f66658e11ec00492cc8b66ac24e845b633cdec0421d5e4a",
+    "ticker_sampled": "GOOG",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "0150a974219892a6cdbc26f2b7c5507861dc6b779de47da1e2b0cd2b7ec8d2ac",
+    "ticker_sampled": "SPY",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "d2ceb7d2ac0427373751a8d41e9be3ec59e84db49802b96c5340c5d75e278205",
+    "ticker_sampled": "GME",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "f47c9d510c96a2ebe733f03bff6e0185417191c1a32737614f981511fbed6e17",
+    "ticker_sampled": "AMC",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "4edc172954b4fe693098855a50efaaa87c36c8940d8301f4837850048a4d04a1",
+    "ticker_sampled": "TSLA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "e11c7c2177f85309525878c7c454a077279d309eb51eb627d6d194e03fd76ead",
+    "ticker_sampled": "AAPL",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "61cb520d4cbbaf0c4d517ad07eced424b09e13b1683e8f698a5b0bbf93663c76",
+    "ticker_sampled": "NVDA",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "2821f0c0893f3a1d3114672df8c4bd5a3bead490d5c20d479eba7eb5e1911d3f",
+    "ticker_sampled": "MSFT",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "65c45bf34096d1467c2640a2cea1f0ae0d6aae69edd663e3cdbefb4e315a55d8",
+    "ticker_sampled": "AMZN",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "effe2410152cd9fbf45525a35c7e57aa238b2dbeac60bb3ab45c2cb5597b2136",
+    "ticker_sampled": "META",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "b03a1c909844a4654ad1b1461b474595b2521b5fe0ef7033e3118bce4c66ee29",
+    "ticker_sampled": "GOOG",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  },
+  {
+    "author_id_hash": "fc9622803e47a69540cb7eaf01514b2722edbda4ed93d663414cb6b35998c9c8",
+    "ticker_sampled": "SPY",
+    "label": "human",
+    "notes": "Multi-year account, diverse content, low hashtag usage",
+    "labeled_at": "2026-05-12",
+    "labeled_by": "synthetic-bootstrap"
+  }
+]
