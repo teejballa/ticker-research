@@ -145,8 +145,10 @@ describe('golden-ticker-suite regression', () => {
         try {
           // Dynamic import — when 20-D-02 hasn't shipped the module path resolves
           // to undefined and we no-op with a documented WARN.
-          // @ts-expect-error - module may not exist; soft-ref pattern
-          const mod = await import('@/lib/eval/citation-coverage');
+          // Use string concat to defeat static module resolution so this stays
+          // a runtime soft-ref even if 20-D-02 hasn't published the module yet.
+          const modPath = '@/lib/eval/' + 'citation-coverage';
+          const mod = await import(/* @vite-ignore */ modPath);
           if (mod && typeof (mod as any).citationCoverage === 'function') {
             const coverage = await (mod as any).citationCoverage(report, source);
             expect(coverage).toBeGreaterThanOrEqual(0.8);
