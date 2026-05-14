@@ -5,7 +5,11 @@
 
 import { useState } from 'react';
 import { formatTimestamp, formatMarketCap as formatMarketCapLib, formatPercent, formatPrice } from '@/lib/formatters';
-import { renderPrompt } from '@/lib/prompts/render';
+import {
+  DISCLAIMER_FOOTER_V1_BODY,
+  PRICE_TARGET_HEDGE_V1_BODY,
+  applyDisclaimerVars,
+} from '@/lib/prompts/client-disclaimers';
 import type { AnalysisResult, MarketSnapshot, InstitutionalSnapshot, InsiderSnapshot, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import { FEATURES } from '@/lib/features';
 import NavBar from '@/components/NavBar';
@@ -614,7 +618,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           <div>
             <h4 className="text-[11px] font-bold tracking-widest uppercase text-tertiary mb-1">Financial Disclaimer</h4>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              {renderPrompt('disclaimer-footer', { data_as_of_timestamp: analyzed_at.slice(0, 10) })}
+              {applyDisclaimerVars(DISCLAIMER_FOOTER_V1_BODY, { data_as_of_timestamp: analyzed_at.slice(0, 10) })}
             </p>
           </div>
         </section>
@@ -1177,7 +1181,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                   } else {
                     hedgeStr = '(implied range)';
                   }
-                  const body = renderPrompt('price-target-hedge', {
+                  const body = applyDisclaimerVars(PRICE_TARGET_HEDGE_V1_BODY, {
                     data_as_of_timestamp: dataAsOfDate,
                     ci_band_or_implied_range: hedgeStr,
                   });
