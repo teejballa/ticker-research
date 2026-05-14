@@ -34,7 +34,8 @@ export type Sector =
   | 'ev_mobility'
   | 'space_hardware'
   | 'reit_utilities'
-  | 'staples';
+  | 'staples'
+  | 'materials';
 
 // Sector-tagged pools so the rotation can ensure every cycle hits a balanced
 // mix of sectors instead of stacking 4 software names on a bad day.
@@ -50,9 +51,10 @@ export const LARGE_BY_SECTOR: SectorPool[] = [
   { sector: 'healthcare',    tickers: ['LLY', 'UNH', 'JNJ', 'PFE', 'MRK', 'ABBV', 'TMO'] },
   { sector: 'energy_industrials', tickers: ['XOM', 'CVX', 'CAT', 'GE', 'BA', 'RTX', 'LMT'] },
   { sector: 'consumer',      tickers: ['WMT', 'COST', 'HD', 'NKE', 'MCD', 'DIS', 'NFLX', 'TSLA'] },
-  { sector: 'staples',       tickers: ['KO', 'PEP', 'PG'] },
-  { sector: 'comms',         tickers: ['T', 'VZ'] },
+  { sector: 'staples',       tickers: ['KO', 'PEP', 'PG', 'CL', 'MDLZ', 'PM'] },
+  { sector: 'comms',         tickers: ['T', 'VZ', 'CMCSA', 'CHTR', 'TMUS'] },
   { sector: 'crypto_meme',   tickers: ['PLTR', 'COIN', 'MSTR'] },
+  { sector: 'materials',     tickers: ['LIN', 'APD', 'FCX', 'NEM', 'SHW', 'DOW'] },
 ];
 
 export const MID_BY_SECTOR: SectorPool[] = [
@@ -60,9 +62,12 @@ export const MID_BY_SECTOR: SectorPool[] = [
   { sector: 'consumer',      tickers: ['SOFI', 'HOOD', 'RBLX', 'SNAP', 'PINS', 'ETSY', 'CHWY', 'AFRM', 'UPST', 'LULU', 'DECK', 'ANF', 'FIVE', 'CROX', 'BBWI', 'DKNG', 'PENN', 'WYNN', 'CZR'] },
   { sector: 'healthcare',    tickers: ['TDOC', 'EXAS', 'ICLR', 'CRSP'] },
   { sector: 'energy_industrials', tickers: ['FSLR', 'ENPH', 'PWR', 'BWXT'] },
-  { sector: 'reit_utilities', tickers: ['VICI', 'WPC', 'EQR', 'AES'] },
-  { sector: 'staples',       tickers: ['CELH', 'SAM', 'BYND'] },
+  { sector: 'reit_utilities', tickers: ['VICI', 'WPC', 'EQR', 'AES', 'O', 'PLD', 'STAG', 'NEE'] },
+  { sector: 'staples',       tickers: ['CELH', 'SAM', 'BYND', 'UTZ', 'WEN', 'JACK'] },
   { sector: 'crypto_meme',   tickers: ['MARA', 'RIOT', 'CLSK', 'IREN'] },
+  { sector: 'biotech_micro', tickers: ['MRNA', 'BNTX', 'BMRN', 'INCY'] },
+  { sector: 'materials',     tickers: ['ALB', 'MOS', 'CF', 'CTVA', 'AA', 'X'] },
+  { sector: 'comms',         tickers: ['LYV', 'WBD', 'PARA'] },
 ];
 
 export const SMALL_BY_SECTOR: SectorPool[] = [
@@ -70,11 +75,14 @@ export const SMALL_BY_SECTOR: SectorPool[] = [
   { sector: 'tech_semis',    tickers: ['RGTI', 'IONQ', 'QUBT', 'ARQQ'] },
   { sector: 'biotech_micro', tickers: ['AVDL', 'OCGN', 'IBRX', 'AVTX', 'KPTI', 'NVAX'] },
   { sector: 'ev_mobility',   tickers: ['NKLA', 'WKHS', 'FFIE', 'MULN', 'GOEV', 'GP'] },
-  { sector: 'crypto_meme',   tickers: ['GME', 'AMC', 'BARK', 'FUBO', 'CLOV', 'RDDT'] },
-  { sector: 'space_hardware', tickers: ['ASTS', 'RKLB', 'JOBY', 'ACHR'] },
+  { sector: 'crypto_meme',   tickers: ['GME', 'AMC', 'BARK', 'FUBO', 'CLOV', 'RDDT', 'DJT'] },
+  { sector: 'space_hardware', tickers: ['ASTS', 'RKLB', 'JOBY', 'ACHR', 'BKSY', 'PL', 'SPIR'] },
   { sector: 'consumer',      tickers: ['OPEN', 'LMND', 'ATER'] },
   { sector: 'energy_industrials', tickers: ['VLN', 'NRGV', 'BLNK'] },
-  { sector: 'reit_utilities', tickers: ['NYMT', 'CIM'] },
+  { sector: 'reit_utilities', tickers: ['NYMT', 'CIM', 'MFA', 'GOOD'] },
+  { sector: 'biotech_micro', tickers: ['SAVA', 'AKBA', 'CYCN', 'ATXS'] },
+  { sector: 'financials',    tickers: ['NRDS', 'MQ', 'DAVE', 'OPFI'] },
+  { sector: 'materials',     tickers: ['MP', 'IE', 'USAR'] },
 ];
 
 const ROTATION = {
