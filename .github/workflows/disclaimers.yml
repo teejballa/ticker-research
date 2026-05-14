@@ -1,0 +1,26 @@
+name: Disclaimer Audit Gate
+on:
+  pull_request:
+    paths:
+      - 'src/components/ResearchReport.tsx'
+      - 'src/lib/eval/disclaimer-audit.ts'
+      - 'src/lib/prompts/_v*/disclaimer-*.md'
+      - 'src/lib/prompts/_v*/price-target-hedge*.md'
+      - 'tests/golden-tickers/**'
+      - 'tests/eval/disclaimer-audit.*.test.ts'
+      - 'tests/eval/disclaimer-audit.*.test.tsx'
+      - 'scripts/audit-disclaimers.ts'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Run disclaimer audit
+        run: npm run check-disclaimers
+      - name: Run audit unit + integration tests
+        run: npx vitest run tests/eval/disclaimer-audit.unit.test.ts tests/eval/disclaimer-audit.integration.test.tsx
