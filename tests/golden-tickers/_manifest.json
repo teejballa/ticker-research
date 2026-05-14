@@ -1,0 +1,64 @@
+{
+  "version": "2026-05-11",
+  "required_categories": [
+    "large-cap-equity",
+    "mid-cap-equity",
+    "meme-echo-chamber",
+    "recently-public",
+    "ETF",
+    "SPAC",
+    "ADR",
+    "micro-cap-low-coverage"
+  ],
+  "tickers": [
+    {
+      "symbol": "AAPL",
+      "category": "large-cap-equity",
+      "rotation_policy": "static",
+      "rationale": "Apex liquid large-cap; deep analyst coverage; multi-source consensus baseline for numeric grounding."
+    },
+    {
+      "symbol": "DKNG",
+      "category": "mid-cap-equity",
+      "rotation_policy": "static",
+      "rationale": "DraftKings — mid-cap volatility profile, sports-betting regulatory exposure, retail-favorite signal mix."
+    },
+    {
+      "symbol": "GME",
+      "category": "meme-echo-chamber",
+      "rotation_policy": "static",
+      "rationale": "Originating bug ticker — 100% bullish single-source vendor tag rendered as thesis (CONTEXT.md line 5). Non-negotiable adversarial fixture."
+    },
+    {
+      "symbol": "SOFI",
+      "category": "recently-public",
+      "rotation_policy": "static",
+      "rationale": "SoFi Technologies — listed via SPAC in 2021; sparse historical filings; exercises recently-listed coverage."
+    },
+    {
+      "symbol": "SPY",
+      "category": "ETF",
+      "rotation_policy": "static",
+      "rationale": "SPDR S&P 500 ETF — security_type='etf' branch; no fundamentals/EPS; tests report shape on non-equity instruments."
+    },
+    {
+      "symbol": "DWAC",
+      "category": "SPAC",
+      "rotation_policy": "static",
+      "rationale": "Digital World Acquisition Corp — pre-merger SPAC; thin fundamentals; tests the SPAC-specific report rendering path."
+    },
+    {
+      "symbol": "TSM",
+      "category": "ADR",
+      "rotation_policy": "static",
+      "rationale": "Taiwan Semiconductor ADR — foreign primary listing; ADR-specific disclosures; exercises the ADR rendering path."
+    },
+    {
+      "symbol": "ROTATING-MICRO",
+      "category": "micro-cap-low-coverage",
+      "rotation_policy": "monthly",
+      "current_symbol": "MICROCAP",
+      "rationale": "Monthly rotation per S9 + CONTEXT.md line 176 — rotates from _micro_cap_pool.json candidate set; picks one with market_cap<$300M, daily_avg_volume_30d<500k, analyst_count<=1."
+    }
+  ]
+}
