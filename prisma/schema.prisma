@@ -443,6 +443,25 @@ model ProviderCallLog {
   @@map("provider_call_logs")
 }
 
+/// Phase 30 D-18 — provider health breach alerts written by /api/cron/provider-error-budget.
+/// One row inserted per breach (error_rate > 0.10 over 24h with total >= 50);
+/// resolved_at set on the next cron run when the breach clears.
+/// 90d retention via extended provider-call-log-retention sweep.
+model ProviderHealthAlert {
+  id                   String    @id @default(uuid())
+  provider_id          String    // pinned ProviderId (see src/lib/telemetry/cost-estimators.ts)
+  breached_at          DateTime  @db.Timestamptz
+  error_rate           Float
+  error_count          Int
+  total_count          Int
+  dominant_error_class String?   // controlled TelemetryErrorClass; nullable when no error_class column populated
+  resolved_at          DateTime? @db.Timestamptz  // set on the next cron run when error_rate < 0.10 again
+
+  @@index([provider_id, breached_at(sort: Desc)], map: "idx_pha_provider_breached")
+  @@index([resolved_at], map: "idx_pha_resolved_at")
+  @@map("provider_health_alerts")
+}
+
 // ─── Phase 20-A-04 — Per-ticker author-share Q1 calibration ───
 // Weekly cron computes the 25th percentile (Q1) of trailing-90d author-share
 // distribution per ticker. Aggregator down-weights observations whose author's
