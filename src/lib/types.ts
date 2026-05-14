@@ -48,6 +48,15 @@ export interface SourceSection {
 // news/analyst news-leg attribution under the new ladder. Original origins
 // stay because Yahoo / Finnhub / Polygon / Anthropic-search remain in tree as
 // fallbacks (D-32). Tiingo removed 2026-05-10 (paid sales contact required).
+//
+// Phase 30 / D-11 (research R-2 strategy 2 — additive, NOT a replacement):
+//   'unavailable' marks "we asked every source in the cascade and they all
+//   returned null". This is semantically distinct from `null`, which legacy
+//   persisted records use to mean "no source supplied a value". We keep
+//   `null` in the union so existing JSONB rows in `Report.analysis._field_sources`
+//   continue to type-check without a backfill. Renderers in `research-brief.ts`
+//   and the report page (added in Plan 30-03 alongside merge.ts) treat both
+//   `null` and `'unavailable'` as the em-dash render case ("—").
 export type FieldOrigin =
   | 'yahoo'
   | 'finnhub'
@@ -56,7 +65,26 @@ export type FieldOrigin =
   | 'twelvedata'
   | 'exa'
   | 'anthropic-search'
+  | 'unavailable'
   | null;
+
+/**
+ * Phase 30 / D-09 — per-field fallback ladder telemetry. One entry per field
+ * the merge layer (`src/lib/data/merge.ts`) walked, capturing which providers
+ * were tried in order and which one (if any) resolved the field. Aggregated
+ * into `SourcePackage.fallback_summary` (Plan 30-03) and surfaced on the
+ * `/insights/sentiment-health` Fallback heatmap tile.
+ *
+ * - `tried`        — pinned `ProviderId`s in cascade order (e.g. `['polygon','finnhub','yahoo']`)
+ * - `resolved_by`  — winning provider, OR `'unavailable'` when every source returned null
+ */
+export interface FallbackSummaryEntry {
+  field: string;
+  tried: import('./telemetry/cost-estimators').ProviderId[];
+  resolved_by:
+    | import('./telemetry/cost-estimators').ProviderId
+    | 'unavailable';
+}
 
 export interface MarketDataFieldSources {
   price: FieldOrigin;

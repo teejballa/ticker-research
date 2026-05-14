@@ -145,9 +145,9 @@ async function recordOutcome(
   // LPUSH + LTRIM 0 (ringSize-1) maintains the trailing-N window (D-05).
   await r.lpush(ringKey(provider_id), outcome);
   await r.ltrim(ringKey(provider_id), 0, cfg.ringSize - 1);
-  const ring = await r.lrange(ringKey(provider_id), 0, cfg.ringSize - 1);
+  const ring = await r.lrange<string>(ringKey(provider_id), 0, cfg.ringSize - 1);
   if (ring.length < cfg.minRingForTrip) return;
-  const errs = ring.filter((o) => o === 'err').length;
+  const errs = ring.filter((o: string) => o === 'err').length;
   const rate = errs / ring.length;
   // Strict > matches D-05: "10/20 = 50% does NOT trip; 11/20 = 55% trips".
   if (rate > cfg.tripErrorRate) {

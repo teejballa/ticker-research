@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { withRetry, isRetryableError } from '@/lib/data/retry';
+import { BreakerOpenError } from '@/lib/data/circuit-breaker';
 
 /**
  * Per CONTEXT D-25: retry wrapper retries 5xx + network errors only — NOT 4xx
@@ -229,5 +230,43 @@ describe('withRetry / isRetryableError (Plan 19-B-02)', () => {
     expect(isRetryableError(null)).toBe(false);
     expect(isRetryableError(undefined)).toBe(false);
     expect(isRetryableError(new Error('plain'))).toBe(false);
+  });
+});
+
+/**
+ * Phase 30 / D-07 — BreakerOpenError is non-retryable.
+ *
+ * Critical invariant: when the circuit breaker is open and a caller hits
+ * withRetry, the BreakerOpenError must propagate immediately. If withRetry
+ * retried it, a tripped breaker would consume the entire retry budget on
+ * every call site and amplify the back-pressure pathology the breaker
+ * exists to prevent.
+ *
+ * BreakerOpenError carries no HTTP `status` and no Node `code`, so the
+ * default `isRetryableError` returns false without any explicit guard.
+ * These tests pin that invariant.
+ */
+describe('Phase 30 / D-07: withRetry does NOT retry BreakerOpenError', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('withRetry does NOT retry a BreakerOpenError — fn called exactly once', async () => {
+    let attemptCount = 0;
+    const fn = vi.fn().mockImplementation(() => {
+      attemptCount++;
+      return Promise.reject(new BreakerOpenError('yahoo', Date.now()));
+    });
+
+    await expect(
+      withRetry(fn, { jitter: false, baseDelayMs: 1, maxAttempts: 3 }),
+    ).rejects.toBeInstanceOf(BreakerOpenError);
+
+    expect(attemptCount).toBe(1);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('isRetryableError(BreakerOpenError instance) returns false', () => {
+    expect(isRetryableError(new BreakerOpenError('polygon', Date.now()))).toBe(false);
   });
 });
