@@ -413,3 +413,82 @@ export async function fetchStockTwitsSentimentReputationWeighted(
     return empty('StockTwits fetch failed');
   }
 }
+
+// ── Plan 20-Z-04 follow-up (2026-05-13) — raw message bag for PIT feature store ──
+//
+// `fetchStockTwitsRaw(ticker)` returns the raw StockTwits message stream so the
+// sentiment-scan cron can write per-message rows to `sentiment_observations`
+// (Phase 20-Z-01 PIT feature store) AND `bot_filter_flags` /
+// `coordination_clusters` (Phase 20-C-03).
+//
+// Prior to this function, the sentiment-scan cron silently dropped every
+// message because no upstream surfaced `stocktwits.messages`. The PIT feature
+// store sat at 0 rows in production despite the table existing, starving
+// every downstream calibrator (20-A-03 / 20-B-04 / 20-C-01).
+//
+// Shape matches what the cron's per-message loop expects:
+//   { id, body, created_at, user: { username, followers, ideas, created_at, identity } }
+//
+// Returns [] (NOT null) on any failure — the cron's downstream writes are
+// gated on `messages.length > 0`, so an empty bag is a safe no-op.
+
+export interface StockTwitsRawMessage {
+  id: string | number;
+  body: string;
+  created_at: string;
+  user: {
+    username?: string;
+    followers?: number;
+    ideas?: number;
+    created_at?: string;
+    identity?: string;
+  };
+}
+
+interface StockTwitsRawApiMessage {
+  id?: number | string;
+  body?: string;
+  created_at?: string;
+  user?: {
+    username?: string;
+    followers?: number;
+    ideas?: number;
+    created_at?: string;
+    identity?: string;
+  };
+}
+
+export async function fetchStockTwitsRaw(ticker: string): Promise<StockTwitsRawMessage[]> {
+  try {
+    const res = await withTelemetry(
+      'stocktwits',
+      () =>
+        fetch(
+          `https://api.stocktwits.com/api/2/streams/symbol/${encodeURIComponent(ticker)}.json`,
+          { signal: AbortSignal.timeout(5000) },
+        ),
+      { ticker },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { messages?: StockTwitsRawApiMessage[] };
+    const messages = data.messages ?? [];
+    return messages
+      .filter((m): m is StockTwitsRawApiMessage & { id: number | string; body: string; created_at: string } =>
+        m.id != null && typeof m.body === 'string' && typeof m.created_at === 'string',
+      )
+      .map((m) => ({
+        id: m.id,
+        body: m.body,
+        created_at: m.created_at,
+        user: {
+          username: m.user?.username,
+          followers: m.user?.followers,
+          ideas: m.user?.ideas,
+          created_at: m.user?.created_at,
+          identity: m.user?.identity,
+        },
+      }));
+  } catch {
+    return [];
+  }
+}

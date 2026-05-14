@@ -14,7 +14,7 @@
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
-import { fetchStockTwitsSentiment } from './stocktwits';
+import { fetchStockTwitsSentiment, fetchStockTwitsRaw, type StockTwitsRawMessage } from './stocktwits';
 import {
   fetchQuiverInsider,
   fetchQuiverCongressional,
@@ -79,6 +79,20 @@ export interface EnrichedSnapshot extends SentimentDimensions {
    * Same null semantics as quiver_insider.
    */
   quiver_congressional: QuiverCongressionalData | null;
+  /**
+   * Plan 20-Z-04 follow-up (2026-05-13) — raw StockTwits messages for the
+   * Phase-20-Z-01 PIT feature store + 20-C-03 bot/coordination detectors.
+   * Required by the sentiment-scan cron's per-message writers; without this
+   * field the `sentiment_observations`, `bot_filter_flags`, and
+   * `coordination_clusters` tables sit empty in prod even on a successful scan.
+   *
+   * Wrapped under a `stocktwits` sub-object to match the existing route shape
+   * the cron has been preemptively reading via optional chaining.
+   *
+   * Empty array (NOT null) on any upstream failure — the cron's writers
+   * gracefully no-op on empty bags.
+   */
+  stocktwits: { messages: StockTwitsRawMessage[] };
 }
 
 export async function lightweightCommunityScan(ticker: string): Promise<EnrichedSnapshot | null> {
@@ -99,6 +113,7 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     algoMd,
     nicheMd,
     stocktwitsResult,
+    stocktwitsRawMessages,
     marketCap,
     quiverInsiderRes,
     quiverCongressRes,
@@ -109,6 +124,10 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     scrapeOne(fc, `https://www.reddit.com/r/algotrading/search/?q=${upper}&sort=new&t=week`),
     scrapeOne(fc, `https://www.reddit.com/r/${upper}/new/`),
     fetchStockTwitsSentiment(upper),
+    // Plan 20-Z-04 follow-up (2026-05-13) — raw message bag for PIT feature store.
+    // Independent HTTP call; cached by the StockTwits adapter via withTelemetry.
+    // Failures degrade to [] (logged via withTelemetry) — never blocks the scan.
+    fetchStockTwitsRaw(upper),
     yf.quote(upper).then(q => q.marketCap ?? null).catch(() => null),
     // Both Quiver fetchers already return null on any failure; wrap defensively
     // so any unexpected throw still degrades to null without breaking the scan.
@@ -189,6 +208,10 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     cap_class: classifyCapClass(marketCap),
     quiver_insider,
     quiver_congressional,
+    // Plan 20-Z-04 follow-up — wired into Phase-20-Z-01 SentimentObservation
+    // writer in src/app/api/cron/sentiment-scan/route.ts via the existing
+    // optional-chained `communityData.stocktwits.messages` read path.
+    stocktwits: { messages: stocktwitsRawMessages },
   };
 }
 
