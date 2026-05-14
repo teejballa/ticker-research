@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
+    "prebuild": "npx tsx scripts/generate-prompt-manifest.ts",
     "build": "next build",
+    "predev": "npx tsx scripts/generate-prompt-manifest.ts",
+    "generate-prompt-manifest": "npx tsx scripts/generate-prompt-manifest.ts",
+    "check-prompt-manifest": "npx tsx scripts/generate-prompt-manifest.ts --check",
     "postinstall": "prisma generate",
     "start": "next build && next start",
     "lint": "eslint .",
