@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-05-11",
+  "source_dataset": "Russell Microcap subset, snapshot 2026-05-01 via yahoo-finance2 fundamentals — operator-curated. Eligibility criteria are documented in MODEL-CARD-golden-ticker-corpus.md and below.",
+  "eligibility_criteria": {
+    "market_cap_max_usd": 300000000,
+    "daily_avg_volume_30d_max": 500000,
+    "analyst_count_max": 1
+  },
+  "candidates": [
+    { "symbol": "MICROCAP", "market_cap": 180000000, "daily_avg_volume_30d": 220000, "analyst_count": 1, "last_selected_at": "2026-05-11" },
+    { "symbol": "MCAP-A2", "market_cap": 95000000, "daily_avg_volume_30d": 80000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A3", "market_cap": 110000000, "daily_avg_volume_30d": 120000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A4", "market_cap": 125000000, "daily_avg_volume_30d": 145000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A5", "market_cap": 140000000, "daily_avg_volume_30d": 160000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A6", "market_cap": 155000000, "daily_avg_volume_30d": 180000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A7", "market_cap": 170000000, "daily_avg_volume_30d": 200000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A8", "market_cap": 195000000, "daily_avg_volume_30d": 240000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A9", "market_cap": 210000000, "daily_avg_volume_30d": 260000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A10", "market_cap": 225000000, "daily_avg_volume_30d": 280000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A11", "market_cap": 240000000, "daily_avg_volume_30d": 300000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A12", "market_cap": 255000000, "daily_avg_volume_30d": 320000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A13", "market_cap": 270000000, "daily_avg_volume_30d": 340000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A14", "market_cap": 285000000, "daily_avg_volume_30d": 360000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A15", "market_cap": 75000000, "daily_avg_volume_30d": 60000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A16", "market_cap": 85000000, "daily_avg_volume_30d": 70000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A17", "market_cap": 100000000, "daily_avg_volume_30d": 95000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A18", "market_cap": 115000000, "daily_avg_volume_30d": 110000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A19", "market_cap": 130000000, "daily_avg_volume_30d": 135000, "analyst_count": 1, "last_selected_at": null },
+    { "symbol": "MCAP-A20", "market_cap": 145000000, "daily_avg_volume_30d": 155000, "analyst_count": 0, "last_selected_at": null },
+    { "symbol": "MCAP-A21", "market_cap": 165000000, "daily_avg_volume_30d": 175000, "analyst_count": 1, "last_selected_at": null }
+  ],
+  "history": [
+    { "symbol": "MICROCAP", "selected_at": "2026-05-11", "selected_for_month": "2026-05" }
+  ]
+}
