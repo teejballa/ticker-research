@@ -106,11 +106,11 @@ export async function GET(request: NextRequest) {
       // 20-A-03 (time decay), 20-B-01 (per-doc NLP), 20-B-04 (source-tier weight),
       // and 20-C-01 (per-source ICIR) will join on. Failure here is logged-and-continued —
       // it MUST NOT block the snapshot writer that serves current readers.
-      // NOTE: lightweightCommunityScan currently returns EnrichedSnapshot (sentiment
-      // dimensions + highlights), not raw StockTwits messages. The shape cast below
-      // gracefully handles either future-state — once an upstream returns raw messages
-      // (Phase 20-C-01 wires this), this loop starts populating rows without further
-      // edits to the cron route.
+      //
+      // Plan 20-Z-04 follow-up (2026-05-13) — lightweightCommunityScan now returns
+      // `stocktwits.messages: StockTwitsRawMessage[]` via fetchStockTwitsRaw(). The
+      // optional-chained cast below is kept defensive so the route still no-ops if
+      // a future caller (or test fixture) hands in a snapshot without the field.
       const stocktwitsMessages =
         (communityData as { stocktwits?: { messages?: Array<{ id?: string | number; body?: string; created_at?: string; user?: { username?: string; followers?: number; ideas?: number; created_at?: string; identity?: string } }> } } | null | undefined)
           ?.stocktwits?.messages ?? [];
