@@ -680,18 +680,24 @@ Script: `scripts/provider-health-verdict.ts` reads the D-24 SQL and the D-16 cos
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **R-3 Model ID Resolution** — Is the current AI Gateway path actually routing to `gemini-3-pro` (and is that what the $4/call observation reflects), or is it falling back to a default? CONTEXT.md prescribes `gemini-2.5-pro`. The planner needs to verify the current routing behavior with a live call BEFORE writing the model-pin task, then lock the slug in PLAN-CHECK.
    - What we know: Code calls `model: 'google/gemini-3-flash'` by default; `'google/gemini-3-pro'` when routerCtx says pro.
    - What's unclear: Whether AI Gateway honors `google/gemini-3-pro` (and at what cost) or transparently falls back. The $4/call observation could be `gemini-3-pro` × longer-than-expected token counts, not a model misroute.
    - Recommendation: Spend one Gemini call in dev to verify response metadata's model id matches the request.
 
+   **RESOLVED 2026-05-14:** Live code already uses `google/gemini-3-pro` / `google/gemini-3-flash` / `google/gemini-3.1-flash-lite` (verified via grep on `src/`). CONTEXT.md D-14 amendment block records that the live 3-tier slugs are authoritative; the `gemini-2.5-pro` / `gemini-2.5-flash` references in the original D-14 text are superseded by the amendment. Planner MUST pin to the 3-tier slugs in all D-14 tasks.
+
 2. **D-15 single counter scope** — Cost-anomaly counter `cost_anomaly:gemini` is provider-wide, not per-call-site. If only ONE call site (gemini-analysis.ts) is the offender, a provider-wide breaker punishes the lightweight per-doc classifier too. CONTEXT.md says provider-wide; honor that, but flag the asymmetry.
    - Recommendation: Honor CONTEXT.md (provider-wide). If false-positives become a problem post-ship, the deferred ideas list already includes a "rolling-average alert" follow-up.
 
+   **RESOLVED 2026-05-14:** Keep provider-wide per CONTEXT.md original wording. The asymmetry (Flash classifier punished when Pro is the offender) is acceptable because cost-anomaly is a coarse safety net, not a fine-grained attribution tool. No CONTEXT.md amendment needed; the original D-15 wording stands.
+
 3. **Yahoo-only quote field fallback** — Once Yahoo is breaker-tripped, `price`, `volume`, and `percent_change_today` have NO fallback. Sentiment-scan currently fails the ticker if `price === null` (`sentiment-scan/route.ts:42`). With D-04 + D-12 + D-23, this becomes "all tickers fail when Yahoo's breaker is open." Is that acceptable?
    - Recommendation: Accept it. Yahoo's breaker is open precisely BECAUSE Yahoo is failing — there's nothing to fall back to. The watchlist rotates within 8h (next sweep), so a 30s breaker open window has minimal impact. Document this explicitly in `sentiment-scan/route.ts` comments so future debugging is faster.
+
+   **RESOLVED 2026-05-14:** Acceptable. Sentiment-scan skips the ticker under D-12 (skip + log + continue). Watchlist rotation provides natural retry. No new mitigation needed in Phase 30.
 
 ---
 
@@ -793,10 +799,10 @@ Script: `scripts/provider-health-verdict.ts` reads the D-24 SQL and the D-16 cos
 | Pitfalls | HIGH | Composition + FieldOrigin traps surfaced explicitly |
 | Model-ID pin | LOW | R-3 discrepancy unresolved — planner action required |
 
-### Open Questions
-- R-3: Resolve Gemini model slug (`gemini-2.5-pro` per CONTEXT.md vs `gemini-3-pro` in current code)
-- D-15 single counter scope — provider-wide vs per-call-site (CONTEXT.md says provider-wide; honor it)
-- Yahoo-only quote field fallback behavior when breaker open (acceptable; document it)
+### Open Questions (RESOLVED)
+- R-3: Resolve Gemini model slug (`gemini-2.5-pro` per CONTEXT.md vs `gemini-3-pro` in current code) — **RESOLVED 2026-05-14:** Live code already uses `google/gemini-3-pro` / `google/gemini-3-flash` / `google/gemini-3.1-flash-lite`. CONTEXT.md D-14 amendment block locks the 3-tier slugs as authoritative; original 2.5 references superseded.
+- D-15 single counter scope — provider-wide vs per-call-site (CONTEXT.md says provider-wide; honor it) — **RESOLVED 2026-05-14:** Keep provider-wide per CONTEXT.md original wording. Asymmetry (Flash classifier punished when Pro is the offender) is acceptable because cost-anomaly is a coarse safety net, not a fine-grained attribution tool.
+- Yahoo-only quote field fallback behavior when breaker open (acceptable; document it) — **RESOLVED 2026-05-14:** Acceptable; sentiment-scan skips the ticker under D-12 (skip + log + continue). Watchlist rotation provides retry. No new mitigation needed in Phase 30.
 
 ### Ready for Planning
 Research complete. Planner can now create PLAN.md files with the file-edit map above as the task-sizing reference. The Validation Architecture table is the Nyquist VALIDATION.md seed.

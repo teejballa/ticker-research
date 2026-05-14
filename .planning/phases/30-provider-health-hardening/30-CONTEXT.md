@@ -52,7 +52,13 @@ Every external data fetcher in `src/lib/data/` returns useful data under prod co
   - `src/lib/gemini-analysis.ts` (main analysis call): explicit `model: 'gemini-2.5-pro'` — Pro is justified for the reasoning-heavy analysis call.
   - All other Gemini call sites (URL-discovery, lightweight community summarization, prompt-routing, anything else): explicit `model: 'gemini-2.5-flash'`.
   - Audit all `generateObject(` / `generateText(` call sites and add the explicit `model` field; no implicit defaults.
+- **D-14 — Decision Amendment 2026-05-14:** The original D-14 text references `gemini-2.5-pro` / `gemini-2.5-flash`. The live codebase already routes Gemini calls through the AI Gateway using 3-tier slugs (verified 2026-05-14 via grep on `src/`):
+  - Main analysis (`src/lib/gemini-analysis.ts`): pin to **`google/gemini-3-pro`**
+  - URL discovery + lightweight community summarization + Flash-tier prompts: pin to **`google/gemini-3-flash`**
+  - Per-doc classifier (`src/lib/sentiment/per-doc-classifier.ts`): keep **`google/gemini-3.1-flash-lite`** (already pinned).
+  - The intent of D-14 (explicit per-call-site model pinning, no fuzzy AI-Gateway routing) is unchanged — only the slug values are updated to match production reality.
 - **D-15:** **Cost-ceiling circuit breaker.** Add a post-hoc check in `withTelemetry`: if `cost_usd > 1.00` on a single Gemini call, increment a `cost_anomaly_count` counter in Upstash. If counter reaches 3 within a 1h window, trip a 1h provider-wide Gemini breaker. Counter resets after the breaker closes.
+- **D-15 — Decision Amendment 2026-05-14:** Original wording says "Counter resets after the breaker closes." Implementation reset point is moved to TRIP time (counter `DEL` happens when the breaker trips) rather than CLOSE time. Equivalent observable behavior: while breaker is open, all Gemini calls short-circuit with `BreakerOpenError` before reaching the cost-anomaly path, so no $1+ call can be counted during the 1h open window. Trip-time reset saves one Upstash round-trip on the recovery path. Net behavior is identical from the operator's perspective.
 - **D-16:** **Done-gate cost assertion (binary, grep-verifiable).** Phase 30 verification includes a live SQL probe: `SELECT AVG(cost_usd) FROM "ProviderCallLog" WHERE provider_id = 'gemini' AND started_at > now() - interval '24 hours'` must be `< 0.50`. Same SQL pattern used in cost-budget-check (T-20-Z-03-04).
 
 ### Error Budget Alerting
