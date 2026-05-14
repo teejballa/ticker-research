@@ -1,0 +1,52 @@
+# .github/workflows/golden-ticker-suite.yml
+#
+# Plan 20-D-04 Task 8 — Golden-ticker suite CI gate.
+#
+# Runs on PRs that touch the report-generation surface or any of the
+# golden-ticker artifacts. Required-for-merge status flipped separately
+# by the operator in branch-protection settings.
+
+name: Golden Ticker Suite
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/gemini-analysis.ts'
+      - 'src/lib/research-brief.ts'
+      - 'src/lib/prompts/**'
+      - 'src/components/ResearchReport.tsx'
+      - 'src/lib/eval/**'
+      - 'tests/golden-tickers/**'
+      - 'tests/integration/golden-ticker-suite.regression.test.ts'
+      - 'tests/integration/golden-ticker-suite.synthetic-injection.test.ts'
+      - 'tests/unit/golden-ticker-manifest.unit.test.ts'
+      - 'tests/unit/golden-ticker-rotation.unit.test.ts'
+      - 'scripts/check-golden-tickers.ts'
+      - 'scripts/rotate-micro-cap.ts'
+      - '.github/workflows/golden-ticker-suite.yml'
+  schedule:
+    # Nightly run with RUN_LIVE_VERIFIER=true exercises the 20-D-03 verifier gate.
+    - cron: '0 6 * * *' # 06:00 UTC daily
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RUN_LIVE_VERIFIER: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
+      HF_DISTILBERT_MNLI_ENDPOINT: ${{ secrets.HF_DISTILBERT_MNLI_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: Prisma generate
+        run: npx prisma generate
+      - name: Check golden tickers
+        run: npm run check-golden-tickers
