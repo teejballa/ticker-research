@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "aapl-bullish-clean",
+  "ticker": "AAPL",
+  "notes": "Bullish thesis with every number sourced and full citation chain. Candidate adds an explicit forward-PT citation. High clean-cluster.",
+  "baseline_text": "AAPL at $248.96 (yahoo). P/E 28.5 (yahoo). Revenue $435.6B TTM (yahoo). EPS $7.90 (yahoo). StockTwits bull/bear 70/30 (stocktwits). Analyst PT $260 (anthropic-search).",
+  "candidate_text": "AAPL at $248.96 (yahoo). P/E 28.5 (yahoo). Revenue $435.6B TTM (yahoo). EPS $7.90 (yahoo). StockTwits bull/bear 70/30 (stocktwits). Analyst PT $260 (anthropic-search). Forward-PT consensus $268 (anthropic-search). BUY with conviction.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 5,
+    "hedging_quality": 4,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

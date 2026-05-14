@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "gme-mixed-degraded",
+  "ticker": "GME",
+  "notes": "Narrative collapses on dispersion — candidate flips bull/bear sentence-by-sentence without integration.",
+  "baseline_text": "GME StockTwits 100/0 (stocktwits). Put/call 1.8 bearish (yahoo). Revenue -12% YoY (sec_filings).",
+  "candidate_text": "GME is bullish on retail. But also bearish on fundamentals. Buy. Sell. The picture is unclear.",
+  "human_scores": {
+    "numeric_grounding": 1,
+    "citation_coverage": 0,
+    "narrative_coherence": 0,
+    "hedging_quality": 1,
+    "contradiction_handling": 1
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

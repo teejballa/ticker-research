@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "tsm-bullish-degraded",
+  "ticker": "TSM",
+  "notes": "Candidate ignores ADR structure + Taiwan geo-political risk entirely.",
+  "baseline_text": "TSM ADR at $186.42 (yahoo). AI revenue +24% (anthropic-search). Taiwan listing primary (anthropic-search).",
+  "candidate_text": "TSM straight up — AI moon. No risks. Massive multiple expansion. $400 PT (no source).",
+  "human_scores": {
+    "numeric_grounding": 0,
+    "citation_coverage": 0,
+    "narrative_coherence": 2,
+    "hedging_quality": 0,
+    "contradiction_handling": 0
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

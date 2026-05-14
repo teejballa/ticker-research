@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "sofi-bullish-clean",
+  "ticker": "SOFI",
+  "notes": "SOFI bullish on bank-charter unlock + member growth; clean citations on 10-Q + analyst commentary.",
+  "baseline_text": "SOFI at $8.75 (yahoo). Member count 8.1M (sec_filings), +44% YoY. Bank charter granted Jan 2022 (sec_filings). Q3 GAAP net loss narrowed to -$0.05/sh (sec_filings) from -$0.11.",
+  "candidate_text": "SOFI at $8.75 (yahoo). Member count 8.1M (sec_filings), +44% YoY — strong cohort growth. Bank charter granted Jan 2022 (sec_filings) — unlocks deposit funding. Q3 GAAP net loss narrowed to -$0.05/sh (sec_filings) from -$0.11. BUY with path-to-profit narrative.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 3,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

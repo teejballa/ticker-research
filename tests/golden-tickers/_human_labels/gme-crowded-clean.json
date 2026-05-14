@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "gme-crowded-clean",
+  "ticker": "GME",
+  "notes": "GME crowded-consensus correctly surfaced — 100% bull is treated as an echo-chamber signal (Lucchini 2022), with mean-reversion warning.",
+  "baseline_text": "GME StockTwits bull/bear 100/0 (stocktwits). Volume 8x avg (yahoo). Short interest 21% (finnhub). Put/call 1.8 — bearish (yahoo options).",
+  "candidate_text": "GME StockTwits 100% bull (stocktwits) — single-source extreme + low author diversity flags an echo-chamber crowding signal (Lucchini 2022, internal calibration). Historical mean-reversion within 5-10 sessions. Volume 8x (yahoo). Put/call 1.8 contradicts bull% — net dispersion is wide. NEUTRAL with elevated mean-reversion risk flagged.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 4,
+    "narrative_coherence": 4,
+    "hedging_quality": 5,
+    "contradiction_handling": 5
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

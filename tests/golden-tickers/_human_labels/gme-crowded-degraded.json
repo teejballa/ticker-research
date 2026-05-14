@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "gme-crowded-degraded",
+  "ticker": "GME",
+  "notes": "Originating Phase-20 bug — candidate treats 100% bullish single-source vendor tag as a thesis. Contradiction handling=0.",
+  "baseline_text": "GME StockTwits bull/bear 100/0 (stocktwits, n=412). Put/call 1.8 bearish (yahoo options). Short interest 21% (finnhub).",
+  "candidate_text": "GME is 100% bullish on StockTwits (n=412). Strong consensus — BUY on retail confidence wave.",
+  "human_scores": {
+    "numeric_grounding": 3,
+    "citation_coverage": 2,
+    "narrative_coherence": 2,
+    "hedging_quality": 0,
+    "contradiction_handling": 0
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

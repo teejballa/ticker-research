@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "microcap-mixed-degraded",
+  "ticker": "MICROCAP",
+  "notes": "Mixed signals; candidate can't reconcile growth vs cash burn; thesis collapses.",
+  "baseline_text": "MICROCAP revenue +35% YoY (sec_filings). Cash $8M (sec_filings). Burn $3M/q (sec_filings).",
+  "candidate_text": "MICROCAP growing fast. Also low on cash. Could be a winner. Or could go to zero. Hard to say.",
+  "human_scores": {
+    "numeric_grounding": 2,
+    "citation_coverage": 0,
+    "narrative_coherence": 1,
+    "hedging_quality": 1,
+    "contradiction_handling": 2
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

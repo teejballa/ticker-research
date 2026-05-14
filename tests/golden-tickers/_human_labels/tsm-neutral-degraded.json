@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "tsm-neutral-degraded",
+  "ticker": "TSM",
+  "notes": "Over-hedged into a meaningless mush; no decision.",
+  "baseline_text": "TSM ADR at $186.42 (yahoo). AI demand +24% (anthropic-search).",
+  "candidate_text": "TSM might do well. Or not. Geopolitics is uncertain. AI is unclear. We don't have a view.",
+  "human_scores": {
+    "numeric_grounding": 1,
+    "citation_coverage": 0,
+    "narrative_coherence": 1,
+    "hedging_quality": 0,
+    "contradiction_handling": 2
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

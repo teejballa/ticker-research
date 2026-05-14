@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "microcap-bearish-clean",
+  "ticker": "MICROCAP",
+  "notes": "Bearish on cash runway + dilution risk; clean cites to 10-Q + S-3 shelf.",
+  "baseline_text": "MICROCAP cash $8M (sec_filings). Quarterly burn $3M (sec_filings) = ~2.7 quarter runway. S-3 shelf registration filed Q2 (sec_filings).",
+  "candidate_text": "MICROCAP cash $8M (sec_filings) — ~2.7 quarter runway at $3M/q burn (sec_filings). S-3 shelf filed Q2 (sec_filings) — capital raise inbound, dilution overhang. AVOID until financing event clears.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 4,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

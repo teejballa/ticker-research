@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "gme-bearish-clean",
+  "ticker": "GME",
+  "notes": "GME bearish on fundamentals — declining revenue + cash burn — with full citation chain.",
+  "baseline_text": "GME revenue $5.27B TTM (sec_filings), -12% YoY. Cash $1.1B (sec_filings). Net loss -$313M last 4Q (sec_filings). P/E negative (yahoo).",
+  "candidate_text": "GME revenue $5.27B TTM (sec_filings) — declining -12% YoY. Cash $1.1B (sec_filings) provides runway but burns at ~$313M/yr (sec_filings). P/E negative (yahoo). Net: fundamentals materially weakening; SELL bias on the equity outside of speculative meme cycles.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 4,
+    "contradiction_handling": 4
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

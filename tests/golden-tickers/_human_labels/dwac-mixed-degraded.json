@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dwac-mixed-degraded",
+  "ticker": "DWAC",
+  "notes": "Candidate can't reconcile merger-close (bull) vs SEC probe (bear); narrative incoherent.",
+  "baseline_text": "DWAC merger close Q1 (sec_filings). SEC probe disclosed (sec_filings).",
+  "candidate_text": "DWAC has good news. Also bad news. Stock could go up. Could go down. SPAC stuff is hard.",
+  "human_scores": {
+    "numeric_grounding": 1,
+    "citation_coverage": 0,
+    "narrative_coherence": 0,
+    "hedging_quality": 1,
+    "contradiction_handling": 1
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "sofi-bullish-degraded",
+  "ticker": "SOFI",
+  "notes": "Candidate cites fabricated revenue growth and drops bank-charter citation.",
+  "baseline_text": "SOFI member count 8.1M (sec_filings), +44% YoY. Bank charter granted (sec_filings). Q3 GAAP loss -$0.05/sh (sec_filings).",
+  "candidate_text": "SOFI revenue tripled this year (no source). Massive growth. Profitable next quarter for sure. Buy now.",
+  "human_scores": {
+    "numeric_grounding": 0,
+    "citation_coverage": 0,
+    "narrative_coherence": 2,
+    "hedging_quality": 0,
+    "contradiction_handling": 1
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

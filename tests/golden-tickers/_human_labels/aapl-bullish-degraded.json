@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "aapl-bullish-degraded",
+  "ticker": "AAPL",
+  "notes": "Candidate introduces an unsourced $300 PT and drops the StockTwits citation. Numeric grounding + citation coverage regression.",
+  "baseline_text": "AAPL at $248.96 (yahoo). P/E 28.5 (yahoo). Revenue $435.6B TTM (yahoo). EPS $7.90 (yahoo). StockTwits bull/bear 70/30 (stocktwits). Analyst PT $260 (anthropic-search).",
+  "candidate_text": "AAPL is trading strong. P/E 28.5. Revenue $435.6B TTM. Forward PT $300+ (no source). Sentiment positive across the board. BUY.",
+  "human_scores": {
+    "numeric_grounding": 1,
+    "citation_coverage": 1,
+    "narrative_coherence": 3,
+    "hedging_quality": 2,
+    "contradiction_handling": 2
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

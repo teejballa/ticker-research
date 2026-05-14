@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dkng-bullish-clean",
+  "ticker": "DKNG",
+  "notes": "DKNG bullish on state legalization expansion. Full citations to state legislation tracker + Q3 EPS beat.",
+  "baseline_text": "DKNG at $42.10 (yahoo). Market cap $20.5B (yahoo). 3 new state launches in Q4 (sec_filings). Q3 EPS $0.12 beat consensus $0.08 (anthropic-search). StockTwits bull/bear 62/38 (stocktwits).",
+  "candidate_text": "DKNG at $42.10 (yahoo). Market cap $20.5B (yahoo). 3 new state launches in Q4 (sec_filings) — TAM expansion catalyst. Q3 EPS $0.12 beat consensus $0.08 (anthropic-search). StockTwits bull/bear 62/38 (stocktwits). Net BUY with state-legalization optionality.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 3,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

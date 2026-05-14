@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dwac-bearish-clean",
+  "ticker": "DWAC",
+  "notes": "DWAC bearish on regulatory probe + redemption-rate risk; SPAC-specific bear case with clean cites.",
+  "baseline_text": "DWAC SEC investigation disclosed (sec_filings). Redemption rate prior SPACs avg 80% (anthropic-search). Trust value $10.30/sh (sec_filings) vs trading $26.40 — premium-to-trust 156%.",
+  "candidate_text": "DWAC SEC investigation disclosed (sec_filings) — material overhang. Redemption rate prior SPACs avg 80% (anthropic-search) — float will likely shrink at close. Trust value $10.30/sh (sec_filings); premium-to-trust 156%. SELL on regulatory + dilution risk.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 5,
+    "hedging_quality": 3,
+    "contradiction_handling": 4
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

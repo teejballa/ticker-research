@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "sofi-neutral-degraded",
+  "ticker": "SOFI",
+  "notes": "Over-hedged to uselessness — every signal qualified into vagueness, no thesis.",
+  "baseline_text": "SOFI member count 8.1M (sec_filings). Student-loan moratorium impact -$50M/qtr (sec_filings).",
+  "candidate_text": "SOFI might grow members. Or might not. Could be impacted by macro. Many variables. No view at this time.",
+  "human_scores": {
+    "numeric_grounding": 1,
+    "citation_coverage": 0,
+    "narrative_coherence": 1,
+    "hedging_quality": 0,
+    "contradiction_handling": 2
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

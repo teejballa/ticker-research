@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dkng-mixed-degraded",
+  "ticker": "DKNG",
+  "notes": "Mixed signals — candidate fails to reconcile bull (state launches) vs bear (cash burn); flat narrative.",
+  "baseline_text": "DKNG 3 new state launches Q4 (sec_filings). But cash burn $200M/qtr (sec_filings). Q3 loss -$0.28 EPS (sec_filings).",
+  "candidate_text": "DKNG launched in 3 states. Also losing money. Hard to say. Neutral. May or may not work out.",
+  "human_scores": {
+    "numeric_grounding": 2,
+    "citation_coverage": 0,
+    "narrative_coherence": 1,
+    "hedging_quality": 1,
+    "contradiction_handling": 1
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}
