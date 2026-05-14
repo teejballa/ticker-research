@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "aapl-bearish-clean",
+  "ticker": "AAPL",
+  "notes": "Bearish thesis on China-exposure with full citations and acknowledged bull case. High clean cluster on first 3 dims.",
+  "baseline_text": "AAPL Greater China revenue -8% YoY (sec_filings). FX headwinds -2.5% YoY (sec_filings). P/E 28.5 vs 5y mean 24.1 (yahoo). Bearish signal: services growth decelerating to +12% (sec_filings) from +18%.",
+  "candidate_text": "AAPL Greater China revenue -8% YoY (sec_filings) — material drag. FX headwinds -2.5% YoY (sec_filings). P/E 28.5 vs 5y mean 24.1 (yahoo) — premium with weakening growth. Services growth decelerating to +12% (sec_filings) from +18%. Net: bearish near-term despite strong cash position; HOLD with downside bias.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 4,
+    "contradiction_handling": 4
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

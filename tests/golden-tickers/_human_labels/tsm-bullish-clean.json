@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "tsm-bullish-clean",
+  "ticker": "TSM",
+  "notes": "TSM bullish on AI capex + N3 ramp; ADR-specific FX and Taiwan listing disclosures cited.",
+  "baseline_text": "TSM ADR at $186.42 (yahoo). N3 process ramping H2 (sec_filings). AI revenue share +24% (anthropic-search). USD/TWD 31.5 (yahoo).",
+  "candidate_text": "TSM ADR at $186.42 (yahoo). N3 process ramping H2 (sec_filings) — leading-edge moat reinforced. AI revenue share +24% (anthropic-search). USD/TWD 31.5 (yahoo) — FX neutral for USD investor. BUY on AI capex cycle; flag Taiwan geo-political tail risk separately.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 4,
+    "contradiction_handling": 4
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

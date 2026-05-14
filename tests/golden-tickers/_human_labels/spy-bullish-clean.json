@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "spy-bullish-clean",
+  "ticker": "SPY",
+  "notes": "Bullish SPY on Fed-pivot + earnings beat; clean cites to FOMC + S&P 500 EPS aggregate.",
+  "baseline_text": "SPY at $568.42 (yahoo). YTD +18% (yahoo). S&P 500 Q3 EPS aggregate +9.2% YoY (anthropic-search). FOMC pivot signal at Dec meeting (anthropic-search).",
+  "candidate_text": "SPY at $568.42 (yahoo). YTD +18% (yahoo). S&P 500 Q3 EPS aggregate +9.2% YoY (anthropic-search) — earnings broadening beyond mega-cap. FOMC pivot signal at Dec meeting (anthropic-search) — discount-rate tailwind. BUY bias.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 5,
+    "hedging_quality": 3,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

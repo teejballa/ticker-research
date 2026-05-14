@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "spy-bearish-degraded",
+  "ticker": "SPY",
+  "notes": "Candidate cites a fake VIX level + ignores fundamentals.",
+  "baseline_text": "SPY at $568.42 (yahoo). VIX 14.2 (yahoo).",
+  "candidate_text": "SPY crashing — VIX is at 80 (no source, fabricated). Sell everything. Recession imminent.",
+  "human_scores": {
+    "numeric_grounding": 0,
+    "citation_coverage": 0,
+    "narrative_coherence": 1,
+    "hedging_quality": 0,
+    "contradiction_handling": 0
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

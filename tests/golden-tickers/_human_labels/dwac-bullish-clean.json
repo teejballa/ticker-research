@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dwac-bullish-clean",
+  "ticker": "DWAC",
+  "notes": "DWAC bullish on Truth Social merger close + retail momentum; SPAC-specific structure cited.",
+  "baseline_text": "DWAC at $26.40 (yahoo). Trust value ~$10.30/sh (sec_filings). Merger close target Q1 (sec_filings). StockTwits bull/bear 78/22 (stocktwits).",
+  "candidate_text": "DWAC at $26.40 (yahoo). Trust value ~$10.30/sh (sec_filings) — premium reflects merger-close optionality. Merger close target Q1 (sec_filings). StockTwits bull/bear 78/22 (stocktwits). BUY with binary-event-driven framing — premium decays if close slips.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 4,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

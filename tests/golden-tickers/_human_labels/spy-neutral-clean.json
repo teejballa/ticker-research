@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "spy-neutral-clean",
+  "ticker": "SPY",
+  "notes": "SPY balanced rate-cut vs earnings; correctly notes ETF has no per-name EPS.",
+  "baseline_text": "SPY at $568.42 (yahoo). 50-day SMA $562 (yahoo). ETF instrument — no per-name EPS (security_type=etf). Top 5 holdings AAPL/MSFT/NVDA/AMZN/META = 28% weight (sec_filings).",
+  "candidate_text": "SPY at $568.42 (yahoo). 50-day SMA $562 (yahoo) — trend intact. ETF instrument — no per-name EPS (security_type=etf). Top 5 holdings AAPL/MSFT/NVDA/AMZN/META = 28% weight (sec_filings) — concentration risk. Rate-cut tailwind vs concentration-risk headwind. NEUTRAL with sector rotation watch.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 4,
+    "narrative_coherence": 4,
+    "hedging_quality": 5,
+    "contradiction_handling": 4
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

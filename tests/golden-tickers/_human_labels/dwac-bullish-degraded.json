@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dwac-bullish-degraded",
+  "ticker": "DWAC",
+  "notes": "Candidate ignores SPAC structure, treats premium as fundamental value.",
+  "baseline_text": "DWAC trust value ~$10.30/sh (sec_filings). Premium-to-trust = 156% — merger optionality only.",
+  "candidate_text": "DWAC undervalued at $26 vs $100 fair value (no source). Strong upside. Hold for the merger spike.",
+  "human_scores": {
+    "numeric_grounding": 0,
+    "citation_coverage": 0,
+    "narrative_coherence": 2,
+    "hedging_quality": 1,
+    "contradiction_handling": 1
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

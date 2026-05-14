@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dkng-bearish-clean",
+  "ticker": "DKNG",
+  "notes": "DKNG bearish on California Prop 27 failure + cash burn; clean citations across SEC + news.",
+  "baseline_text": "DKNG Q3 net loss -$0.28 EPS (sec_filings). Cash burn $200M/qtr (sec_filings). California Prop 27 failed Nov 2022 (anthropic-search). Customer-acquisition cost $371 (anthropic-search).",
+  "candidate_text": "DKNG Q3 net loss -$0.28 EPS (sec_filings) — profitability gap persists. Cash burn $200M/qtr (sec_filings) gives ~6 quarter runway at current pace. California Prop 27 failed Nov 2022 (anthropic-search) — largest state remains unaddressable. CAC $371 (anthropic-search). Net: SELL bias near-term.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 5,
+    "hedging_quality": 3,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

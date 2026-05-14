@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "spy-neutral-degraded",
+  "ticker": "SPY",
+  "notes": "Candidate invents a per-name SPY P/E and ignores ETF structure.",
+  "baseline_text": "SPY at $568.42 (yahoo). ETF — no per-name EPS (security_type=etf). Top 5 = 28% weight.",
+  "candidate_text": "SPY P/E is 19.2 (no source — SPY has no per-name P/E). EPS is $30 (no source — same). Buy SPY.",
+  "human_scores": {
+    "numeric_grounding": 0,
+    "citation_coverage": 1,
+    "narrative_coherence": 2,
+    "hedging_quality": 1,
+    "contradiction_handling": 0
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

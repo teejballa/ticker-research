@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "aapl-bearish-degraded",
+  "ticker": "AAPL",
+  "notes": "Candidate over-hedges and fails to integrate contradictions; bearish thesis collapses into bullet salad.",
+  "baseline_text": "AAPL Greater China revenue -8% YoY (sec_filings). FX headwinds -2.5% YoY (sec_filings). P/E 28.5 vs 5y mean 24.1 (yahoo). Services growth decelerating to +12% (sec_filings) from +18%.",
+  "candidate_text": "AAPL may or may not face China weakness. Maybe FX is a headwind, hard to say. P/E could be elevated. Services might decelerate. Many factors to consider. No clear verdict. Could go either way.",
+  "human_scores": {
+    "numeric_grounding": 2,
+    "citation_coverage": 1,
+    "narrative_coherence": 1,
+    "hedging_quality": 0,
+    "contradiction_handling": 1
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

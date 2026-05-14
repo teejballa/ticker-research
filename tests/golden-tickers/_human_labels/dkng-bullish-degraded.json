@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "dkng-bullish-degraded",
+  "ticker": "DKNG",
+  "notes": "Candidate cites a fabricated 'analyst PT $90' and ignores the regulatory bear case entirely.",
+  "baseline_text": "DKNG at $42.10 (yahoo). Market cap $20.5B (yahoo). 3 new state launches in Q4 (sec_filings). Q3 EPS $0.12 beat consensus $0.08 (anthropic-search). StockTwits bull/bear 62/38 (stocktwits).",
+  "candidate_text": "DKNG to $90 PT — strong upside (no source). Massive growth runway. No regulatory concerns. Buy aggressively.",
+  "human_scores": {
+    "numeric_grounding": 0,
+    "citation_coverage": 0,
+    "narrative_coherence": 3,
+    "hedging_quality": 1,
+    "contradiction_handling": 0
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

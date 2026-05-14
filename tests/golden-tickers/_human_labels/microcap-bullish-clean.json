@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "microcap-bullish-clean",
+  "ticker": "MICROCAP",
+  "notes": "Generic micro-cap bull thesis with full citations to 10-K + analyst-of-one coverage.",
+  "baseline_text": "MICROCAP at $4.20 (yahoo). Market cap $180M (yahoo). Q3 revenue +35% YoY (sec_filings). Single analyst PT $7 (anthropic-search). Daily volume 220k (yahoo).",
+  "candidate_text": "MICROCAP at $4.20 (yahoo). Market cap $180M (yahoo). Q3 revenue +35% YoY (sec_filings) — strong execution against the cohort. Single analyst PT $7 (anthropic-search). Daily volume 220k (yahoo) — flag illiquidity. SPEC-BUY with position-size discipline.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 5,
+    "contradiction_handling": 3
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

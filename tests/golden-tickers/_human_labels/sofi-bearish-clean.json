@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "sofi-bearish-clean",
+  "ticker": "SOFI",
+  "notes": "SOFI bearish on student-loan moratorium + GAAP losses; clean citations.",
+  "baseline_text": "SOFI student-loan moratorium impact -$50M/qtr revenue (sec_filings). Cumulative GAAP loss -$320M FY (sec_filings). Galileo segment growth slowing to +14% YoY (sec_filings) from +35%.",
+  "candidate_text": "SOFI student-loan moratorium drag -$50M/qtr (sec_filings) continues to weigh on top-line. Cumulative GAAP loss -$320M FY (sec_filings) despite path-to-profit narrative. Galileo segment decelerating to +14% (sec_filings) from +35% — platform thesis cracking. SELL near-term.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 4,
+    "hedging_quality": 4,
+    "contradiction_handling": 4
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

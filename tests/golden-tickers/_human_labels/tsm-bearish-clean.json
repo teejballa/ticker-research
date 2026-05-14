@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "tsm-bearish-clean",
+  "ticker": "TSM",
+  "notes": "TSM bearish on Taiwan geo-political risk + AI demand digestion; clean ADR-specific bear thesis.",
+  "baseline_text": "TSM ADR at $186.42 (yahoo). Taiwan Strait tension index elevated (anthropic-search). AI capex peak signals from hyperscalers (anthropic-search). N3 gross margin -2pp QoQ (sec_filings).",
+  "candidate_text": "TSM ADR at $186.42 (yahoo). Taiwan Strait tension elevated (anthropic-search) — tail risk to single-country production. AI capex digestion signals from hyperscalers (anthropic-search) — demand peak nearing. N3 gross margin -2pp QoQ (sec_filings). HOLD with hedge bias.",
+  "human_scores": {
+    "numeric_grounding": 5,
+    "citation_coverage": 5,
+    "narrative_coherence": 5,
+    "hedging_quality": 4,
+    "contradiction_handling": 4
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}

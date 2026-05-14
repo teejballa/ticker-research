@@ -1,0 +1,16 @@
+{
+  "exemplar_id": "microcap-bullish-degraded",
+  "ticker": "MICROCAP",
+  "notes": "Candidate ignores liquidity risk; pumps a $15 PT with no analyst basis.",
+  "baseline_text": "MICROCAP at $4.20 (yahoo). Daily volume 220k (yahoo). Single analyst PT $7 (anthropic-search).",
+  "candidate_text": "MICROCAP $15 PT — 4x upside (no source). Strong buy. Big winner.",
+  "human_scores": {
+    "numeric_grounding": 0,
+    "citation_coverage": 0,
+    "narrative_coherence": 1,
+    "hedging_quality": 0,
+    "contradiction_handling": 0
+  },
+  "labeler": "tj",
+  "labeled_at": "2026-05-11T22:00:00Z"
+}
