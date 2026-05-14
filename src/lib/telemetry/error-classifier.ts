@@ -8,7 +8,15 @@
  *
  * Network-sentinel code set mirrors src/lib/data/retry.ts but is duplicated
  * intentionally so this module is independently testable (no import from retry.ts).
+ *
+ * Phase 30 / D-08: union widened with `'BREAKER_OPEN'` so breaker-tripped
+ * attempts have their own controlled enum value in ProviderCallLog rather
+ * than being miscounted as `'UNKNOWN'`. The widening is type-only —
+ * `error_class` in Prisma is `String?`, so no schema migration is needed
+ * (see 30-RESEARCH lines 258-259).
  */
+
+import { BreakerOpenError } from '@/lib/data/circuit-breaker';
 
 export type TelemetryErrorClass =
   | 'RATE_LIMITED'
@@ -16,7 +24,8 @@ export type TelemetryErrorClass =
   | 'TIMEOUT'
   | 'UPSTREAM_5XX'
   | 'NETWORK'
-  | 'UNKNOWN';
+  | 'UNKNOWN'
+  | 'BREAKER_OPEN';
 
 const NETWORK_CODES = new Set([
   'ECONNREFUSED',
@@ -28,6 +37,10 @@ const NETWORK_CODES = new Set([
 
 export function classifyError(err: unknown): TelemetryErrorClass {
   if (err == null) return 'UNKNOWN';
+  // Phase 30 / D-08: BreakerOpenError must be classified by TYPE, not by
+  // status/code. It is non-null but has neither, so without this guard it
+  // would fall through to 'UNKNOWN' below.
+  if (err instanceof BreakerOpenError) return 'BREAKER_OPEN';
   const e = err as { name?: string; status?: number; code?: string; cause?: { code?: string } };
   const code = e.code ?? e.cause?.code;
   if (typeof code === 'string' && NETWORK_CODES.has(code)) return 'NETWORK';

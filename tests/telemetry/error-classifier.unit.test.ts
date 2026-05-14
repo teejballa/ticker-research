@@ -8,6 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { classifyError } from '@/lib/telemetry/error-classifier';
+import { BreakerOpenError } from '@/lib/data/circuit-breaker';
 
 describe('classifyError — controlled enum mapping', () => {
   it('401 → AUTH_FAILED', () => {
@@ -52,9 +53,55 @@ describe('classifyError — T-20-Z-03-05 secret-leak prevention', () => {
     });
     const cls = classifyError(err);
     // Return value is one of the controlled enum values, period.
-    expect(['RATE_LIMITED', 'AUTH_FAILED', 'TIMEOUT', 'UPSTREAM_5XX', 'NETWORK', 'UNKNOWN']).toContain(cls);
+    expect([
+      'RATE_LIMITED',
+      'AUTH_FAILED',
+      'TIMEOUT',
+      'UPSTREAM_5XX',
+      'NETWORK',
+      'UNKNOWN',
+      'BREAKER_OPEN',
+    ]).toContain(cls);
     expect(cls).toBe('AUTH_FAILED');
     // The secret string is NOT part of the returned class.
     expect(cls).not.toMatch(/sk-ant/);
+  });
+});
+
+describe('Phase 30 / D-08: BreakerOpenError → BREAKER_OPEN', () => {
+  it('classifies BreakerOpenError as BREAKER_OPEN', () => {
+    expect(classifyError(new BreakerOpenError('yahoo', 0))).toBe('BREAKER_OPEN');
+  });
+
+  it('classifies BreakerOpenError by TYPE, not by status/code (it has neither)', () => {
+    const err = new BreakerOpenError('finnhub', Date.now());
+    // No 'status' or 'code' fields — would otherwise fall through to 'UNKNOWN'.
+    expect((err as unknown as { status?: number }).status).toBeUndefined();
+    expect((err as unknown as { code?: string }).code).toBeUndefined();
+    expect(classifyError(err)).toBe('BREAKER_OPEN');
+  });
+
+  it('preserves prior classifications: 401 → AUTH_FAILED', () => {
+    expect(classifyError({ status: 401 })).toBe('AUTH_FAILED');
+  });
+
+  it('preserves prior classifications: 429 → RATE_LIMITED', () => {
+    expect(classifyError({ status: 429 })).toBe('RATE_LIMITED');
+  });
+
+  it('preserves prior classifications: 408 → TIMEOUT', () => {
+    expect(classifyError({ status: 408 })).toBe('TIMEOUT');
+  });
+
+  it('preserves prior classifications: 503 → UPSTREAM_5XX', () => {
+    expect(classifyError({ status: 503 })).toBe('UPSTREAM_5XX');
+  });
+
+  it('preserves prior classifications: ECONNREFUSED → NETWORK', () => {
+    expect(classifyError({ code: 'ECONNREFUSED' })).toBe('NETWORK');
+  });
+
+  it('preserves prior classifications: plain Error → UNKNOWN', () => {
+    expect(classifyError(new Error('plain'))).toBe('UNKNOWN');
   });
 });

@@ -24,7 +24,15 @@ export type { CacheKey } from './cache-keys';
 
 let redisClient: Redis | null = null;
 
-function getRedis(): Redis | null {
+/**
+ * Returns a memoized Upstash REST client, or `null` when
+ * `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` env vars are unset.
+ * Phase 30 (D-04) exports this so the circuit-breaker module can read/write
+ * `breaker:*` keys directly, sharing state across lambda cold starts. The
+ * `cached()` helper above and the breaker both honor the same graceful-degrade
+ * contract: a `null` client makes the caller pass through to its fallback.
+ */
+export function getRedis(): Redis | null {
   if (redisClient) return redisClient;
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;

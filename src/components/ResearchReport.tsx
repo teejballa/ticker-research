@@ -470,6 +470,9 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
   // Plan 19-B-06 (D-29): FieldOrigin union extended additively — accept the
   // new ladder origins so this UI renders the correct provenance badge once
   // the new ladder graduates past shadow.
+  // Phase 30 (D-11): 'unavailable' added to FieldOrigin additively; rendered
+  // as no badge here (Plan 30-03 introduces the "—" rendering case alongside
+  // the merge.ts emission of 'unavailable').
   const sourceLabel = (
     origin:
       | 'yahoo'
@@ -479,6 +482,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
       | 'twelvedata'
       | 'exa'
       | 'anthropic-search'
+      | 'unavailable'
       | null
       | undefined,
   ): string | null => {
@@ -489,6 +493,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     if (origin === 'twelvedata') return 'via Twelve Data';
     if (origin === 'exa')     return 'via Exa';
     if (origin === 'anthropic-search') return 'via Anthropic Search';
+    // 'unavailable' (Plan 30-03 plumbing) and null/undefined render no badge.
     return null;
   };
 
