@@ -1,9 +1,9 @@
 ---
-status: complete
+status: resolved
 phase: 20-real-sentiment-analysis
 source: [20-Z-01-SUMMARY.md through 20-D-05-SUMMARY.md (29 files)]
 started: 2026-05-14T00:00:00Z
-updated: 2026-05-14T18:00:00Z
+updated: 2026-05-14T18:30:00Z
 ---
 
 ## Current Test
@@ -63,10 +63,8 @@ evidence: valid JSON; 21 cron entries total (15 new from Phase 20).
 
 ### 11. Prisma migrations present for all new tables
 expected: Migration directory exists for each new Phase-20 table; `npx prisma validate` exits 0.
-result: issue
-reported: "Only 5 of ~14 new Phase-20 models have dedicated migration directories. Missing migrations for: SentimentObservation, PerSourceIC, ProviderCallLog, BotFilterFlag, CoordinationCluster, SourceTier, ManipulationWarning, TemperatureCalibration, FairnessAuditReport. `prisma migrate deploy` at deploy time will NOT create these 9 tables — operator must run `prisma migrate dev --name phase-20-consolidate` first to generate the consolidated migration."
-severity: major
-evidence: `ls prisma/migrations/20260512_*` returns 5 directories; `grep -E '^model ' prisma/schema.prisma | wc -l` shows 14+ Phase-20 models. `npx prisma validate` is green (schema is internally consistent), but the schema-to-migration mapping is incomplete.
+result: pass
+resolution: "Hand-written consolidated migration committed at prisma/migrations/20260514_phase_20_consolidate/migration.sql — CREATE TABLE IF NOT EXISTS for all 9 missing tables (sentiment_observations, per_source_ic, provider_call_logs, bot_filter_flags, coordination_clusters, source_tiers, manipulation_warnings, temperature_calibrations, fairness_audit_reports) + their indexes. `npx prisma validate` exits 0. `vercel.json` buildCommand `prisma migrate deploy && next build` will now create all 14 Phase-20 tables at next deploy."
 
 ### 12. 15 model cards present at docs/cards/
 expected: ≥15 cards including all new Phase-20 ones.
@@ -76,15 +74,17 @@ evidence: 15 MODEL-CARD-*.md files at docs/cards/, all Mitchell-2019 frontmatter
 ## Summary
 
 total: 12
-passed: 11
-issues: 1
+passed: 12
+issues: 0
 pending: 0
 skipped: 0
 
 ## Gaps
 
 - truth: "Migration files exist for every new Phase-20 Prisma model so `prisma migrate deploy` creates all 14 tables at deploy time"
-  status: failed
+  status: resolved
+  resolved_at: 2026-05-14
+  resolved_by: prisma/migrations/20260514_phase_20_consolidate/migration.sql
   reason: "Only 5 of ~14 new Phase-20 models have dedicated migration directories under prisma/migrations/. Missing: SentimentObservation (Z-01), PerSourceIC (C-01), ProviderCallLog (Z-03), BotFilterFlag + CoordinationCluster (C-03), SourceTier (B-04), ManipulationWarning (C-04), TemperatureCalibration (B-03), FairnessAuditReport (C-06). At deploy, `prisma migrate deploy && next build` (vercel.json buildCommand) will skip these 9 tables silently — production runtime will then throw on first DAO call to any of them."
   severity: major
   test: 11
