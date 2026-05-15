@@ -13,6 +13,7 @@ import type {
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 // yahoo-finance2 v3 requires instantiation
@@ -64,13 +65,18 @@ export async function fetchMarketData(ticker: string): Promise<MarketDataSection
     async () => {
       const collected_at = new Date().toISOString();
       try {
+        // Phase 30 D-04..D-07 — composition order is load-bearing:
+        // withTelemetry → withBreaker → withRetry → fn. The breaker short-circuits
+        // BEFORE entering withRetry so a tripped breaker doesn't consume retry budget.
         const quote = await withTelemetry(
           'yahoo',
           () =>
-            withRetry(() => yahooFinance.quote(ticker), {
-              maxAttempts: 3,
-              baseDelayMs: 100,
-            }),
+            withBreaker('yahoo', () =>
+              withRetry(() => yahooFinance.quote(ticker), {
+                maxAttempts: 3,
+                baseDelayMs: 100,
+              }),
+            ),
           { ticker },
         );
         return {
@@ -115,15 +121,18 @@ export async function fetchFundamentals(ticker: string): Promise<FundamentalsSec
     async () => {
       const collected_at = new Date().toISOString();
       try {
+        // Phase 30 D-04..D-07 — withTelemetry → withBreaker → withRetry composition.
         const summary = await withTelemetry(
           'yahoo',
           () =>
-            withRetry(
-              () =>
-                yahooFinance.quoteSummary(ticker, {
-                  modules: ['financialData', 'defaultKeyStatistics'],
-                }),
-              { maxAttempts: 3, baseDelayMs: 100 },
+            withBreaker('yahoo', () =>
+              withRetry(
+                () =>
+                  yahooFinance.quoteSummary(ticker, {
+                    modules: ['financialData', 'defaultKeyStatistics'],
+                  }),
+                { maxAttempts: 3, baseDelayMs: 100 },
+              ),
             ),
           { ticker },
         );

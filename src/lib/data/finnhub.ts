@@ -11,6 +11,7 @@ import type {
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 const BASE = 'https://finnhub.io/api/v1';
@@ -24,19 +25,24 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 
  * can decide whether to back off.
  */
 async function fetchOk(url: string, ticker?: string): Promise<Response> {
+  // Phase 30 D-04..D-07 — withTelemetry → withBreaker → withRetry composition.
+  // The breaker short-circuits BEFORE entering withRetry, so a tripped breaker
+  // does not consume retry budget.
   return withTelemetry(
     'finnhub',
     () =>
-      withRetry(
-        async () => {
-          const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-          if (!res.ok) {
-            const err = Object.assign(new Error(`finnhub ${res.status}`), { status: res.status });
-            throw err;
-          }
-          return res;
-        },
-        { maxAttempts: 3, baseDelayMs: 100 },
+      withBreaker('finnhub', () =>
+        withRetry(
+          async () => {
+            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            if (!res.ok) {
+              const err = Object.assign(new Error(`finnhub ${res.status}`), { status: res.status });
+              throw err;
+            }
+            return res;
+          },
+          { maxAttempts: 3, baseDelayMs: 100 },
+        ),
       ),
     { ticker },
   );

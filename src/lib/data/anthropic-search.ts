@@ -13,6 +13,7 @@ import type {
   SocialSentimentSection,
 } from '@/lib/types';
 import type { SecurityType } from '@/lib/types';
+import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 const client = new Anthropic();
@@ -57,19 +58,24 @@ Return an empty array [] if no relevant news is found.`;
   }
 
   try {
+    // Phase 30 D-04..D-07 — withTelemetry → withBreaker → withRetry composition.
+    // (anthropic-search has no withRetry — the Anthropic SDK is itself retry-aware,
+    // so the breaker wraps the bare SDK call.)
     // Equity searches get max_uses: 5 for broader coverage; SPAC/ETF use max_uses: 3
     const response = await withTelemetry(
       'anthropic-search',
       () =>
-        client.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 2048,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
-          messages: [{
-            role: 'user',
-            content: prompt,
-          }],
-        }),
+        withBreaker('anthropic-search', () =>
+          client.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 2048,
+            tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
+            messages: [{
+              role: 'user',
+              content: prompt,
+            }],
+          }),
+        ),
       { ticker },
     );
 
@@ -121,19 +127,22 @@ Focus on: Wall Street consensus rating, average price target, recent upgrades/do
   }
 
   try {
+    // Phase 30 D-04..D-07 — withTelemetry → withBreaker composition.
     const response = await withTelemetry(
       'anthropic-search',
       () =>
-        client.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 2048,
-          // Equity analyst searches: max_uses: 5; SPAC and other non-ETF: max_uses: 3
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
-          messages: [{
-            role: 'user',
-            content: prompt,
-          }],
-        }),
+        withBreaker('anthropic-search', () =>
+          client.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 2048,
+            // Equity analyst searches: max_uses: 5; SPAC and other non-ETF: max_uses: 3
+            tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: securityType === 'equity' ? 5 : 3 }],
+            messages: [{
+              role: 'user',
+              content: prompt,
+            }],
+          }),
+        ),
       { ticker },
     );
 
@@ -187,18 +196,21 @@ risks, and business developments from the filing. Return null if the filing cann
   }
 
   try {
+    // Phase 30 D-04..D-07 — withTelemetry → withBreaker composition.
     const response = await withTelemetry(
       'anthropic-search',
       () =>
-        client.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 3000,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
-          messages: [{
-            role: 'user',
-            content: prompt,
-          }],
-        }),
+        withBreaker('anthropic-search', () =>
+          client.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 3000,
+            tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+            messages: [{
+              role: 'user',
+              content: prompt,
+            }],
+          }),
+        ),
       { ticker },
     );
 
@@ -248,18 +260,21 @@ Return null for overall_tone if sentiment is unclear or insufficient data.`;
   }
 
   try {
+    // Phase 30 D-04..D-07 — withTelemetry → withBreaker composition.
     const response = await withTelemetry(
       'anthropic-search',
       () =>
-        client.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 2048,
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
-          messages: [{
-            role: 'user',
-            content: prompt,
-          }],
-        }),
+        withBreaker('anthropic-search', () =>
+          client.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 2048,
+            tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+            messages: [{
+              role: 'user',
+              content: prompt,
+            }],
+          }),
+        ),
       { ticker },
     );
 

@@ -12,6 +12,7 @@ import type {
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 
 const BASE = 'https://api.polygon.io';
@@ -25,19 +26,24 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 
  * to back off; callers wrap in try/catch and degrade to `available:false`.
  */
 async function fetchOk(url: string, ticker?: string): Promise<Response> {
+  // Phase 30 D-04..D-07 — withTelemetry → withBreaker → withRetry composition.
+  // The breaker short-circuits BEFORE entering withRetry, so a tripped breaker
+  // does not consume retry budget.
   return withTelemetry(
     'polygon',
     () =>
-      withRetry(
-        async () => {
-          const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-          if (!res.ok) {
-            const err = Object.assign(new Error(`polygon ${res.status}`), { status: res.status });
-            throw err;
-          }
-          return res;
-        },
-        { maxAttempts: 3, baseDelayMs: 100 },
+      withBreaker('polygon', () =>
+        withRetry(
+          async () => {
+            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            if (!res.ok) {
+              const err = Object.assign(new Error(`polygon ${res.status}`), { status: res.status });
+              throw err;
+            }
+            return res;
+          },
+          { maxAttempts: 3, baseDelayMs: 100 },
+        ),
       ),
     { ticker },
   );

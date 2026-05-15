@@ -13,6 +13,7 @@
 // Cost: ~5 Firecrawl credits + 1 StockTwits call per ticker (was 3 + 1 pre-D-44).
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
+import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { fetchStockTwitsSentiment, fetchStockTwitsRaw, type StockTwitsRawMessage } from './stocktwits';
 import {
@@ -36,9 +37,18 @@ async function scrapeOne(fc: Firecrawl, url: string): Promise<string> {
   try {
     // Plan 20-Z-03: wrap the Firecrawl scrape with telemetry. Cost defaults
     // to the flat $0.001/call rate from COST_PER_CALL_USD['firecrawl'].
+    //
+    // Phase 30 D-23 — BreakerOpenError caught by surrounding try/catch in
+    // scrapeOne, scan continues with empty markdown. The cron pipeline must
+    // never 500 when Firecrawl is degraded; the breaker short-circuit is
+    // observed as a tripped BREAKER_OPEN row in ProviderCallLog so the
+    // dashboard can surface it while the user-facing path returns ''.
     const doc = await withTelemetry(
       'firecrawl',
-      () => fc.scrape(url, { formats: ['markdown'], onlyMainContent: true } as Parameters<typeof fc.scrape>[1]),
+      () =>
+        withBreaker('firecrawl', () =>
+          fc.scrape(url, { formats: ['markdown'], onlyMainContent: true } as Parameters<typeof fc.scrape>[1]),
+        ),
     );
     const content = (doc as { markdown?: string }).markdown ?? '';
     // Lowered from 150 → 30: previous gate punished partial scrapes and starved
