@@ -11,6 +11,12 @@
 import { COST_PER_CALL_USD, type ProviderId } from './cost-estimators';
 import { classifyError, type TelemetryErrorClass } from './error-classifier';
 import { recordCallAsync } from './provider-call-log';
+// Phase 30 D-15 — cost-anomaly trip line (post-success) reads `getRedis` to
+// INCR a counter keyed `cost_anomaly:gemini`. When the count reaches 3 within
+// a 1h window the regular `breaker:gemini:state` key is written with
+// `reason='cost_anomaly'` (1h TTL) so subsequent Gemini calls short-circuit
+// through the same withBreaker primitive — no second breaker class.
+import { getRedis } from '@/lib/data/cache/upstash';
 
 // Plan 20-B-06 — the ProviderId union below (re-exported from cost-estimators)
 // includes 'lm-fallback' so withTelemetry('lm-fallback', ...) is type-safe.
@@ -120,5 +126,37 @@ export async function withTelemetry<T>(
     response_size_bytes: null,
     retry_count: 0,
   });
+
+  // Phase 30 D-15 — cost-ceiling regression guard.
+  // Gemini call costing more than $1.00 increments an Upstash counter; 3 such
+  // calls within 1h trip a 1h provider-wide gemini breaker. Reuses the same
+  // breaker:gemini:state key that withBreaker reads, so no second breaker class.
+  // Per Amendment 2026-05-14: counter resets at TRIP time (DEL on trip) rather
+  // than CLOSE time — equivalent observable behavior since while breaker is
+  // open all Gemini calls short-circuit before reaching this path.
+  if (provider_id === 'gemini' && typeof cost_usd === 'number' && cost_usd > 1.00) {
+    queueMicrotask(async () => {
+      try {
+        const r = getRedis();
+        if (!r) return;
+        const key = 'cost_anomaly:gemini';
+        const count = await r.incr(key);
+        if (count === 1) await r.expire(key, 3600);
+        if (count >= 3) {
+          await r.set(
+            'breaker:gemini:state',
+            JSON.stringify({ status: 'open', opened_at: Date.now(), reason: 'cost_anomaly' }),
+            { ex: 3600 },
+          );
+          await r.del(key);
+          console.warn('[withTelemetry] gemini cost_anomaly breaker tripped:', { cost_usd, count });
+        }
+      } catch (err) {
+        // Fire-and-forget — never block the caller. Cost-anomaly tracking is best-effort.
+        console.warn('[withTelemetry] cost_anomaly tracking failed:', String(err));
+      }
+    });
+  }
+
   return value;
 }

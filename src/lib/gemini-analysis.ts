@@ -1202,19 +1202,24 @@ async function generateAnalysis(
   // buildSystemPrompt (so the LLM sees the dual-class context in one message).
   const systemPrompt = buildSystemPrompt(engineCtx);
 
-  // Phase 19-C-09 (D-41): map ModelChoice → AI Gateway model string. When the
-  // routerCtx is unset (default), keep the legacy flash slug verbatim so the
-  // citations-v2 baseline path is bit-identical to today's behavior. Strings
-  // pinned per the convention already in use elsewhere in this file
-  // ('google/gemini-3-flash' for the flash tier).
-  const modelString =
-    routerCtx == null
-      ? 'google/gemini-3-flash'
-      : routerCtx.modelOverride === 'gemini-pro'
-        ? 'google/gemini-3-pro'
-        : routerCtx.modelOverride === 'haiku'
-          ? 'anthropic/claude-haiku-4.5'
-          : 'google/gemini-3-flash';
+  // Phase 30 D-14 — explicit model pin, no AI-Gateway fuzzy routing.
+  // R-3 resolution: 3-tier slugs reflect the live codebase; CONTEXT.md mentions
+  // 2.5 slugs but the live codebase has been on 3-tier since Phase 19-C-09.
+  // The haiku fallback branch is removed because D-14 mandates explicit pinning
+  // to gemini-3-pro for analysis; haiku routing was previously a fuzzy-routing
+  // artifact from the now-deprecated AI-Gateway auto-route path and never
+  // reflected an intentional product decision for the main analysis call.
+  //
+  // If you need to change this model, also update
+  // tests/unit/gemini-analysis.model-pin.unit.test.ts and re-verify the
+  // Phase 30 done-gate cost SQL.
+  //
+  // Per R-12 — DO NOT delete src/lib/reasoning/router.ts. The router still
+  // runs, emits LearningEvent rows with event_type='model_router_decision',
+  // and tracks token usage. We just ignore its `modelOverride` output for the
+  // model SELECTION at this call site. The usage write below
+  // (`routerCtx.usageOut.tokens`) is preserved.
+  const modelString = 'google/gemini-3-pro';
 
   try {
     // Plan 20-Z-03: wrap the Gemini call with telemetry. cost_usd_estimator
