@@ -3,7 +3,7 @@ phase: 30
 plan: 05
 subsystem: provider-health-hardening
 tags: [wave-4, done-gate, operator-cli, firecrawl-rotation, audit-log, gitignore]
-status: checkpoint-pending
+status: closed-with-deferral
 dependency_graph:
   requires:
     - "30-04 (Wave 3 — provider-error-budget cron + ProviderHealthAlert lifecycle + retention parity)"
@@ -48,7 +48,15 @@ metrics:
 
 # Phase 30 Plan 05: Wave 4 — Done-gate verdict report + Firecrawl rotation (checkpoint) Summary
 
-**One-liner:** Operator CLI `npm run provider-health-report` produces a one-row-per-provider markdown verdict (error_rate vs 10% gate + AVG(gemini cost_usd) vs $0.50 gate) — Task 1 done; Task 2 (Firecrawl key rotation) is a `checkpoint:human-action` awaiting the operator to run the `vercel env rm/add` + Firecrawl dashboard rotation procedure logged in `firecrawl-rotation-log.md`.
+**One-liner:** Operator CLI `npm run provider-health-report` produces a one-row-per-provider markdown verdict (error_rate vs 10% gate + AVG(gemini cost_usd) vs $0.50 gate) — Task 1 done; **Task 2 (Firecrawl key rotation) is DEFERRED to sub-phase 30.1 — operator hit Firecrawl free tier and is migrating away from Firecrawl entirely instead of rotating.** See `firecrawl-rotation-log.md` for the deferral rationale and 30.1 follow-up.
+
+## Task 2 — DEFERRED (decided 2026-05-14)
+
+The operator hit Firecrawl's free-tier limit. Rotating would only reset the existing key under the same paid model; it does not solve the cost problem. The full Firecrawl replacement (most likely Reddit OAuth API for the narrow Reddit-only footprint that currently exists in `lightweight-community-scan.ts`) is captured as **Phase 30.1 — Free Community-Scan Migration**, to be discussed/planned next via `/gsd-discuss-phase 30.1`.
+
+**Done-gate 1 impact:** Firecrawl will remain in BREACH (error_rate > 10%) until 30.1 ships. This is documented and EXPECTED — the Phase-30 alerting infrastructure (D-17 cron + D-19 dashboard tile) correctly surfaces it as an active alert. Not a regression.
+
+**Done-gates 2 and 3 are unaffected:** Gemini cost gate is independent of Firecrawl; cron-HTTP-200-under-outage is already satisfied by the `withBreaker` wrap shipped in Plan 30-03.
 
 ## Performance
 
