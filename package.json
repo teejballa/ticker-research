@@ -59,7 +59,8 @@
     "check-citation-coverage": "npx tsx scripts/eval-citation-coverage.ts --ci",
     "measure-claim-verification": "npx tsx scripts/measure-claim-verification.ts",
     "rotate-micro-cap": "npx tsx scripts/rotate-micro-cap.ts",
-    "check-golden-tickers": "npx tsx scripts/check-golden-tickers.ts"
+    "check-golden-tickers": "npx tsx scripts/check-golden-tickers.ts",
+    "provider-health-report": "npx tsx scripts/provider-health-report.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
