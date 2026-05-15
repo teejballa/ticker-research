@@ -256,7 +256,10 @@ describe.skipIf(!HAS_DB)('Phase 17 — sentiment-scan writes smart-money columns
 
     const result = await callCron();
     expect(result.scanned).toBe(0);
-    expect(result.failed).toBe(1);
+    // Phase 30 D-13 — `results.failed` was renamed to `skipped_no_data` (same
+    // semantics: ticker had no usable upstream data). The old key is gone.
+    expect(result.skipped_no_data).toBe(1);
+    expect((result as { failed?: unknown }).failed).toBeUndefined();
 
     const row = await prisma.sentimentSnapshot.findFirst({ where: { ticker: TEST_TICKER } });
     expect(row).toBeNull();

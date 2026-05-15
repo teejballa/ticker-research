@@ -169,7 +169,10 @@ describe.skipIf(!HAS_DB)('sentiment-scan writes technical_data alongside communi
     expect(snap!.technical_data).toBeNull();
   });
 
-  it('skips the ticker (results.failed++) when BOTH community and technical return null', async () => {
+  it('skips the ticker (results.skipped_no_data++) when BOTH community and technical return null', async () => {
+    // Phase 30 D-13 — `results.failed` was renamed to `skipped_no_data` (same
+    // semantics — ticker had no usable upstream data); a real BreakerOpenError
+    // increments `skipped_breaker_open` instead. See sentiment-scan/route.ts.
     const { lightweightCommunityScan } = await import('@/lib/data/lightweight-community-scan');
     const { computeTechnicalSnapshot } = await import('@/lib/data/technical');
     vi.mocked(lightweightCommunityScan).mockResolvedValueOnce(null);
@@ -177,7 +180,9 @@ describe.skipIf(!HAS_DB)('sentiment-scan writes technical_data alongside communi
 
     const result = await callCron();
     expect(result.scanned).toBe(0);
-    expect(result.failed).toBe(1);
+    expect(result.skipped_no_data).toBe(1);
+    // Sanity: the old `failed` key MUST be absent now (was renamed).
+    expect((result as { failed?: unknown }).failed).toBeUndefined();
 
     const snap = await prisma.sentimentSnapshot.findFirst({ where: { ticker: TEST_TICKER } });
     expect(snap).toBeNull();

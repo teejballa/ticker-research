@@ -81,10 +81,24 @@ export function recordCallAsync(row: ProviderCallLogRow): void {
   });
 }
 
-/** Used ONLY by the 90-day retention cron (T-20-Z-03-02). */
-export async function deleteOlderThan(thresholdDays: number): Promise<{ deleted: number }> {
+/**
+ * Used by the 90-day retention cron (T-20-Z-03-02).
+ *
+ * Phase 30 D-18 — extended additively to ALSO sweep `provider_health_alerts`
+ * rows older than the same horizon. Single function, single cron — keeps
+ * retention parity between the call-log table and the alert table. Existing
+ * callers reading `result.deleted` continue to work; `alerts_deleted` is new.
+ */
+export async function deleteOlderThan(
+  thresholdDays: number,
+): Promise<{ deleted: number; alerts_deleted: number }> {
   const { prisma } = await import('@/lib/db');
   const cutoff = new Date(Date.now() - thresholdDays * 86_400_000);
-  const r = await prisma.providerCallLog.deleteMany({ where: { started_at: { lt: cutoff } } });
-  return { deleted: r.count };
+  const callLogResult = await prisma.providerCallLog.deleteMany({
+    where: { started_at: { lt: cutoff } },
+  });
+  const alertResult = await prisma.providerHealthAlert.deleteMany({
+    where: { breached_at: { lt: cutoff } },
+  });
+  return { deleted: callLogResult.count, alerts_deleted: alertResult.count };
 }

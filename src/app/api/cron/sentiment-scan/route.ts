@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getCurrentWatchlist } from '@/lib/data/ticker-watchlist';
 import { lightweightCommunityScan } from '@/lib/data/lightweight-community-scan';
+// Phase 30 D-12 — classify breaker-tripped fetches as soft skips, not errors.
+import { BreakerOpenError } from '@/lib/data/circuit-breaker';
 import { computeTechnicalSnapshot } from '@/lib/data/technical';
 import { fetchInsiderData } from '@/lib/data/insider';
 import { fetchInstitutionalData } from '@/lib/data/institutional';
@@ -24,7 +26,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const results = { scanned: 0, failed: 0, skipped: 0 };
+  // Phase 30 D-13 — per-batch counters surfaced for done-gate inputs.
+  // `failed` was renamed to `skipped_no_data` (semantic preservation: ticker
+  // had no usable upstream data) and `errors` was added for genuine throws.
+  // BreakerOpenError increments its own bucket so a tripped breaker isn't
+  // miscounted as a server error.
+  const results = {
+    scanned: 0,
+    skipped_no_data: 0,      // ticker had no usable upstream data (was `failed`)
+    skipped_breaker_open: 0, // Phase 30 D-12 — any sensor breaker was open
+    skipped: 0,              // already-scanned-recently path
+    errors: 0,               // top-level try/catch increments (was `failed++` in catch)
+  };
 
   const tickers = getCurrentWatchlist();
   for (const ticker of tickers) {
@@ -39,7 +52,7 @@ export async function GET(request: NextRequest) {
         const quote = await yf.quote(ticker);
         price = typeof quote.regularMarketPrice === 'number' ? quote.regularMarketPrice : null;
       } catch { /* skip */ }
-      if (price === null) { results.failed++; continue; }
+      if (price === null) { results.skipped_no_data++; continue; }
 
       // Phase 17-03: extends Phase 16's parallel sensor pattern from 2 → 4.
       // All 4 fetchers are best-effort: each returns null on failure; we
@@ -52,7 +65,7 @@ export async function GET(request: NextRequest) {
         fetchInstitutionalData(ticker),
       ]);
       if (!communityData && !technicalData && !insiderData && !institutionalData) {
-        results.failed++;
+        results.skipped_no_data++;
         continue;
       }
 
@@ -303,10 +316,27 @@ export async function GET(request: NextRequest) {
       results.scanned++;
 
       await new Promise(r => setTimeout(r, 2000));
-    } catch {
-      results.failed++;
+    } catch (err) {
+      // Phase 30 D-12 / D-13 — classify BreakerOpenError as a soft skip
+      // (not an error) so a tripped breaker doesn't inflate the errors
+      // counter. Every other throw counts as an error and gets logged.
+      if (err instanceof BreakerOpenError) {
+        results.skipped_breaker_open++;
+      } else {
+        results.errors++;
+        console.warn('[sentiment-scan] ticker error', { err: String(err) });
+      }
     }
   }
+
+  // Phase 30 D-13 — structured summary line for done-gate alerting.
+  console.log(
+    `[sentiment-scan] scanned=${results.scanned} ` +
+      `skipped_no_data=${results.skipped_no_data} ` +
+      `skipped_breaker_open=${results.skipped_breaker_open} ` +
+      `skipped=${results.skipped} ` +
+      `errors=${results.errors}`,
+  );
 
   return NextResponse.json({ ok: true, ...results });
 }
