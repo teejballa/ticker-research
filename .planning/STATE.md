@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-14T00:24:28.041Z"
-last_activity: 2026-05-14
+last_updated: "2026-05-15T05:24:26.343Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 1
   completed_phases: 1
@@ -26,10 +26,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 ## Current Position
 
 Milestone: v2.0
-Phase: 20
+Phase: 30
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-05-14
+Last activity: 2026-05-15
 Last completed: 20-C-02 → Brier + Murphy 1973 decomposition + CORP-method (PNAS 2021) reliability diagram per classifier_version. `src/lib/stats/brier.ts` (brierScore + brierDecomposition with strict unique-prediction-value Murphy 1973 partition — algebraic identity BS = R − Res + U holds at 1e-9; equal-width binning is retained only for the per_bin dashboard histogram, not for R/Res/U) + `src/lib/stats/isotonic.ts` (Pool-Adjacent-Violators with same-x tie pre-aggregation + CORP-method reliability diagram). `scripts/eval-brier.ts` joins SentimentObservation PIT-INVARIANT on `fetched_at` (Gate 8: zero `published_at` literals) × forward 7d alpha-vs-SPY (PriceOutcome.pct_change at days_after=7 minus SPY 7d return via yahoo-finance2). Weekly `/api/cron/eval-brier` (Bearer CRON_SECRET; `0 8 * * 1` UTC) writes `reports/brier-{date}.json` (always; gitignored) and `reports/brier-{date}.md` (only on ship_gate_failed; committed as operator narrative with REMEDIATION_RECOMMENDATION). `/insights/calibration` server component renders one BrierTile (ship-gate badge + stacked R/−Res/U bar + remediation) + one ReliabilityDiagram (pure-SVG CORP curve + identity diagonal + 20-bin frequency histogram for T-20-C-02-04 multimodal defense) per classifier_version. Ship gate: Brier ≤ 0.24 AND |base_rate − 0.5| < 0.1 (T-20-C-02-01). Minimum n=100 per classifier_version (T-20-C-02-02 isotonic stability). HYPERPARAMETERS.md §Brier Calibration with citations to Brier 1950, Murphy 1973, Bröcker-Smith 2007, Barlow-Brunk 1972, Dimitriadis-Gneiting-Jordan 2021, Niculescu-Mizil-Caruana 2005. `setAlphaResolver()` test seam allows integration tests to inject deterministic outcomes without yahoo-finance2 fixtures. 22 unit tests + 5 live-Neon integration tests green; npm test 1136 passing (no regressions vs 1114 baseline); npx tsc --noEmit 0; check-model-cards/immutability/telemetry-coverage/prompts/lookahead all 0 violations. 1477 new LOC across 8 source files + 4 test files. 7 atomic commits (bfbe06b, ffb29bd, ae29804, 838663c, 7034101, 1f4519b, 8e894b1).
 
 Last completed (prior): 20-Z-05 → LLM-as-judge eval harness — `src/lib/eval/judge.ts` calls Claude Opus 4.7 with five-dimension rubric (numeric_grounding · citation_coverage · narrative_coherence · hedging_quality · contradiction_handling) loaded from the 20-Z-04 prompt registry (id=`eval-judge-v1`, version=`v1`); hard-pinned `judge_model='claude-opus-4-7'`, `temperature=0`, no `cache_control` (T-20-Z-05-05); lazy-client pattern mirrors anthropic-search.ts; type-narrowed `opts.temperature?: 0` and `opts.cache?: false` so accidental looseness is a compile-time error. `scripts/eval-report.ts` CLI iterates `tests/golden-tickers/_human_labels/` (5 starter exemplars covering AAPL bull/bear, GME meme crowding, SPY neutral, PLTR mixed; per-dim variance 1.20-2.24 so Pearson well-defined), emits per-dimension Pearson r vs human scores + JSON + markdown; auto-engages `--dry-run` (deterministic sha256-seeded synthetic scoring) when `ANTHROPIC_API_KEY` is unset so CI runs cost zero tokens (T-20-Z-05-02). Sample-size warning fires at n<30 referencing 20-D-04 dependency. `npm run eval` wired in package.json; wall-clock ~2ms on starter set (target <60s). 13 unit tests with mocked Anthropic SDK + RUN_LIVE_JUDGE-gated integration test (skipped in `npm test`, opt-in via `RUN_LIVE_JUDGE=true`). PromptId union extended in `src/lib/prompts/registry.ts` with `'eval-judge-v1'`; rubric body lives at `src/lib/prompts/_v1/eval-judge-v1.md` with golden-snapshot drift protection from 20-Z-04. All 879 unit tests passing (+2 skipped, +3 todo), `npx tsc --noEmit` 0, `npm run check-prompts` 0. 4 atomic commits (b7c0c8a, cc46d21, c70cbcd, 41b3aae).
@@ -75,7 +75,7 @@ Last completed (prior 2): 20-Z-01 → SentimentObservation PIT feature store —
 
 **Velocity (v1.0 baseline):**
 
-- Total plans completed: 94
+- Total plans completed: 99
 - Average duration: ~0.9 days/plan
 - Total execution time: 49 days
 
