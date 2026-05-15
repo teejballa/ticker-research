@@ -113,6 +113,12 @@ export interface MarketDataSection extends SourceSection {
   percent_change_today: number | null;
   exchange: string | null;
   _field_sources?: MarketDataFieldSources; // populated by mergeMarketData
+  /**
+   * Phase 30 D-09 — per-field cascade telemetry emitted by mergeMarketData.
+   * Aggregated into SourcePackage.fallback_summary by source-package.ts.
+   * Optional so persisted Reports without this field continue to type-check.
+   */
+  _fallback_summary?: FallbackSummaryEntry[];
 }
 
 export interface FundamentalsSection extends SourceSection {
@@ -122,6 +128,11 @@ export interface FundamentalsSection extends SourceSection {
   debt_to_equity: number | null;
   profit_margin: number | null;
   _field_sources?: FundamentalsFieldSources; // populated by mergeFundamentals
+  /**
+   * Phase 30 D-09 — per-field cascade telemetry emitted by mergeFundamentals.
+   * Aggregated into SourcePackage.fallback_summary by source-package.ts.
+   */
+  _fallback_summary?: FallbackSummaryEntry[];
 }
 
 // Structured fields the merge layer can read. Mirror MarketDataSection / FundamentalsSection
@@ -334,6 +345,14 @@ export interface SourcePackage {
   collection_errors: string[];
   supplementary_market_data: SupplementaryMarketData;
   sentiment_intelligence: SentimentIntelligenceSection;
+  /**
+   * Phase 30 D-09 — flat per-field cascade telemetry. Aggregates the
+   * `_fallback_summary` arrays emitted by mergeMarketData + mergeFundamentals.
+   * Surfaced on `/insights/sentiment-health` via the fallback heatmap tile
+   * (D-10). Optional so persisted legacy `Report.analysis` JSONs without this
+   * field continue to type-check.
+   */
+  fallback_summary?: FallbackSummaryEntry[];
 }
 
 // ---- Supplementary Market Data — multi-source aggregation (Phase 10) ----

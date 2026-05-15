@@ -306,6 +306,14 @@ async function buildSourcePackageOldLadder(
   const merged_market = mergeMarketData(yahooMarket, finnhub.available ? finnhub : null, polygon.available ? polygon : null);
   const merged_fundamentals = mergeFundamentals(yahooFundamentals, finnhub.available ? finnhub : null, polygon.available ? polygon : null);
 
+  // Phase 30 D-09 — aggregate per-field cascade telemetry from merge.ts into
+  // a single SourcePackage.fallback_summary array for the insights heatmap
+  // (D-10). Each merge function emits one entry per field it resolved; flatten.
+  const fallback_summary = [
+    ...(merged_market._fallback_summary ?? []),
+    ...(merged_fundamentals._fallback_summary ?? []),
+  ];
+
   return {
     ticker,
     company_name: companyName,
@@ -335,6 +343,7 @@ async function buildSourcePackageOldLadder(
       },
       'sentiment_intelligence',
     ),
+    fallback_summary,
   };
 }
 
@@ -525,6 +534,12 @@ async function buildSourcePackageNewLadder(
       ? { ...analystPrimary, avg_price_target: finnhubAnalyst.avg_price_target }
       : analystPrimary;
 
+  // Phase 30 D-09 — aggregate per-field cascade telemetry from merge.ts.
+  const fallback_summary = [
+    ...(merged_market._fallback_summary ?? []),
+    ...(merged_fundamentals._fallback_summary ?? []),
+  ];
+
   return {
     ticker,
     company_name: companyName,
@@ -560,6 +575,7 @@ async function buildSourcePackageNewLadder(
       },
       'sentiment_intelligence',
     ),
+    fallback_summary,
   };
 }
 

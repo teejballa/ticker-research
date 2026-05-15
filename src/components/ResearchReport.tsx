@@ -486,6 +486,12 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
       | null
       | undefined,
   ): string | null => {
+    // Phase 30 D-11 — 'unavailable' (FieldOrigin set when every cascade source
+    // returned null) renders no badge. Legacy persisted records use `null`
+    // for the same case; both are mapped to no-badge here. The em-dash render
+    // for the field's VALUE is handled by the per-stat formatters in the
+    // `stats` grid below (each `value` already falls back to '—' on null).
+    if (origin === 'unavailable' || origin == null) return null;
     if (origin === 'finnhub') return 'via Finnhub';
     if (origin === 'polygon') return 'via Polygon';
     if (origin === 'yahoo')   return 'via Yahoo';
@@ -493,7 +499,6 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
     if (origin === 'twelvedata') return 'via Twelve Data';
     if (origin === 'exa')     return 'via Exa';
     if (origin === 'anthropic-search') return 'via Anthropic Search';
-    // 'unavailable' (Plan 30-03 plumbing) and null/undefined render no badge.
     return null;
   };
 

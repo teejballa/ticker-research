@@ -1,18 +1,28 @@
 // src/lib/data/merge.ts
 // Field-level merge layer (Phase 10-FIX-01).
-// Cascades yahoo → finnhub → polygon per field. First non-null wins.
-// Per-field provenance recorded in `_field_sources`. Fields that are null
-// across every source are listed in `unavailable_fields` so the UI can
-// distinguish "we asked three sources, none had it" from "we never asked".
+//
+// Phase 30 D-01 — cascade order for fields Polygon and Finnhub cover:
+//   polygon (primary) -> finnhub (fallback 1) -> yahoo (fallback 2)
+// Yahoo-only fields (price, volume, percent_change_today) keep yahoo-primary
+// because Polygon and Finnhub do not expose them (see field coverage matrix
+// in .planning/phases/30-provider-health-hardening/30-RESEARCH.md).
+//
+// Phase 30 D-09 — every cascade resolution emits a FallbackSummaryEntry into
+// the returned `fallback_summary` array: `{ field, tried, resolved_by }`. The
+// `tried` array reflects providers consulted in cascade order until a non-null
+// value was found (sequential short-circuit semantics — see plan additional
+// guidance). When all providers in the cascade returned null, `resolved_by` is
+// `'unavailable'` and `_field_sources[field]` is set to `'unavailable'` per
+// D-11 instead of `null` (legacy persisted records keep `null`; renderers in
+// `research-brief.ts` and the report page treat both as the em-dash case).
 //
 // Plan 19-B-06 (D-29): the canonical FieldOrigin union (declared in
 // `src/lib/types.ts`) was extended additively with 'tiingo' | 'twelvedata' |
 // 'exa' | 'anthropic-search' so the new merge ladder
 // (tiingo → twelvedata → 'yahoo' → 'finnhub' → 'polygon' fallbacks; exa →
 // 'anthropic-search' for news/analyst) can stamp provenance without breaking
-// the existing Yahoo/Finnhub/Polygon paths. The functions below preserve
-// first-non-null-wins; new ladder rungs slot in via additional CascadeEntry
-// rows in source-package.ts's buildSourcePackageNewLadder.
+// the existing Yahoo/Finnhub/Polygon paths. New ladder rungs slot in via
+// additional CascadeEntry rows in source-package.ts's buildSourcePackageNewLadder.
 
 import type {
   MarketDataSection,
@@ -23,7 +33,9 @@ import type {
   SupplementarySource,
   SupplementaryMarketFields,
   SupplementaryFundamentalsFields,
+  FallbackSummaryEntry,
 } from '@/lib/types';
+import type { ProviderId } from '@/lib/telemetry/cost-estimators';
 
 const MARKET_KEYS = [
   'price',
@@ -43,20 +55,62 @@ const FUNDAMENTAL_KEYS = [
   'profit_margin',
 ] as const satisfies readonly (keyof SupplementaryFundamentalsFields)[];
 
-type CascadeEntry<T> = { source: Exclude<FieldOrigin, null>; data: T | null | undefined };
+// Phase 30 D-01 — Yahoo-only market fields (no alternative source available).
+const YAHOO_ONLY_MARKET_KEYS = new Set<keyof SupplementaryMarketFields>([
+  'price',
+  'volume',
+  'percent_change_today',
+]);
 
-function pickField<T, K extends keyof T>(
-  cascade: CascadeEntry<T>[],
+// Phase 30 D-01 — sequential short-circuit cascade orderings.
+//   - SHARED fields are tried polygon → finnhub → yahoo (Yahoo demoted).
+//   - YAHOO-ONLY fields are tried yahoo only.
+const SHARED_CASCADE_ORDER: ReadonlyArray<Extract<ProviderId, 'polygon' | 'finnhub' | 'yahoo'>> = [
+  'polygon',
+  'finnhub',
+  'yahoo',
+];
+const YAHOO_ONLY_CASCADE_ORDER: ReadonlyArray<Extract<ProviderId, 'yahoo'>> = ['yahoo'];
+
+/**
+ * Resolve a single field via sequential short-circuit cascade. Returns the
+ * value, the FieldOrigin marker, and the per-field tried/resolved_by entry.
+ *
+ * `data[provider]` is the already-fetched candidate from that provider
+ * (parallel fan-out happens upstream in source-package.ts — this layer
+ * implements the *cascade selection* short-circuit, NOT the network short-
+ * circuit; the breaker primitive owns the network short-circuit story via
+ * BreakerOpenError → withRetry never runs).
+ *
+ * `tried` reflects providers consulted in cascade order until the first
+ * non-null value was found; on all-null the full cascade is recorded.
+ */
+function resolveFieldFromCascade<T extends object, K extends keyof T>(
+  field: string,
+  cascadeOrder: ReadonlyArray<Extract<ProviderId, 'polygon' | 'finnhub' | 'yahoo'>>,
+  data: Partial<Record<'polygon' | 'finnhub' | 'yahoo', T | null | undefined>>,
   key: K,
-): { value: T[K] | null; source: FieldOrigin } {
-  for (const entry of cascade) {
-    if (!entry.data) continue;
-    const v = entry.data[key];
+): { value: T[K] | null; source: FieldOrigin; entry: FallbackSummaryEntry } {
+  const tried: ProviderId[] = [];
+  for (const provider of cascadeOrder) {
+    tried.push(provider);
+    const candidate = data[provider];
+    if (!candidate) continue;
+    const v = candidate[key];
     if (v !== null && v !== undefined) {
-      return { value: v, source: entry.source };
+      return {
+        value: v,
+        source: provider,
+        entry: { field, tried, resolved_by: provider },
+      };
     }
   }
-  return { value: null, source: null };
+  // All-null path — D-11: FieldOrigin set to 'unavailable' (not null).
+  return {
+    value: null,
+    source: 'unavailable',
+    entry: { field, tried, resolved_by: 'unavailable' },
+  };
 }
 
 export function mergeMarketData(
@@ -64,21 +118,31 @@ export function mergeMarketData(
   finnhub: SupplementarySource | null,
   polygon: SupplementarySource | null,
 ): MarketDataSection {
-  const cascade: CascadeEntry<SupplementaryMarketFields>[] = [
-    { source: 'yahoo', data: yahooToMarket(yahoo) },
-    { source: 'finnhub', data: finnhub?.market ?? null },
-    { source: 'polygon', data: polygon?.market ?? null },
-  ];
+  const data = {
+    polygon: polygon?.market ?? null,
+    finnhub: finnhub?.market ?? null,
+    yahoo: yahooToMarket(yahoo),
+  } as const;
 
   const merged: Partial<SupplementaryMarketFields> = {};
   const sources = {} as MarketDataFieldSources;
   const unavailable: string[] = [];
+  const fallback_summary: FallbackSummaryEntry[] = [];
 
   for (const k of MARKET_KEYS) {
-    const { value, source } = pickField(cascade, k);
+    const order = YAHOO_ONLY_MARKET_KEYS.has(k)
+      ? YAHOO_ONLY_CASCADE_ORDER
+      : SHARED_CASCADE_ORDER;
+    const { value, source, entry } = resolveFieldFromCascade<SupplementaryMarketFields, typeof k>(
+      k,
+      order,
+      data,
+      k,
+    );
     (merged as Record<string, unknown>)[k] = value;
     sources[k] = source;
-    if (source === null) unavailable.push(k);
+    fallback_summary.push(entry);
+    if (source === 'unavailable') unavailable.push(k);
   }
 
   // Preserve yahoo's collected_at so timestamps stay consistent across reruns.
@@ -92,6 +156,7 @@ export function mergeMarketData(
     percent_change_today: merged.percent_change_today ?? null,
     exchange: merged.exchange ?? null,
     _field_sources: sources,
+    _fallback_summary: fallback_summary,
     ...(unavailable.length > 0 ? { unavailable_fields: unavailable } : {}),
     // Only surface yahoo's error when we got nothing from any source.
     ...(unavailable.length === MARKET_KEYS.length && yahoo.error ? { error: yahoo.error } : {}),
@@ -103,21 +168,29 @@ export function mergeFundamentals(
   finnhub: SupplementarySource | null,
   polygon: SupplementarySource | null,
 ): FundamentalsSection {
-  const cascade: CascadeEntry<SupplementaryFundamentalsFields>[] = [
-    { source: 'yahoo', data: yahooToFundamentals(yahoo) },
-    { source: 'finnhub', data: finnhub?.fundamentals ?? null },
-    { source: 'polygon', data: polygon?.fundamentals ?? null },
-  ];
+  const data = {
+    polygon: polygon?.fundamentals ?? null,
+    finnhub: finnhub?.fundamentals ?? null,
+    yahoo: yahooToFundamentals(yahoo),
+  } as const;
 
   const merged: Partial<SupplementaryFundamentalsFields> = {};
   const sources = {} as FundamentalsFieldSources;
   const unavailable: string[] = [];
+  const fallback_summary: FallbackSummaryEntry[] = [];
 
   for (const k of FUNDAMENTAL_KEYS) {
-    const { value, source } = pickField(cascade, k);
+    // All FUNDAMENTAL_KEYS are shared (Polygon + Finnhub both can cover them).
+    const { value, source, entry } = resolveFieldFromCascade<SupplementaryFundamentalsFields, typeof k>(
+      k,
+      SHARED_CASCADE_ORDER,
+      data,
+      k,
+    );
     (merged as Record<string, unknown>)[k] = value;
     sources[k] = source;
-    if (source === null) unavailable.push(k);
+    fallback_summary.push(entry);
+    if (source === 'unavailable') unavailable.push(k);
   }
 
   return {
@@ -128,6 +201,7 @@ export function mergeFundamentals(
     debt_to_equity: merged.debt_to_equity ?? null,
     profit_margin: merged.profit_margin ?? null,
     _field_sources: sources,
+    _fallback_summary: fallback_summary,
     ...(unavailable.length > 0 ? { unavailable_fields: unavailable } : {}),
     ...(unavailable.length === FUNDAMENTAL_KEYS.length && yahoo.error ? { error: yahoo.error } : {}),
   };
