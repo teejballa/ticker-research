@@ -13,7 +13,7 @@ dependency_graph:
     - "TelemetryErrorClass widened with 'BREAKER_OPEN' value"
     - "FieldOrigin widened additively with 'unavailable' (null kept for back-compat)"
     - "FallbackSummaryEntry interface (D-09 telemetry shape)"
-    - "ProviderHealthAlert Prisma model + additive migration SQL (NOT yet applied — Task 4)"
+    - "ProviderHealthAlert Prisma model + additive migration applied to dev Neon DB (Task 4 ✓ — 2026-05-14, migration 20260514170000_phase30_provider_health applied via prisma migrate deploy, client regenerated)"
   affects:
     - "Plan 30-03 (Wave 2): adapter wiring, merge.ts emission of 'unavailable', research-brief '—' rendering"
     - "Plan 30-04 (Wave 3): /api/cron/provider-error-budget + dashboard tiles consume ProviderHealthAlert"
