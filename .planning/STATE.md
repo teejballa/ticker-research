@@ -43,6 +43,9 @@ Last completed (prior 2): 20-Z-01 → SentimentObservation PIT feature store —
 ### Roadmap Evolution
 
 - 2026-05-10: Phase 21 added — Sector-Relative Outcome Labels (`alpha-vs-sector-ETF` becomes primary outcome label; SPY-alpha retained as secondary). Driven by 4-agent literature synthesis: DGTW 1997 / Lakonishok-Lee / AQR / Park-Irwin / Quantopian all converge that sector-relative is the right benchmark for the firm-specific signals Cipher tracks. Context doc: `.planning/phases/21-sector-relative-outcome-labels/CONTEXT.md`.
+- 2026-05-14: Phase 30 added — Provider Health Hardening. Triggered by Bayesian-learning-engine production outage diagnosis (resolved/bayesian-learning-engine-prod-broken.md): Yahoo 90.7% error rate, Firecrawl 100%, Anthropic-search 86.3%, Gemini $4/call cost anomaly. Locked 25 decisions in 30-CONTEXT.md (circuit breaker + Prisma `ProviderHealthAlert` + new `/api/cron/provider-error-budget` + Yahoo demotion + Gemini model pinning + cost-anomaly trip).
+- 2026-05-15: Phase 30 completed with 5/5 plans (12 commits). Deferred D-21 (Firecrawl rotation) mid-execution because operator hit Firecrawl free tier — full migration scoped as new Phase 30.1.
+- 2026-05-15: Phase 30.1 inserted (URGENT) — Free Community-Scan Migration. Replaces Firecrawl entirely. Scope per operator: not just Reddit-only — design must cover broader free sentiment sources (multiple subreddits, news/forum sites). Likely Reddit replacement: official OAuth API (free 100 QPM). Twitter/X scraping is dead for free in 2026. Until 30.1 ships, Firecrawl remains in BREACH on Phase-30 Done-gate 1.
 
 **Architectural commitments preserved:**
 
