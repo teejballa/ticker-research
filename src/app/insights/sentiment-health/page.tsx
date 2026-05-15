@@ -8,6 +8,9 @@
 import NavBar from '@/components/NavBar';
 import { ProviderTile } from './components/ProviderTile';
 import { CalibrationTile } from './components/CalibrationTile';
+// Phase 30 D-10 + D-19 — fallback heatmap + active alerts tiles.
+import { FallbackHeatmapTile } from './components/FallbackHeatmapTile';
+import { ActiveAlertsTile } from './components/ActiveAlertsTile';
 import {
   resolveFinBERTClassifierVersion,
   resolveGeminiPerDocClassifierVersion,
@@ -38,10 +41,34 @@ interface PageData {
   rows: ProviderRow[];
   /** Plan 20-B-06 — share of NLP-classifier calls that fell to L&M lexicon over last 24h. */
   degradation_rate_24h: number;
+  /** Phase 30 D-10 — per-provider fallback rate over 24h, sorted descending. */
+  fallback_rows: Array<{
+    provider_id: string;
+    fallback_rate: number;
+    count_24h: number;
+  }>;
+  /** Phase 30 D-19 — unresolved provider health alerts. */
+  active_alerts: Array<{
+    id: string;
+    provider_id: string;
+    breached_at: Date;
+    error_rate: number;
+    error_count: number;
+    total_count: number;
+    dominant_error_class: string | null;
+  }>;
 }
 
 async function load(): Promise<PageData> {
-  if (!process.env.DATABASE_URL) return { rows: [], degradation_rate_24h: 0 };
+  if (!process.env.DATABASE_URL) {
+    return {
+      rows: [],
+      degradation_rate_24h: 0,
+      // Phase 30 D-10 + D-19 — empty states for the new tiles when DB unset.
+      fallback_rows: [],
+      active_alerts: [],
+    };
+  }
   // Dynamic import — same pattern as /insights/page.tsx — keeps @/lib/db
   // (which throws on missing DATABASE_URL) out of static analysis paths.
   const { prisma } = await import('@/lib/db');
@@ -102,7 +129,31 @@ async function load(): Promise<PageData> {
   `);
   const degradation_rate_24h = degRows[0]?.rate ?? 0;
 
-  return { rows: mappedRows, degradation_rate_24h };
+  // Phase 30 D-10 — per-provider fallback rate over 24h, sorted desc.
+  // Derived from the same mappedRows aggregation as the main grid so the
+  // tile and the per-provider tile agree on counts.
+  const fallback_rows = mappedRows
+    .filter((r) => r.count_24h > 0)
+    .map((r) => ({
+      provider_id: r.provider_id,
+      fallback_rate: r.fallback_rate,
+      count_24h: r.count_24h,
+    }))
+    .sort((a, b) => b.fallback_rate - a.fallback_rate);
+
+  // Phase 30 D-19 — unresolved provider health alerts (most recent first).
+  const active_alerts = await prisma.providerHealthAlert.findMany({
+    where: { resolved_at: null },
+    orderBy: { breached_at: 'desc' },
+    take: 20,
+  });
+
+  return {
+    rows: mappedRows,
+    degradation_rate_24h,
+    fallback_rows,
+    active_alerts,
+  };
 }
 
 /**
@@ -136,7 +187,7 @@ function DegradationRateTile({ rate }: { rate: number }) {
 }
 
 export default async function SentimentHealthPage() {
-  const { rows, degradation_rate_24h } = await load();
+  const { rows, degradation_rate_24h, fallback_rows, active_alerts } = await load();
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <NavBar />
@@ -159,6 +210,12 @@ export default async function SentimentHealthPage() {
         </p>
         {/* Plan 20-B-06 — degradation_rate_24h tile (T-20-B-06-04 observability). */}
         <DegradationRateTile rate={degradation_rate_24h} />
+
+        {/* Phase 30 D-19 — Active alerts (unresolved ProviderHealthAlert rows). */}
+        <ActiveAlertsTile alerts={active_alerts} />
+
+        {/* Phase 30 D-10 — Fallback heatmap (per-provider fallback rate over 24h). */}
+        <FallbackHeatmapTile rows={fallback_rows} />
 
         {/* Plan 20-B-03 — per-classifier temperature-calibration tiles. */}
         <section className="mb-8">
