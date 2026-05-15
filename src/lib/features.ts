@@ -134,3 +134,24 @@ export const BOT_FILTER_MODE: BotFilterMode = FEATURES.bot_filter_mode;
 // keeps FEATURE_PER_ASPECT_AGGREGATE grep-traceable for source-package wiring,
 // research-brief prompt insertion, and PerAspectChips UI gating.
 export const FEATURE_PER_ASPECT_AGGREGATE: FeatureMode = FEATURES.per_aspect_aggregate_mode;
+
+// ── Plan 30.1 — community_scan_source: sibling flag with a DIFFERENT value set
+// (firecrawl/reddit/shadow), so it cannot live in FLAG_NAMES (which uses the
+// 3-mode off/shadow/on FeatureMode). Default 'firecrawl' preserves production
+// behavior (D-25). Fail-fast on unknown values (T-30.1-01-01 mitigation).
+//   off — N/A (use 'firecrawl' to keep legacy path)
+//   firecrawl — legacy Firecrawl community scan (current production)
+//   reddit    — new Reddit + HackerNews path is primary writer
+//   shadow    — new path runs but writes nowhere (golden-ticker validation only)
+export type CommunityScanSource = 'firecrawl' | 'reddit' | 'shadow';
+
+function parseCommunityScanSource(raw: string | undefined): CommunityScanSource {
+  if (raw == null || raw === '') return 'firecrawl';
+  if (raw === 'firecrawl' || raw === 'reddit' || raw === 'shadow') return raw;
+  throw new Error(
+    `FEATURE_COMMUNITY_SCAN_SOURCE must be one of: firecrawl, reddit, shadow (got: ${raw})`,
+  );
+}
+
+export const COMMUNITY_SCAN_SOURCE: CommunityScanSource =
+  parseCommunityScanSource(process.env.FEATURE_COMMUNITY_SCAN_SOURCE);
