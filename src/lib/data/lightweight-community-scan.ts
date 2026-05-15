@@ -33,6 +33,39 @@ import type { CommunityHighlight } from '@/lib/types';
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
+/**
+ * Phase 30.1 (D-19) — engagement-tier thresholds.
+ * Per HYPERPARAMETERS.md §Community-Engagement Tiers. Thresholds are
+ * preliminary and calibrated against the historical Firecrawl-era tier
+ * distribution during plan 30.1-05's 7-day shadow soak.
+ *
+ * HN uses the SAME thresholds (RESEARCH allows asymmetric; symmetric is
+ * the starting point and calibration in plan 30.1-05 will retune if the
+ * shadow soak shows distributional drift outside ±10pp.).
+ */
+export const ENGAGEMENT_TIER_THRESHOLDS = {
+  high_score: 100,
+  high_comments: 50,
+  medium_score: 20,
+  medium_comments: 10,
+} as const;
+
+/**
+ * Maps Reddit (score, num_comments) OR HN (points, num_comments — same
+ * threshold constants) to a three-tier engagement label consumed by
+ * `computeSentimentDimensions`. Replaces the regex-extracted approximation
+ * `rawEngagementCount` + `toEngagement` used by the Firecrawl-era path.
+ */
+export function toEngagementFromFields(input: {
+  score: number;
+  num_comments: number;
+}): 'high' | 'medium' | 'low' {
+  const t = ENGAGEMENT_TIER_THRESHOLDS;
+  if (input.score >= t.high_score || input.num_comments >= t.high_comments) return 'high';
+  if (input.score >= t.medium_score || input.num_comments >= t.medium_comments) return 'medium';
+  return 'low';
+}
+
 async function scrapeOne(fc: Firecrawl, url: string): Promise<string> {
   try {
     // Plan 20-Z-03: wrap the Firecrawl scrape with telemetry. Cost defaults
