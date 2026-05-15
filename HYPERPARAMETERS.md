@@ -535,3 +535,29 @@ NLI model choice.
   reference at `reports/per-claim-verification-baseline-blessed.json`.
 
 Updated by: Plan 20-D-03 (2026-05-13).
+
+## Community-Engagement Tiers (Phase 30.1)
+
+*Module:* `src/lib/data/lightweight-community-scan.ts` — `toEngagementFromFields()` + `ENGAGEMENT_TIER_THRESHOLDS`.
+
+Maps Reddit `score` + `num_comments` (and HN `points` + `num_comments` — same constants) to a three-tier engagement label consumed by `computeSentimentDimensions`.
+
+| Tier     | Threshold                                            |
+|----------|------------------------------------------------------|
+| `high`   | `score ≥ 100` OR `num_comments ≥ 50`                 |
+| `medium` | `score ≥ 20` OR `num_comments ≥ 10` (and not high)   |
+| `low`    | otherwise                                            |
+
+**Calibration procedure (D-19):**
+
+1. During plan 30.1-05's shadow soak (env `FEATURE_COMMUNITY_SCAN_SOURCE=shadow` for ≥7 days), collect both Firecrawl-era and Reddit/HN tier classifications for the watchlist.
+2. Compute the tier distribution `P(high), P(medium), P(low)` for each source.
+3. Adjust `ENGAGEMENT_TIER_THRESHOLDS` constants so the new-path distribution is within ±10pp per tier of the Firecrawl-era distribution.
+4. Re-run the diffusion-engine calibration smoke test (`npm test -- sentiment-dimensions`) to confirm `computeSentimentDimensions` returns shape-consistent outputs.
+5. **Last calibration:** TBD — finalize after shadow soak (plan 30.1-05).
+
+**Cross-source comparability:** HN `points` and Reddit `score` are NOT directly comparable in raw magnitudes (HN's smaller audience means a 100-point HN post carries similar reach to a 500-score WSB post). Per-source thresholds may diverge after calibration; the symmetric defaults above are a starting point.
+
+**Optional upvote-ratio gate:** Plan 30.1-04 may drop Reddit posts with `upvote_ratio < 0.5` from highlights (low-signal), but keeps them in `RedditPost[]` for citation purposes.
+
+Updated by: Plan 30.1-03 (2026-05-15).
