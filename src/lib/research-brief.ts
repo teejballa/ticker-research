@@ -5,8 +5,14 @@
 // Phase 19 / Plan 19-C-07 (D-39): also assembles structured Citation objects
 // from the SourcePackage and renders them into a CITATIONS section. The LLM
 // SELECTS citations from this list — it never fabricates URLs (T-19-C-07-01).
+//
+// Phase 30 D-11 — when merge.ts cannot resolve a field from any source it sets
+// FieldOrigin to 'unavailable' (legacy persisted records use `null` for the
+// same case). The fmtUnavailable() helper renders "(no source available)" so
+// the Gemini prompt does not see "N/A" for fields that have been exhausted
+// across every source. "N/A" is reserved for "we never asked".
 
-import type { SourcePackage, NewsItem, AnalystChange, PerAspectSentimentEntry } from './types';
+import type { SourcePackage, NewsItem, AnalystChange, PerAspectSentimentEntry, FieldOrigin } from './types';
 import type { Citation } from './sentiment/citation-schema';
 import { sanitizeUrl } from './sentiment/citation-schema';
 // Plan 20-Z-04 — every Gemini-bound prompt section is a versioned (id, version)
@@ -15,6 +21,19 @@ import { sanitizeUrl } from './sentiment/citation-schema';
 import { renderPrompt } from '@/lib/prompts/render';
 
 // ---- Helpers ----
+
+/**
+ * Phase 30 D-11 — guard for unavailable FieldOrigin.
+ * Returns the literal "(no source available)" for `'unavailable'` or `null`
+ * origin; otherwise defers to the provided formatter.
+ */
+function fmtUnavailable(
+  origin: FieldOrigin | undefined,
+  formatter: () => string,
+): string {
+  if (origin === 'unavailable' || origin === null) return '(no source available)';
+  return formatter();
+}
 
 /**
  * Null-safe value formatter. Returns 'N/A' for null/undefined.
@@ -131,23 +150,29 @@ export function formatResearchBrief(pkg: SourcePackage): string {
   lines.push(`Supplementary Sources Included: ${suppCount} (${suppNames})`);
   lines.push('');
 
-  // Market Data
+  // Market Data — Phase 30 D-11: route every per-field formatter through
+  // fmtUnavailable() so the LLM sees "(no source available)" when every
+  // cascade source for that field returned null. Plain `N/A` continues to
+  // signal "we never asked" (legacy SourcePackage records with no merge
+  // metadata).
+  const mfs = pkg.market_data._field_sources;
   lines.push('--- MARKET DATA ---');
-  lines.push(`Current Price: ${fmtDollar(pkg.market_data.price)}`);
-  lines.push(`Market Cap: ${fmtLargeNum(pkg.market_data.market_cap)}`);
-  lines.push(`52-Week High: ${fmtDollar(pkg.market_data.fifty_two_week_high)}`);
-  lines.push(`52-Week Low: ${fmtDollar(pkg.market_data.fifty_two_week_low)}`);
-  lines.push(`% Change Today: ${fmtPct(pkg.market_data.percent_change_today)}`);
-  lines.push(`Volume: ${fmtNum(pkg.market_data.volume)}`);
+  lines.push(`Current Price: ${fmtUnavailable(mfs?.price, () => fmtDollar(pkg.market_data.price))}`);
+  lines.push(`Market Cap: ${fmtUnavailable(mfs?.market_cap, () => fmtLargeNum(pkg.market_data.market_cap))}`);
+  lines.push(`52-Week High: ${fmtUnavailable(mfs?.fifty_two_week_high, () => fmtDollar(pkg.market_data.fifty_two_week_high))}`);
+  lines.push(`52-Week Low: ${fmtUnavailable(mfs?.fifty_two_week_low, () => fmtDollar(pkg.market_data.fifty_two_week_low))}`);
+  lines.push(`% Change Today: ${fmtUnavailable(mfs?.percent_change_today, () => fmtPct(pkg.market_data.percent_change_today))}`);
+  lines.push(`Volume: ${fmtUnavailable(mfs?.volume, () => fmtNum(pkg.market_data.volume))}`);
   lines.push('');
 
-  // Fundamentals
+  // Fundamentals — Phase 30 D-11: same FieldOrigin-aware rendering.
+  const ffs = pkg.fundamentals._field_sources;
   lines.push('--- FUNDAMENTALS ---');
-  lines.push(`P/E Ratio: ${fmtNum(pkg.fundamentals.pe_ratio)}`);
-  lines.push(`EPS: ${fmtDollar(pkg.fundamentals.eps)}`);
-  lines.push(`Revenue: ${fmtLargeNum(pkg.fundamentals.revenue)}`);
-  lines.push(`Debt/Equity: ${fmtNum(pkg.fundamentals.debt_to_equity)}`);
-  lines.push(`Profit Margin: ${fmtPctPlain(pkg.fundamentals.profit_margin)}`);
+  lines.push(`P/E Ratio: ${fmtUnavailable(ffs?.pe_ratio, () => fmtNum(pkg.fundamentals.pe_ratio))}`);
+  lines.push(`EPS: ${fmtUnavailable(ffs?.eps, () => fmtDollar(pkg.fundamentals.eps))}`);
+  lines.push(`Revenue: ${fmtUnavailable(ffs?.revenue, () => fmtLargeNum(pkg.fundamentals.revenue))}`);
+  lines.push(`Debt/Equity: ${fmtUnavailable(ffs?.debt_to_equity, () => fmtNum(pkg.fundamentals.debt_to_equity))}`);
+  lines.push(`Profit Margin: ${fmtUnavailable(ffs?.profit_margin, () => fmtPctPlain(pkg.fundamentals.profit_margin))}`);
   lines.push('');
 
   // Analyst Sentiment
