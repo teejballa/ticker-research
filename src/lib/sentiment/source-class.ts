@@ -21,7 +21,9 @@ export type CipherSource =
   | 'sec'
   | 'apewisdom'
   | 'swaggystocks'
-  | 'x';
+  | 'x'
+  | 'reddit'       // Plan 30.1 D-15 — direct Reddit OAuth ingestion → retail
+  | 'hackernews';  // Plan 30.1 D-16 — HackerNews Algolia search → social-other
 
 export class SourceClassUnknownError extends Error {
   constructor(public readonly source: string) {
@@ -53,6 +55,10 @@ export function sourceToClass(source: CipherSource): SourceClass {
       return 'social-other'; // per spec — non-Reddit forums (Discord/Yahoo/etc.)
     case 'sec':
       return 'sec'; // reserved for 20-B SEC fetcher
+    case 'reddit':
+      return 'retail'; // Plan 30.1 D-15 — direct Reddit OAuth ingestion is retail-tier
+    case 'hackernews':
+      return 'social-other'; // Plan 30.1 D-16 — HN technical/analytical audience, between retail and analyst
     default: {
       // Exhaustiveness guard — adding a new CipherSource without extending
       // this switch fails compilation here.
@@ -74,6 +80,7 @@ const LEGACY_SOURCE_TO_CLASS: Record<string, SourceClass> = {
   reddit: 'retail',
   news: 'news',
   firecrawl: 'social-other',
+  hackernews: 'social-other', // Plan 30.1 D-16 — historic DB string callers
 };
 
 export function sourceToClassUnsafe(source: string): SourceClass {

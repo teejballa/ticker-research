@@ -23,6 +23,18 @@ describe('COST_PER_CALL_USD — pinned per-provider rates (T-20-Z-03-03 quarterl
       expect(COST_PER_CALL_USD[id]).toBe(0);
     },
   );
+
+  // Plan 30.1 — Reddit OAuth app-only client_credentials grant (100 QPM ceiling,
+  // free; UA: Cipher/1.0 per D-06). Citation: https://github.com/reddit-archive/reddit/wiki/API
+  it('reddit = $0/call (OAuth app-only, 100 QPM ceiling)', () => {
+    expect(COST_PER_CALL_USD['reddit']).toBe(0);
+  });
+
+  // Plan 30.1 — HackerNews Algolia public search API (free, no auth).
+  // Citation: https://hn.algolia.com/api
+  it('hackernews = $0/call (Algolia public search, no auth)', () => {
+    expect(COST_PER_CALL_USD['hackernews']).toBe(0);
+  });
 });
 
 describe('GEMINI_TOKEN_RATES — pinned 2026-Q1 (https://ai.google.dev/pricing)', () => {
