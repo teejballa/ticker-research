@@ -99,6 +99,7 @@ export async function classifyDocumentsBatch(
     (async (p: string) => {
       // AI SDK v6: generateText + Output.object for structured outputs through the AI Gateway.
       // Model pinned per S5 (CONTEXT.md pinned-versions invariant).
+      // Phase 30 D-14 — explicit model pin (lightweight per-doc classifier — Flash-lite tier).
       const res = await generateText({
         model: 'google/gemini-3.1-flash-lite',
         output: Output.object({ schema: ResponseSchema }),
