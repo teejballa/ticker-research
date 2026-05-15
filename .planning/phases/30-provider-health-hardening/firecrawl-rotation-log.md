@@ -1,54 +1,56 @@
 # Phase 30 D-21 — Firecrawl key rotation log
 
-**Operator:** {operator fills in — name / email}
-**Started:** {ISO timestamp}
-**Completed:** {ISO timestamp}
+**Status:** **DEFERRED** — rotation skipped, full migration planned as sub-phase 30.1
+**Decision date:** 2026-05-14
+**Operator:** TJ
 
-## Pre-rotation state
+## Why deferred
 
-- Old key fingerprint: `fc-________` (first 8 chars only — NEVER paste the full key)
-- Last successful call (UTC): `____-__-__T__:__:__Z`
-- Recent error sample (5 rows):
+The operator hit Firecrawl's free-tier limit and does not want to add another paid line item. Rotating the existing key would only reset usage; it does not solve the cost problem. Instead, Phase 30.1 (to be planned next) will design a free replacement architecture.
 
-  | started_at | error_class | http_status |
-  |------------|-------------|-------------|
-  | ...        | ...         | ...         |
-  | ...        | ...         | ...         |
-  | ...        | ...         | ...         |
-  | ...        | ...         | ...         |
-  | ...        | ...         | ...         |
+## Replacement direction (research summary 2026-05-14)
 
-## Rotation steps
+Cipher's actual Firecrawl footprint is narrow: `src/lib/data/lightweight-community-scan.ts` calls Firecrawl on exactly 5 Reddit search URLs per ticker. There is no Twitter, no general-web, and no JS-rendered-SPA usage.
 
-- [ ] Step 1 — Captured pre-rotation state (Vercel env pull + Neon SQL queries)
-- [ ] Step 2 — Generated new key on Firecrawl dashboard (New key fingerprint: `fc-________`)
-- [ ] Step 3 — Pushed new key to Vercel production + preview envs (`vercel env rm` then `vercel env add`)
-- [ ] Step 4 — Redeployed production (URL: `__________`)
-- [ ] Step 5 — Verified new key works (first `status='ok'` row at: `____-__-__T__:__:__Z`)
-- [ ] Step 6 — Revoked OLD key on Firecrawl dashboard (revocation timestamp: `____-__-__T__:__:__Z`)
-- [ ] Step 7 — Updated local `.env.local` (or N/A if not needed)
+**Most likely replacement for Reddit-only scope:** Reddit OAuth API (script-type app). Free tier is 100 QPM with no monthly cap; returns structured JSON (better quality than the current markdown regex extraction).
 
-## Post-rotation verification SQL output
+**Twitter / news / forum expansion** is explicitly out of Phase 30.1 scope unless retriggered: free Twitter/X scraping is effectively dead in 2026 (Nitter dormant, X free API limited to 1500 posts/month).
+
+## D-22 status
+
+D-22's "Exa migration trigger" (rotated key dies within one week) no longer applies — we are not rotating. Phase 30.1's research pass will compare Reddit OAuth API vs Exa vs other free options before locking the design.
+
+## Impact on Phase 30 done-gates
+
+- **Done-gate 1 (`ProviderCallLog.error_rate < 10%`):** Firecrawl will remain in BREACH until 30.1 ships the replacement. The Phase-30 alerting infrastructure (D-17 cron + D-19 dashboard tile) will correctly continue to surface this as an active alert. This is documented behavior, not a regression.
+- **Done-gate 2 (Gemini cost):** Unaffected.
+- **Done-gate 3 (cron HTTP 200 under provider outage):** Unaffected — `withBreaker` on Firecrawl ensures the cron returns 200 even with Firecrawl fully down (already shipped in Plan 30-03).
+
+## Follow-up
+
+After Phase 30 closes, run:
 
 ```
-{paste output of:
-  SELECT started_at, status, error_class, http_status
-  FROM provider_call_logs
-  WHERE provider_id = 'firecrawl'
-    AND started_at > NOW() - INTERVAL '15 minutes'
-  ORDER BY started_at DESC
-  LIMIT 5;
-}
+/gsd-insert-phase 30.1
 ```
 
-At least one row MUST show `status='ok'`. If all rows are `status='error'`, the rotation failed — abort and escalate.
-
-## D-22 trigger watch
-
-Per CONTEXT.md D-22, if the rotated key dies again within ONE WEEK of this rotation
-(i.e., before `____-__-__`), the next phase planner migrates community-scan to Exa.
-Otherwise Firecrawl stays primary.
+…or simply `/gsd-discuss-phase 30.1` to start the migration discuss session.
 
 ---
 
-*Audit log scaffolding created by Plan 30-05 Task 2. Operator completes all fields above during the rotation procedure (see 30-05-PLAN.md Task 2 body for the full procedure).*
+*Original audit-log scaffold (unused) preserved below for the record.*
+
+<details>
+<summary>Original blank rotation procedure (DID NOT EXECUTE)</summary>
+
+```
+- [ ] Step 1 — Captured pre-rotation state
+- [ ] Step 2 — Generated new key on Firecrawl dashboard
+- [ ] Step 3 — Pushed new key to Vercel production + preview envs
+- [ ] Step 4 — Redeployed production
+- [ ] Step 5 — Verified new key works
+- [ ] Step 6 — Revoked OLD key on Firecrawl dashboard
+- [ ] Step 7 — Updated local .env.local
+```
+
+</details>
