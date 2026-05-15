@@ -22,11 +22,17 @@ export async function GET(request: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
   const result = await deleteOlderThan(RETENTION_DAYS);
+  // Phase 30 D-18 — extended sweep also deletes ProviderHealthAlert rows
+  // older than the same 90d horizon. Surfaced as `alerts_deleted` in the log
+  // line and response body so the operator sees both counts at a glance.
   console.log(
-    `[provider-call-log-retention] deleted=${result.deleted} threshold_days=${RETENTION_DAYS}`,
+    `[provider-call-log-retention] deleted=${result.deleted} ` +
+      `alerts_deleted=${result.alerts_deleted} ` +
+      `threshold_days=${RETENTION_DAYS}`,
   );
   return NextResponse.json({
     deleted: result.deleted,
+    alerts_deleted: result.alerts_deleted, // Phase 30 D-18 retention parity
     threshold_days: RETENTION_DAYS,
     ran_at: new Date().toISOString(),
   });
