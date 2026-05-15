@@ -37,14 +37,11 @@ beforeAll(async () => {
 afterAll(async () => {
   if (!process.env.DATABASE_URL) return;
   const { prisma } = await import('@/lib/db');
-  // Cleanup ProviderCallLog rows; ProviderHealthAlert cleanup added in Plan 30-02
-  // once the model exists.
+  // Cleanup ProviderCallLog rows + ProviderHealthAlert rows. The Phase-30 D-18
+  // migration applied the providerHealthAlert delegate to the Prisma client
+  // (Plan 30-02 Task 4); the @ts-expect-error annotation that used to live
+  // here was removed once the regenerated client exposed the model.
   await prisma.providerCallLog.deleteMany({ where: { provider_id: TEST_PROVIDER } });
-  // The providerHealthAlert delegate does not exist on PrismaClient until the
-  // D-18 migration runs in Plan 30-02. Until then, suppress the missing-property
-  // error so the test file compiles. Wave 2 verify will assert this annotation
-  // is removed (its presence becomes a signal that the model is still missing).
-  // @ts-expect-error — Phase 30 D-18 model lands in Plan 02
   await prisma.providerHealthAlert.deleteMany({ where: { provider_id: TEST_PROVIDER } });
   await prisma.$disconnect();
 });

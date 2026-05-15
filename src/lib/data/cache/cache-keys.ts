@@ -19,7 +19,14 @@ export const CACHE_KEYS = {
 } as const;
 
 export const TTL_SECONDS = {
-  quote: 300,           // 5min
+  // Phase 30 D-02 — short TTL to avoid sentiment-scan reading stale 5-min prices
+  // (was 300s pre-Phase-30). Yahoo cache hits are NOT counted as Yahoo errors
+  // (the withTelemetry cache_check path masks them), so this tightening just
+  // reduces the staleness window without affecting the breaker's view of Yahoo.
+  quote: 60,
+  // Phase 30 D-02 — fundamentals TTL stays 24h (planner discretion; rarely intra-day).
+  // Documented explicitly here so any future tightening goes through a planning
+  // round (price feeds are intra-day; balance sheets are not).
   fundamentals: 86_400, // 24h
   options: 900,         // 15min
   community: 600,       // 10min
