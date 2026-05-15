@@ -1,0 +1,157 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "CIPHER" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e6]:
+          - link "Research" [ref=e7] [cursor=pointer]:
+            - /url: /terminal
+          - link "Insights" [ref=e8] [cursor=pointer]:
+            - /url: /insights
+          - generic [ref=e9]: NYSE
+          - generic [ref=e10]: NASDAQ
+      - generic [ref=e11]:
+        - link "Sign in" [ref=e12] [cursor=pointer]:
+          - /url: /auth/signin
+        - link "Research a ticker" [ref=e13] [cursor=pointer]:
+          - /url: /auth/signin
+        - generic [ref=e14]:
+          - generic [ref=e15]: schedule
+          - generic [ref=e16]: fiber_manual_record
+    - generic [ref=e18]:
+      - generic:
+        - generic: Equity research · Cited
+        - generic: CIPHER
+        - paragraph: Source-cited research on any ticker. Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500.
+      - generic [ref=e20]:
+        - img "Cipher terminal"
+        - img "Cipher terminal color"
+      - generic:
+        - generic:
+          - link "Sign in":
+            - /url: /auth/signin
+          - link "Research dashboard":
+            - /url: /insights
+      - generic [ref=e21]:
+        - generic [ref=e22]: SCROLL
+        - generic [ref=e24]: 0%
+    - generic [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: "01"
+          - generic [ref=e30]: Step_01
+          - heading "COLLECT" [level=3] [ref=e31]
+          - paragraph [ref=e32]: SEC filings, earnings transcripts, market data, news, and community discussion — pulled in parallel from six sources.
+        - generic [ref=e36]:
+          - generic [ref=e37]: "02"
+          - generic [ref=e38]: Step_02
+          - heading "ANALYZE" [level=3] [ref=e39]
+          - paragraph [ref=e40]: A reasoning model reads the source pack and extracts the bull case, bear case, and risk factors — each tied to the document it came from.
+        - generic [ref=e44]:
+          - generic [ref=e45]: "03"
+          - generic [ref=e46]: Step_03
+          - heading "REPORT" [level=3] [ref=e47]
+          - paragraph [ref=e48]: "A structured memo: recommendation with confidence, forward outlook with price-target context, and every claim linked to its source."
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - text: Live Feed
+            - heading "Market Snapshot" [level=2] [ref=e56]
+          - generic [ref=e58]: CLOSED
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: SYMBOL
+            - generic [ref=e63]: NAME
+            - generic [ref=e64]: LAST PRICE
+            - generic [ref=e65]: CHANGE
+          - generic [ref=e67]: Loading market data...
+      - generic [ref=e69]:
+        - heading "Data & model stack" [level=4] [ref=e70]
+        - generic [ref=e71]:
+          - generic [ref=e72]: CLAUDE
+          - generic [ref=e73]: GEMINI
+          - generic [ref=e74]: Yahoo! Finance
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - heading "Research that shows its work" [level=2] [ref=e77]
+          - paragraph [ref=e78]: Every conclusion in a Cipher report links to the filing, transcript, or article it came from.
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e82]: database
+            - heading "Primary sources, not summaries" [level=3] [ref=e83]
+            - paragraph [ref=e84]: Cipher reads 10-Ks, 10-Qs, 8-Ks, and earnings transcripts directly. Bull and bear points cite the exact filing they came from.
+            - generic [ref=e85]:
+              - generic [ref=e86]: SEC_EDGAR
+              - generic [ref=e87]: YAHOO_FINANCE
+          - generic [ref=e88]:
+            - generic [ref=e90]: insights
+            - heading "Calibrated against the market" [level=3] [ref=e91]
+            - paragraph [ref=e92]: Each recommendation carries a confidence level back-tested against the S&P 500 — so a “bullish” call comes with its historical hit rate.
+            - generic [ref=e93]:
+              - generic [ref=e94]: CALIBRATION
+              - generic [ref=e95]: VS_SPY
+      - generic [ref=e97]:
+        - heading "Research a ticker." [level=2] [ref=e98]
+        - paragraph [ref=e99]: A structured memo with sources, drivers, outlook, and a calibrated recommendation — in under a minute.
+        - generic [ref=e100]:
+          - link "Sign in" [ref=e101] [cursor=pointer]:
+            - /url: /auth/signin
+          - link "Research dashboard" [ref=e102] [cursor=pointer]:
+            - /url: /insights
+    - contentinfo [ref=e103]:
+      - generic [ref=e105]:
+        - generic [ref=e106]:
+          - generic [ref=e107]: AAPL
+          - generic [ref=e108]: —
+        - generic [ref=e109]:
+          - generic [ref=e110]: TSLA
+          - generic [ref=e111]: —
+        - generic [ref=e112]:
+          - generic [ref=e113]: MSFT
+          - generic [ref=e114]: —
+        - generic [ref=e115]:
+          - generic [ref=e116]: NVDA
+          - generic [ref=e117]: —
+        - generic [ref=e118]:
+          - generic [ref=e119]: GOOGL
+          - generic [ref=e120]: —
+        - generic [ref=e121]:
+          - generic [ref=e122]: AMZN
+          - generic [ref=e123]: —
+        - generic [ref=e124]:
+          - generic [ref=e125]: META
+          - generic [ref=e126]: —
+        - generic [ref=e127]:
+          - generic [ref=e128]: JPM
+          - generic [ref=e129]: —
+        - generic [ref=e130]:
+          - generic [ref=e131]: AAPL
+          - generic [ref=e132]: —
+        - generic [ref=e133]:
+          - generic [ref=e134]: TSLA
+          - generic [ref=e135]: —
+        - generic [ref=e136]:
+          - generic [ref=e137]: MSFT
+          - generic [ref=e138]: —
+        - generic [ref=e139]:
+          - generic [ref=e140]: NVDA
+          - generic [ref=e141]: —
+        - generic [ref=e142]:
+          - generic [ref=e143]: GOOGL
+          - generic [ref=e144]: —
+        - generic [ref=e145]:
+          - generic [ref=e146]: AMZN
+          - generic [ref=e147]: —
+        - generic [ref=e148]:
+          - generic [ref=e149]: META
+          - generic [ref=e150]: —
+        - generic [ref=e151]:
+          - generic [ref=e152]: JPM
+          - generic [ref=e153]: —
+      - generic [ref=e154]:
+        - generic [ref=e155]: fiber_manual_record
+        - generic [ref=e156]: CLOSED
+  - button "Open Next.js Dev Tools" [ref=e162] [cursor=pointer]:
+    - img [ref=e163]
+  - alert [ref=e166]
