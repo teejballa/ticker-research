@@ -1276,7 +1276,29 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                     </p>
                   ) : (
                     <blockquote className="text-sm text-on-surface leading-relaxed italic border-l-2 border-outline/30 pl-3">
-                      &ldquo;{h.standout_quote}&rdquo;
+                      {/* Plan 30.1-04 Task 3 (D-24) — render standout_quote as a
+                          clickable external anchor when standout_url is present
+                          (Reddit permalink or HN item URL). Security: both
+                          `target="_blank"` AND `rel="noopener noreferrer"` are
+                          MANDATORY — without `noopener`, the linked page can
+                          access window.opener (tabnabbing surface — T-30.1-04-05).
+                          React attribute-escaping handles any URL-string surface,
+                          but the URLs themselves are constructed by typed adapter
+                          outputs (https://www.reddit.com{permalink} or
+                          https://news.ycombinator.com/item?id={objectID}), not
+                          from user input. */}
+                      {h.standout_url ? (
+                        <a
+                          href={h.standout_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-on-surface hover:text-primary underline-offset-2 hover:underline"
+                        >
+                          &ldquo;{h.standout_quote}&rdquo;
+                        </a>
+                      ) : (
+                        <>&ldquo;{h.standout_quote}&rdquo;</>
+                      )}
                     </blockquote>
                   )}
 

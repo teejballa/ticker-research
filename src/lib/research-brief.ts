@@ -12,7 +12,7 @@
 // the Gemini prompt does not see "N/A" for fields that have been exhausted
 // across every source. "N/A" is reserved for "we never asked".
 
-import type { SourcePackage, NewsItem, AnalystChange, PerAspectSentimentEntry, FieldOrigin } from './types';
+import type { SourcePackage, NewsItem, AnalystChange, PerAspectSentimentEntry, FieldOrigin, CommunityHighlight } from './types';
 import type { Citation } from './sentiment/citation-schema';
 import { sanitizeUrl } from './sentiment/citation-schema';
 // Plan 20-Z-04 — every Gemini-bound prompt section is a versioned (id, version)
@@ -124,6 +124,52 @@ export function renderPerAspectBlock(perAspect: PerAspectSentimentEntry[] | unde
     return `  ${p.aspect}: ${p.bull_pct.toFixed(0)}% bullish (n=${p.n_docs})`;
   });
   return `Per-aspect sentiment:\n${lines.join('\n')}\n\n`;
+}
+
+// ---- Plan 30.1-04 Task 3 (D-24) — Community Intelligence citation rendering ----
+
+/**
+ * Escape Markdown special characters that would let an untrusted post title
+ * break out of a `[text](url)` link wrapper. Without escaping, a malicious
+ * `standout_quote` like `evil](javascript:alert(1)) hijack [extra` would
+ * produce a broken Markdown link the LLM could misinterpret.
+ *
+ * Escapes `[`, `]`, and `\` — sufficient because the link text appears
+ * between `[` and `]` and a backslash is the Markdown escape char. URL is
+ * NOT escaped (Reddit permalinks and HN item URLs are URL-safe by adapter
+ * contract; see T-30.1-04-04 mitigation note in plan threat model).
+ */
+export function escapeMarkdownLinkText(s: string): string {
+  return s.replace(/([\\\[\]])/g, '\\$1');
+}
+
+/**
+ * Render the Community Intelligence highlight list as Markdown for inclusion
+ * in any Gemini-bound prompt that wants permalink citations.
+ *
+ * Three branches per highlight:
+ *  1. standout_quote present + standout_url present  → `- {community_name} ({community_type}): [{escaped_quote}]({standout_url})`
+ *  2. standout_quote present + standout_url absent   → `- {community_name} ({community_type}): "{standout_quote}"`
+ *  3. standout_quote empty                            → `- {community_name} ({community_type})`
+ *
+ * Returns '' for an empty highlights array so callers can append/skip.
+ */
+export function renderCommunityHighlights(highlights: CommunityHighlight[]): string {
+  if (highlights.length === 0) return '';
+  const lines: string[] = [];
+  for (const h of highlights) {
+    const head = `- ${h.community_name} (${h.community_type})`;
+    if (h.standout_quote && h.standout_quote.length > 0) {
+      if (h.standout_url) {
+        lines.push(`${head}: [${escapeMarkdownLinkText(h.standout_quote)}](${h.standout_url})`);
+      } else {
+        lines.push(`${head}: "${h.standout_quote}"`);
+      }
+    } else {
+      lines.push(head);
+    }
+  }
+  return lines.join('\n');
 }
 
 // ---- Public API ----
