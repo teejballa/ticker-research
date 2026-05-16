@@ -43,33 +43,37 @@ describe('hackernews adapter — Wave 0 frozen contracts (Plan 30.1-01)', () => 
 });
 
 describe('hackernews adapter — implementation (Plan 30.1-03)', () => {
-  const fetchSpy = vi.spyOn(globalThis, 'fetch');
-
   beforeEach(() => {
-    fetchSpy.mockReset();
+    // Per Plan 30.1-02 reddit.test.ts pattern — stubGlobal replaces fetch
+    // for the duration of the test; vi.unstubAllGlobals() restores after.
+    vi.stubGlobal('fetch', vi.fn());
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
   it('fetchHackerNewsStories returns empty array when fetch fails with 5xx after retries', async () => {
-    fetchSpy.mockResolvedValue(new Response('upstream broken', { status: 503 }));
+    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    f.mockResolvedValue(new Response('upstream broken', { status: 503 }));
     const out = await fetchHackerNewsStories('AAPL');
     expect(out).toEqual([]);
-    // withRetry default budget is 3; 5xx is retryable
-    expect(fetchSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    // withRetry default budget is 3; 5xx is retryable.
+    expect(f.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('fetchHackerNewsStories returns empty array when fetch returns 429 (4xx fast-fail, no retry)', async () => {
-    fetchSpy.mockResolvedValue(new Response('rate limit', { status: 429 }));
+    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    f.mockResolvedValue(new Response('rate limit', { status: 429 }));
     const out = await fetchHackerNewsStories('AAPL');
     expect(out).toEqual([]);
-    expect(fetchSpy.mock.calls.length).toBe(1);
+    expect(f.mock.calls.length).toBe(1);
   });
 
   it('fetchHackerNewsStories maps Algolia hits to HNStory[]', async () => {
-    fetchSpy.mockResolvedValue(
+    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    f.mockResolvedValue(
       new Response(
         JSON.stringify({
           hits: [
@@ -98,7 +102,8 @@ describe('hackernews adapter — implementation (Plan 30.1-03)', () => {
   });
 
   it('fetchHackerNewsStories filters hits missing objectID or created_at_i', async () => {
-    fetchSpy.mockResolvedValue(
+    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    f.mockResolvedValue(
       new Response(
         JSON.stringify({
           hits: [
@@ -119,12 +124,11 @@ describe('hackernews adapter — implementation (Plan 30.1-03)', () => {
   });
 
   it('fetchHackerNewsStories sends query=TICKER + tags=story + numericFilters in URL', async () => {
-    fetchSpy.mockResolvedValue(
-      new Response(JSON.stringify({ hits: [] }), { status: 200 }),
-    );
+    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    f.mockResolvedValue(new Response(JSON.stringify({ hits: [] }), { status: 200 }));
     await fetchHackerNewsStories('AAPL');
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const calledUrl = String(fetchSpy.mock.calls[0]![0]);
+    expect(f).toHaveBeenCalledTimes(1);
+    const calledUrl = String(f.mock.calls[0]![0]);
     expect(calledUrl).toContain('https://hn.algolia.com/api/v1/search');
     expect(calledUrl).toContain('query=AAPL');
     expect(calledUrl).toContain('tags=story');
@@ -134,16 +138,16 @@ describe('hackernews adapter — implementation (Plan 30.1-03)', () => {
   });
 
   it('fetchHackerNewsStories uppercases the ticker before encoding', async () => {
-    fetchSpy.mockResolvedValue(
-      new Response(JSON.stringify({ hits: [] }), { status: 200 }),
-    );
+    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    f.mockResolvedValue(new Response(JSON.stringify({ hits: [] }), { status: 200 }));
     await fetchHackerNewsStories('aapl');
-    const calledUrl = String(fetchSpy.mock.calls[0]![0]);
+    const calledUrl = String(f.mock.calls[0]![0]);
     expect(calledUrl).toContain('query=AAPL');
   });
 
   it('fetchHackerNewsStories never throws — even on malformed JSON', async () => {
-    fetchSpy.mockResolvedValue(
+    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    f.mockResolvedValue(
       new Response('not-json{', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
     // adapter contract: NEVER throws — Phase 19-C-05 T-19-C-05-01 pattern.

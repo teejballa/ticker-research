@@ -423,6 +423,12 @@ export interface CommunityHighlight {
   community_type: 'mainstream' | 'middle' | 'niche';
   audience: string;                 // e.g. "institutional-adjacent analysts"
   standout_quote: string;           // best single user opinion (backward compat)
+  // Plan 30.1-03 (D-24) — clickable permalink to the standout post/story.
+  // Optional + additive: legacy Firecrawl-era highlights leave this `undefined`;
+  // Reddit branch sets it to `https://www.reddit.com{permalink}`; HN branch sets
+  // it to `https://news.ycombinator.com/item?id={objectID}`. Final wire-up to
+  // the report renderer is Plan 30.1-04's job — this field unblocks that work.
+  standout_url?: string;
   theme: string;                    // primary theme (backward compat)
   sentiment: 'bullish' | 'bearish' | 'neutral';
   engagement_signal: 'high' | 'medium' | 'low';
