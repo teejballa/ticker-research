@@ -95,14 +95,9 @@ export async function writeRedditObservations(
         decay_weight: null, // populated by 20-A-03 via new model_version
         author_id,
         author_features_snapshot: { ...NULL_AUTHOR_FEATURES },
-        // LOOKAHEAD-OK: post.created_utc IS the as-of-time (Reddit-claimed
-        // post creation). We override the DAO default of now() because
-        // backtest joins in Phase 20-C-02 use fetched_at as the PIT key
-        // (CLAUDE.md §Statistical-Methods Reference rule #6).
+        // LOOKAHEAD-OK: post.created_utc IS the as-of-time (Reddit-claimed post creation); backtest joins in 20-C-02 use fetched_at as PIT key per CLAUDE.md §Statistical-Methods rule #6.
         fetched_at: new Date(post.created_utc * 1000),
-        // LOOKAHEAD-OK: published_at mirrors fetched_at for Reddit because
-        // post.created_utc is the only timestamp the upstream API exposes; the
-        // schema column carries a // PIT-INVARIANT marker forbidding backtest joins.
+        // LOOKAHEAD-OK: published_at mirrors fetched_at for Reddit — column carries a // PIT-INVARIANT marker forbidding backtest joins, informational-only.
         published_at: new Date(post.created_utc * 1000),
       });
       written++;
@@ -153,12 +148,9 @@ export async function writeHackerNewsObservations(
         decay_weight: null,
         author_id,
         author_features_snapshot: { ...NULL_AUTHOR_FEATURES },
-        // LOOKAHEAD-OK: HN Algolia created_at_i is Unix epoch seconds [VERIFIED
-        // in 30.1-RESEARCH.md line 502]. This IS the as-of-time. Backtest joins
-        // in Phase 20-C-02 use fetched_at as the PIT key — override mandatory.
+        // LOOKAHEAD-OK: HN Algolia created_at_i is Unix epoch seconds [VERIFIED 30.1-RESEARCH.md line 502]; IS the as-of-time. Backtest joins in 20-C-02 use fetched_at as PIT key.
         fetched_at: new Date(story.created_at_i * 1000),
-        // LOOKAHEAD-OK: published_at mirrors fetched_at for HN — the schema
-        // column is informational-only (// PIT-INVARIANT marker forbids backtest joins).
+        // LOOKAHEAD-OK: published_at mirrors fetched_at for HN — column carries a // PIT-INVARIANT marker forbidding backtest joins, informational-only.
         published_at: new Date(story.created_at_i * 1000),
       });
       written++;
