@@ -72,12 +72,20 @@ describe('renderCommunityHighlights — D-24 citation rendering', () => {
         standout_url: 'https://www.reddit.com/r/x/comments/1abc/',
       },
     ]);
-    // Bracket should be escaped to \[ / \]
+    // Bracket should be escaped to \[ / \] — this is what makes the link
+    // injection harmless when a Markdown parser walks the output (the bare `]`
+    // can no longer terminate the wrapping `[...](...)` link).
     expect(md).toContain('\\]');
     expect(md).toContain('\\[');
-    // The unescaped link injection attempt must NOT produce a working markdown
-    // link that points anywhere other than the legitimate standout_url
-    expect(md).not.toContain('](javascript:alert(1))');
+    // The link target the LLM/renderer would actually follow MUST be the
+    // legitimate standout_url, not the injected javascript: URI.
+    expect(md).toContain('](https://www.reddit.com/r/x/comments/1abc/)');
+    // The legitimate URL must close the wrapping link — i.e. the wrapping
+    // link's closing `)` follows the legitimate URL. Since we escape `]` in
+    // the quote, the FIRST unescaped `]` in the output is the wrapping link's
+    // closer, immediately followed by `(`+standout_url+`)`.
+    const closingPattern = /[^\\]\]\(https:\/\/www\.reddit\.com\/r\/x\/comments\/1abc\/\)/;
+    expect(md).toMatch(closingPattern);
   });
 
   it('renders multiple highlights as separate lines', () => {
