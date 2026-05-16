@@ -133,4 +133,61 @@ describe('check-lookahead-static — unit', () => {
       /allowlist-comment-empty|no-allowlist-comment|published_at/,
     );
   });
+
+  // ─── Plan 30.1-04 — Reddit + HN PIT writers ──────────────────────────────
+  // Behavior 7 of Plan 30.1-04 Task 1: the static lookahead check must
+  // continue passing when the Reddit and HackerNews SentimentObservation
+  // writers reference `published_at` — both call sites are explicit
+  // LOOKAHEAD-OK overrides per CLAUDE.md §Statistical-Methods Reference
+  // rule #6 (post.created_utc / story.created_at_i IS the as-of-time).
+  // These tests assert that fixtures shaped like the Reddit/HN writer
+  // bodies are correctly allowlisted.
+
+  it('exits 0 when a Reddit writer fixture references published_at with LOOKAHEAD-OK', () => {
+    mkdirSync(TMP_DIR, { recursive: true });
+    writeFileSync(
+      TMP_FILE,
+      `// Synthetic Reddit writer fixture\n` +
+        `const post = { source: 'reddit' as const, created_utc: 1715200000 };\n` +
+        `// LOOKAHEAD-OK: post.created_utc IS the as-of-time (Reddit-claimed creation)\n` +
+        `const fa = new Date(post.created_utc * 1000);\n` +
+        `// LOOKAHEAD-OK: published_at mirrors fetched_at for Reddit\n` +
+        `export const x = { fetched_at: fa, published_at: new Date(post.created_utc * 1000) };\n`,
+    );
+    stageTmp();
+    const r = runCheck();
+    expect(r.exitCode).toBe(0);
+  });
+
+  it('exits 0 when a HackerNews writer fixture references published_at with LOOKAHEAD-OK', () => {
+    mkdirSync(TMP_DIR, { recursive: true });
+    writeFileSync(
+      TMP_FILE,
+      `// Synthetic HackerNews writer fixture\n` +
+        `const story = { source: 'hackernews' as const, created_at_i: 1715200000 };\n` +
+        `// LOOKAHEAD-OK: HN Algolia created_at_i is Unix epoch seconds (verified)\n` +
+        `const fa = new Date(story.created_at_i * 1000);\n` +
+        `// LOOKAHEAD-OK: published_at mirrors fetched_at for HN — schema column is informational-only\n` +
+        `export const x = { fetched_at: fa, published_at: new Date(story.created_at_i * 1000) };\n`,
+    );
+    stageTmp();
+    const r = runCheck();
+    expect(r.exitCode).toBe(0);
+  });
+
+  it('exits non-zero when a Reddit-shaped writer reference omits LOOKAHEAD-OK above published_at', () => {
+    mkdirSync(TMP_DIR, { recursive: true });
+    // Same Reddit shape but no LOOKAHEAD-OK comment on the line above
+    // `published_at:` — this is the regression case Plan 30.1-04 guards
+    // against (a future writer that forgets to mark the override).
+    writeFileSync(
+      TMP_FILE,
+      `const post = { source: 'reddit' as const, created_utc: 1715200000 };\n` +
+        `export const x = { published_at: new Date(post.created_utc * 1000) };\n`,
+    );
+    stageTmp();
+    const r = runCheck();
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr + r.stdout).toMatch(/published_at/);
+  });
 });

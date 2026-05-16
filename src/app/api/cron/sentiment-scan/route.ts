@@ -14,6 +14,16 @@ import { computeCrowdedConsensus } from '@/lib/sentiment/aggregator';
 import { cresciBotScore, type CresciReason } from '@/lib/sentiment/bot-filter';
 import { detectCoordinatedPosting, COORDINATION_SIMILARITY } from '@/lib/sentiment/coordination';
 import { runPerMessagePass, type PerMessagePassMode } from '@/lib/sentiment/per-message-pass';
+// Plan 30.1-04 (D-15 / D-16 / D-17) — Reddit + HN observation writers wired in
+// after the existing StockTwits writer block. Both writers honor the Crons-never-500
+// invariant (every error caught + logged-and-continued) and PIT discipline
+// (fetched_at = upstream-claimed creation timestamp). Type-only import of
+// EnrichedSnapshot keeps the cron's runtime surface unchanged.
+import {
+  writeRedditObservations,
+  writeHackerNewsObservations,
+} from '@/lib/sentiment/community-observation-writers';
+import type { EnrichedSnapshot } from '@/lib/data/lightweight-community-scan';
 import { createHash } from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -176,6 +186,35 @@ export async function GET(request: NextRequest) {
       (results as Record<string, number>)[`obs_written_${ticker}`] = obs_written;
       (results as Record<string, number>)[`obs_dupes_${ticker}`]   = obs_dupes;
       (results as Record<string, number>)[`obs_errors_${ticker}`]  = obs_errors;
+
+      // ── Phase 30.1-04 (D-15) — Reddit posts → SentimentObservation PIT feature store ──
+      // The orchestrator surfaces communityData.reddit_posts only on the
+      // 'reddit'/'shadow' branch of FEATURES.community_scan_source. On the
+      // 'firecrawl' branch it's undefined and the writer is a no-op.
+      // The writer:
+      //  - hashes raw Reddit usernames via SHA-256(pepper + lowercased author)
+      //    so PII never persists (T-30.1-04-02) and Phase 20-C-03 Cresci
+      //    clustering sees deterministic author IDs across rescans.
+      //  - sets fetched_at = post.created_utc*1000 (LOOKAHEAD-OK inside the
+      //    helper — backtest joins in Phase 20-C-02 use fetched_at as the
+      //    PIT key per CLAUDE.md §Statistical-Methods Reference rule #6).
+      //  - catches every error per the Crons-never-500 invariant; duplicate
+      //    errors increment reddit_obs_dupes_${ticker}, all others increment
+      //    reddit_obs_errors_${ticker} and log a console.warn.
+      const _enriched = communityData as EnrichedSnapshot | null;
+      await writeRedditObservations(
+        ticker,
+        _enriched?.reddit_posts,
+        results as Record<string, number>,
+      );
+
+      // ── Phase 30.1-04 (D-16) — HackerNews stories → SentimentObservation PIT feature store ──
+      // Mirrors the Reddit writer above. fetched_at = story.created_at_i*1000.
+      await writeHackerNewsObservations(
+        ticker,
+        _enriched?.hackernews_stories,
+        results as Record<string, number>,
+      );
 
       // Plan 20-C-03 — per-author Cresci scoring + aggregate-level coordinated-posting detection.
       // Persistence ALWAYS runs (off|shadow|on); the consumer-side weight gate in
