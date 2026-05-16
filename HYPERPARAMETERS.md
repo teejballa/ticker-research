@@ -561,3 +561,24 @@ Maps Reddit `score` + `num_comments` (and HN `points` + `num_comments` — same 
 **Optional upvote-ratio gate:** Plan 30.1-04 may drop Reddit posts with `upvote_ratio < 0.5` from highlights (low-signal), but keeps them in `RedditPost[]` for citation purposes.
 
 Updated by: Plan 30.1-03 (2026-05-15).
+
+## Model Versioning
+
+SentimentObservation `model_version` strings follow the convention `{source}-{stage}-v{N}`:
+
+| Source     | Stage  | Current version       | Owner phase |
+|------------|--------|-----------------------|-------------|
+| reddit     | tag    | `reddit-tag-v1`       | Phase 30.1-04 |
+| hackernews | tag    | `hackernews-tag-v1`   | Phase 30.1-04 |
+| stocktwits | tag    | `stocktwits-tag-v1`   | Phase 20-Z-01 (PEPPER retrofit pending) |
+
+The `tag` stage means "tagged at ingest with no classifier score yet" — Phase 20-B-01's FinBERT classifier will bump the version to `reddit-tag-v2` / `hackernews-tag-v2` when it back-fills `classifier_score`.
+
+**Pepper rotation playbook:** rotating `SENTIMENT_AUTHOR_PEPPER` invalidates every `author_id` deterministic-cluster mapping (Phase 20-C-03 / 20-C-04 use these to group posts by author). To rotate:
+
+1. Generate the new pepper and stage it in Vercel env as `SENTIMENT_AUTHOR_PEPPER_NEXT`.
+2. Bump `MODEL_VERSION_REDDIT` from `reddit-tag-v1` → `reddit-tag-v2` (and same for `hackernews-tag-v1` → `hackernews-tag-v2`) in `src/lib/sentiment/community-observation-writers.ts`. The DAO's `(ticker, message_id, model_version)` uniqueness lets the new pepper land without conflicting with prior rows.
+3. Flip `SENTIMENT_AUTHOR_PEPPER = $SENTIMENT_AUTHOR_PEPPER_NEXT`. New writes use the new hash space.
+4. Old (`*-tag-v1`) rows remain queryable for backtest replay; downstream consumers should filter by `model_version` to avoid cross-pepper joins.
+
+Updated by: Plan 30.1-04 (2026-05-15).
