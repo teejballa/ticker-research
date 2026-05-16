@@ -13,6 +13,11 @@
 // Cost: ~5 Firecrawl credits + 1 StockTwits call per ticker (was 3 + 1 pre-D-44).
 import Firecrawl from '@mendable/firecrawl-js';
 import YahooFinance from 'yahoo-finance2';
+// Plan 30.1-03 — `after()` from next/server is the Vercel-honored primitive
+// that extends the lambda lifetime past the response so background work
+// completes. `setImmediate` is unsafe on Vercel — the function may complete
+// before the immediate callback fires. https://nextjs.org/docs/app/api-reference/functions/after
+import { after } from 'next/server';
 import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { fetchStockTwitsSentiment, fetchStockTwitsRaw, type StockTwitsRawMessage } from './stocktwits';
@@ -26,10 +31,16 @@ import { fetchSwaggyStocks } from './adapters/swaggystocks';
 import { fetchApeWisdom } from './adapters/apewisdom';
 import type { CommunitySignal } from './adapters/apewisdom';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
-import { FEATURES } from '@/lib/features';
+import { FEATURES, COMMUNITY_SCAN_SOURCE } from '@/lib/features';
 import { computeSentimentDimensions, type SentimentDimensions } from '@/lib/sentiment-dimensions';
 import { classifyCapClass, type CapClass } from '@/lib/diffusion-trace';
 import type { CommunityHighlight } from '@/lib/types';
+// Plan 30.1-03 — Reddit + HackerNews adapters wired in behind the
+// COMMUNITY_SCAN_SOURCE flag. The legacy Firecrawl branch is preserved
+// byte-equivalent in runFirecrawlPath; the new path lives in runRedditPath.
+import { fetchRedditCommunity, type RedditPost } from './adapters/reddit';
+import { fetchHackerNewsStories, type HNStory } from './adapters/hackernews';
+import { COMMUNITY_SUBS } from './community-subs';
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
@@ -136,9 +147,28 @@ export interface EnrichedSnapshot extends SentimentDimensions {
    * gracefully no-op on empty bags.
    */
   stocktwits: { messages: StockTwitsRawMessage[] };
+  /**
+   * Plan 30.1-03 (D-20) — additive optional fields. Populated by the Reddit
+   * branch; undefined on the Firecrawl branch. Plan 30.1-04's sentiment-scan
+   * writer reads these via `(snapshot as EnrichedSnapshot).reddit_posts ?? []`.
+   *
+   * D-20 contract: the PUBLIC EnrichedSnapshot shape is unchanged for
+   * downstream consumers (source-package.ts, research-brief.ts, the SSE
+   * progress beats, the report renderer, the sentiment-scan cron). These two
+   * optional fields are additive — every existing consumer continues to work.
+   */
+  reddit_posts?: RedditPost[];
+  hackernews_stories?: HNStory[];
 }
 
-export async function lightweightCommunityScan(ticker: string): Promise<EnrichedSnapshot | null> {
+/**
+ * Plan 30.1-03 — legacy Firecrawl community scan (pre-plan body, verbatim
+ * extraction so the runtime contract on the firecrawl branch is byte-equivalent
+ * to pre-plan-30.1-03 behavior). Promoted to a top-level entry point
+ * `lightweightCommunityScan` flips between this and `runRedditPath` based on
+ * `COMMUNITY_SCAN_SOURCE` (D-25).
+ */
+async function runFirecrawlPath(ticker: string): Promise<EnrichedSnapshot | null> {
   if (!process.env.FIRECRAWL_API_KEY) return null;
 
   const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
@@ -256,6 +286,236 @@ export async function lightweightCommunityScan(ticker: string): Promise<Enriched
     // optional-chained `communityData.stocktwits.messages` read path.
     stocktwits: { messages: stocktwitsRawMessages },
   };
+}
+
+/**
+ * Plan 30.1-03 — Reddit + HackerNews community path. Fan-out is
+ * `Promise.allSettled` over Reddit + HN + StockTwits + Quiver + Yahoo
+ * (D-21 — no new failure modes vs the legacy Firecrawl path: each adapter
+ * already null/empty-degrades, and the wrapping `.catch()` here is belt &
+ * braces in case any adapter regresses into throwing).
+ *
+ * Pre-flight: if REDDIT creds are unset, returns null + console.warn so
+ * the operator notices a partial cutover at boot. This is the same
+ * pattern as the legacy `if (!process.env.FIRECRAWL_API_KEY) return null;`
+ * short-circuit — see D-25.
+ *
+ * Highlight assembly (D-19, D-24): one highlight per subreddit that
+ * produced ≥1 post; one HN highlight if HN returned ≥1 story. Each
+ * highlight gets `standout_quote` (top post title sliced to 140 chars)
+ * and `standout_url` (permalink). Sub config (community_type, audience,
+ * theme) comes from COMMUNITY_SUBS; the per-ticker niche sub `r/{TICKER}`
+ * uses sensible defaults.
+ */
+async function runRedditPath(
+  ticker: string,
+  priority: 'report' | 'cron',
+): Promise<EnrichedSnapshot | null> {
+  if (!process.env.REDDIT_CLIENT_ID || !process.env.REDDIT_CLIENT_SECRET) {
+    console.warn(
+      '[community-scan] Reddit path selected but REDDIT_CLIENT_ID/SECRET unset — returning null',
+    );
+    return null;
+  }
+
+  const upper = ticker.toUpperCase();
+  const subs = [...COMMUNITY_SUBS.map(s => s.name), upper];
+
+  // Promise.allSettled-style fan-out: each fetcher has a `.catch()` so
+  // one failure does not poison the others. D-21 — same call shape as the
+  // legacy path; downstream Promise.all consumers see the same behavior.
+  const [
+    redditRes,
+    hnRes,
+    stocktwitsResult,
+    stocktwitsRawMessages,
+    marketCap,
+    quiverInsiderRes,
+    quiverCongressRes,
+  ] = await Promise.all([
+    fetchRedditCommunity(upper, subs, priority).catch((err: unknown) => {
+      console.warn(
+        '[community-scan reddit] failed:',
+        err instanceof Error ? err.message : String(err),
+      );
+      return [] as RedditPost[];
+    }),
+    fetchHackerNewsStories(upper), // adapter is array-valued + null-safe by contract
+    fetchStockTwitsSentiment(upper),
+    fetchStockTwitsRaw(upper),
+    yf
+      .quote(upper)
+      .then(q => q.marketCap ?? null)
+      .catch(() => null),
+    fetchQuiverInsider(upper).catch(() => null),
+    fetchQuiverCongressional(upper).catch(() => null),
+  ]);
+
+  const reddit_posts: RedditPost[] = redditRes;
+  const hackernews_stories: HNStory[] = hnRes;
+
+  // Group Reddit posts by their actual subreddit field.
+  const subToPosts = new Map<string, RedditPost[]>();
+  for (const p of reddit_posts) {
+    const list = subToPosts.get(p.subreddit) ?? [];
+    list.push(p);
+    subToPosts.set(p.subreddit, list);
+  }
+
+  const subLookup = new Map(
+    COMMUNITY_SUBS.map(s => [s.name.toLowerCase(), s] as const),
+  );
+  const highlights: CommunityHighlight[] = [];
+  const enrichedHighlights: EnrichedSnapshot['highlights'] = [];
+
+  for (const [subName, posts] of subToPosts) {
+    if (posts.length === 0) continue;
+    const maxScore = Math.max(...posts.map(p => p.score));
+    const maxComments = Math.max(...posts.map(p => p.num_comments));
+    const engagement = toEngagementFromFields({
+      score: maxScore,
+      num_comments: maxComments,
+    });
+    const cfg = subLookup.get(subName.toLowerCase());
+    const isTickerNiche = subName.toLowerCase() === upper.toLowerCase();
+    const communityType: 'mainstream' | 'middle' | 'niche' =
+      cfg?.community_type ?? (isTickerNiche ? 'niche' : 'mainstream');
+    const audience =
+      cfg?.audience ?? (isTickerNiche ? 'dedicated ticker community' : 'general retail');
+    const theme =
+      cfg?.theme ?? (isTickerNiche ? 'ticker-specific discussion' : 'general discussion');
+
+    // D-24: pick the top-scoring post for standout_quote + standout_url.
+    const topPost = [...posts].sort((a, b) => b.score - a.score)[0];
+    const standout_quote = topPost ? topPost.title.slice(0, 140) : '';
+    const standout_url = topPost ? `https://www.reddit.com${topPost.permalink}` : undefined;
+
+    highlights.push({
+      community_name: `r/${subName}`,
+      community_type: communityType,
+      audience,
+      standout_quote,
+      standout_url,
+      theme,
+      sentiment: 'neutral',
+      engagement_signal: engagement,
+    });
+    enrichedHighlights.push({
+      community_name: `r/${subName}`,
+      community_type: communityType,
+      engagement,
+      engagement_count: maxScore + maxComments,
+    });
+  }
+
+  if (hackernews_stories.length > 0) {
+    const maxPoints = Math.max(...hackernews_stories.map(s => s.points));
+    const maxComments = Math.max(...hackernews_stories.map(s => s.num_comments));
+    const engagement = toEngagementFromFields({
+      score: maxPoints,
+      num_comments: maxComments,
+    });
+    // D-24: top story by points → standout_quote + standout_url.
+    const topStory = [...hackernews_stories].sort((a, b) => b.points - a.points)[0];
+    const hn_standout_quote = topStory ? topStory.title.slice(0, 140) : '';
+    const hn_standout_url = topStory
+      ? `https://news.ycombinator.com/item?id=${topStory.objectID}`
+      : undefined;
+    highlights.push({
+      community_name: 'HackerNews',
+      community_type: 'middle',
+      audience: 'technical/analytical readers',
+      standout_quote: hn_standout_quote,
+      standout_url: hn_standout_url,
+      theme: 'tech and finance discussion',
+      sentiment: 'neutral',
+      engagement_signal: engagement,
+    });
+    enrichedHighlights.push({
+      community_name: 'HackerNews',
+      community_type: 'middle',
+      engagement,
+      engagement_count: maxPoints + maxComments,
+    });
+  }
+
+  if (
+    highlights.length === 0 &&
+    !stocktwitsResult.stocktwits_bull_pct &&
+    !marketCap
+  ) {
+    // Nothing to say about this ticker — preserve the null-return contract
+    // for unknown tickers (legacy Firecrawl path does the same via empty
+    // highlights + empty enrichedHighlights → caller's `if (!snapshot) ...`
+    // branch). Here we return null directly when the entire fan-out is empty.
+    return null;
+  }
+
+  const stInput =
+    stocktwitsResult.stocktwits_bull_pct != null &&
+    stocktwitsResult.stocktwits_message_count != null
+      ? {
+          bull: stocktwitsResult.stocktwits_bull_pct,
+          bear: stocktwitsResult.stocktwits_bear_pct ?? 0,
+          messageCount: stocktwitsResult.stocktwits_message_count,
+        }
+      : null;
+
+  const dims = computeSentimentDimensions(highlights, stInput);
+
+  return {
+    ...dims,
+    highlights: enrichedHighlights,
+    market_cap: marketCap,
+    cap_class: classifyCapClass(marketCap),
+    quiver_insider: quiverInsiderRes,
+    quiver_congressional: quiverCongressRes,
+    stocktwits: { messages: stocktwitsRawMessages },
+    reddit_posts,
+    hackernews_stories,
+  };
+}
+
+/**
+ * Public entry point — flag-gated branch between Firecrawl (legacy) and
+ * the Reddit + HN path (D-25). Shadow mode runs the new path in the
+ * background via `after()` (Vercel-honored lambda-lifetime extender) so
+ * the Reddit/HN telemetry rows still land in ProviderCallLog while the
+ * returned shape stays Firecrawl-driven.
+ *
+ * Default `priority: 'cron'` because both the cron and `/api/research/[ticker]`
+ * call this function and the cron is the dominant caller (D-04, D-21). A
+ * future plan can flip the route layer to pass `'report'` if needed.
+ */
+export async function lightweightCommunityScan(
+  ticker: string,
+  priority: 'report' | 'cron' = 'cron',
+): Promise<EnrichedSnapshot | null> {
+  const source = COMMUNITY_SCAN_SOURCE;
+  if (source === 'firecrawl') {
+    return runFirecrawlPath(ticker);
+  }
+  if (source === 'shadow') {
+    // Fire-and-forget the new path for telemetry observation. Return the
+    // canonical Firecrawl result. `after()` from next/server extends the
+    // lambda lifetime past the response so Vercel actually runs the
+    // background work (setImmediate is unsafe on Vercel — the function
+    // may complete before the immediate callback fires).
+    // https://nextjs.org/docs/app/api-reference/functions/after
+    after(async () => {
+      try {
+        await runRedditPath(ticker, priority);
+      } catch (err) {
+        console.warn(
+          '[community-scan shadow] reddit path failed:',
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+    });
+    return runFirecrawlPath(ticker);
+  }
+  // source === 'reddit'
+  return runRedditPath(ticker, priority);
 }
 
 // ---------------------------------------------------------------------------

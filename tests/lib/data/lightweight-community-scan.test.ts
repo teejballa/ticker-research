@@ -112,7 +112,10 @@ describe('lightweightCommunityScan — Reddit branch (Plan 30.1-03 Task 3)', () 
   it('runRedditPath calls fetchRedditCommunity with subs = COMMUNITY_SUBS + ticker', async () => {
     vi.stubEnv('REDDIT_CLIENT_ID', 'fake-id');
     vi.stubEnv('REDDIT_CLIENT_SECRET', 'fake-secret');
-    const fetchRedditCommunityMock = vi.fn(async () => [] as RedditPost[]);
+    // Typed mock so mock.calls[0][1] is recognized as the `subs` arg.
+    const fetchRedditCommunityMock = vi.fn<
+      (ticker: string, subs: string[], priority?: 'report' | 'cron') => Promise<RedditPost[]>
+    >(async () => []);
     vi.doMock('@/lib/features', async () => {
       const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
       return { ...actual, COMMUNITY_SCAN_SOURCE: 'reddit' };
@@ -123,7 +126,7 @@ describe('lightweightCommunityScan — Reddit branch (Plan 30.1-03 Task 3)', () 
     vi.doMock('@/lib/data/adapters/hackernews', () => ({
       fetchHackerNewsStories: vi.fn(async () => []),
     }));
-    vi.doMock('@/lib/data/adapters/stocktwits', () => ({
+    vi.doMock('@/lib/data/stocktwits', () => ({
       fetchStockTwitsSentiment: vi.fn(async () => ({
         stocktwits_bull_pct: null,
         stocktwits_bear_pct: null,
@@ -138,7 +141,7 @@ describe('lightweightCommunityScan — Reddit branch (Plan 30.1-03 Task 3)', () 
     const mod = await import('@/lib/data/lightweight-community-scan');
     await mod.lightweightCommunityScan('AAPL');
     expect(fetchRedditCommunityMock).toHaveBeenCalled();
-    const subsArg = fetchRedditCommunityMock.mock.calls[0]![1] as string[];
+    const subsArg = fetchRedditCommunityMock.mock.calls[0]![1];
     expect(subsArg.length).toBe(17); // 16 fixed + 1 ticker niche
     expect(subsArg[subsArg.length - 1]).toBe('AAPL');
   });
@@ -159,7 +162,7 @@ describe('lightweightCommunityScan — Reddit branch (Plan 30.1-03 Task 3)', () 
     vi.doMock('@/lib/data/adapters/hackernews', () => ({
       fetchHackerNewsStories: vi.fn(async () => []),
     }));
-    vi.doMock('@/lib/data/adapters/stocktwits', () => ({
+    vi.doMock('@/lib/data/stocktwits', () => ({
       fetchStockTwitsSentiment: vi.fn(async () => ({
         stocktwits_bull_pct: null,
         stocktwits_bear_pct: null,
@@ -191,7 +194,7 @@ describe('lightweightCommunityScan — Reddit branch (Plan 30.1-03 Task 3)', () 
     vi.doMock('@/lib/data/adapters/hackernews', () => ({
       fetchHackerNewsStories: vi.fn(async () => [makeHNStory()]),
     }));
-    vi.doMock('@/lib/data/adapters/stocktwits', () => ({
+    vi.doMock('@/lib/data/stocktwits', () => ({
       fetchStockTwitsSentiment: vi.fn(async () => ({
         stocktwits_bull_pct: null,
         stocktwits_bear_pct: null,
@@ -224,7 +227,7 @@ describe('lightweightCommunityScan — Reddit branch (Plan 30.1-03 Task 3)', () 
     vi.doMock('@/lib/data/adapters/hackernews', () => ({
       fetchHackerNewsStories: vi.fn(async () => []),
     }));
-    vi.doMock('@/lib/data/adapters/stocktwits', () => ({
+    vi.doMock('@/lib/data/stocktwits', () => ({
       fetchStockTwitsSentiment: vi.fn(async () => ({
         stocktwits_bull_pct: null,
         stocktwits_bear_pct: null,
@@ -263,7 +266,7 @@ describe('lightweightCommunityScan — Reddit branch (Plan 30.1-03 Task 3)', () 
     vi.doMock('@/lib/data/adapters/hackernews', () => ({
       fetchHackerNewsStories: vi.fn(async () => [story]),
     }));
-    vi.doMock('@/lib/data/adapters/stocktwits', () => ({
+    vi.doMock('@/lib/data/stocktwits', () => ({
       fetchStockTwitsSentiment: vi.fn(async () => ({
         stocktwits_bull_pct: null,
         stocktwits_bear_pct: null,
@@ -347,7 +350,7 @@ describe('lightweightCommunityScan — Shadow branch (Plan 30.1-03 Task 3)', () 
     vi.doMock('@/lib/data/adapters/hackernews', () => ({
       fetchHackerNewsStories: vi.fn(async () => []),
     }));
-    vi.doMock('@/lib/data/adapters/stocktwits', () => ({
+    vi.doMock('@/lib/data/stocktwits', () => ({
       fetchStockTwitsSentiment: vi.fn(async () => ({
         stocktwits_bull_pct: null,
         stocktwits_bear_pct: null,
