@@ -162,3 +162,4 @@ calibration-reports/
 # Operator-readable per-provider gate verdict. Regenerated on demand;
 # NEVER committed (no fixed historical artifact value).
 /reports/provider-health-*.md
+.env.vercel.*
