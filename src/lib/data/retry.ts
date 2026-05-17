@@ -45,7 +45,7 @@ const NETWORK_ERROR_CODES = new Set([
  */
 export function isRetryableError(err: unknown): boolean {
   if (err == null) return false;
-  const e = err as { status?: number; code?: string; cause?: { code?: string } };
+  const e = err as { name?: string; status?: number; code?: string; cause?: { code?: string } };
 
   // Network sentinel code (direct or undici-style nested)
   const code = e.code ?? e.cause?.code;
@@ -53,6 +53,11 @@ export function isRetryableError(err: unknown): boolean {
 
   // HTTP 5xx
   if (typeof e.status === 'number' && e.status >= 500 && e.status < 600) return true;
+
+  // Phase 30.1 pivot — Xpoz transient errors (connection drop, server-side
+  // operation timeout) should retry. AuthenticationError and OperationFailedError
+  // stay terminal (consistent with 4xx / 5xx semantics).
+  if (e.name === 'XpozConnectionError' || e.name === 'OperationTimeoutError') return true;
 
   // Per D-25: 4xx (incl. 408, 429) explicitly NOT retried
   return false;
