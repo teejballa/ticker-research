@@ -218,24 +218,24 @@ describe('twitter adapter — isAuthenticTwitterUser (Plan 30.1-pivot Task 3 / D
     expect(ok).toBe(true);
   });
 
-  it('returns false when isInauthentic is true (hard signal)', async () => {
+  it('returns true even when isInauthentic would be true (gate disabled 2026-05-16; Xpoz rejects the field)', async () => {
     getUserMock.mockResolvedValueOnce({
       username: 'botUser',
       isInauthentic: true,
       isInauthenticProbScore: 0.95,
     });
     const ok = await isAuthenticTwitterUser('botUser');
-    expect(ok).toBe(false);
+    expect(ok).toBe(true);
   });
 
-  it('returns false when isInauthenticProbScore > 0.7 (soft threshold)', async () => {
+  it('returns true even when isInauthenticProbScore > 0.7 (gate disabled 2026-05-16)', async () => {
     getUserMock.mockResolvedValueOnce({
       username: 'suspectUser',
       isInauthentic: false,
       isInauthenticProbScore: 0.75,
     });
     const ok = await isAuthenticTwitterUser('suspectUser');
-    expect(ok).toBe(false);
+    expect(ok).toBe(true);
   });
 
   it('returns true on Xpoz error (default-true so a flaky lookup never drops legit posts)', async () => {

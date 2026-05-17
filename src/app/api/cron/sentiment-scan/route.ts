@@ -22,6 +22,7 @@ import { runPerMessagePass, type PerMessagePassMode } from '@/lib/sentiment/per-
 import {
   writeRedditObservations,
   writeHackerNewsObservations,
+  writeTwitterObservations,
 } from '@/lib/sentiment/community-observation-writers';
 import type { EnrichedSnapshot } from '@/lib/data/lightweight-community-scan';
 import { createHash } from 'crypto';
@@ -213,6 +214,14 @@ export async function GET(request: NextRequest) {
       await writeHackerNewsObservations(
         ticker,
         _enriched?.hackernews_stories,
+        results as Record<string, number>,
+      );
+
+      // ── Phase 30.1-pivot (D-38) — Twitter posts → SentimentObservation PIT feature store ──
+      // Mirrors the Reddit/HN writers. fetched_at = post.created_utc*1000.
+      await writeTwitterObservations(
+        ticker,
+        _enriched?.twitter_posts,
         results as Record<string, number>,
       );
 

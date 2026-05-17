@@ -25,6 +25,7 @@
 import { createHash } from 'crypto';
 import type { RedditPost } from '@/lib/data/adapters/reddit';
 import type { HNStory } from '@/lib/data/adapters/hackernews';
+import type { TwitterPost } from '@/lib/data/adapters/twitter';
 import {
   insertObservation,
   SentimentObservationDuplicateError,
@@ -32,6 +33,16 @@ import {
 
 export const MODEL_VERSION_REDDIT = 'reddit-tag-v1';
 export const MODEL_VERSION_HACKERNEWS = 'hackernews-tag-v1';
+export const MODEL_VERSION_TWITTER = 'twitter-tag-v1';
+
+/** D-17 — SHA-256(`twitter:${pepper}:${lowercased_author}`). Empty / null /
+ *  undefined author falls back to `anonymous`. */
+export function hashTwitterAuthor(author: string | null | undefined, pepper: string): string {
+  const normalized = author && author.length > 0 ? author : 'anonymous';
+  return createHash('sha256')
+    .update(`twitter:${pepper}:${normalized.toLowerCase()}`, 'utf8')
+    .digest('hex');
+}
 
 /** D-17 — SHA-256(`reddit:${pepper}:${lowercased_author}`). Reddit usernames
  *  are case-insensitive (Reddit allows `/u/Foo` and `/u/foo` for the same user);
@@ -168,4 +179,60 @@ export async function writeHackerNewsObservations(
   results[`hackernews_obs_written_${ticker}`] = written;
   results[`hackernews_obs_dupes_${ticker}`] = dupes;
   results[`hackernews_obs_errors_${ticker}`] = errors;
+}
+
+/**
+ * Phase 30.1-pivot (D-38) — Write one SentimentObservation row per Twitter post.
+ * Mirrors writeRedditObservations / writeHackerNewsObservations:
+ *   - PIT discipline: fetched_at = post.created_utc * 1000
+ *   - PII discipline: SHA-256(pepper + lowercased author)
+ *   - Crons-never-500: dupes counted, all other errors logged-and-continued
+ *
+ * `undefined` or empty `posts` is a no-op (firecrawl branch surfaces undefined).
+ */
+export async function writeTwitterObservations(
+  ticker: string,
+  posts: TwitterPost[] | undefined,
+  results: Record<string, number>,
+): Promise<void> {
+  const PEPPER = process.env.SENTIMENT_AUTHOR_PEPPER ?? '';
+  let written = 0;
+  let dupes = 0;
+  let errors = 0;
+
+  for (const post of posts ?? []) {
+    if (!post.id || !post.text || post.text.length === 0) continue;
+    const author_id = hashTwitterAuthor(post.author, PEPPER);
+    try {
+      await insertObservation({
+        ticker,
+        source: 'twitter',
+        message_id: post.id,
+        raw_body: post.text,
+        classifier_version: MODEL_VERSION_TWITTER,
+        classifier_score: null,
+        model_version: MODEL_VERSION_TWITTER,
+        decay_weight: null,
+        author_id,
+        author_features_snapshot: { ...NULL_AUTHOR_FEATURES },
+        // LOOKAHEAD-OK: Twitter post.created_utc is the upstream-claimed post time; backtest joins in 20-C-02 use fetched_at as PIT key per CLAUDE.md §Statistical-Methods rule #6.
+        fetched_at: new Date(post.created_utc * 1000),
+        // LOOKAHEAD-OK: published_at mirrors fetched_at for Twitter; informational only per Plan 20-Z-01 schema marker.
+        published_at: new Date(post.created_utc * 1000),
+      });
+      written++;
+    } catch (e) {
+      if (e instanceof SentimentObservationDuplicateError) {
+        dupes++;
+      } else {
+        errors++;
+        console.warn(
+          `[sentiment-scan][twitter] ${ticker} ${post.id}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+  }
+  results[`twitter_obs_written_${ticker}`] = written;
+  results[`twitter_obs_dupes_${ticker}`] = dupes;
+  results[`twitter_obs_errors_${ticker}`] = errors;
 }
