@@ -165,30 +165,11 @@ export async function fetchTwitterCommunity(
  * from the report. The breaker + telemetry composition still records the failure.
  */
 export async function isAuthenticTwitterUser(username: string): Promise<boolean> {
+  // 2026-05-16 — Xpoz's docs claim TwitterUser exposes `isInauthentic` +
+  // `isInauthenticProbScore`, but the live API rejects those field names
+  // with "Validation failed for field: fields - Invalid field(s)". Disabled
+  // until Xpoz exposes the inauthenticity signal (or we replace with a
+  // follower/age heuristic in a follow-up). Returning true keeps all posts.
   if (!username) return true;
-  try {
-    return await withTelemetry('twitter-xpoz', () =>
-      withBreaker('twitter-xpoz', () =>
-        withRetry(async () => {
-          const client = await getClient();
-          const user = await client.twitter.getUser(username, {
-            fields: ['username', 'isInauthentic', 'isInauthenticProbScore'],
-          });
-          // Xpoz's TwitterUser interface uses `[key: string]: unknown` so
-          // these fields are loosely-typed at the SDK boundary.
-          const u = user as unknown as {
-            isInauthentic?: boolean | null;
-            isInauthenticProbScore?: number | null;
-          };
-          if (u.isInauthentic === true) return false;
-          const score = typeof u.isInauthenticProbScore === 'number'
-            ? u.isInauthenticProbScore
-            : 0;
-          return score <= 0.7;
-        }),
-      ),
-    );
-  } catch {
-    return true;
-  }
+  return true;
 }
