@@ -37,8 +37,16 @@ import { classifyCapClass, type CapClass } from '@/lib/diffusion-trace';
 import type { CommunityHighlight } from '@/lib/types';
 // Plan 30.1-03 — Reddit + HackerNews adapters wired in behind the
 // COMMUNITY_SCAN_SOURCE flag. The legacy Firecrawl branch is preserved
-// byte-equivalent in runFirecrawlPath; the new path lives in runRedditPath.
+// byte-equivalent in runFirecrawlPath; the new path lives in runXpozPath.
+//
+// Plan 30.1-pivot (D-35, D-36, D-39) — Xpoz Pro replaces Reddit OAuth and
+// adds Twitter; flag values become 'firecrawl' | 'xpoz' | 'shadow'.
 import { fetchRedditCommunity, type RedditPost } from './adapters/reddit';
+import {
+  fetchTwitterCommunity,
+  isAuthenticTwitterUser,
+  type TwitterPost,
+} from './adapters/twitter';
 import { fetchHackerNewsStories, type HNStory } from './adapters/hackernews';
 import { COMMUNITY_SUBS } from './community-subs';
 
@@ -148,17 +156,21 @@ export interface EnrichedSnapshot extends SentimentDimensions {
    */
   stocktwits: { messages: StockTwitsRawMessage[] };
   /**
-   * Plan 30.1-03 (D-20) — additive optional fields. Populated by the Reddit
+   * Plan 30.1-03 (D-20) — additive optional fields. Populated by the Xpoz
    * branch; undefined on the Firecrawl branch. Plan 30.1-04's sentiment-scan
    * writer reads these via `(snapshot as EnrichedSnapshot).reddit_posts ?? []`.
    *
    * D-20 contract: the PUBLIC EnrichedSnapshot shape is unchanged for
    * downstream consumers (source-package.ts, research-brief.ts, the SSE
-   * progress beats, the report renderer, the sentiment-scan cron). These two
+   * progress beats, the report renderer, the sentiment-scan cron). These
    * optional fields are additive — every existing consumer continues to work.
+   *
+   * Plan 30.1-pivot (D-35, D-38) — `twitter_posts` added for the new Xpoz
+   * Twitter ingest. Same additive contract.
    */
   reddit_posts?: RedditPost[];
   hackernews_stories?: HNStory[];
+  twitter_posts?: TwitterPost[];
 }
 
 /**
@@ -289,31 +301,37 @@ async function runFirecrawlPath(ticker: string): Promise<EnrichedSnapshot | null
 }
 
 /**
- * Plan 30.1-03 — Reddit + HackerNews community path. Fan-out is
- * `Promise.allSettled` over Reddit + HN + StockTwits + Quiver + Yahoo
+ * Plan 30.1-pivot — Xpoz community path. Fan-out is `Promise.allSettled` over
+ * per-subreddit Reddit calls + Twitter + HN + StockTwits + Quiver + Yahoo
  * (D-21 — no new failure modes vs the legacy Firecrawl path: each adapter
  * already null/empty-degrades, and the wrapping `.catch()` here is belt &
  * braces in case any adapter regresses into throwing).
  *
- * Pre-flight: if REDDIT creds are unset, returns null + console.warn so
- * the operator notices a partial cutover at boot. This is the same
- * pattern as the legacy `if (!process.env.FIRECRAWL_API_KEY) return null;`
- * short-circuit — see D-25.
+ * Pre-flight: if XPOZ_API_KEY is unset, returns null + console.warn so the
+ * operator notices a partial cutover at boot. Mirrors the legacy
+ * `if (!process.env.FIRECRAWL_API_KEY) return null;` short-circuit.
  *
- * Highlight assembly (D-19, D-24): one highlight per subreddit that
- * produced ≥1 post; one HN highlight if HN returned ≥1 story. Each
- * highlight gets `standout_quote` (top post title sliced to 140 chars)
- * and `standout_url` (permalink). Sub config (community_type, audience,
- * theme) comes from COMMUNITY_SUBS; the per-ticker niche sub `r/{TICKER}`
- * uses sensible defaults.
+ * Reddit fan-out: each subreddit gets its own `fetchRedditCommunity` call (one
+ * Xpoz query each). 10 subs from COMMUNITY_SUBS + r/{TICKER} niche = 11 calls.
+ * Wrapped in Promise.allSettled so a 403 on a private sub doesn't poison the
+ * rest; results are flattened.
+ *
+ * Twitter (D-35): one Xpoz Twitter search per ticker per run. Authenticity
+ * filter (D-39) gates the top-3 highest-engagement posts via
+ * `isAuthenticTwitterUser`.
+ *
+ * Highlight assembly (D-19, D-24, D-38): one highlight per subreddit that
+ * produced ≥1 post + one HN highlight if HN returned ≥1 story + one Twitter
+ * highlight if Twitter returned ≥1 (post-authenticity) post. Each highlight
+ * gets `standout_quote` + `standout_url`.
  */
-async function runRedditPath(
+async function runXpozPath(
   ticker: string,
-  priority: 'report' | 'cron',
+  _priority: 'report' | 'cron',
 ): Promise<EnrichedSnapshot | null> {
-  if (!process.env.REDDIT_CLIENT_ID || !process.env.REDDIT_CLIENT_SECRET) {
+  if (!process.env.XPOZ_API_KEY) {
     console.warn(
-      '[community-scan] Reddit path selected but REDDIT_CLIENT_ID/SECRET unset — returning null',
+      '[community-scan] Xpoz path selected but XPOZ_API_KEY unset — returning null',
     );
     return null;
   }
@@ -321,11 +339,17 @@ async function runRedditPath(
   const upper = ticker.toUpperCase();
   const subs = [...COMMUNITY_SUBS.map(s => s.name), upper];
 
-  // Promise.allSettled-style fan-out: each fetcher has a `.catch()` so
-  // one failure does not poison the others. D-21 — same call shape as the
-  // legacy path; downstream Promise.all consumers see the same behavior.
+  // Per-sub fan-out via Promise.allSettled so one 403/404 doesn't drop the rest.
+  const subResults = await Promise.allSettled(
+    subs.map((sub) => fetchRedditCommunity(upper, sub)),
+  );
+  const reddit_posts: RedditPost[] = subResults.flatMap((r) =>
+    r.status === 'fulfilled' ? r.value : [],
+  );
+
+  // Remaining fetchers — same parallel shape as the legacy path.
   const [
-    redditRes,
+    twitterRes,
     hnRes,
     stocktwitsResult,
     stocktwitsRawMessages,
@@ -333,14 +357,14 @@ async function runRedditPath(
     quiverInsiderRes,
     quiverCongressRes,
   ] = await Promise.all([
-    fetchRedditCommunity(upper, subs, priority).catch((err: unknown) => {
+    fetchTwitterCommunity(upper).catch((err: unknown) => {
       console.warn(
-        '[community-scan reddit] failed:',
+        '[community-scan twitter] failed:',
         err instanceof Error ? err.message : String(err),
       );
-      return [] as RedditPost[];
+      return [] as TwitterPost[];
     }),
-    fetchHackerNewsStories(upper), // adapter is array-valued + null-safe by contract
+    fetchHackerNewsStories(upper),
     fetchStockTwitsSentiment(upper),
     fetchStockTwitsRaw(upper),
     yf
@@ -351,7 +375,21 @@ async function runRedditPath(
     fetchQuiverCongressional(upper).catch(() => null),
   ]);
 
-  const reddit_posts: RedditPost[] = redditRes;
+  // D-39 — authenticity gate on top-3 highest-engagement Twitter posts.
+  // Default-true on lookup error keeps legitimate posts from being dropped.
+  const sortedTwitter = [...twitterRes].sort(
+    (a, b) =>
+      (b.like_count + b.retweet_count + b.reply_count) -
+      (a.like_count + a.retweet_count + a.reply_count),
+  );
+  const topThree = sortedTwitter.slice(0, 3);
+  const tail = sortedTwitter.slice(3);
+  const authenticityResults = await Promise.all(
+    topThree.map((p) => isAuthenticTwitterUser(p.author).catch(() => true)),
+  );
+  const filteredTopThree = topThree.filter((_, i) => authenticityResults[i]);
+  const twitter_posts: TwitterPost[] = [...filteredTopThree, ...tail];
+
   const hackernews_stories: HNStory[] = hnRes;
 
   // Group Reddit posts by their actual subreddit field.
@@ -439,6 +477,41 @@ async function runRedditPath(
     });
   }
 
+  // Plan 30.1-pivot (D-38) — Twitter highlight. Engagement tier derived
+  // from like_count + retweet_count + reply_count thresholds documented
+  // in HYPERPARAMETERS.md §Community-Engagement Tiers (low <50, medium 50-500,
+  // high >500). Reuses the same toEngagementFromFields shape by treating
+  // total engagement as `score` and reply_count as `num_comments`.
+  if (twitter_posts.length > 0) {
+    const totalEngagement = (p: TwitterPost) =>
+      p.like_count + p.retweet_count + p.reply_count;
+    const maxEngagement = Math.max(...twitter_posts.map(totalEngagement));
+    const maxReplies = Math.max(...twitter_posts.map(p => p.reply_count));
+    const engagement: 'high' | 'medium' | 'low' =
+      maxEngagement > 500 ? 'high' : maxEngagement >= 50 ? 'medium' : 'low';
+    const topPost = [...twitter_posts].sort(
+      (a, b) => totalEngagement(b) - totalEngagement(a),
+    )[0];
+    const tw_standout_quote = topPost ? topPost.text.slice(0, 140) : '';
+    const tw_standout_url = topPost ? topPost.url : undefined;
+    highlights.push({
+      community_name: 'Twitter',
+      community_type: 'mainstream',
+      audience: 'public retail microblog',
+      standout_quote: tw_standout_quote,
+      standout_url: tw_standout_url,
+      theme: 'real-time chatter',
+      sentiment: 'neutral',
+      engagement_signal: engagement,
+    });
+    enrichedHighlights.push({
+      community_name: 'Twitter',
+      community_type: 'mainstream',
+      engagement,
+      engagement_count: maxEngagement + maxReplies,
+    });
+  }
+
   if (
     highlights.length === 0 &&
     !stocktwitsResult.stocktwits_bull_pct &&
@@ -473,19 +546,19 @@ async function runRedditPath(
     stocktwits: { messages: stocktwitsRawMessages },
     reddit_posts,
     hackernews_stories,
+    twitter_posts,
   };
 }
 
 /**
  * Public entry point — flag-gated branch between Firecrawl (legacy) and
- * the Reddit + HN path (D-25). Shadow mode runs the new path in the
- * background via `after()` (Vercel-honored lambda-lifetime extender) so
- * the Reddit/HN telemetry rows still land in ProviderCallLog while the
- * returned shape stays Firecrawl-driven.
+ * the Xpoz (Reddit + Twitter + HN) path (D-25, D-36). Shadow mode runs the
+ * new path in the background via `after()` (Vercel-honored lambda-lifetime
+ * extender) so the Xpoz telemetry rows still land in ProviderCallLog while
+ * the returned shape stays Firecrawl-driven.
  *
  * Default `priority: 'cron'` because both the cron and `/api/research/[ticker]`
- * call this function and the cron is the dominant caller (D-04, D-21). A
- * future plan can flip the route layer to pass `'report'` if needed.
+ * call this function and the cron is the dominant caller (D-04, D-21).
  */
 export async function lightweightCommunityScan(
   ticker: string,
@@ -504,18 +577,18 @@ export async function lightweightCommunityScan(
     // https://nextjs.org/docs/app/api-reference/functions/after
     after(async () => {
       try {
-        await runRedditPath(ticker, priority);
+        await runXpozPath(ticker, priority);
       } catch (err) {
         console.warn(
-          '[community-scan shadow] reddit path failed:',
+          '[community-scan shadow] xpoz path failed:',
           err instanceof Error ? err.message : String(err),
         );
       }
     });
     return runFirecrawlPath(ticker);
   }
-  // source === 'reddit'
-  return runRedditPath(ticker, priority);
+  // source === 'xpoz'
+  return runXpozPath(ticker, priority);
 }
 
 // ---------------------------------------------------------------------------

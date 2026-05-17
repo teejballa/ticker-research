@@ -135,21 +135,22 @@ export const BOT_FILTER_MODE: BotFilterMode = FEATURES.bot_filter_mode;
 // research-brief prompt insertion, and PerAspectChips UI gating.
 export const FEATURE_PER_ASPECT_AGGREGATE: FeatureMode = FEATURES.per_aspect_aggregate_mode;
 
-// ── Plan 30.1 — community_scan_source: sibling flag with a DIFFERENT value set
-// (firecrawl/reddit/shadow), so it cannot live in FLAG_NAMES (which uses the
-// 3-mode off/shadow/on FeatureMode). Default 'firecrawl' preserves production
-// behavior (D-25). Fail-fast on unknown values (T-30.1-01-01 mitigation).
+// ── Plan 30.1-pivot — community_scan_source: sibling flag with a DIFFERENT
+// value set (firecrawl/xpoz/shadow), so it cannot live in FLAG_NAMES (which
+// uses the 3-mode off/shadow/on FeatureMode). Default 'firecrawl' preserves
+// production behavior (D-25 / D-36). Fail-fast on unknown values
+// (T-30.1-01-01 mitigation).
 //   off — N/A (use 'firecrawl' to keep legacy path)
 //   firecrawl — legacy Firecrawl community scan (current production)
-//   reddit    — new Reddit + HackerNews path is primary writer
+//   xpoz      — new Xpoz (Reddit + Twitter) path is primary writer (D-36)
 //   shadow    — new path runs but writes nowhere (golden-ticker validation only)
-export type CommunityScanSource = 'firecrawl' | 'reddit' | 'shadow';
+export type CommunityScanSource = 'firecrawl' | 'xpoz' | 'shadow';
 
 function parseCommunityScanSource(raw: string | undefined): CommunityScanSource {
   if (raw == null || raw === '') return 'firecrawl';
-  if (raw === 'firecrawl' || raw === 'reddit' || raw === 'shadow') return raw;
+  if (raw === 'firecrawl' || raw === 'xpoz' || raw === 'shadow') return raw;
   throw new Error(
-    `FEATURE_COMMUNITY_SCAN_SOURCE must be one of: firecrawl, reddit, shadow (got: ${raw})`,
+    `FEATURE_COMMUNITY_SCAN_SOURCE must be one of: firecrawl, xpoz, shadow (got: ${raw})`,
   );
 }
 
