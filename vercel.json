@@ -13,7 +13,7 @@
     }
   },
   "crons": [
-    { "path": "/api/cron/sentiment-scan", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/sentiment-scan", "schedule": "0 8 * * *" },
     { "path": "/api/cron/price-followup", "schedule": "0 6 * * *" },
     { "path": "/api/cron/learn", "schedule": "30 7 * * *" },
     { "path": "/api/cron/alpha-decay-watch", "schedule": "0 6 * * *" },
