@@ -35,6 +35,17 @@ describe('COST_PER_CALL_USD — pinned per-provider rates (T-20-Z-03-03 quarterl
   it('hackernews = $0/call (Algolia public search, no auth)', () => {
     expect(COST_PER_CALL_USD['hackernews']).toBe(0);
   });
+
+  // Plan 30.1-pivot — Xpoz Pro Reddit endpoint. 2 credits/call;
+  // overage at $0.80/1K credits ⇒ ~$0.001/call. Citation: https://xpoz.ai
+  it('reddit-xpoz = $0.001/call (Xpoz Pro 2 credits @ $0.80/1K)', () => {
+    expect(COST_PER_CALL_USD['reddit-xpoz']).toBe(0.001);
+  });
+
+  // Plan 30.1-pivot — Xpoz Pro Twitter endpoint. Same rate as Reddit.
+  it('twitter-xpoz = $0.001/call (Xpoz Pro 2 credits @ $0.80/1K)', () => {
+    expect(COST_PER_CALL_USD['twitter-xpoz']).toBe(0.001);
+  });
 });
 
 describe('GEMINI_TOKEN_RATES — pinned 2026-Q1 (https://ai.google.dev/pricing)', () => {

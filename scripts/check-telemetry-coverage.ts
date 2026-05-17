@@ -30,6 +30,8 @@ const REQUIRED: RequiredEntry[] = [
   { file: 'src/lib/data/lightweight-community-scan.ts', reason: 'Firecrawl + community fetch' },
   { file: 'src/lib/data/adapters/apewisdom.ts', reason: 'ApeWisdom external API' },
   { file: 'src/lib/data/adapters/exa-search.ts', reason: 'Exa web search external API' },
+  { file: 'src/lib/data/adapters/reddit.ts', reason: 'Xpoz Reddit external API (Plan 30.1-pivot D-32)' },
+  { file: 'src/lib/data/adapters/twitter.ts', reason: 'Xpoz Twitter external API (Plan 30.1-pivot D-35)' },
   { file: 'src/lib/sentiment/finsentllm.ts', reason: 'HF FinBERT inference endpoint' },
   { file: 'src/lib/gemini-analysis.ts', reason: 'Gemini via AI Gateway' },
 ];
