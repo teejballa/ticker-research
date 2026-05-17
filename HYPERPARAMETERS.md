@@ -539,8 +539,13 @@ Updated by: Plan 20-D-03 (2026-05-13).
 ## Community-Engagement Tiers (Phase 30.1)
 
 *Module:* `src/lib/data/lightweight-community-scan.ts` — `toEngagementFromFields()` + `ENGAGEMENT_TIER_THRESHOLDS`.
+*Calibration script:* `npm run calibrate-tiers` → `scripts/calibrate-engagement-tiers.ts` (pure comparison logic in `src/lib/evaluation/tier-calibration.ts`).
 
 Maps Reddit `score` + `num_comments` (and HN `points` + `num_comments` — same constants) to a three-tier engagement label consumed by `computeSentimentDimensions`.
+
+**Calibration constraint (D-19):** Tier distribution under the new Reddit+HN thresholds must match the historical Firecrawl-era distribution within ±10 percentage points per tier (CONTEXT.md D-19). This is enforced by `npm run calibrate-tiers` — exit 0 ships, exit 2 forces a threshold retune. Per CLAUDE.md §Statistical-Methods Reference rule #2 (calibration is a first-class metric), calibration lives alongside hit-rate and Brier-score modules in `src/lib/evaluation/`.
+
+### Pre-calibration defaults (Phase 30.1-03 starting point)
 
 | Tier     | Threshold                                            |
 |----------|------------------------------------------------------|
@@ -548,19 +553,38 @@ Maps Reddit `score` + `num_comments` (and HN `points` + `num_comments` — same 
 | `medium` | `score ≥ 20` OR `num_comments ≥ 10` (and not high)   |
 | `low`    | otherwise                                            |
 
+### Calibrated thresholds (post-Stage-3 — operator fills after shadow soak)
+
+| Tier   | Reddit `score` | Reddit `num_comments` | HN `points` | HN `num_comments` |
+|--------|----------------|------------------------|-------------|-------------------|
+| high   | ≥ {TBD}        | OR ≥ {TBD}             | ≥ {TBD}     | OR ≥ {TBD}        |
+| medium | ≥ {TBD}        | OR ≥ {TBD}             | ≥ {TBD}     | OR ≥ {TBD}        |
+| low    | otherwise      | otherwise              | otherwise   | otherwise         |
+
+### Calibration backtest (filled after Stage 3 of 30.1-OPERATOR-PLAYBOOK.md)
+
+- Window: 7 days of shadow-mode `SentimentSnapshot.community_aggregated.highlights[]` rows
+- Reddit highlights observed: {N}
+- HackerNews highlights observed: {N}
+- Firecrawl baseline source: `FIRECRAWL_BASELINE_DIST` constant in `scripts/calibrate-engagement-tiers.ts` (sourced from pre-30.1 `SentimentSnapshot.community_aggregated` highlight counts over a representative 30-day window)
+- Max `|delta_pp|` across tiers: {X.X}
+- Verdict: {PASS within ±10pp / FAIL — retune ENGAGEMENT_TIER_THRESHOLDS and re-run}
+- Recalibration cadence: re-run on every Reddit/HN adapter behavior change OR after 90 days, whichever first.
+
 **Calibration procedure (D-19):**
 
 1. During plan 30.1-05's shadow soak (env `FEATURE_COMMUNITY_SCAN_SOURCE=shadow` for ≥7 days), collect both Firecrawl-era and Reddit/HN tier classifications for the watchlist.
-2. Compute the tier distribution `P(high), P(medium), P(low)` for each source.
-3. Adjust `ENGAGEMENT_TIER_THRESHOLDS` constants so the new-path distribution is within ±10pp per tier of the Firecrawl-era distribution.
-4. Re-run the diffusion-engine calibration smoke test (`npm test -- sentiment-dimensions`) to confirm `computeSentimentDimensions` returns shape-consistent outputs.
-5. **Last calibration:** TBD — finalize after shadow soak (plan 30.1-05).
+2. Run `npm run calibrate-tiers`. The script reads `SentimentSnapshot.community_aggregated.highlights[].engagement_signal` from the soak window, partitions per source by `community_name` (`r/*` → reddit; `HackerNews` → hackernews), and compares each per-source Distribution against `FIRECRAWL_BASELINE_DIST` via `compareDistributions` (pure, unit-tested in `tests/lib/evaluation/tier-calibration.unit.test.ts`).
+3. Exit 0 (≤10pp deviation on every tier): paste the calibration report Markdown table into the "Calibrated thresholds" section above and proceed to cutover (Stage 4).
+4. Exit 2 (>10pp on at least one tier): adjust `ENGAGEMENT_TIER_THRESHOLDS` in `src/lib/data/lightweight-community-scan.ts`, redeploy, wait 24h for fresh snapshots, re-run.
+5. Re-run the diffusion-engine calibration smoke test (`npm test -- sentiment-dimensions`) to confirm `computeSentimentDimensions` returns shape-consistent outputs.
+6. **Last calibration:** TBD — finalize after shadow soak (plan 30.1-05 Task 2).
 
 **Cross-source comparability:** HN `points` and Reddit `score` are NOT directly comparable in raw magnitudes (HN's smaller audience means a 100-point HN post carries similar reach to a 500-score WSB post). Per-source thresholds may diverge after calibration; the symmetric defaults above are a starting point.
 
 **Optional upvote-ratio gate:** Plan 30.1-04 may drop Reddit posts with `upvote_ratio < 0.5` from highlights (low-signal), but keeps them in `RedditPost[]` for citation purposes.
 
-Updated by: Plan 30.1-03 (2026-05-15).
+Updated by: Plan 30.1-03 (2026-05-15); Plan 30.1-05 Task 1 (2026-05-15 — calibration script + ±10pp gate + post-Stage-3 table skeleton).
 
 ## Model Versioning
 

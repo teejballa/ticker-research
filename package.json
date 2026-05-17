@@ -37,6 +37,7 @@
     "check-lookahead": "npx tsx scripts/check-lookahead-static.ts",
     "test:lookahead-bias": "vitest run --config vitest.integration.config.ts tests/integration/lookahead-bias.regression.test.ts",
     "check-telemetry-coverage": "npx tsx scripts/check-telemetry-coverage.ts",
+    "calibrate-tiers": "npx tsx scripts/calibrate-engagement-tiers.ts",
     "check-prompts": "npx tsx scripts/check-prompt-versions.ts",
     "check-disclaimers": "npx tsx scripts/audit-disclaimers.ts",
     "check-numeric-grounding": "npx tsx scripts/check-numeric-grounding.ts",
