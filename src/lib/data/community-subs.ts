@@ -1,7 +1,12 @@
 /**
  * Phase 30.1 — Subreddit roster for community-scan ingestion (D-10, D-11).
  *
- * 16 fixed entries spanning mainstream / middle / niche audiences.
+ * Plan 30.1-pivot (D-33) — trimmed from 16 to 10 entries. The 6 dropped
+ * (dividends, FinancialIndependence, Vitards, pennystocks, biotech_stocks,
+ * Bogleheads) overlapped heavily with the surviving mainstream/middle subs
+ * and contributed noise rather than signal under Xpoz Pro's credit-metered
+ * pricing.
+ *
  * The per-ticker niche sub `r/{TICKER}` (D-11) is NOT in this config —
  * it is computed at orchestrator time in lightweight-community-scan.ts
  * (plan 30.1-03) so a roster edit doesn't touch ticker-specific logic.
@@ -31,11 +36,5 @@ export const COMMUNITY_SUBS: readonly CommunitySubConfig[] = [
   { name: 'SecurityAnalysis',     community_type: 'middle',     audience: 'value/fundamentals analysts',theme: 'DCF + intrinsic value' },
   { name: 'algotrading',          community_type: 'middle',     audience: 'quant/systematic traders',   theme: 'systematic + quant' },
   { name: 'ValueInvesting',       community_type: 'middle',     audience: 'value-focused',              theme: 'Buffett-school deep value' },
-  { name: 'dividends',            community_type: 'middle',     audience: 'income-focused',             theme: 'dividend yield + DRIPs' },
-  { name: 'Bogleheads',           community_type: 'middle',     audience: 'passive/index',              theme: 'index strategy' },
-  { name: 'FinancialIndependence',community_type: 'middle',     audience: 'long-horizon retail',        theme: 'FIRE + long-term portfolios' },
-  { name: 'Vitards',              community_type: 'niche',      audience: 'value-investor-adjacent',    theme: 'cyclical + materials' },
-  { name: 'pennystocks',          community_type: 'niche',      audience: 'micro-cap retail',           theme: 'small/micro-cap speculation' },
   { name: 'Superstonk',           community_type: 'niche',      audience: 'meme-stock',                 theme: 'GME-adjacent' },
-  { name: 'biotech_stocks',       community_type: 'niche',      audience: 'biotech retail',             theme: 'biotech catalysts' },
 ] as const;

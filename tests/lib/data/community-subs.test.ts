@@ -8,6 +8,9 @@
 import { describe, it, expect } from 'vitest';
 import { COMMUNITY_SUBS, type CommunitySubConfig } from '@/lib/data/community-subs';
 
+// Plan 30.1-pivot (D-33) — roster trimmed 16 → 10. Dropped subs (dividends,
+// FinancialIndependence, Vitards, pennystocks, biotech_stocks, Bogleheads)
+// overlapped with surviving entries and added noise under Xpoz credit pricing.
 const EXPECTED_NAMES = [
   'wallstreetbets',
   'stocks',
@@ -18,18 +21,12 @@ const EXPECTED_NAMES = [
   'SecurityAnalysis',
   'algotrading',
   'ValueInvesting',
-  'dividends',
-  'Bogleheads',
-  'FinancialIndependence',
-  'Vitards',
-  'pennystocks',
   'Superstonk',
-  'biotech_stocks',
 ] as const;
 
-describe('COMMUNITY_SUBS — Plan 30.1-01 frozen roster (D-10)', () => {
-  it('exposes exactly 16 entries (r/{TICKER} is appended at scan time, not here)', () => {
-    expect(COMMUNITY_SUBS.length).toBe(16);
+describe('COMMUNITY_SUBS — Plan 30.1-pivot trimmed roster (D-33)', () => {
+  it('exposes exactly 10 entries (r/{TICKER} is appended at scan time, not here)', () => {
+    expect(COMMUNITY_SUBS.length).toBe(10);
   });
 
   it('every entry has all four typed keys with correct primitive types', () => {
