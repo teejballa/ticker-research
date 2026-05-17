@@ -129,7 +129,9 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
 
   it('calls fetchRedditCommunity once per sub in COMMUNITY_SUBS + ticker niche', async () => {
     vi.stubEnv('XPOZ_API_KEY', 'fake-xpoz-key');
-    const fetchRedditCommunityMock = vi.fn(async () => [] as RedditPost[]);
+    const fetchRedditCommunityMock = vi.fn<
+      (ticker: string, sub: string, opts?: { limit?: number }) => Promise<RedditPost[]>
+    >(async () => []);
     vi.doMock('@/lib/features', async () => {
       const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
       return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
@@ -169,7 +171,9 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
 
   it('calls fetchTwitterCommunity once per ticker per run', async () => {
     vi.stubEnv('XPOZ_API_KEY', 'fake-xpoz-key');
-    const fetchTwitterCommunityMock = vi.fn(async () => [] as TwitterPost[]);
+    const fetchTwitterCommunityMock = vi.fn<
+      (ticker: string, opts?: { limit?: number; sinceDays?: number }) => Promise<TwitterPost[]>
+    >(async () => []);
     vi.doMock('@/lib/features', async () => {
       const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
       return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
