@@ -36,10 +36,10 @@ describe('COMMUNITY_SCAN_SOURCE — Plan 30.1-01 flag contract (D-25)', () => {
     expect(mod.COMMUNITY_SCAN_SOURCE).toBe('firecrawl');
   });
 
-  it('accepts "reddit" as a valid value (cutover path)', async () => {
-    process.env[ENV_VAR] = 'reddit';
+  it('accepts "xpoz" as a valid value (Plan 30.1-pivot cutover path)', async () => {
+    process.env[ENV_VAR] = 'xpoz';
     const mod = await import('@/lib/features');
-    expect(mod.COMMUNITY_SCAN_SOURCE).toBe('reddit');
+    expect(mod.COMMUNITY_SCAN_SOURCE).toBe('xpoz');
   });
 
   it('accepts "shadow" as a valid value (golden-ticker validation path)', async () => {
@@ -48,15 +48,22 @@ describe('COMMUNITY_SCAN_SOURCE — Plan 30.1-01 flag contract (D-25)', () => {
     expect(mod.COMMUNITY_SCAN_SOURCE).toBe('shadow');
   });
 
+  it('rejects the legacy "reddit" value (superseded by "xpoz" in 30.1-pivot)', async () => {
+    process.env[ENV_VAR] = 'reddit';
+    await expect(import('@/lib/features')).rejects.toThrow(
+      /FEATURE_COMMUNITY_SCAN_SOURCE must be one of: firecrawl, xpoz, shadow/,
+    );
+  });
+
   it('throws fail-fast on any other value (T-30.1-01-01 mitigation)', async () => {
     process.env[ENV_VAR] = 'garbage';
     await expect(import('@/lib/features')).rejects.toThrow(
-      /FEATURE_COMMUNITY_SCAN_SOURCE must be one of: firecrawl, reddit, shadow/,
+      /FEATURE_COMMUNITY_SCAN_SOURCE must be one of: firecrawl, xpoz, shadow/,
     );
   });
 
   it('error message includes the offending value for operator debugging', async () => {
-    process.env[ENV_VAR] = 'redit'; // common typo
-    await expect(import('@/lib/features')).rejects.toThrow(/got: redit/);
+    process.env[ENV_VAR] = 'xpoz-typo'; // common typo
+    await expect(import('@/lib/features')).rejects.toThrow(/got: xpoz-typo/);
   });
 });
