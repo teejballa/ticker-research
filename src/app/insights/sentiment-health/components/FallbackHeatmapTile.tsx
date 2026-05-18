@@ -26,13 +26,13 @@ export function FallbackHeatmapTile({ rows }: { rows: FallbackRow[] }) {
   if (rows.length === 0) {
     return (
       <div
-        className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 mb-6"
+        className="rounded-lg border border-outline-variant dark:border-outline-variant p-4 mb-6"
         data-testid="fallback-heatmap-tile-empty"
       >
-        <div className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <div className="text-xs uppercase tracking-wide text-on-surface-variant dark:text-on-surface-variant">
           Fallback heatmap (last 24h) — per D-10
         </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+        <p className="text-sm text-on-surface-variant dark:text-on-surface-variant mt-2">
           No provider data yet.
         </p>
       </div>
@@ -40,10 +40,10 @@ export function FallbackHeatmapTile({ rows }: { rows: FallbackRow[] }) {
   }
   return (
     <div
-      className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 mb-6"
+      className="rounded-lg border border-outline-variant dark:border-outline-variant p-4 mb-6"
       data-testid="fallback-heatmap-tile"
     >
-      <div className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-3">
+      <div className="text-xs uppercase tracking-wide text-on-surface-variant dark:text-on-surface-variant mb-3">
         Fallback heatmap (last 24h) — per D-10
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -59,13 +59,13 @@ function FallbackEntry({ row }: { row: FallbackRow }) {
   const pct = (row.fallback_rate * 100).toFixed(1);
   return (
     <>
-      <dt className="text-zinc-500 dark:text-zinc-400">{row.provider_id}</dt>
+      <dt className="text-on-surface-variant dark:text-on-surface-variant">{row.provider_id}</dt>
       <dd
         className={colorFor(row.fallback_rate)}
         data-testid={`fallback-rate-${row.provider_id}`}
       >
         {pct}%{' '}
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-on-surface-variant">
           ({row.count_24h.toLocaleString()})
         </span>
       </dd>

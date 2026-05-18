@@ -1,0 +1,473 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - button "Switch to dark mode" [ref=e4] [cursor=pointer]:
+        - img [ref=e5]
+      - link "CIPHER" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - text: CIPHER
+      - navigation [ref=e10]:
+        - link "Research" [ref=e11] [cursor=pointer]:
+          - /url: /terminal
+        - link "Insights" [ref=e12] [cursor=pointer]:
+          - /url: /insights
+        - generic [ref=e13]: NYSE
+        - generic [ref=e14]: NASDAQ
+    - generic [ref=e15]:
+      - generic [ref=e16]: Markets closed · Weekend
+      - link "Sign in" [ref=e18] [cursor=pointer]:
+        - /url: /auth/signin
+      - link "Analyze a ticker →" [ref=e19] [cursor=pointer]:
+        - /url: /terminal
+        - text: Analyze a ticker
+        - generic [ref=e20]: →
+  - generic [ref=e22]:
+    - generic:
+      - generic: Coverage
+      - text: NYSE · NASDAQ
+    - generic:
+      - generic: Tickers · μ
+      - text: 8 412 indexed
+    - generic:
+      - generic: Brier · OOS
+      - text: σ = 0.196
+    - generic:
+      - generic: Hit rate · 90d
+      - text: 58.3% ± 2.1
+    - generic [ref=e24]: Equity research · Cited
+    - generic [ref=e27]:
+      - generic [ref=e28]: A
+      - generic [ref=e29]: AAPL
+      - generic [ref=e30]: "210.84"
+      - generic [ref=e31]: +1.32%
+    - generic [ref=e32]:
+      - generic [ref=e33]: "N"
+      - generic [ref=e34]: NVDA
+      - generic [ref=e35]: "182.40"
+      - generic [ref=e36]: +0.84%
+    - generic [ref=e37]:
+      - generic [ref=e38]: T
+      - generic [ref=e39]: TSLA
+      - generic [ref=e40]: "346.65"
+      - generic [ref=e41]: "-1.75%"
+    - generic [ref=e42]:
+      - generic [ref=e43]: M
+      - generic [ref=e44]: MSFT
+      - generic [ref=e45]: "372.29"
+      - generic [ref=e46]: "-0.16%"
+    - generic [ref=e47]:
+      - generic [ref=e48]: M
+      - generic [ref=e49]: META
+      - generic [ref=e50]: "575.05"
+      - generic [ref=e51]: +0.35%
+    - generic [ref=e52]:
+      - generic [ref=e53]: A
+      - generic [ref=e54]: AMZN
+      - generic [ref=e55]: "213.77"
+      - generic [ref=e56]: +0.46%
+    - generic:
+      - img
+    - generic [ref=e57]:
+      - generic [ref=e58]: C
+      - generic [ref=e59]: I
+      - generic [ref=e60]: P
+      - generic [ref=e61]: H
+      - generic [ref=e62]: E
+      - generic [ref=e63]: R
+    - generic [ref=e64]:
+      - emphasis [ref=e65]: Source-cited research on any ticker.
+      - text: Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500.
+    - generic:
+      - generic:
+        - generic: · ready when you are ·
+        - heading "Decipher any ticker." [level=2]:
+          - text: Decipher any
+          - emphasis: ticker
+          - text: .
+        - generic:
+          - generic:
+            - generic: ⌕
+            - textbox "Ticker search":
+              - /placeholder: Search a symbol or company — AAPL, Tesla, JPMorgan…
+            - button "Research →":
+              - text: Research
+              - generic: →
+    - generic [ref=e66]:
+      - generic [ref=e67]: SCROLL
+      - generic [ref=e69]: 00%
+  - generic [ref=e70]:
+    - generic [ref=e71]:
+      - generic [ref=e72]:
+        - generic [ref=e73]: How Cipher works
+        - heading "From a thousand pages of disclosure to one cited memo." [level=2] [ref=e74]:
+          - text: From a thousand pages of disclosure to
+          - emphasis [ref=e75]: one cited memo.
+        - paragraph [ref=e76]: Every report follows the same three steps — and the work is auditable end-to-end.
+      - generic [ref=e77]:
+        - generic [ref=e78] [cursor=pointer]:
+          - generic: "01"
+          - generic [ref=e79]: Step · 01
+          - img [ref=e81]
+          - heading "Collect" [level=3] [ref=e91]
+          - paragraph [ref=e92]: SEC filings, earnings transcripts, market data, news, and community discussion — pulled in parallel from six sources.
+          - generic [ref=e93]:
+            - generic [ref=e94]: SEC_EDGAR
+            - generic [ref=e95]: EARNINGS_CALLS
+            - generic [ref=e96]: YAHOO_FINANCE
+            - generic [ref=e97]: REUTERS
+            - generic [ref=e98]: STOCKTWITS
+        - generic [ref=e108] [cursor=pointer]:
+          - generic: "02"
+          - generic [ref=e109]: Step · 02
+          - img [ref=e111]
+          - heading "Analyze" [level=3] [ref=e129]
+          - paragraph [ref=e130]: A reasoning model reads the source pack and extracts the bull case, bear case, and risk factors — each tied to the document it came from.
+          - generic [ref=e131]:
+            - generic [ref=e132]: CLAUDE
+            - generic [ref=e133]: GEMINI
+            - generic [ref=e134]: FINBERT
+            - generic [ref=e135]: LOUGHRAN-MCDONALD
+        - generic [ref=e145] [cursor=pointer]:
+          - generic: "03"
+          - generic [ref=e146]: Step · 03
+          - img [ref=e148]:
+            - generic [ref=e151]: ▲ BULL
+          - heading "Report" [level=3] [ref=e158]
+          - paragraph [ref=e159]: "A structured memo: recommendation with confidence, forward outlook with price-target context, and every claim linked to its source."
+          - generic [ref=e160]:
+            - generic [ref=e161]: CALIBRATION
+            - generic [ref=e162]: VS_SPY
+            - generic [ref=e163]: BACKTEST
+    - generic [ref=e173]:
+      - generic [ref=e174]:
+        - generic [ref=e175]:
+          - generic [ref=e176]: Coverage map
+          - heading "A research memo for every sector." [level=2] [ref=e177]:
+            - text: A research memo for
+            - emphasis [ref=e178]: every sector.
+          - paragraph [ref=e179]: Sentiment, drivers, and outlook calibrated per cap-class and signal class — not one-size-fits-all.
+        - generic [ref=e180]:
+          - generic [ref=e181]: Active coverage
+          - generic [ref=e182]: 6 sectors
+      - generic [ref=e183]:
+        - generic [ref=e184] [cursor=pointer]:
+          - generic [ref=e185]:
+            - generic [ref=e186]: Sector
+            - generic [ref=e187]: Semiconductors
+            - generic [ref=e188]: Σ
+          - generic [ref=e189]:
+            - generic [ref=e190]: NVDA
+            - generic [ref=e191]: AMD
+            - generic [ref=e192]: TSM
+        - generic [ref=e193] [cursor=pointer]:
+          - generic [ref=e194]:
+            - generic [ref=e195]: Sector
+            - generic [ref=e196]: Consumer Tech
+            - generic [ref=e197]: ↗
+          - generic [ref=e198]:
+            - generic [ref=e199]: AAPL
+            - generic [ref=e200]: SONY
+            - generic [ref=e201]: DELL
+        - generic [ref=e202] [cursor=pointer]:
+          - generic [ref=e203]:
+            - generic [ref=e204]: Sector
+            - generic [ref=e205]: Enterprise SaaS
+            - generic [ref=e206]: ▲
+          - generic [ref=e207]:
+            - generic [ref=e208]: MSFT
+            - generic [ref=e209]: CRM
+            - generic [ref=e210]: NOW
+        - generic [ref=e211] [cursor=pointer]:
+          - generic [ref=e212]:
+            - generic [ref=e213]: Sector
+            - generic [ref=e214]: Energy
+            - generic [ref=e215]: ◐
+          - generic [ref=e216]:
+            - generic [ref=e217]: XOM
+            - generic [ref=e218]: CVX
+            - generic [ref=e219]: BP
+        - generic [ref=e220] [cursor=pointer]:
+          - generic [ref=e221]:
+            - generic [ref=e222]: Sector
+            - generic [ref=e223]: Biotech
+            - generic [ref=e224]: α
+          - generic [ref=e225]:
+            - generic [ref=e226]: LLY
+            - generic [ref=e227]: REGN
+            - generic [ref=e228]: VRTX
+        - generic [ref=e229] [cursor=pointer]:
+          - generic [ref=e230]:
+            - generic [ref=e231]: Sector
+            - generic [ref=e232]: Banking
+            - generic [ref=e233]: $
+          - generic [ref=e234]:
+            - generic [ref=e235]: JPM
+            - generic [ref=e236]: BAC
+            - generic [ref=e237]: C
+    - generic [ref=e238]:
+      - generic [ref=e239]:
+        - generic [ref=e240]:
+          - generic [ref=e241]: Live feed
+          - heading "The tape never sleeps." [level=2] [ref=e242]:
+            - text: The
+            - emphasis [ref=e243]: tape
+            - text: never sleeps.
+        - generic [ref=e245]: Regular session · NYSE / NASDAQ
+      - generic [ref=e247]:
+        - generic [ref=e248]:
+          - generic [ref=e249]: Symbol
+          - generic [ref=e250]: Name
+          - generic [ref=e251]: Last
+          - generic [ref=e252]: Change
+          - generic [ref=e253]: Trend
+        - generic [ref=e255]: Loading market data…
+    - generic [ref=e257]:
+      - generic [ref=e258]:
+        - generic [ref=e259]: An example
+        - heading "A report you can actually act on." [level=2] [ref=e260]:
+          - text: A report you can
+          - emphasis [ref=e261]: actually act on.
+        - paragraph [ref=e262]: Every conclusion in a Cipher report links back to the filing, transcript, or article it came from. Click a citation, see the source.
+        - generic [ref=e263]:
+          - img [ref=e264]
+          - generic [ref=e270]:
+            - generic [ref=e271]: 12-mo vs SPY
+            - generic [ref=e272]: +4.8 pp
+        - button "Open the AAPL sample →" [ref=e273] [cursor=pointer]:
+          - text: Open the AAPL sample
+          - generic [ref=e274]: →
+      - generic [ref=e275]:
+        - generic [ref=e276]:
+          - generic [ref=e277]:
+            - generic [ref=e278]: AAPL
+            - generic [ref=e279]: APPLE INC.
+          - generic [ref=e280]:
+            - generic [ref=e281]: $210.84
+            - generic [ref=e282]: +1.32%
+        - generic [ref=e283]:
+          - generic [ref=e284]:
+            - heading "Thesis" [level=2] [ref=e285]
+            - generic [ref=e286]:
+              - text: Services revenue continues to
+              - emphasis [ref=e287]: insulate margins
+              - text: from iPhone unit softness, but China remains the swing factor for the next two quarters.
+            - generic [ref=e288]:
+              - generic [ref=e289]:
+                - heading "Bull · 3" [level=5] [ref=e290]
+                - list [ref=e291]:
+                  - listitem [ref=e292]: Services hit 30% of revenue, +14% YoY 10-Q · p.14
+                  - listitem [ref=e293]: Gross margin held 46.2% despite mix shift Q3 call
+                  - listitem [ref=e294]: $26B buyback announced 8-K
+              - generic [ref=e295]:
+                - heading "Bear · 2" [level=5] [ref=e296]
+                - list [ref=e297]:
+                  - listitem [ref=e298]: Greater China revenue −6.5% YoY 10-Q · p.22
+                  - listitem [ref=e299]: AI feature rollout delayed in 4 markets Reuters
+          - generic [ref=e300]:
+            - heading "Recommendation" [level=2] [ref=e301]
+            - generic [ref=e302]: ▲ Constructive · 12mo
+            - generic [ref=e303]:
+              - generic [ref=e304]: Confidence
+              - generic [ref=e314]: 6 / 8
+            - generic [ref=e315]:
+              - generic [ref=e316]: vs. S&P 500 · 12mo
+              - generic [ref=e317]: +4.8 pp
+              - generic [ref=e318]: Back-tested · n=148
+    - generic [ref=e319]:
+      - generic [ref=e320]:
+        - generic [ref=e321]: The principles
+        - heading "Research that shows its work." [level=2] [ref=e322]:
+          - text: Research that
+          - emphasis [ref=e323]: shows its work.
+        - paragraph [ref=e324]: Four ideas that make Cipher reports trustworthy.
+      - generic [ref=e325]:
+        - generic [ref=e326]:
+          - generic [ref=e327]: S/E
+          - heading "Primary sources, not summaries." [level=3] [ref=e328]
+          - paragraph [ref=e329]: Cipher reads 10-Ks, 10-Qs, 8-Ks, and earnings transcripts directly. Bull and bear points cite the exact filing they came from.
+          - generic [ref=e330]:
+            - generic [ref=e331]: SEC_EDGAR
+            - generic [ref=e332]: YAHOO_FINANCE
+        - generic [ref=e333]:
+          - generic [ref=e334]: ± / σ
+          - heading "Calibrated against the market." [level=3] [ref=e335]
+          - paragraph [ref=e336]: Each recommendation carries a confidence level back-tested against the S&P 500 — so a "bullish" call comes with its historical hit rate.
+          - generic [ref=e337]:
+            - generic [ref=e338]: CALIBRATION
+            - generic [ref=e339]: VS_SPY
+        - generic [ref=e340]:
+          - generic [ref=e341]: Δ /∇
+          - heading "Sentiment with receipts." [level=3] [ref=e342]
+          - paragraph [ref=e343]: We don't just count positive words. Cipher applies FinBERT and Loughran-McDonald to filings and call transcripts, with per-aspect aggregation.
+          - generic [ref=e344]:
+            - generic [ref=e345]: FINBERT
+            - generic [ref=e346]: L-M
+            - generic [ref=e347]: PER_ASPECT
+        - generic [ref=e348]:
+          - generic [ref=e349]: </>
+          - heading "Auditable end-to-end." [level=3] [ref=e350]
+          - paragraph [ref=e351]: Every model card, every dataset card, every calibration cron — published. Read the math, not just the recommendation.
+          - generic [ref=e352]:
+            - generic [ref=e353]: MODEL_CARDS
+            - generic [ref=e354]: DATASET_CARDS
+    - generic [ref=e355]:
+      - generic [ref=e356]: Built on · Data and model stack
+      - generic [ref=e357]:
+        - generic [ref=e358]: Claude
+        - generic [ref=e359]: Gemini
+        - generic [ref=e360]: Yahoo! Finance
+        - generic [ref=e361]: SEC EDGAR
+        - generic [ref=e362]: FinBERT
+    - generic [ref=e364]:
+      - generic:
+        - img
+      - generic:
+        - img
+      - heading "Research a ticker." [level=2] [ref=e365]:
+        - text: Research a
+        - emphasis [ref=e366]: ticker.
+      - paragraph [ref=e367]: A structured memo with sources, drivers, outlook, and a calibrated recommendation — in under a minute.
+      - generic [ref=e369]:
+        - textbox "Ticker symbol" [ref=e370]:
+          - /placeholder: AAPL · NVDA · TSLA …
+        - button "Decipher →" [ref=e371] [cursor=pointer]:
+          - text: Decipher
+          - generic [ref=e372]: →
+    - contentinfo [ref=e373]:
+      - generic [ref=e374]:
+        - generic [ref=e375]:
+          - generic [ref=e376]: CIPHER
+          - generic [ref=e377]:
+            - text: Source-cited
+            - emphasis [ref=e378]: equity research,
+            - text: for everyone.
+          - generic [ref=e379]:
+            - generic [ref=e380]: © 2026 Cipher Research
+            - generic [ref=e381]: Not investment advice
+            - generic [ref=e382]: Educational use only
+        - generic [ref=e383]:
+          - heading "Product" [level=6] [ref=e384]
+          - list [ref=e385]:
+            - listitem [ref=e386]:
+              - link "Research terminal" [ref=e387] [cursor=pointer]:
+                - /url: /terminal
+            - listitem [ref=e388]:
+              - link "Insights" [ref=e389] [cursor=pointer]:
+                - /url: /insights
+            - listitem [ref=e390]:
+              - link "Dashboard" [ref=e391] [cursor=pointer]:
+                - /url: /dashboard
+            - listitem [ref=e392]:
+              - link "Sign in" [ref=e393] [cursor=pointer]:
+                - /url: /auth/signin
+        - generic [ref=e394]:
+          - heading "Methods" [level=6] [ref=e395]
+          - list [ref=e396]:
+            - listitem [ref=e397]:
+              - link "Calibration" [ref=e398] [cursor=pointer]:
+                - /url: /insights/calibration
+            - listitem [ref=e399]:
+              - link "Sentiment sources" [ref=e400] [cursor=pointer]:
+                - /url: /insights/sentiment-sources
+            - listitem [ref=e401]:
+              - link "Pipeline health" [ref=e402] [cursor=pointer]:
+                - /url: /insights/sentiment-health
+            - listitem [ref=e403]:
+              - link "Backtests" [ref=e404] [cursor=pointer]:
+                - /url: /insights
+        - generic [ref=e405]:
+          - heading "Coverage" [level=6] [ref=e406]
+          - list [ref=e407]:
+            - listitem [ref=e408]:
+              - link "S&P 500 · SPY" [ref=e409] [cursor=pointer]:
+                - /url: /research/SPY
+            - listitem [ref=e410]:
+              - link "Nasdaq 100 · QQQ" [ref=e411] [cursor=pointer]:
+                - /url: /research/QQQ
+            - listitem [ref=e412]:
+              - link "Search a ticker" [ref=e413] [cursor=pointer]:
+                - /url: /terminal
+            - listitem [ref=e414]:
+              - link "Methodology" [ref=e415] [cursor=pointer]:
+                - /url: /insights
+    - generic [ref=e417]:
+      - generic [ref=e418]:
+        - generic [ref=e419]: AAPL
+        - generic [ref=e420]: —
+        - generic [ref=e421]: ·
+        - generic [ref=e422]: ·
+      - generic [ref=e423]:
+        - generic [ref=e424]: MSFT
+        - generic [ref=e425]: —
+        - generic [ref=e426]: ·
+        - generic [ref=e427]: ·
+      - generic [ref=e428]:
+        - generic [ref=e429]: NVDA
+        - generic [ref=e430]: —
+        - generic [ref=e431]: ·
+        - generic [ref=e432]: ·
+      - generic [ref=e433]:
+        - generic [ref=e434]: GOOGL
+        - generic [ref=e435]: —
+        - generic [ref=e436]: ·
+        - generic [ref=e437]: ·
+      - generic [ref=e438]:
+        - generic [ref=e439]: AMZN
+        - generic [ref=e440]: —
+        - generic [ref=e441]: ·
+        - generic [ref=e442]: ·
+      - generic [ref=e443]:
+        - generic [ref=e444]: TSLA
+        - generic [ref=e445]: —
+        - generic [ref=e446]: ·
+        - generic [ref=e447]: ·
+      - generic [ref=e448]:
+        - generic [ref=e449]: META
+        - generic [ref=e450]: —
+        - generic [ref=e451]: ·
+        - generic [ref=e452]: ·
+      - generic [ref=e453]:
+        - generic [ref=e454]: JPM
+        - generic [ref=e455]: —
+        - generic [ref=e456]: ·
+        - generic [ref=e457]: ·
+      - generic [ref=e458]:
+        - generic [ref=e459]: AAPL
+        - generic [ref=e460]: —
+        - generic [ref=e461]: ·
+        - generic [ref=e462]: ·
+      - generic [ref=e463]:
+        - generic [ref=e464]: MSFT
+        - generic [ref=e465]: —
+        - generic [ref=e466]: ·
+        - generic [ref=e467]: ·
+      - generic [ref=e468]:
+        - generic [ref=e469]: NVDA
+        - generic [ref=e470]: —
+        - generic [ref=e471]: ·
+        - generic [ref=e472]: ·
+      - generic [ref=e473]:
+        - generic [ref=e474]: GOOGL
+        - generic [ref=e475]: —
+        - generic [ref=e476]: ·
+        - generic [ref=e477]: ·
+      - generic [ref=e478]:
+        - generic [ref=e479]: AMZN
+        - generic [ref=e480]: —
+        - generic [ref=e481]: ·
+        - generic [ref=e482]: ·
+      - generic [ref=e483]:
+        - generic [ref=e484]: TSLA
+        - generic [ref=e485]: —
+        - generic [ref=e486]: ·
+        - generic [ref=e487]: ·
+      - generic [ref=e488]:
+        - generic [ref=e489]: META
+        - generic [ref=e490]: —
+        - generic [ref=e491]: ·
+        - generic [ref=e492]: ·
+      - generic [ref=e493]:
+        - generic [ref=e494]: JPM
+        - generic [ref=e495]: —
+        - generic [ref=e496]: ·
+        - generic [ref=e497]: ·

@@ -1,97 +1,105 @@
 // src/app/auth/signin/page.tsx
 'use client';
-import { signIn } from 'next-auth/react';
+
 import { Suspense } from 'react';
+import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import NavBar from '@/components/NavBar';
+import FooterTicker from '@/components/FooterTicker';
 
-function SignInContent() {
+const STEPS = [
+  'Sign in with Google',
+  'Generate your first report',
+  'Review and export to PDF',
+];
+
+const RESEARCH_PATH_RE = /^\/research\/([A-Z0-9.\-^=]{1,20})/i;
+
+function SignInInner() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
+
+  // Detect that the user was redirected from a research page (e.g. /research/MSFT).
+  // Show a ticker-specific gate so the prompt feels like a continuation of the
+  // user's action rather than a generic sign-in screen.
+  let gatedTicker: string | null = null;
+  try {
+    const parsed = new URL(callbackUrl, 'http://placeholder');
+    const match = parsed.pathname.match(RESEARCH_PATH_RE);
+    if (match && match[1].toUpperCase() !== 'AAPL') {
+      gatedTicker = match[1].toUpperCase();
+    }
+  } catch {
+    // bad callbackUrl — fall through to default copy
+  }
+
+  const heading = gatedTicker ? (
+    <>Sign in to research <em style={{ color: 'var(--indigo)' }}>{gatedTicker}</em>.</>
+  ) : (
+    <>Welcome <em style={{ color: 'var(--indigo)' }}>back</em>.</>
+  );
+
+  const body = gatedTicker
+    ? `Generating a Cipher report requires a free account. AAPL is open as a sample — every other ticker is behind sign-in. We'll bring you back to ${gatedTicker} right after.`
+    : 'Sign in to generate research reports and keep your history. Free during early access — no credit card required.';
+
   return (
-    <div
-      data-testid="signin-root"
-      className="min-h-screen flex items-center justify-center font-mono"
-      style={{ backgroundColor: '#080a0f' }}
-    >
-      <div
-        className="w-96 max-sm:w-full max-sm:mx-4 p-8 space-y-6"
-        style={{ border: '1px solid #1a2d42' }}
-      >
-        {/* Header */}
-        <div>
-          <div
-            className="text-xs font-bold tracking-widest uppercase mb-3"
-            style={{ color: '#f59e0b', fontSize: '11px', letterSpacing: '0.25em' }}
-          >
-            Cipher / Sign in
-          </div>
-          <p
-            className="text-xs leading-relaxed"
-            style={{ color: 'rgba(223,226,235,0.55)', fontSize: '12px' }}
-          >
-            Sign in to generate research reports and keep your history.
-          </p>
-        </div>
+    <>
+      <div className="paper-grain" />
+      <NavBar />
 
-        {/* Sign-in button */}
-        <button
-          type="button"
-          aria-label="Sign in or create account with Google"
-          onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-          className="w-full text-xs font-bold uppercase tracking-widest transition-colors duration-150"
-          style={{
-            minHeight: '44px',
-            padding: '10px 16px',
-            border: '1px solid rgba(245,158,11,0.5)',
-            color: 'rgba(245,158,11,0.85)',
-            background: 'transparent',
-            fontSize: '11px',
-            letterSpacing: '0.12em',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(245,158,11,0.08)';
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(245,158,11,0.8)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(245,158,11,0.5)';
-          }}
-        >
-          Continue with Google
-        </button>
-
-        {/* Social proof */}
-        <p
-          className="text-center text-[10px]"
-          style={{ color: 'rgba(223,226,235,0.25)' }}
-        >
-          Free · No credit card
-        </p>
-
-        {/* Step preview */}
-        <div className="space-y-2 pt-1" style={{ borderTop: '1px solid #1a2d42' }}>
-          {[
-            'Sign in with Google',
-            'Generate your first report',
-            'Review and export',
-          ].map((step, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-xs tabular-nums" style={{ color: 'rgba(245,158,11,0.4)' }}>
-                0{i + 1}
-              </span>
-              <span className="text-xs" style={{ color: 'rgba(223,226,235,0.35)', fontSize: '10px' }}>
-                {step}
-              </span>
+      <main className="page">
+        <div className="signin-wrap">
+          <div className="glow" />
+          <div className="signin-card fade-in" data-testid="signin-root">
+            <div className="tag">
+              {gatedTicker ? `Cipher / Locked: ${gatedTicker}` : 'Cipher / Sign in'}
             </div>
-          ))}
+            <h1>{heading}</h1>
+            <p>{body}</p>
+
+            <button
+              type="button"
+              className="google-btn"
+              aria-label="Sign in or create account with Google"
+              onClick={() => signIn('google', { callbackUrl })}
+            >
+              <span className="g">G</span>
+              Continue with Google
+            </button>
+
+            {gatedTicker && (
+              <Link
+                href="/research/AAPL"
+                className="mt-3 inline-block text-[11px] tracking-[0.18em] uppercase"
+                style={{ color: 'var(--ink-3)', textDecoration: 'underline' }}
+              >
+                Or open the AAPL sample first →
+              </Link>
+            )}
+
+            <div className="signin-steps">
+              {STEPS.map((s, i) => (
+                <div key={i} className="signin-step">
+                  <span className="num">0{i + 1}</span>
+                  <span>{s}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </main>
+
+      <FooterTicker />
+    </>
   );
 }
 
 export default function SignIn() {
   return (
     <Suspense fallback={null}>
-      <SignInContent />
+      <SignInInner />
     </Suspense>
   );
 }

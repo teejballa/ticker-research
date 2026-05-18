@@ -7,9 +7,12 @@ import type { TickerSearchResult } from '@/lib/types';
 
 interface TickerSearchProps {
   className?: string;
+  /** Button label — "Research" on the landing, "Decipher" on the terminal. */
+  cta?: string;
+  autoFocus?: boolean;
 }
 
-export default function TickerSearch({ className }: TickerSearchProps) {
+export default function TickerSearch({ className, cta = 'Research', autoFocus }: TickerSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<TickerSearchResult[]>([]);
@@ -17,16 +20,13 @@ export default function TickerSearch({ className }: TickerSearchProps) {
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [shake, setShake] = useState(false);
-  const [focused, setFocused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Close on outside click
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
-        setFocused(false);
       }
     }
     document.addEventListener('mousedown', onMouseDown);
@@ -82,102 +82,81 @@ export default function TickerSearch({ className }: TickerSearchProps) {
     }
   }
 
-  function handleResultClick(result: TickerSearchResult) {
-    setShowDropdown(false);
-    setQuery('');
-    router.push(`/research/${result.symbol}`);
-  }
+  const goToResult = useCallback(
+    (result: TickerSearchResult) => {
+      setShowDropdown(false);
+      setQuery('');
+      router.push(`/research/${result.symbol}`);
+    },
+    [router],
+  );
 
-  function handleInputFocus() {
-    setFocused(true);
-    if (results.length > 0) setShowDropdown(true);
+  function submit() {
+    if (results[0]) {
+      goToResult(results[0]);
+    } else if (query.trim()) {
+      router.push(`/research/${encodeURIComponent(query.trim().toUpperCase())}`);
+    } else {
+      triggerShake();
+    }
   }
-
-  const borderCls = error
-    ? 'border-error/40'
-    : focused
-    ? 'border-primary/35 ring-1 ring-primary-container/60'
-    : 'border-outline-variant';
 
   return (
-    <div ref={containerRef} className={`relative w-full${className ? ` ${className}` : ''}`}>
-
-      {/* ── INPUT ── */}
-      <div
-        className={`flex items-center bg-surface-container-high border transition-all duration-200 ${borderCls} ${shake ? 'animate-shake' : ''}`}
-      >
-        {/* Prompt */}
-        <span
-          className={`pl-3.5 pr-2 text-sm select-none transition-colors duration-200 ${
-            focused ? 'text-primary' : 'text-outline'
-          }`}
-        >
-          {'>'}
-        </span>
-
+    <div ref={containerRef} className={className}>
+      <div className={`search-shell${shake ? ' shake' : ''}`}>
+        <span className="icon">⌕</span>
         <input
-          ref={inputRef}
+          autoFocus={autoFocus}
           type="text"
           value={query}
           onChange={handleInputChange}
-          onFocus={handleInputFocus}
-          onBlur={() => setFocused(false)}
-          placeholder="TICKER or company name..."
-          className="flex-1 py-3 pr-2 bg-transparent text-primary placeholder-outline/40 text-sm focus:outline-none tracking-wider"
+          onFocus={() => { if (results.length > 0) setShowDropdown(true); }}
+          placeholder="Search a symbol or company — AAPL, Tesla, JPMorgan…"
+          aria-label="Ticker search"
+          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
         />
-
-        {isLoading ? (
-          <div className="pr-3.5">
-            <span className="w-3 h-3 border border-primary/50 border-t-transparent rounded-full animate-spin inline-block" />
-          </div>
-        ) : (
-          <span className="pr-3.5 text-[10px] text-outline select-none">⏎</span>
-        )}
+        <button type="button" onClick={submit}>
+          {isLoading ? (
+            <span
+              className="inline-block w-3 h-3 rounded-full animate-spin"
+              style={{ border: '2px solid currentColor', borderTopColor: 'transparent' }}
+            />
+          ) : (
+            <>
+              {cta} <span style={{ marginLeft: '2px' }}>→</span>
+            </>
+          )}
+        </button>
       </div>
 
-      {/* ── ERROR ── */}
       {error && (
-        <div className="mt-0.5 px-3.5 py-1.5 bg-surface-container-high border border-error/15">
-          <span className="text-[10px] text-error/60 tracking-wider">
+        <div
+          className="mt-1.5 px-3.5 py-1.5"
+          style={{
+            background: 'var(--rose-soft)',
+            border: '1px solid var(--rose)',
+            borderRadius: 'var(--radius)',
+          }}
+        >
+          <span className="font-mono text-[10px] tracking-wider" style={{ color: 'var(--rose)' }}>
             {error === 'NO_MATCH'
-              ? '// ERROR: SYMBOL NOT FOUND IN DATABASE'
-              : '// ERROR: CONNECTION FAILED — RETRY'}
+              ? '// SYMBOL NOT FOUND IN DATABASE'
+              : '// CONNECTION FAILED — RETRY'}
           </span>
         </div>
       )}
 
-      {/* ── DROPDOWN ── */}
       {showDropdown && results.length > 0 && (
-        <div className="absolute z-50 w-full mt-0.5 bg-surface-container-high border border-outline-variant overflow-hidden">
-          {/* Column header */}
-          <div className="px-3.5 py-1.5 border-b border-outline-variant/40 flex items-center justify-between text-[9px] text-outline tracking-[0.3em] select-none">
-            <span>SYMBOL / NAME</span>
-            <span>LAST</span>
-          </div>
-
-          {results.map((result, idx) => (
-            <button
-              key={result.symbol}
-              type="button"
-              onClick={() => handleResultClick(result)}
-              className={`w-full px-3.5 py-2.5 text-left border-b border-outline-variant/20 last:border-b-0 flex items-center justify-between gap-3 transition-colors duration-100 ${
-                idx === 0 ? 'bg-surface-container-highest' : 'hover:bg-surface-container-highest'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="font-bold text-primary text-sm tracking-wider shrink-0 w-16">
-                  {result.symbol}
-                </span>
-                <span className="text-on-surface-variant text-xs truncate">
-                  {result.longname ?? result.shortname ?? ''}
-                </span>
-              </div>
-              <span className="text-outline text-xs shrink-0 tabular-nums">
+        <div className="suggest">
+          {results.map((result) => (
+            <div key={result.symbol} className="suggest-row" onClick={() => goToResult(result)}>
+              <span className="sym">{result.symbol}</span>
+              <span className="nm">{result.longname ?? result.shortname ?? ''}</span>
+              <span className="sc">
                 {result.currentPrice != null ? `$${result.currentPrice.toFixed(2)}` : '—'}
               </span>
-            </button>
+            </div>
           ))}
-
         </div>
       )}
     </div>

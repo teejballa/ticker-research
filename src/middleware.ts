@@ -20,7 +20,23 @@ export default function middleware(req: NextRequest) {
   }
   // Cron endpoints authenticate via Bearer CRON_SECRET inside the route handler — bypass NextAuth.
   // Insights API is public (anonymized aggregate data) — bypass NextAuth.
-  if (req.nextUrl.pathname.startsWith('/api/cron') || req.nextUrl.pathname.startsWith('/api/insights') || req.nextUrl.pathname === '/insights') {
+  // market-snapshot + sectors serve public market data (Yahoo quotes, no user
+  // data) and feed the public landing page — bypass NextAuth.
+  // ticker/chart + ticker/search power the public landing-page search bar — bypass NextAuth.
+  // AAPL is the public sample report — both the page and its supporting APIs
+  // are reachable without a session. All other tickers require login.
+  const path = req.nextUrl.pathname;
+  if (
+    path.startsWith('/api/cron') ||
+    path.startsWith('/api/insights') ||
+    path === '/insights' ||
+    path === '/api/market-snapshot' ||
+    path === '/api/sectors' ||
+    path.startsWith('/api/ticker/') ||
+    path === '/research/AAPL' ||
+    path === '/api/research/AAPL' ||
+    path === '/api/analysis/AAPL'
+  ) {
     return NextResponse.next();
   }
   // Web mode: delegate to NextAuth middleware
@@ -31,7 +47,11 @@ export default function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Protect all routes except NextAuth callbacks, static assets, favicon, and e2e test helpers
-    '/((?!api/auth|api/test|_next/static|_next/image|favicon.ico).*)',
+    // Protect all routes except NextAuth callbacks, e2e test helpers, Next.js
+    // internals, and anything in /public/ — public assets are detected by file
+    // extension. Without the extension exclusion, signed-out visitors land on
+    // /auth/signin instead of seeing the requested PNG/SVG/font/manifest, which
+    // surfaces as broken-image icons on the landing hero animation.
+    '/((?!api/auth|api/test|_next/static|_next/image|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|webmanifest|woff|woff2|ttf|otf|map|txt|xml)).*)',
   ],
 };

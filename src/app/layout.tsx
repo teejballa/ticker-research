@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from './providers';
 import { Analytics } from '@vercel/analytics/next';
@@ -9,6 +9,13 @@ const inter = Inter({
   subsets: ["latin"],
   display: 'swap',
   variable: '--font-inter',
+});
+
+const interTight = Inter_Tight({
+  weight: ['500', '600', '700', '800', '900'],
+  subsets: ["latin"],
+  display: 'swap',
+  variable: '--font-inter-tight',
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -77,8 +84,16 @@ const WEBSITE_LD = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark bg-surface">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* No-flash theme init — light is the default; dark only if the user
+            picked it. Runs before paint so there is no theme flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{if(localStorage.getItem('cipher-theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})();",
+          }}
+        />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
@@ -92,7 +107,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_LD) }}
         />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-[family-name:var(--font-inter)] antialiased bg-surface text-on-surface`}>
+      <body className={`${inter.variable} ${interTight.variable} ${jetbrainsMono.variable} font-[family-name:var(--font-inter)] antialiased bg-background text-on-surface`}>
         <Providers>{children}</Providers>
         <Analytics />
       </body>

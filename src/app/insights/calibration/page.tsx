@@ -18,36 +18,36 @@ export default async function CalibrationPage() {
   const payload = await fetchCalibrationPayload();
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10 text-zinc-200">
+    <main className="mx-auto max-w-6xl px-6 py-10 text-on-surface">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">
+        <h1 className="text-2xl font-semibold tracking-tight text-on-surface">
           Brier Calibration — per-classifier_version
         </h1>
-        <p className="mt-2 max-w-3xl text-sm text-zinc-400">
+        <p className="mt-2 max-w-3xl text-sm text-on-surface-variant">
           Weekly Brier score + Murphy 1973 decomposition (Reliability −
           Resolution + Uncertainty) on the binary claim
           &ldquo;classifier-bullish ⇒ beats SPY at 7d.&rdquo; Reliability
           diagrams use the CORP method (Dimitriadis-Gneiting-Jordan, PNAS
           2021) — isotonic regression replaces ad-hoc equal-width binning.
         </p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-on-surface-variant">
           Ship gate: Brier ≤ 0.24 with |base_rate − 0.5| &lt; 0.1
           (T-20-C-02-01). Minimum n = 100 per classifier_version
           (T-20-C-02-02). Recomputed Mondays 08:00 UTC via{' '}
           <code>/api/cron/eval-brier</code>.
         </p>
-        <p className="mt-1 text-xs text-zinc-600">
+        <p className="mt-1 text-xs text-outline">
           See also:{' '}
           <Link
             href="/insights/sentiment-health"
-            className="underline hover:text-zinc-300"
+            className="underline hover:text-on-surface"
           >
             /insights/sentiment-health
           </Link>
           {' · '}
           <Link
             href="/insights/sentiment-sources"
-            className="underline hover:text-zinc-300"
+            className="underline hover:text-on-surface"
           >
             /insights/sentiment-sources
           </Link>
@@ -56,10 +56,10 @@ export default async function CalibrationPage() {
 
       {payload == null || payload.results.length === 0 ? (
         <section
-          className="rounded-lg border border-zinc-700 bg-zinc-900/40 p-6 text-sm text-zinc-400"
+          className="rounded-lg border border-outline-variant bg-surface/40 p-6 text-sm text-on-surface-variant"
           data-testid="calibration-empty-state"
         >
-          <p className="mb-2 font-medium text-zinc-200">
+          <p className="mb-2 font-medium text-on-surface">
             No Brier evaluation written yet.
           </p>
           <p>
@@ -70,7 +70,7 @@ export default async function CalibrationPage() {
         </section>
       ) : (
         <>
-          <p className="mb-4 text-xs text-zinc-500">
+          <p className="mb-4 text-xs text-on-surface-variant">
             Computed at {payload.computed_at} · {payload.results.length}{' '}
             classifier{payload.results.length === 1 ? '' : 's'} ·{' '}
             <span className="font-mono">{payload.source_path}</span>

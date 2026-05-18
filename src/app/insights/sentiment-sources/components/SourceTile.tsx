@@ -16,18 +16,18 @@ export function SourceTile({ source_id, horizon, tile }: SourceTileProps) {
   if (tile === null) {
     return (
       <section
-        className="rounded-md border border-zinc-800 bg-zinc-950 p-4 text-zinc-300"
+        className="rounded-md border border-outline-variant bg-background p-4 text-on-surface"
         aria-label={`${source_id} ${horizon}d cold start`}
       >
         <header className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold tracking-wide text-zinc-100">
+          <h2 className="text-sm font-semibold tracking-wide text-on-surface">
             {source_id} · {horizon}d
           </h2>
-          <span className="rounded-sm bg-zinc-800 px-2 py-0.5 text-xs uppercase tracking-wider text-zinc-300">
+          <span className="rounded-sm bg-surface-container px-2 py-0.5 text-xs uppercase tracking-wider text-on-surface">
             COLD START
           </span>
         </header>
-        <p className="mt-2 text-xs text-zinc-500">
+        <p className="mt-2 text-xs text-on-surface-variant">
           Insufficient data — n &lt; 20 days of cross-sectional observations.
         </p>
       </section>
@@ -44,11 +44,11 @@ export function SourceTile({ source_id, horizon, tile }: SourceTileProps) {
 
   return (
     <section
-      className="rounded-md border border-zinc-800 bg-zinc-950 p-4 text-zinc-300"
+      className="rounded-md border border-outline-variant bg-background p-4 text-on-surface"
       aria-label={`${source_id} ${horizon}d ICIR ${icirText}`}
     >
       <header className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-zinc-100">
+        <h2 className="text-sm font-semibold tracking-wide text-on-surface">
           {source_id} · {horizon}d
         </h2>
         {tile.auto_down_weight ? (
@@ -63,7 +63,7 @@ export function SourceTile({ source_id, horizon, tile }: SourceTileProps) {
           <span
             data-testid="below-threshold-badge"
             aria-label="ICIR below 0.3 single window"
-            className="rounded-sm bg-zinc-800 px-2 py-0.5 text-xs uppercase tracking-wider text-amber-200"
+            className="rounded-sm bg-surface-container px-2 py-0.5 text-xs uppercase tracking-wider text-amber-200"
           >
             BELOW THRESHOLD
           </span>
@@ -72,18 +72,18 @@ export function SourceTile({ source_id, horizon, tile }: SourceTileProps) {
 
       <div className="mt-3 flex items-baseline gap-4">
         <div>
-          <div className="text-xs uppercase tracking-wider text-zinc-500">ICIR</div>
-          <div className="text-2xl font-mono text-zinc-100">{icirText}</div>
+          <div className="text-xs uppercase tracking-wider text-on-surface-variant">ICIR</div>
+          <div className="text-2xl font-mono text-on-surface">{icirText}</div>
         </div>
         <div>
-          <div className="text-xs uppercase tracking-wider text-zinc-500">IC 20d</div>
-          <div className="text-base font-mono text-zinc-300">
+          <div className="text-xs uppercase tracking-wider text-on-surface-variant">IC 20d</div>
+          <div className="text-base font-mono text-on-surface">
             {tile.ic_20d.toFixed(3)}
           </div>
         </div>
       </div>
 
-      <footer className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+      <footer className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant">
         <span>n = {tile.n_observations}</span>
         <span>NW lag = {tile.nw_lag}</span>
         <span>

@@ -36,7 +36,9 @@
       "mcp__playwright__browser_resize",
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_take_screenshot",
-      "Bash(git -C /Users/tj/Desktop/Cipher log --oneline --since=\"2026-03-25\")"
+      "Bash(git -C /Users/tj/Desktop/Cipher log --oneline --since=\"2026-03-25\")",
+      "Bash(cp __TRACKED_VAR__/.claude/get-shit-done/templates/VALIDATION.md .planning/phases/30.1-free-community-scan-migration/30.1-VALIDATION.md)",
+      "Bash(sed -i '' 's/{N}/30.1/g; s/{phase-slug}/free-community-scan-migration/g; s/{date}/2026-05-15/g' .planning/phases/30.1-free-community-scan-migration/30.1-VALIDATION.md)"
     ]
   }
 }

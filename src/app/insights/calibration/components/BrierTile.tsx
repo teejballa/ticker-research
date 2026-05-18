@@ -19,10 +19,10 @@ function tone(result: EvalBrierResult): {
 } {
   if (result.status === 'insufficient_data') {
     return {
-      bg: 'bg-zinc-800/40',
-      border: 'border-zinc-600',
+      bg: 'bg-surface-container/40',
+      border: 'border-outline',
       label: 'COLLECTING DATA',
-      text: 'text-zinc-300',
+      text: 'text-on-surface',
     };
   }
   if (result.brier <= SHIP_GATE) {
@@ -63,11 +63,11 @@ export function BrierTile({ result }: { result: EvalBrierResult }) {
 
   return (
     <div
-      className={`rounded-lg border ${t.border} ${t.bg} p-4 text-zinc-200`}
+      className={`rounded-lg border ${t.border} ${t.bg} p-4 text-on-surface`}
       data-testid={`brier-tile-${result.classifier_version}`}
     >
       <header className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-medium text-zinc-100">
+        <h3 className="text-sm font-medium text-on-surface">
           {result.classifier_version}
         </h3>
         <span
@@ -79,7 +79,7 @@ export function BrierTile({ result }: { result: EvalBrierResult }) {
       </header>
 
       {insufficient ? (
-        <p className="mt-3 text-sm text-zinc-400">
+        <p className="mt-3 text-sm text-on-surface-variant">
           n = {result.n} (below the n = 100 minimum). Ship gate skipped per
           T-20-C-02-02 (isotonic regression overfit defense). Awaiting more
           observations from the weekly cron.
@@ -87,44 +87,44 @@ export function BrierTile({ result }: { result: EvalBrierResult }) {
       ) : (
         <>
           <div className="mt-3 flex items-baseline gap-3">
-            <span className="text-3xl font-semibold tabular-nums text-zinc-50">
+            <span className="text-3xl font-semibold tabular-nums text-on-surface">
               {result.brier.toFixed(3)}
             </span>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-on-surface-variant">
               Brier score · ship gate ≤ {SHIP_GATE.toFixed(2)}
             </span>
           </div>
 
-          <dl className="mt-4 grid grid-cols-3 gap-3 text-xs text-zinc-300">
+          <dl className="mt-4 grid grid-cols-3 gap-3 text-xs text-on-surface">
             <div>
-              <dt className="text-[10px] uppercase tracking-wider text-zinc-500">
+              <dt className="text-[10px] uppercase tracking-wider text-on-surface-variant">
                 n
               </dt>
-              <dd className="tabular-nums text-zinc-100">{result.n}</dd>
+              <dd className="tabular-nums text-on-surface">{result.n}</dd>
             </div>
             <div>
-              <dt className="text-[10px] uppercase tracking-wider text-zinc-500">
+              <dt className="text-[10px] uppercase tracking-wider text-on-surface-variant">
                 base rate
               </dt>
-              <dd className="tabular-nums text-zinc-100">
+              <dd className="tabular-nums text-on-surface">
                 {result.base_rate.toFixed(3)}
               </dd>
             </div>
             <div>
-              <dt className="text-[10px] uppercase tracking-wider text-zinc-500">
+              <dt className="text-[10px] uppercase tracking-wider text-on-surface-variant">
                 bs_check
               </dt>
-              <dd className="tabular-nums text-zinc-100">
+              <dd className="tabular-nums text-on-surface">
                 {result.bs_check.toFixed(4)}
               </dd>
             </div>
           </dl>
 
           <div className="mt-4">
-            <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wider text-zinc-500">
+            <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wider text-on-surface-variant">
               <span>Reliability − Resolution + Uncertainty (Murphy 1973)</span>
             </div>
-            <div className="flex h-2 w-full overflow-hidden rounded bg-zinc-800">
+            <div className="flex h-2 w-full overflow-hidden rounded bg-surface-container">
               <div
                 className="bg-rose-500"
                 style={{ width: `${pct(r)}%` }}
@@ -136,34 +136,34 @@ export function BrierTile({ result }: { result: EvalBrierResult }) {
                 title={`-Resolution ${result.resolution.toFixed(4)}`}
               />
               <div
-                className="bg-zinc-500"
+                className="bg-surface-container-highest"
                 style={{ width: `${pct(u)}%` }}
                 title={`Uncertainty ${result.uncertainty.toFixed(4)}`}
               />
             </div>
-            <div className="mt-1 flex justify-between text-[10px] text-zinc-500 tabular-nums">
+            <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant tabular-nums">
               <span className="text-rose-400">
                 R {result.reliability.toFixed(4)}
               </span>
               <span className="text-sky-400">
                 −Res {result.resolution.toFixed(4)}
               </span>
-              <span className="text-zinc-400">
+              <span className="text-on-surface-variant">
                 U {result.uncertainty.toFixed(4)}
               </span>
             </div>
           </div>
 
           {result.ship_gate.remediation_recommendation && (
-            <p className="mt-4 rounded border border-zinc-700 bg-zinc-900/60 p-2 text-[11px] text-zinc-300">
-              <span className="font-semibold text-zinc-100">
+            <p className="mt-4 rounded border border-outline-variant bg-surface/60 p-2 text-[11px] text-on-surface">
+              <span className="font-semibold text-on-surface">
                 Remediation:{' '}
               </span>
               {result.ship_gate.remediation_recommendation}
               {result.ship_gate.dominant_failure_mode && (
                 <>
                   {' '}
-                  <span className="text-zinc-500">
+                  <span className="text-on-surface-variant">
                     (dominant: {result.ship_gate.dominant_failure_mode})
                   </span>
                 </>
@@ -173,7 +173,7 @@ export function BrierTile({ result }: { result: EvalBrierResult }) {
         </>
       )}
 
-      <footer className="mt-4 text-[10px] text-zinc-500">
+      <footer className="mt-4 text-[10px] text-on-surface-variant">
         Murphy 1973 identity holds within 1e-9. CORP method per
         Dimitriadis-Gneiting-Jordan PNAS 2021. Reliability diagrams can mislead
         on multimodal prediction distributions (T-20-C-02-04) — the histogram
