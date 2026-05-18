@@ -169,8 +169,9 @@ describe('SOURCE_TO_CLASS', () => {
     expect(SOURCE_TO_CLASS.stocktwits).toBe('community');
     expect(SOURCE_TO_CLASS.reddit).toBe('community');
     expect(SOURCE_TO_CLASS.x).toBe('community');
+    expect(SOURCE_TO_CLASS.twitter).toBe('community');
+    expect(SOURCE_TO_CLASS.hackernews).toBe('community');
     expect(SOURCE_TO_CLASS.apewisdom).toBe('community');
-    expect(SOURCE_TO_CLASS.firecrawl).toBe('community');
   });
 
   it('maps news and sec source classes', () => {

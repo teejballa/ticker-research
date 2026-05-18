@@ -102,9 +102,11 @@ export async function POST(
       // Step 2: emit 'adding news' to trigger stepper step 2
       enqueue(JSON.stringify({ type: 'progress', message: 'Adding news sources and SEC filings...' }));
 
-      // Step 3: Firecrawl community sentiment search (optional — graceful skip)
-      // Uses Firecrawl search to discover + extract Reddit/StockTwits/SeekingAlpha content.
-      // sources_checked contains source names ("Reddit r/investing"), not URLs — search is correct here.
+      // Step 3: Community sentiment scan (post-Phase-30.1: Reddit + Twitter via
+      // Xpoz Pro + HackerNews Algolia, fanning out from
+      // src/lib/data/lightweight-community-scan.ts). The third-party-scraper
+      // path was removed in plan 30.1-05 Task 5 (D-26); the call site is kept
+      // as a stub for back-compat — pkg.community_aggregated carries the data.
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying community sentiment sources...' }));
       const scraped = await scrapeCommunitySentiment(ticker, pkg.company_name);
       const highlights = await extractCommunityHighlights(

@@ -3,8 +3,8 @@
  * Plan 20-Z-03 — telemetry coverage guard (S6).
  *
  * For each module that contains a known external call (yahoo / polygon /
- * finnhub / anthropic / stocktwits / firecrawl / gemini / finbert / apewisdom
- * / exa), this script asserts the module also contains a `withTelemetry(`
+ * finnhub / anthropic / stocktwits / gemini / finbert / apewisdom / exa),
+ * this script asserts the module also contains a `withTelemetry(`
  * call. Exits non-zero on any uncovered module.
  *
  * Adding a new external provider in a future plan REQUIRES extending the
@@ -27,7 +27,7 @@ const REQUIRED: RequiredEntry[] = [
   { file: 'src/lib/data/finnhub.ts', reason: 'Finnhub external API' },
   { file: 'src/lib/data/anthropic-search.ts', reason: 'Anthropic web search' },
   { file: 'src/lib/data/stocktwits.ts', reason: 'StockTwits external API' },
-  { file: 'src/lib/data/lightweight-community-scan.ts', reason: 'Firecrawl + community fetch' },
+  { file: 'src/lib/data/lightweight-community-scan.ts', reason: 'Community fetch fan-out (Reddit/Twitter/HN/StockTwits/Quiver)' },
   { file: 'src/lib/data/adapters/apewisdom.ts', reason: 'ApeWisdom external API' },
   { file: 'src/lib/data/adapters/exa-search.ts', reason: 'Exa web search external API' },
   { file: 'src/lib/data/adapters/reddit.ts', reason: 'Xpoz Reddit external API (Plan 30.1-pivot D-32)' },

@@ -1,31 +1,24 @@
 /**
  * Plan 19-C-05 — Swaggystocks adapter (D-37, SUPPLEMENTAL).
  *
- * Per D-37 + user direction 2026-05-07 ("firecrawl is very reliable"),
- * Swaggystocks is a SUPPLEMENTAL community-data source. Firecrawl REMAINS
- * PRIMARY. Output is merged into `SentimentSnapshot.community_aggregated`
- * JSONB column by `lightweight-community-scan.ts` (Task 4) — never replaces
- * the Firecrawl branch.
+ * Swaggystocks is a SUPPLEMENTAL community-data source. Output is merged into
+ * `SentimentSnapshot.community_aggregated` JSONB column by
+ * `lightweight-community-scan.ts` (Task 4) — never replaces the canonical
+ * community-scan branch.
  *
  * Per RESEARCH Assumption A5, swaggystocks.com has no official API docs;
  * the endpoint shape was community-discovered and is MEDIUM confidence. The
  * adapter:
  *
  *   1. Tries the JSON endpoint at `https://api.swaggystocks.com/wsb/ticker/<TICKER>`
- *   2. On 4xx (endpoint moved) — graceful null. The Firecrawl-fallback path
- *      is intentionally NOT auto-triggered here: it would require a Firecrawl
- *      credit per call, and the planner's intent was "fall back to Firecrawl
- *      scrape" only when the JSON endpoint is fundamentally unavailable AND
- *      the operator opts in. We expose `fetchSwaggyStocksViaFirecrawl` for
- *      that use-case but the default `fetchSwaggyStocks` does NOT consume it
- *      (so a flaky 4xx doesn't burn Firecrawl credits silently). If
- *      operators want the fallback, they wire it explicitly in Task 4.
+ *   2. On 4xx (endpoint moved) — graceful null. No auto-fallback to any
+ *      third-party scraper.
  *   3. Maps a successful payload to `CommunitySignal`.
  *
  * Threat-model mitigations (T-19-C-05-01):
  *   - Any non-2xx response, retry exhaustion, or unexpected payload returns
  *     null. The adapter NEVER throws — it cannot crash the canonical
- *     Firecrawl primary path. Promise.allSettled in Task 4 is a second
+ *     community-scan path. Promise.allSettled in Task 4 is a second
  *     guard, but the null-sentinel discipline is the first line of defense.
  *   - withRetry(5xx + network only — D-25). 429 is 4xx → not retried.
  *   - cached(10min — TTL_SECONDS.community) keeps call frequency low.
@@ -109,9 +102,9 @@ async function doFetchSwaggyStocks(
  * Cached 10min via `comm:TICKER:swaggystocks` namespace per
  * TTL_SECONDS.community.
  *
- * Per Assumption A5, if the JSON endpoint is permanently moved, operators
- * may wire the Firecrawl-scrape fallback by importing
- * `fetchSwaggyStocksViaFirecrawl` and chaining it after this returns null.
+ * Per Assumption A5, if the JSON endpoint is permanently moved, the adapter
+ * returns null — there is no scrape-based fallback. Callers fall back through
+ * `Promise.allSettled` in the orchestrator.
  */
 export async function fetchSwaggyStocks(
   ticker: string,
@@ -140,59 +133,6 @@ export async function fetchSwaggyStocks(
     // adapter itself must NEVER throw per T-19-C-05-01.
     console.warn(
       `[swaggystocks] ${ticker} cache-layer failed:`,
-      err instanceof Error ? err.message : String(err),
-    );
-    return null;
-  }
-}
-
-/**
- * Optional Firecrawl-scrape fallback per RESEARCH Assumption A5. Only fires
- * when explicitly invoked — `fetchSwaggyStocks` does NOT auto-call this on
- * 4xx, because doing so would burn Firecrawl credits silently. Operators
- * who want the fallback can chain:
- *
- *   const sig = (await fetchSwaggyStocks(t))
- *             ?? (await fetchSwaggyStocksViaFirecrawl(t));
- *
- * Returns null gracefully when FIRECRAWL_API_KEY is missing or the scrape
- * fails — same null-sentinel discipline as the JSON path.
- */
-export async function fetchSwaggyStocksViaFirecrawl(
-  ticker: string,
-): Promise<CommunitySignal | null> {
-  if (!process.env.FIRECRAWL_API_KEY) return null;
-  try {
-    // Lazy-import Firecrawl so the JSON-only fast path doesn't load the SDK.
-    const { default: Firecrawl } = await import('@mendable/firecrawl-js');
-    const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
-    const url = `https://swaggystocks.com/dashboard/wsb/ticker/${encodeURIComponent(ticker.toUpperCase())}`;
-    const doc = await fc.scrape(url, {
-      formats: ['markdown'],
-      onlyMainContent: true,
-    } as Parameters<typeof fc.scrape>[1]);
-    const md = (doc as { markdown?: string }).markdown ?? '';
-    if (md.length < 100) return null;
-
-    // Parse loose mention-count + bullish-percent from markdown. The page
-    // surfaces both as numeric strings near labels.
-    const mentionMatch = md.match(/(\d{1,6})\s*mentions?/i);
-    const bullishMatch = md.match(/bullish[^0-9]{0,20}(\d{1,3})\s*%/i);
-    const bearishMatch = md.match(/bearish[^0-9]{0,20}(\d{1,3})\s*%/i);
-
-    const mention_count = mentionMatch ? num(mentionMatch[1]) : null;
-    if (mention_count == null) return null;
-
-    return {
-      source: 'swaggystocks',
-      mention_count,
-      bullish_pct: bullishMatch ? num(bullishMatch[1]) : null,
-      bearish_pct: bearishMatch ? num(bearishMatch[1]) : null,
-      trending_rank: null,
-    };
-  } catch (err) {
-    console.warn(
-      `[swaggystocks] firecrawl-fallback ${ticker} failed:`,
       err instanceof Error ? err.message : String(err),
     );
     return null;

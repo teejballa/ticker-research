@@ -2,8 +2,8 @@
   "exemplar_id": "gme-crowded-2026-01",
   "ticker": "GME",
   "notes": "GME meme-stock case — the candidate correctly flags the StockTwits 100% bull% as an echo-chamber crowding signal (Lucchini-style) and surfaces the opposing put/call dispersion. Tests high contradiction_handling with low narrative_coherence (the report is a bullet salad of contradictions without a clean thesis verdict).",
-  "baseline_text": "GME StockTwits bull/bear: 100/0 (stocktwits). 1d volume 8x average (yahoo). Short interest 21% (finnhub). Put/call ratio 1.8 — net bearish (yahoo options). Reddit r/wallstreetbets discussion volume 5x baseline (firecrawl).",
-  "candidate_text": "GME StockTwits bull/bear: 100/0 (stocktwits). However, this single-source extreme is an echo-chamber crowding signal (Lucchini 2022) that historically mean-reverts within 5-10 sessions on similar setups. 1d volume 8x average (yahoo). Short interest 21% (finnhub). Put/call ratio 1.8 — net BEARISH and contradicts the bull% (yahoo options). Reddit r/wallstreetbets discussion volume 5x baseline (firecrawl). NET: dispersion is extreme — bull/bear split 60/40 weighted across StockTwits / options / short-interest. NEUTRAL with high-confidence flag for elevated mean-reversion risk.",
+  "baseline_text": "GME StockTwits bull/bear: 100/0 (stocktwits). 1d volume 8x average (yahoo). Short interest 21% (finnhub). Put/call ratio 1.8 — net bearish (yahoo options). Reddit r/wallstreetbets discussion volume 5x baseline (reddit).",
+  "candidate_text": "GME StockTwits bull/bear: 100/0 (stocktwits). However, this single-source extreme is an echo-chamber crowding signal (Lucchini 2022) that historically mean-reverts within 5-10 sessions on similar setups. 1d volume 8x average (yahoo). Short interest 21% (finnhub). Put/call ratio 1.8 — net BEARISH and contradicts the bull% (yahoo options). Reddit r/wallstreetbets discussion volume 5x baseline (reddit). NET: dispersion is extreme — bull/bear split 60/40 weighted across StockTwits / options / short-interest. NEUTRAL with high-confidence flag for elevated mean-reversion risk.",
   "human_scores": {
     "numeric_grounding": 5,
     "citation_coverage": 5,

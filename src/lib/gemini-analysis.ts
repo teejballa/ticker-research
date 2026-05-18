@@ -5,10 +5,9 @@
 
 import { generateText, Output, NoObjectGeneratedError } from 'ai';
 import { z } from 'zod';
-import Firecrawl from '@mendable/firecrawl-js';
-// Direct Anthropic SDK is required here — Pool B niche discovery and community extraction use
-// the `web_search_20250305` tool, which is an Anthropic-native feature not available through
-// the AI Gateway. Gemini calls route through the Gateway via plain model strings as normal.
+// Direct Anthropic SDK retained for non-community-scan call sites (web_search_20250305 tool
+// is an Anthropic-native feature not available through the AI Gateway). Phase 30.1-05
+// removed the Haiku-driven community-scrape branch entirely (D-26).
 import Anthropic from '@anthropic-ai/sdk';
 import {
   formatResearchBrief,
@@ -219,7 +218,7 @@ export const SYSTEM_PROMPT = renderPrompt('gemini-research-brief-system', {});
 
 /**
  * Assembles the Gemini user prompt from the research brief, news URLs, optional
- * Firecrawl community sentiment content, optional structured sentiment intelligence data,
+ * community sentiment content, optional structured sentiment intelligence data,
  * and optional structured community highlights extracted by Haiku.
  */
 export function buildUserPrompt(
@@ -317,61 +316,29 @@ export function buildUserPrompt(
   });
 }
 
-// ---- Firecrawl community sentiment gatherer ----
-
-// Mainstream tier — high volume, hype-heavy, ideas arrive after spreading
-const MAINSTREAM_URLS = [
-  'https://www.reddit.com/r/wallstreetbets/search/?q={TICKER}&sort=new&t=week',
-  'https://finance.yahoo.com/quote/{TICKER}/community/',
-];
-
-// Middle tier — general investor audience, mixed quality
-const MIDDLE_URLS = [
-  'https://www.reddit.com/search/?q={TICKER}+stock&sort=new',
-  'https://seekingalpha.com/symbol/{TICKER}',
-];
-
-function buildTieredUrls(ticker: string): { mainstream: string[]; middle: string[] } {
-  return {
-    mainstream: MAINSTREAM_URLS.map(u => u.replace('{TICKER}', encodeURIComponent(ticker))),
-    middle: MIDDLE_URLS.map(u => u.replace('{TICKER}', encodeURIComponent(ticker))),
-  };
-}
-
-// Extract reddit.com comment thread URLs from a scraped search page's markdown.
-function extractRedditThreadUrls(markdown: string): string[] {
-  const pattern = /https?:\/\/(?:www\.)?reddit\.com\/r\/\w+\/comments\/[a-z0-9]+\/[^\s\)\]"'<>]*/gi;
-  const matches = markdown.match(pattern) ?? [];
-  const cleaned = matches.map(u => u.replace(/[.,;!?]+$/, ''));
-  return [...new Set(cleaned)].slice(0, 3);
-}
-
-// Scrape a single URL via Firecrawl. Returns '' on failure or paywall content.
-async function scrapeUrlWithFirecrawl(fc: Firecrawl, url: string): Promise<string> {
-  try {
-    const doc = await fc.scrape(url, {
-      formats: ['markdown'],
-      onlyMainContent: true,
-    } as Parameters<typeof fc.scrape>[1]);
-    const content = (doc as { markdown?: string }).markdown ?? '';
-    return content.length >= 200 ? content : '';
-  } catch {
-    return '';
-  }
-}
+// ---- Community sentiment gatherer (post-Phase-30.1) ----
+//
+// The legacy Haiku-driven third-party-scrape branch was removed in Phase 30.1
+// Task 5 (D-26). Community sentiment now flows through
+// `src/lib/data/lightweight-community-scan.ts` which produces typed
+// CommunityHighlight rows directly from the Xpoz Reddit / Twitter feeds and
+// the HackerNews Algolia API; those highlights land in `pkg.community` and
+// are surfaced to the LLM via the `communityHighlights` argument of
+// `buildUserPrompt`.
 
 /**
- * Three-tier community scraping:
- *   Mainstream: r/WallStreetBets, Yahoo Finance — high volume, hype-heavy.
- *   Middle:     Reddit search + SeekingAlpha — general investor audience.
- *   Niche:      Haiku discovers sector-specific communities for this ticker.
+ * Post-Phase-30.1 stub. Returns the empty shape so callers that still invoke
+ * this function compile without modification while community data flows
+ * through `pkg.community_aggregated` instead.
  *
- * Returns: { pinnedContent, nicheContent, nicheUrls, pageCount, mainstreamPageCount, middlePageCount, nichePageCount }
- * pageCount is the total number of non-empty pages successfully scraped.
+ * Plan 30.1-05 Task 5 deleted the third-party-scraper-driven path entirely
+ * (D-26). Community highlights now come from
+ * `src/lib/data/lightweight-community-scan.ts` via the SourcePackage and are
+ * surfaced to the LLM through `buildUserPrompt`'s `communityHighlights` arg.
  */
 export async function scrapeCommunitySentiment(
-  ticker: string,
-  companyName: string,
+  _ticker: string,
+  _companyName: string,
 ): Promise<{
   pinnedContent: string;
   nicheContent: string;
@@ -381,177 +348,29 @@ export async function scrapeCommunitySentiment(
   middlePageCount: number;
   nichePageCount: number;
 }> {
-  const empty = { pinnedContent: '', nicheContent: '', nicheUrls: [], pageCount: 0, mainstreamPageCount: 0, middlePageCount: 0, nichePageCount: 0 };
-  if (!process.env.FIRECRAWL_API_KEY) return empty;
-
-  const fc = new Firecrawl({ apiKey: process.env.FIRECRAWL_API_KEY });
-
-  // ── Mainstream + Middle tiers ─────────────────────────────────────────────
-  const { mainstream, middle } = buildTieredUrls(ticker);
-  const [mainstreamScraped, middleScraped] = await Promise.all([
-    Promise.all(mainstream.map(u => scrapeUrlWithFirecrawl(fc, u))),
-    Promise.all(middle.map(u => scrapeUrlWithFirecrawl(fc, u))),
-  ]);
-  const mainstreamPages = mainstreamScraped.filter(Boolean);
-  const middlePages = middleScraped.filter(Boolean);
-
-  // ── Pool A+: Reddit comment threads ─────────────────────────────────────
-  // Extract actual thread URLs from the Reddit search page (middleScraped[0]) and scrape the comment content.
-  const redditSearchMarkdown = middleScraped[0] ?? '';
-  const redditThreadUrls = extractRedditThreadUrls(redditSearchMarkdown);
-  const redditThreadPages = redditThreadUrls.length > 0
-    ? (await Promise.all(redditThreadUrls.map(u => scrapeUrlWithFirecrawl(fc, u)))).filter(Boolean)
-    : [];
-
-  // ── Pool B: Niche discovery via Haiku ───────────────────────────────────
-  let nicheUrls: string[] = [];
-
-  try {
-    // Search 1: community mapping — what niche places discuss this stock?
-    const mapResponse = await anthropicClient.messages.create({
-      model: 'claude-haiku-4.5',
-      max_tokens: 1024,
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 3 }],
-      messages: [{
-        role: 'user',
-        content:
-          `Find the most active NICHE communities that discuss ${ticker} (${companyName}) stock online. ` +
-          `Target sector-specific forums, specialized subreddits (NOT r/wallstreetbets or r/stocks), ` +
-          `Discord communities, Substack comment sections, ValueInvestorsClub, Bogleheads forums, ` +
-          `EliteTrader threads, industry fan/critic sites, financial blogs, and any specialized ` +
-          `investor community that would uniquely discuss this company. ` +
-          `Exclude: reddit.com/r/wallstreetbets, reddit.com/r/stocks, reddit.com/r/investing, seekingalpha.com, stocktwits.com. ` +
-          `Return ONLY a JSON array of URL strings. Example: ["https://valueinvestorsclub.com/...", ...]`,
-      }],
-    });
-
-    // Search 2: recent discussion threads in niche communities
-    const threadResponse = await anthropicClient.messages.create({
-      model: 'claude-haiku-4.5',
-      max_tokens: 1024,
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search', max_uses: 3 }],
-      messages: [{
-        role: 'user',
-        content:
-          `Find recent (past 14 days) discussion threads specifically about ${ticker} stock in niche ` +
-          `investor communities. Look in specialized subreddits, sector-specific forums, ` +
-          `financial Discord communities, Substack comments, EliteTrader, ValueInvestorsClub, ` +
-          `industry analyst blogs, and any non-mainstream discussion venue. ` +
-          `Exclude: reddit.com/r/wallstreetbets, reddit.com/r/stocks, reddit.com/r/investing, seekingalpha.com, stocktwits.com. ` +
-          `Return ONLY a JSON array of URL strings.`,
-      }],
-    });
-
-    // Extract and merge URLs from both searches
-    for (const response of [mapResponse, threadResponse]) {
-      const textBlock = response.content.filter(b => b.type === 'text').pop();
-      const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
-      const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      // Find JSON array anywhere in the text
-      const arrayMatch = cleaned.match(/\[[\s\S]*?\]/);
-      if (arrayMatch) {
-        try {
-          const parsed = JSON.parse(arrayMatch[0]) as unknown;
-          if (Array.isArray(parsed)) {
-            const urls = (parsed as unknown[])
-              .filter((u): u is string => typeof u === 'string' && u.startsWith('http'))
-              .slice(0, 8);
-            nicheUrls = [...nicheUrls, ...urls];
-          }
-        } catch { /* ignore parse errors */ }
-      }
-    }
-  } catch { /* Haiku failure — proceed with pinned only */ }
-
-  // Deduplicate niche URLs, exclude pinned domains
-  const pinnedDomains = new Set(['reddit.com', 'seekingalpha.com', 'stocktwits.com']);
-  const uniqueNiche = [...new Set(nicheUrls)].filter(u => {
-    try {
-      const host = new URL(u).hostname.replace('www.', '');
-      return !pinnedDomains.has(host);
-    } catch { return false; }
-  }).slice(0, 6);
-
-  // Scrape niche pool
-  const nicheScraped = await Promise.all(uniqueNiche.map(u => scrapeUrlWithFirecrawl(fc, u)));
-  const nichePages = nicheScraped.filter(Boolean);
-
-  const allMiddlePages = [...middlePages, ...redditThreadPages];
-  const pageCount = mainstreamPages.length + allMiddlePages.length + nichePages.length;
-
   return {
-    pinnedContent: [...mainstreamPages, ...allMiddlePages].join('\n\n---\n\n'),
-    nicheContent: nichePages.join('\n\n---\n\n'),
-    nicheUrls: uniqueNiche,
-    pageCount,
-    mainstreamPageCount: mainstreamPages.length,
-    middlePageCount: allMiddlePages.length,
-    nichePageCount: nichePages.length,
+    pinnedContent: '',
+    nicheContent: '',
+    nicheUrls: [],
+    pageCount: 0,
+    mainstreamPageCount: 0,
+    middlePageCount: 0,
+    nichePageCount: 0,
   };
 }
 
 /**
- * Extraction pass: Haiku reads raw scraped markdown and extracts structured
- * per-community findings with standout quotes and sentiment direction.
- *
- * Returns an array of CommunityHighlight objects. Empty array on failure.
- * Filters out pages with no real user opinions (price tables, login walls, etc.).
+ * Post-Phase-30.1 stub. The historical Haiku-driven extraction pass over
+ * third-party-scraped markdown was deleted in plan 30.1-05 Task 5 (D-26).
+ * CommunityHighlight rows now come typed-and-pre-extracted from
+ * `src/lib/data/lightweight-community-scan.ts` and land in `pkg.community`.
  */
 export async function extractCommunityHighlights(
-  pinnedContent: string,
-  nicheContent: string,
-  nicheUrls: string[],
+  _pinnedContent: string,
+  _nicheContent: string,
+  _nicheUrls: string[],
 ): Promise<import('@/lib/types').CommunityHighlight[]> {
-  const allContent = [pinnedContent, nicheContent].filter(Boolean).join('\n\n===PAGE BREAK===\n\n');
-  if (!allContent || allContent.length < 200) return [];
-
-  const extractionPrompt =
-    `You are extracting structured community sentiment findings from scraped investor discussion pages. ` +
-    `For each distinct community or page in the content below, extract ONE finding object. ` +
-    `\n\nRULES:\n` +
-    `- If a page has fewer than 3 actual user opinions (just price data, login walls, or article text with no comments), SKIP it entirely.\n` +
-    `- standout_quote: the single most revealing or surprising user opinion you found.\n` +
-    `- quotes: extract 3-5 VERBATIM user quotes that represent the range of opinion. Must be actual user words, not article text or price data.\n` +
-    `- recurring_themes: list ONLY themes mentioned independently by 2 or more distinct users. If a concern appears once, omit it.\n` +
-    `- unique_to_community: list signals, concerns, or viewpoints discussed in this community that would NOT appear in mainstream financial news or analyst reports (e.g. insider anecdotes, product experiences, regulatory rumors, niche competitive intel). Omit if nothing qualifies.\n` +
-    `- community_name should be the real name (e.g. "r/SecurityAnalysis", "ValueInvestorsClub", "BioPharma Catalyst Forum").\n` +
-    `- community_type: "mainstream" for r/WallStreetBets and Yahoo Finance boards; "middle" for r/investing, r/stocks, SeekingAlpha, r/SecurityAnalysis; "niche" for all sector-specific, ticker-specific, or specialized communities (ValueInvestorsClub, EliteTrader, r/NVDA, industry blogs, Bogleheads).\n` +
-    `- audience: describe who uses this community in 3-6 words (e.g. "institutional-adjacent analysts", "retail momentum traders").\n` +
-    `- engagement_signal: "high" if many active replies/upvotes visible, "low" if sparse.\n` +
-    `\nNiche URLs found (for reference): ${nicheUrls.join(', ')}\n\n` +
-    `SCRAPED CONTENT:\n${allContent.slice(0, 18000)}\n\n` +
-    `Return ONLY a JSON array. Each element:\n` +
-    `{"community_name":"...","community_type":"mainstream|middle|niche","audience":"...","standout_quote":"...","theme":"...","sentiment":"bullish|bearish|neutral","engagement_signal":"high|medium|low","quotes":["verbatim quote 1","verbatim quote 2","verbatim quote 3"],"recurring_themes":["theme mentioned by 2+ users"],"unique_to_community":["signal not in mainstream financial news"]}`;
-
-  try {
-    const response = await anthropicClient.messages.create({
-      model: 'claude-haiku-4.5',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: extractionPrompt }],
-    });
-
-    const textBlock = response.content.filter(b => b.type === 'text').pop();
-    const rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
-    const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const arrayMatch = cleaned.match(/\[[\s\S]*?\]/);
-    if (!arrayMatch) return [];
-
-    const parsed = JSON.parse(arrayMatch[0]) as unknown;
-    if (!Array.isArray(parsed)) return [];
-
-    return (parsed as unknown[]).filter((item): item is import('@/lib/types').CommunityHighlight => {
-      if (typeof item !== 'object' || item === null) return false;
-      const h = item as Record<string, unknown>;
-      return (
-        typeof h.community_name === 'string' &&
-        typeof h.standout_quote === 'string' &&
-        typeof h.theme === 'string' &&
-        ['bullish', 'bearish', 'neutral'].includes(h.sentiment as string)
-      );
-    });
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 // ---- Market snapshot extractor ----

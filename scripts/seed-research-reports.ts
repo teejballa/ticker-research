@@ -10,9 +10,9 @@
 //   DATABASE_URL=... GOOGLE_GENERATIVE_AI_API_KEY=... \
 //     npx tsx scripts/seed-research-reports.ts --count 10 --user-id seed
 //
-// Cost: each report runs Anthropic web-search (~$0.005), Firecrawl
-// community scrape (~$0.01), Gemini analysis (~$0.05 via AI Gateway).
-// 10 reports ≈ $0.65; 20 reports ≈ $1.30.
+// Cost: each report runs Anthropic web-search (~$0.005), community scan
+// (Reddit + Twitter via Xpoz Pro, ~$0.01), Gemini analysis (~$0.05 via AI
+// Gateway). 10 reports ≈ $0.65; 20 reports ≈ $1.30.
 
 import { config as loadDotenv } from 'dotenv';
 loadDotenv({ path: '.env.vercel.prod' });

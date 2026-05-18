@@ -1,6 +1,6 @@
 // src/app/api/analysis/__tests__/route.test.ts
 // Tests for POST /api/analysis/[ticker] — Gemini-based analysis route.
-// Mocks: ai module, @mendable/firecrawl-js, fs/promises, @/lib/gemini-analysis.
+// Mocks: ai module, fs/promises, @/lib/gemini-analysis.
 // Verifies: SSE event streaming, no spawn() calls, no CONTAINER_URL references.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -24,13 +24,6 @@ vi.mock('ai', () => ({
       return e instanceof NoObjectGeneratedError;
     }
   },
-}));
-
-// Mock Firecrawl
-vi.mock('@mendable/firecrawl-js', () => ({
-  default: vi.fn().mockReturnValue({
-    scrape: vi.fn().mockResolvedValue({ markdown: 'community content' }),
-  }),
 }));
 
 // Minimal valid SourcePackage for readFile mock
@@ -177,12 +170,10 @@ describe('POST /api/analysis/[ticker] — Gemini route', () => {
     vi.resetModules();
     vi.clearAllMocks();
     delete process.env.DEPLOYMENT_MODE;
-    delete process.env.FIRECRAWL_API_KEY;
   });
 
   afterEach(() => {
     delete process.env.DEPLOYMENT_MODE;
-    delete process.env.FIRECRAWL_API_KEY;
   });
 
   it('Test 1: returns a response with Content-Type: text/event-stream', async () => {

@@ -1,11 +1,10 @@
 /**
  * Plan 19-C-05 — ApeWisdom adapter (D-37, SUPPLEMENTAL).
  *
- * Per D-37 + user direction 2026-05-07 ("firecrawl is very reliable"),
- * ApeWisdom is a SUPPLEMENTAL community-data source. Firecrawl REMAINS PRIMARY.
- * Output is merged into `SentimentSnapshot.community_aggregated` JSONB column
- * by `lightweight-community-scan.ts` (Task 4) — never replaces the Firecrawl
- * branch.
+ * ApeWisdom is a SUPPLEMENTAL community-data source. Output is merged into
+ * `SentimentSnapshot.community_aggregated` JSONB column by
+ * `lightweight-community-scan.ts` (Task 4) — never replaces the canonical
+ * community-scan branch.
  *
  * Endpoint (free, no auth — per RESEARCH §Sources line 985):
  *   https://apewisdom.io/api/v1.0/filter/all-stocks/page/1
@@ -18,7 +17,7 @@
  * Threat-model mitigations (T-19-C-05-01):
  *   - Any non-2xx response, retry exhaustion, or unexpected payload returns
  *     null. The adapter NEVER throws — it cannot crash the canonical
- *     Firecrawl primary path (Promise.allSettled in Task 4 absorbs this too,
+ *     community-scan path (Promise.allSettled in Task 4 absorbs this too,
  *     but the null-sentinel discipline is the first line of defense).
  *   - withRetry(5xx + network only — D-25). 429 is 4xx → not retried, surfaces
  *     fast. cached(10min — TTL_SECONDS.community) keeps call frequency low.

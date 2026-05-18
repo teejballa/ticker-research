@@ -6,8 +6,8 @@
 // Asserts:
 //  - When highlight has both standout_quote and standout_url, the brief renders
 //    `[quote](url)` Markdown link
-//  - When standout_url is undefined (firecrawl branch), brief renders plain
-//    quoted text (backward compat)
+//  - When standout_url is undefined (legacy pre-30.1 highlight), brief
+//    renders plain quoted text (backward compat)
 //  - When standout_quote is empty, brief omits the quote line entirely
 //  - Markdown special chars in standout_quote are escaped to prevent injection
 

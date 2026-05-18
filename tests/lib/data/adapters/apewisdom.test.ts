@@ -15,7 +15,7 @@
  *
  * Per the threat model (T-19-C-05-01), the adapter MUST return null on any
  * non-2xx so a rate-limit on this supplemental never propagates and crashes
- * the canonical Firecrawl path.
+ * the canonical community-scan path.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 

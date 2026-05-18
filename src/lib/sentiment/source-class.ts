@@ -16,13 +16,12 @@ export type CipherSource =
   | 'stocktwits'
   | 'anthropic-search-news'
   | 'finnhub-analyst'
-  | 'firecrawl-reddit'
-  | 'firecrawl-forums'
   | 'sec'
   | 'apewisdom'
   | 'swaggystocks'
   | 'x'
-  | 'reddit'       // Plan 30.1 D-15 — direct Reddit OAuth ingestion → retail
+  | 'reddit'       // Plan 30.1 D-15 — Reddit ingestion (via Xpoz Pro) → retail
+  | 'twitter'      // Plan 30.1-pivot D-38 — Twitter ingestion (via Xpoz Pro) → retail
   | 'hackernews';  // Plan 30.1 D-16 — HackerNews Algolia search → social-other
 
 export class SourceClassUnknownError extends Error {
@@ -43,20 +42,17 @@ export function sourceToClass(source: CipherSource): SourceClass {
       return 'retail'; // retail aggregator over WSB
     case 'swaggystocks':
       return 'retail'; // retail aggregator
-    case 'firecrawl-reddit':
-      return 'retail'; // per spec
     case 'x':
+    case 'twitter':
       return 'retail'; // retail microblog (treated as retail until 20-C-03 author-credibility scoring lands)
     case 'anthropic-search-news':
       return 'news'; // per spec
     case 'finnhub-analyst':
       return 'analyst'; // per spec
-    case 'firecrawl-forums':
-      return 'social-other'; // per spec — non-Reddit forums (Discord/Yahoo/etc.)
     case 'sec':
       return 'sec'; // reserved for 20-B SEC fetcher
     case 'reddit':
-      return 'retail'; // Plan 30.1 D-15 — direct Reddit OAuth ingestion is retail-tier
+      return 'retail'; // Plan 30.1 D-15 — Reddit ingestion is retail-tier
     case 'hackernews':
       return 'social-other'; // Plan 30.1 D-16 — HN technical/analytical audience, between retail and analyst
     default: {
@@ -71,15 +67,14 @@ export function sourceToClass(source: CipherSource): SourceClass {
 /**
  * Runtime-safe variant for non-typed callers (e.g. data coming from DB strings).
  * 20-Z-01's SentimentObservation.source column accepts a SUPERSET of CipherSource
- * (historic 'reddit'/'news'/'firecrawl' strings predate the typed union). This
- * helper maps the legacy strings to the closest class so backfill + tune-decay
- * can iterate over real historical rows without throwing on every legacy row.
- * Unknown strings still throw SourceClassUnknownError (signals upstream bug).
+ * (historic strings predate the typed union). This helper maps the legacy
+ * strings to the closest class so backfill + tune-decay can iterate over real
+ * historical rows without throwing on every legacy row. Unknown strings still
+ * throw SourceClassUnknownError (signals upstream bug).
  */
 const LEGACY_SOURCE_TO_CLASS: Record<string, SourceClass> = {
   reddit: 'retail',
   news: 'news',
-  firecrawl: 'social-other',
   hackernews: 'social-other', // Plan 30.1 D-16 — historic DB string callers
 };
 

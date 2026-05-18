@@ -3,18 +3,12 @@
 // Phase 16 dual-class extension: TECHNICAL CALIBRATION CONTEXT block,
 // AnalysisResultSchema additions, and post-process numeric overwrite.
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-
-// Mock Firecrawl before importing the module under test
-vi.mock('@mendable/firecrawl-js', () => ({
-  default: vi.fn(),
-}));
+import { describe, it, expect, vi } from 'vitest';
 
 // gemini-analysis.ts imports engine-context (which imports @/lib/db).
 // Stub the prisma client so vitest doesn't need a live DATABASE_URL.
 vi.mock('@/lib/db', () => ({ prisma: {} }));
 
-import Firecrawl from '@mendable/firecrawl-js';
 import {
   scrapeCommunitySentiment,
   buildUserPrompt,
@@ -115,17 +109,8 @@ function buildEngineCtx(overrides: Partial<EngineContext> = {}): EngineContext {
 
 // ── Existing tests (preserved) ─────────────────────────────────────────
 
-describe('scrapeCommunitySentiment', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it('Test 1: returns empty result when FIRECRAWL_API_KEY is absent, without calling Firecrawl', async () => {
-    vi.stubEnv('FIRECRAWL_API_KEY', '');
+describe('scrapeCommunitySentiment (post-Phase-30.1 stub)', () => {
+  it('returns the empty shape — community data now flows through pkg.community', async () => {
     const result = await scrapeCommunitySentiment('AAPL', 'Apple Inc.');
     expect(result).toEqual({
       pinnedContent: '',
@@ -136,30 +121,6 @@ describe('scrapeCommunitySentiment', () => {
       middlePageCount: 0,
       nichePageCount: 0,
     });
-    expect(Firecrawl).not.toHaveBeenCalled();
-  });
-
-  it('Test 2: calls fc.scrape for pinned URLs and returns pinnedContent with scraped markdown', async () => {
-    vi.stubEnv('FIRECRAWL_API_KEY', 'test-key');
-    const longMarkdown = 'reddit post content '.repeat(20);
-    const mockScrape = vi.fn().mockResolvedValue({ markdown: longMarkdown });
-    (Firecrawl as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ scrape: mockScrape });
-
-    const result = await scrapeCommunitySentiment('AAPL', 'Apple Inc.');
-    expect(mockScrape).toHaveBeenCalled();
-    const [url] = mockScrape.mock.calls[0];
-    expect(url).toContain('AAPL');
-    expect(result.pinnedContent).toContain('reddit post content');
-  });
-
-  it('Test 3: returns empty pinnedContent gracefully when fc.scrape throws', async () => {
-    vi.stubEnv('FIRECRAWL_API_KEY', 'test-key');
-    const mockScrape = vi.fn().mockRejectedValue(new Error('scrape failed'));
-    (Firecrawl as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ scrape: mockScrape });
-
-    const result = await scrapeCommunitySentiment('AAPL', 'Apple Inc.');
-    expect(result.pinnedContent).toBe('');
-    expect(result.nicheContent).toBe('');
   });
 });
 

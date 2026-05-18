@@ -424,10 +424,10 @@ export interface CommunityHighlight {
   audience: string;                 // e.g. "institutional-adjacent analysts"
   standout_quote: string;           // best single user opinion (backward compat)
   // Plan 30.1-03 (D-24) — clickable permalink to the standout post/story.
-  // Optional + additive: legacy Firecrawl-era highlights leave this `undefined`;
+  // Optional + additive: legacy persisted highlights leave this `undefined`;
   // Reddit branch sets it to `https://www.reddit.com{permalink}`; HN branch sets
-  // it to `https://news.ycombinator.com/item?id={objectID}`. Final wire-up to
-  // the report renderer is Plan 30.1-04's job — this field unblocks that work.
+  // it to `https://news.ycombinator.com/item?id={objectID}`; Twitter branch sets
+  // it to the post URL.
   standout_url?: string;
   theme: string;                    // primary theme (backward compat)
   sentiment: 'bullish' | 'bearish' | 'neutral';
@@ -616,7 +616,7 @@ export interface AnalysisResult {
   catalyst_watch?: CatalystEvent[];  // Upcoming events that could move the stock
   sources_used: AnalysisSource[];
   source_warnings: string[];
-  community_sentiment_available?: boolean;  // true if Firecrawl community content was included (D-11)
+  community_sentiment_available?: boolean;  // true if community-scan content was included (D-11)
   market_snapshot?: MarketSnapshot;  // optional — populated by analysis pipeline (Phase 3)
   security_type?: SecurityType;  // optional — old persisted reports may not have this field
   // Depth sections — added for richer report content

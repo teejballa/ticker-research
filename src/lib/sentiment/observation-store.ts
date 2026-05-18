@@ -15,7 +15,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
 export type SentimentObservationSource =
-  | 'stocktwits' | 'reddit' | 'x' | 'twitter' | 'news' | 'sec' | 'apewisdom' | 'firecrawl' | 'hackernews';
+  | 'stocktwits' | 'reddit' | 'x' | 'twitter' | 'news' | 'sec' | 'apewisdom' | 'hackernews';
 
 // T-20-Z-01-01 — allowlist. Widening this list requires a new model_version (S2 immutability).
 const AUTHOR_FEATURE_ALLOWLIST = [

@@ -7,10 +7,11 @@ import { prisma } from '@/lib/db';
 const SOURCES = [
   'stocktwits',
   'reddit',
+  'twitter',
   'x',
   'news',
   'apewisdom',
-  'firecrawl',
+  'hackernews',
 ] as const;
 
 const HORIZONS = [7, 30] as const;

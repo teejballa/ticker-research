@@ -20,7 +20,6 @@ const SOURCES = [
   'x',
   'news',
   'apewisdom',
-  'firecrawl',
 ] as const;
 
 const HORIZONS = [7, 30] as const;

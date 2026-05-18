@@ -18,6 +18,7 @@ const SCAN_DIRS = ['src', 'tests', 'scripts'];
 const ALLOWLIST = new Set<string>([
   path.normalize('scripts/check-firecrawl-removed.ts'),
   path.normalize('scripts/migrations/30.1-resolve-firecrawl-alert.ts'),
+  path.normalize('scripts/calibrate-engagement-tiers.ts'),
   path.normalize('tests/scripts/check-firecrawl-removed.unit.test.ts'),
   path.normalize('tests/scripts/resolve-firecrawl-alert.unit.test.ts'),
 ]);

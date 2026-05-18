@@ -77,7 +77,7 @@ const NULL_AUTHOR_FEATURES = {
  * `reddit_obs_written_${ticker}`, `reddit_obs_dupes_${ticker}`, and
  * `reddit_obs_errors_${ticker}` on the provided results object.
  *
- * `undefined` or empty `posts` is a no-op (firecrawl branch surfaces undefined).
+ * `undefined` or empty `posts` is a no-op.
  */
 export async function writeRedditObservations(
   ticker: string,
@@ -188,7 +188,7 @@ export async function writeHackerNewsObservations(
  *   - PII discipline: SHA-256(pepper + lowercased author)
  *   - Crons-never-500: dupes counted, all other errors logged-and-continued
  *
- * `undefined` or empty `posts` is a no-op (firecrawl branch surfaces undefined).
+ * `undefined` or empty `posts` is a no-op.
  */
 export async function writeTwitterObservations(
   ticker: string,

@@ -131,7 +131,7 @@ describe('Phase 30 / D-12: sentiment-scan cron resilience', () => {
   it('D-12: skips a ticker when withBreaker throws BreakerOpenError; continues without erroring', async () => {
     const { lightweightCommunityScan } = await import('@/lib/data/lightweight-community-scan');
     vi.mocked(lightweightCommunityScan).mockRejectedValueOnce(
-      new BreakerOpenError('firecrawl', Date.now()),
+      new BreakerOpenError('reddit-xpoz', Date.now()),
     );
 
     const { status, body } = await callCron();
@@ -177,7 +177,7 @@ describe('Phase 30 / D-13: cron summary counters', () => {
   it('D-13: skipped_breaker_open increments by exactly 1 per BreakerOpenError thrown', async () => {
     const { lightweightCommunityScan } = await import('@/lib/data/lightweight-community-scan');
     vi.mocked(lightweightCommunityScan).mockRejectedValueOnce(
-      new BreakerOpenError('firecrawl', Date.now()),
+      new BreakerOpenError('reddit-xpoz', Date.now()),
     );
 
     const { body } = await callCron();
