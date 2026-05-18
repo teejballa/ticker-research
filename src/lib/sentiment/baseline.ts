@@ -39,8 +39,9 @@ export const SOURCE_TO_CLASS: Record<string, SourceClass> = {
   stocktwits: 'community',
   reddit: 'community',
   x: 'community',
+  twitter: 'community',
+  hackernews: 'community',
   apewisdom: 'community',
-  firecrawl: 'community',
   news: 'news',
   sec: 'sec',
 };

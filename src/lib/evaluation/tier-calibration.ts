@@ -15,8 +15,8 @@
  * src/lib/evaluation/calibration.ts and src/lib/evaluation/significance.ts.
  *
  * Calibration constraint (CONTEXT.md D-19): tier distribution under the new
- * Reddit+HN engagement thresholds must match the historical Firecrawl-era
- * distribution within ±10 percentage points per tier before cutover.
+ * Reddit+HN engagement thresholds must match the historical pre-30.1
+ * baseline distribution within ±10 percentage points per tier before cutover.
  */
 
 /**
@@ -62,7 +62,7 @@ function toPercentages(d: Distribution): { high: number; medium: number; low: nu
 
 /**
  * Compare an `actual` engagement-tier distribution against a `target`
- * distribution (e.g. the historical Firecrawl-era baseline). Emits one
+ * distribution (e.g. the historical pre-30.1 baseline). Emits one
  * `CalibrationResult` per tier with the signed percentage-point delta and
  * an in-tolerance flag.
  *

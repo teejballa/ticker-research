@@ -189,9 +189,9 @@ export async function GET(request: NextRequest) {
       (results as Record<string, number>)[`obs_errors_${ticker}`]  = obs_errors;
 
       // ── Phase 30.1-04 (D-15) — Reddit posts → SentimentObservation PIT feature store ──
-      // The orchestrator surfaces communityData.reddit_posts only on the
-      // 'reddit'/'shadow' branch of FEATURES.community_scan_source. On the
-      // 'firecrawl' branch it's undefined and the writer is a no-op.
+      // The orchestrator surfaces communityData.reddit_posts when the Reddit
+      // adapter returns posts. When `reddit_posts` is undefined the writer
+      // is a no-op.
       // The writer:
       //  - hashes raw Reddit usernames via SHA-256(pepper + lowercased author)
       //    so PII never persists (T-30.1-04-02) and Phase 20-C-03 Cresci

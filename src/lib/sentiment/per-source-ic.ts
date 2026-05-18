@@ -85,7 +85,7 @@ export function rollingICIR(
  *   - distinct fetched_at days in window < 20 (cold-start; per CONTEXT.md spec)
  *   - cross-sectional N per day < 5 (Spearman unstable below this) for EVERY day
  *
- * @param source_id  e.g. 'stocktwits' | 'reddit' | 'x' | 'news' | 'apewisdom' | 'firecrawl'
+ * @param source_id  e.g. 'stocktwits' | 'reddit' | 'x' | 'twitter' | 'news' | 'apewisdom' | 'hackernews'
  * @param horizon    7 | 30 — forward days_after
  * @param asOf       cutoff date (exclusive); rolling 20-day window ends here
  */

@@ -97,7 +97,7 @@ describe('ResearchReport — community-highlight standout_url wiring (D-24)', ()
             theme: 'general',
             sentiment: 'neutral',
             engagement_signal: 'medium',
-            // no standout_url — legacy firecrawl-branch highlight
+            // no standout_url — legacy pre-30.1 highlight
           },
         ])}
       />,

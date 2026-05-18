@@ -77,13 +77,9 @@ vi.mock('ai', () => ({
   tool: vi.fn(),
 }));
 
-// Mock yahoo-finance2 and firecrawl so module-load doesn't try network handshakes.
+// Mock yahoo-finance2 so module-load doesn't try network handshakes.
 vi.mock('yahoo-finance2', () => ({
   default: class { quote = vi.fn(); historical = vi.fn(); chart = vi.fn(); search = vi.fn(); },
-}));
-
-vi.mock('@mendable/firecrawl-js', () => ({
-  default: class { scrape = vi.fn(); },
 }));
 
 // Set env vars that downstream modules read at top level.
@@ -92,7 +88,6 @@ beforeAll(() => {
   process.env.CRON_SECRET ??= 'stub-cron-secret';
   process.env.ANTHROPIC_API_KEY ??= 'sk-ant-stub';
   process.env.GOOGLE_AI_API_KEY ??= 'stub';
-  process.env.FIRECRAWL_API_KEY ??= 'fc-stub';
 });
 
 // The exact set of routes that broke when prompt registry shipped. These are

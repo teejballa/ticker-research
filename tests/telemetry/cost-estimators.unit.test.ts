@@ -11,9 +11,6 @@ describe('COST_PER_CALL_USD — pinned per-provider rates (T-20-Z-03-03 quarterl
   it('anthropic-search = $0.01/call (https://docs.anthropic.com/.../web-search-tool)', () => {
     expect(COST_PER_CALL_USD['anthropic-search']).toBe(0.01);
   });
-  it('firecrawl = $0.001/call (https://www.firecrawl.dev/pricing)', () => {
-    expect(COST_PER_CALL_USD['firecrawl']).toBe(0.001);
-  });
   it('finbert-hf = $0.0001/call (HF $0.033/hr CPU amortized)', () => {
     expect(COST_PER_CALL_USD['finbert-hf']).toBe(0.0001);
   });

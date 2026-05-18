@@ -1,14 +1,16 @@
 /**
- * Plan 30.1-pivot Task 4 — orchestrator tests for the Xpoz community-scan path.
+ * Post-Phase-30.1 — orchestrator tests for the Xpoz community-scan path.
  *
  * Covers (a) `toEngagementFromFields` + `ENGAGEMENT_TIER_THRESHOLDS` (pure
- * thresholds), and (b) the flag-gated orchestrator branches (xpoz / firecrawl
- * / shadow). The new Xpoz `fetchRedditCommunity` is invoked PER-subreddit
- * (one call per sub), so tests assert call count + ticker uppercase + that
- * `fetchTwitterCommunity` is invoked alongside.
+ * thresholds), and (b) the always-on Xpoz-only orchestrator. The Xpoz
+ * `fetchRedditCommunity` is invoked PER-subreddit (one call per sub), so
+ * tests assert call count + ticker uppercase + that `fetchTwitterCommunity`
+ * is invoked alongside.
  *
- * Module-level `COMMUNITY_SCAN_SOURCE` requires `vi.resetModules()` + dynamic
- * `await import()` per-test so the flag-gating re-evaluates per-test.
+ * Phase 30.1-05 removed the `COMMUNITY_SCAN_SOURCE` feature flag (D-25
+ * lifecycle: off → shadow → on → flag deleted) and deleted the legacy
+ * branch entirely (D-26). The orchestrator now unconditionally fans out
+ * across Reddit + Twitter + HackerNews + StockTwits + Quiver.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
@@ -44,7 +46,7 @@ describe('toEngagementFromFields (Plan 30.1-03 Task 2)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// Task 4 — flag-gated orchestrator branches (xpoz / firecrawl / shadow)
+// Xpoz-only orchestrator (post-30.1-05 removal of the flag + legacy branch)
 // ─────────────────────────────────────────────────────────────────────────
 
 function makeRedditPost(overrides: Partial<RedditPost> = {}): RedditPost {
@@ -96,11 +98,10 @@ function makeHNStory(overrides: Partial<HNStory> = {}): HNStory {
   };
 }
 
-describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', () => {
+describe('lightweightCommunityScan (post-30.1-05 Xpoz-only)', () => {
   beforeEach(() => {
     vi.resetModules();
     delete process.env.XPOZ_API_KEY;
-    delete process.env.FIRECRAWL_API_KEY;
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -108,10 +109,6 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
   });
 
   it('returns null when XPOZ_API_KEY is unset', async () => {
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: vi.fn(async () => []),
     }));
@@ -132,10 +129,6 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
     const fetchRedditCommunityMock = vi.fn<
       (ticker: string, sub: string, opts?: { limit?: number }) => Promise<RedditPost[]>
     >(async () => []);
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: fetchRedditCommunityMock,
     }));
@@ -174,10 +167,6 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
     const fetchTwitterCommunityMock = vi.fn<
       (ticker: string, opts?: { limit?: number; sinceDays?: number }) => Promise<TwitterPost[]>
     >(async () => []);
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: vi.fn(async () => []),
     }));
@@ -225,10 +214,6 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
       }
       return [];
     });
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: fetchRedditCommunityMock,
     }));
@@ -260,10 +245,6 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
 
   it('emits a Twitter highlight when Twitter returns ≥1 post', async () => {
     vi.stubEnv('XPOZ_API_KEY', 'fake-xpoz-key');
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: vi.fn(async () => []),
     }));
@@ -305,10 +286,6 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
       makeTwitterPost({ id: 'tail', author: 'low', like_count: 50 }),
     ];
     const isAuthMock = vi.fn(async (username: string) => username !== 'bot');
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: vi.fn(async () => []),
     }));
@@ -343,10 +320,6 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
 
   it('returns null when everything is empty', async () => {
     vi.stubEnv('XPOZ_API_KEY', 'fake-xpoz-key');
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: vi.fn(async () => []),
     }));
@@ -380,15 +353,11 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
     expect(out).toBeNull();
   });
 
-  it('xpoz-branch EnrichedSnapshot exposes reddit_posts + hackernews_stories + twitter_posts', async () => {
+  it('xpoz EnrichedSnapshot exposes reddit_posts + hackernews_stories + twitter_posts', async () => {
     vi.stubEnv('XPOZ_API_KEY', 'fake-xpoz-key');
     const redditPost = makeRedditPost({ id: 'rp1', score: 100, num_comments: 50 });
     const tweet = makeTwitterPost({ id: 'tw1' });
     const story = makeHNStory({ objectID: 'hn1' });
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'xpoz' };
-    });
     vi.doMock('@/lib/data/adapters/reddit', () => ({
       fetchRedditCommunity: vi.fn(async (_t: string, sub: string) =>
         sub === 'stocks' ? [redditPost] : [],
@@ -422,95 +391,5 @@ describe('lightweightCommunityScan — Xpoz branch (Plan 30.1-pivot Task 4)', ()
     expect(out!.twitter_posts![0].id).toBe('tw1');
     expect(out!.hackernews_stories).toHaveLength(1);
     expect(out!.hackernews_stories![0].objectID).toBe('hn1');
-  });
-});
-
-describe('lightweightCommunityScan — Firecrawl branch (Plan 30.1-pivot Task 4)', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    delete process.env.FIRECRAWL_API_KEY;
-  });
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
-  });
-
-  it('branches to runFirecrawlPath when COMMUNITY_SCAN_SOURCE=firecrawl', async () => {
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'firecrawl' };
-    });
-    const fetchRedditCommunityMock = vi.fn(async () => []);
-    const fetchTwitterCommunityMock = vi.fn(async () => []);
-    vi.doMock('@/lib/data/adapters/reddit', () => ({
-      fetchRedditCommunity: fetchRedditCommunityMock,
-    }));
-    vi.doMock('@/lib/data/adapters/twitter', () => ({
-      fetchTwitterCommunity: fetchTwitterCommunityMock,
-      isAuthenticTwitterUser: vi.fn(async () => true),
-    }));
-    vi.doMock('@/lib/data/adapters/hackernews', () => ({
-      fetchHackerNewsStories: vi.fn(async () => []),
-    }));
-    const mod = await import('@/lib/data/lightweight-community-scan');
-    // FIRECRAWL_API_KEY unset → legacy early-exit returns null.
-    const out = await mod.lightweightCommunityScan('AAPL');
-    expect(out).toBeNull();
-    expect(fetchRedditCommunityMock).not.toHaveBeenCalled();
-    expect(fetchTwitterCommunityMock).not.toHaveBeenCalled();
-  });
-});
-
-describe('lightweightCommunityScan — Shadow branch (Plan 30.1-pivot Task 4)', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    delete process.env.FIRECRAWL_API_KEY;
-  });
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
-  });
-
-  it('shadow mode returns Firecrawl result and fires Xpoz path in background via after()', async () => {
-    vi.stubEnv('XPOZ_API_KEY', 'fake-xpoz-key');
-    const fetchRedditCommunityMock = vi.fn(async () => [] as RedditPost[]);
-    const fetchTwitterCommunityMock = vi.fn(async () => [] as TwitterPost[]);
-    vi.doMock('next/server', () => ({
-      after: (fn: () => Promise<void>) => { void fn(); },
-    }));
-    vi.doMock('@/lib/features', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/features')>('@/lib/features');
-      return { ...actual, COMMUNITY_SCAN_SOURCE: 'shadow' };
-    });
-    vi.doMock('@/lib/data/adapters/reddit', () => ({
-      fetchRedditCommunity: fetchRedditCommunityMock,
-    }));
-    vi.doMock('@/lib/data/adapters/twitter', () => ({
-      fetchTwitterCommunity: fetchTwitterCommunityMock,
-      isAuthenticTwitterUser: vi.fn(async () => true),
-    }));
-    vi.doMock('@/lib/data/adapters/hackernews', () => ({
-      fetchHackerNewsStories: vi.fn(async () => []),
-    }));
-    vi.doMock('@/lib/data/stocktwits', () => ({
-      fetchStockTwitsSentiment: vi.fn(async () => ({
-        stocktwits_bull_pct: null,
-        stocktwits_bear_pct: null,
-        stocktwits_message_count: null,
-      })),
-      fetchStockTwitsRaw: vi.fn(async () => []),
-    }));
-    vi.doMock('@/lib/data/adapters/quiver', () => ({
-      fetchQuiverInsider: vi.fn(async () => null),
-      fetchQuiverCongressional: vi.fn(async () => null),
-    }));
-    const mod = await import('@/lib/data/lightweight-community-scan');
-    const out = await mod.lightweightCommunityScan('AAPL');
-    expect(out).toBeNull();
-    // Flush microtasks so the after() callback completes.
-    await new Promise((r) => setImmediate(r));
-    // Both Xpoz fetchers should have been invoked in the background.
-    expect(fetchRedditCommunityMock).toHaveBeenCalled();
-    expect(fetchTwitterCommunityMock).toHaveBeenCalled();
   });
 });

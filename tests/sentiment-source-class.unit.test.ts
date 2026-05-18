@@ -11,13 +11,12 @@ describe('sourceToClass — exhaustive mapping per CONTEXT line 105', () => {
     ['stocktwits', 'retail'],
     ['apewisdom', 'retail'],
     ['swaggystocks', 'retail'],
-    ['firecrawl-reddit', 'retail'],
     ['x', 'retail'],
+    ['twitter', 'retail'],
     ['anthropic-search-news', 'news'],
     ['finnhub-analyst', 'analyst'],
-    ['firecrawl-forums', 'social-other'],
     ['sec', 'sec'],
-    // Plan 30.1 — direct Reddit OAuth + HackerNews ingestion (D-15, D-16)
+    // Plan 30.1 — Reddit + HackerNews ingestion (D-15, D-16)
     ['reddit', 'retail'],
     ['hackernews', 'social-other'],
   ];
@@ -37,7 +36,6 @@ describe('sourceToClassUnsafe — legacy DB strings', () => {
   it.each([
     ['reddit', 'retail'],
     ['news', 'news'],
-    ['firecrawl', 'social-other'],
     ['hackernews', 'social-other'], // Plan 30.1 D-16 — historic DB string callers
   ] as const)('legacy %s → %s', (source, expected) => {
     expect(sourceToClassUnsafe(source)).toBe(expected);

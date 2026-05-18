@@ -2,7 +2,7 @@
  * Plan 19-C-05 — Swaggystocks adapter unit tests (D-37).
  *
  * 6 tests covering the SUPPLEMENTAL community-data path:
- *   1. Returns null when no public endpoint is reachable AND Firecrawl key missing
+ *   1. Returns null when no public endpoint is reachable
  *   2. Returns CommunitySignal-shaped object on success (API path)
  *   3. Falls through to Redis cache on second call (fetch invoked once)
  *   4. Retries 5xx then succeeds
@@ -10,14 +10,13 @@
  *   6. Rate-limit (HTTP 429) returns null without crashing primary path
  *
  * Per RESEARCH Assumption A5, swaggystocks.com has no official API docs;
- * the adapter MAY fall back to a Firecrawl scrape of the public ticker page if
- * the (community-discovered) JSON endpoint is unavailable. These tests target
- * the JSON endpoint path; the Firecrawl fallback is exercised lazily — if no
- * `FIRECRAWL_API_KEY` is set, the adapter must still return null gracefully.
+ * if the (community-discovered) JSON endpoint is unavailable the adapter
+ * returns null without auto-fallback (post-Phase-30.1: there is no
+ * third-party-scraper fallback path).
  *
  * Per the threat model (T-19-C-05-01), the adapter MUST return null on any
  * non-2xx so a rate-limit / endpoint move on this supplemental never crashes
- * the canonical Firecrawl path.
+ * the canonical community-scan path.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -94,7 +93,6 @@ describe('Swaggystocks adapter (Plan 19-C-05)', () => {
     __resetUpstashClientForTests();
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
-    delete process.env.FIRECRAWL_API_KEY;
     fetchSpy = vi.spyOn(globalThis, 'fetch');
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -109,7 +107,7 @@ describe('Swaggystocks adapter (Plan 19-C-05)', () => {
     vi.useRealTimers();
   });
 
-  it('returns null when endpoint unreachable AND no Firecrawl fallback configured', async () => {
+  it('returns null when endpoint unreachable (no scrape fallback post-Phase-30.1)', async () => {
     const netErr = Object.assign(new Error('fetch failed'), {
       cause: { code: 'ECONNREFUSED' },
     });

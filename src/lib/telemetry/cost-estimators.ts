@@ -4,7 +4,7 @@
  * QUARTERLY REVIEW CADENCE (T-20-Z-03-03 mitigation):
  *   - Gemini    — https://ai.google.dev/pricing
  *   - Anthropic — https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/web-search-tool
- *   - Firecrawl — https://www.firecrawl.dev/pricing
+ *   - Xpoz      — https://xpoz.ai pricing (Pro plan + per-credit overage)
  *   - HF        — https://huggingface.co/pricing
  *
  * Edits to these constants require a corresponding update to
@@ -17,7 +17,6 @@ export type ProviderId =
   | 'finnhub'
   | 'anthropic-search'
   | 'stocktwits'
-  | 'firecrawl'
   | 'gemini'
   | 'finbert-hf'
   | 'apewisdom'
@@ -30,7 +29,6 @@ export type ProviderId =
 // Per-provider per-call USD cost constants. CITED above. Quarterly review per T-20-Z-03-03.
 //   gemini   — https://ai.google.dev/pricing (Gemini 2.5 Flash via Vercel AI Gateway, 2026-Q1)
 //   anthropic-search — https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/web-search-tool ($10/1k = $0.01/call)
-//   firecrawl        — https://www.firecrawl.dev/pricing ($1/1k pages = $0.001/call)
 //   finbert-hf       — https://huggingface.co/pricing ($0.033/hr CPU, ~330 inferences/hr → ~$0.0001/call)
 //   reddit-xpoz      — https://xpoz.ai pricing (Pro plan $16/mo + $0.80/1K overage credits ≈ $0.001/call at 2 credits/call)
 //   twitter-xpoz     — same Xpoz Pro plan; same per-call cost.
@@ -41,7 +39,6 @@ export const COST_PER_CALL_USD: Record<ProviderId, number> = {
   'finnhub': 0,
   'anthropic-search': 0.01,
   'stocktwits': 0,
-  'firecrawl': 0.001,
   'gemini': 0, // computed via cost_usd_estimator + GEMINI_TOKEN_RATES
   'finbert-hf': 0.0001,
   'apewisdom': 0,

@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-// Stub prisma + Firecrawl + AI SDK transitive imports so loading the
+// Stub prisma + AI SDK transitive imports so loading the
 // AnalysisResultSchema doesn't require DATABASE_URL or other live env vars.
 vi.mock('@/lib/db', () => ({ prisma: {} }));
 

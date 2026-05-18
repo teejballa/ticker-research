@@ -178,12 +178,12 @@ async function fetchSentimentIntelligence(ticker: string): Promise<SentimentInte
 
   // Plan 19-C-02 (D-34) — runWithShadow('finsentllm-ensemble', ...).
   // Aggregated chatter text is the StockTwits / options interpretation
-  // signal we already have in-process. Per D-44 the dedicated community
-  // chatter ingestion lands later in Wave C (Firecrawl / Arctic Shift) and
-  // will replace this seed text with the full chatter blob; this wiring
-  // keeps the shadow harness exercising the path on every research request
-  // so 19-C-02 PASS verdict (Pearson ≥0.85, ≥95% chatter coverage) can
-  // accumulate without waiting on later plans.
+  // signal we already have in-process. Phase 30.1's lightweight-community-scan
+  // (Reddit + Twitter + HackerNews) already delivers the structured community
+  // payload directly to pkg.community_aggregated; this wiring keeps the
+  // shadow harness exercising the FinBERT path on every research request so
+  // 19-C-02 PASS verdict (Pearson ≥0.85, ≥95% chatter coverage) can
+  // accumulate.
   const chatterText = [
     stwits ? `StockTwits: bull ${stwits.stocktwits_bull_pct ?? '?'}%, bear ${stwits.stocktwits_bear_pct ?? '?'}%` : '',
     options?.put_call_interpretation ? `Options put/call interpretation: ${options.put_call_interpretation}` : '',

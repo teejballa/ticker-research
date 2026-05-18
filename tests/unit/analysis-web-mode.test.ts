@@ -87,9 +87,6 @@ vi.mock('ai', () => ({
     }
   },
 }));
-vi.mock('@mendable/firecrawl-js', () => ({
-  default: vi.fn().mockReturnValue({ scrape: vi.fn().mockResolvedValue({ markdown: '' }) }),
-}));
 vi.mock('fs/promises', () => ({
   // Inline the minimal package JSON to avoid hoisting issues with MOCK_PKG
   readFile: vi.fn().mockResolvedValue(JSON.stringify({
