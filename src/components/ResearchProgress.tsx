@@ -248,7 +248,7 @@ export default function ResearchProgress({
       <NavBar />
 
       {/* Main Loading Canvas */}
-      <main className="relative flex-1 flex flex-col items-center justify-center bg-surface overflow-hidden pt-[44px] pb-[32px]">
+      <main className="relative flex-1 flex flex-col items-center justify-center bg-surface overflow-hidden pt-[56px] pb-[32px]">
         {/* Background Ambient Glow */}
         <div className="absolute inset-0 loading-pulse pointer-events-none" />
 

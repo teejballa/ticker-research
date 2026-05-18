@@ -172,14 +172,14 @@ function DegradationRateTile({ rate }: { rate: number }) {
         ? 'text-amber-600 dark:text-amber-400'
         : 'text-red-600 dark:text-red-400';
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 mb-6">
-      <div className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+    <div className="rounded-lg border border-outline-variant dark:border-outline-variant p-4 mb-6">
+      <div className="text-xs uppercase tracking-wide text-on-surface-variant dark:text-on-surface-variant">
         NLP fallback rate (last 24h)
       </div>
       <div className={`text-4xl font-bold ${color}`} data-testid="degradation-rate-24h">
         {pct.toFixed(1)}%
       </div>
-      <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+      <div className="text-xs text-on-surface-variant dark:text-on-surface-variant mt-1">
         L&apos;m-fallback share of (finbert-hf + lm-fallback) successful NLP calls. Alert at &gt; 5%.
       </div>
     </div>
@@ -189,19 +189,19 @@ function DegradationRateTile({ rate }: { rate: number }) {
 export default async function SentimentHealthPage() {
   const { rows, degradation_rate_24h, fallback_rows, active_alerts } = await load();
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div className="min-h-screen bg-background text-on-surface">
       <NavBar />
-      <main className="max-w-6xl mx-auto px-6 py-10">
+      <main className="max-w-6xl mx-auto px-6 pt-20 pb-10">
         <h1 className="text-3xl font-bold mb-2">Provider health</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 mb-2">
+        <p className="text-on-surface-variant dark:text-on-surface-variant mb-2">
           Latency, error rate, and cost per provider over the last 24 hours.
         </p>
         {/* Plan 20-C-02 — link tile to the Brier calibration dashboard. */}
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+        <p className="text-xs text-on-surface-variant dark:text-on-surface-variant mb-6">
           See also:{' '}
           <a
             href="/insights/calibration"
-            className="underline hover:text-zinc-300"
+            className="underline hover:text-on-surface"
             data-testid="link-to-calibration"
           >
             /insights/calibration
@@ -227,7 +227,7 @@ export default async function SentimentHealthPage() {
         </section>
 
         {rows.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-on-surface-variant dark:text-on-surface-variant">
             No telemetry yet. Providers appear here after the first instrumented call.
           </p>
         ) : (

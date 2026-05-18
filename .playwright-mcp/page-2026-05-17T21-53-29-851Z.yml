@@ -1,0 +1,125 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - button "Switch to dark mode" [ref=e4] [cursor=pointer]:
+        - img [ref=e5]
+      - link "CIPHER" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - text: CIPHER
+      - navigation [ref=e10]:
+        - link "Research" [ref=e11] [cursor=pointer]:
+          - /url: /terminal
+        - link "Insights" [ref=e12] [cursor=pointer]:
+          - /url: /insights
+        - generic [ref=e13]: NYSE
+        - generic [ref=e14]: NASDAQ
+    - generic [ref=e15]:
+      - generic [ref=e16]: Markets closed · Weekend
+      - link "Sign in" [ref=e18] [cursor=pointer]:
+        - /url: /auth/signin
+      - link "Analyze a ticker →" [ref=e19] [cursor=pointer]:
+        - /url: /terminal
+        - text: Analyze a ticker
+        - generic [ref=e20]: →
+  - main [ref=e21]:
+    - generic [ref=e23]:
+      - generic [ref=e24]: Cipher / Sign in
+      - heading "Welcome back." [level=1] [ref=e25]:
+        - text: Welcome
+        - emphasis [ref=e26]: back
+        - text: .
+      - paragraph [ref=e27]: Sign in to generate research reports and keep your history. Free during early access — no credit card required.
+      - button "Sign in or create account with Google" [ref=e28] [cursor=pointer]:
+        - generic [ref=e29]: G
+        - text: Continue with Google
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]: "01"
+          - generic [ref=e33]: Sign in with Google
+        - generic [ref=e34]:
+          - generic [ref=e35]: "02"
+          - generic [ref=e36]: Generate your first report
+        - generic [ref=e37]:
+          - generic [ref=e38]: "03"
+          - generic [ref=e39]: Review and export to PDF
+  - generic [ref=e41]:
+    - generic [ref=e42]:
+      - generic [ref=e43]: AAPL
+      - generic [ref=e44]: —
+      - generic [ref=e45]: ·
+      - generic [ref=e46]: ·
+    - generic [ref=e47]:
+      - generic [ref=e48]: MSFT
+      - generic [ref=e49]: —
+      - generic [ref=e50]: ·
+      - generic [ref=e51]: ·
+    - generic [ref=e52]:
+      - generic [ref=e53]: NVDA
+      - generic [ref=e54]: —
+      - generic [ref=e55]: ·
+      - generic [ref=e56]: ·
+    - generic [ref=e57]:
+      - generic [ref=e58]: GOOGL
+      - generic [ref=e59]: —
+      - generic [ref=e60]: ·
+      - generic [ref=e61]: ·
+    - generic [ref=e62]:
+      - generic [ref=e63]: AMZN
+      - generic [ref=e64]: —
+      - generic [ref=e65]: ·
+      - generic [ref=e66]: ·
+    - generic [ref=e67]:
+      - generic [ref=e68]: TSLA
+      - generic [ref=e69]: —
+      - generic [ref=e70]: ·
+      - generic [ref=e71]: ·
+    - generic [ref=e72]:
+      - generic [ref=e73]: META
+      - generic [ref=e74]: —
+      - generic [ref=e75]: ·
+      - generic [ref=e76]: ·
+    - generic [ref=e77]:
+      - generic [ref=e78]: JPM
+      - generic [ref=e79]: —
+      - generic [ref=e80]: ·
+      - generic [ref=e81]: ·
+    - generic [ref=e82]:
+      - generic [ref=e83]: AAPL
+      - generic [ref=e84]: —
+      - generic [ref=e85]: ·
+      - generic [ref=e86]: ·
+    - generic [ref=e87]:
+      - generic [ref=e88]: MSFT
+      - generic [ref=e89]: —
+      - generic [ref=e90]: ·
+      - generic [ref=e91]: ·
+    - generic [ref=e92]:
+      - generic [ref=e93]: NVDA
+      - generic [ref=e94]: —
+      - generic [ref=e95]: ·
+      - generic [ref=e96]: ·
+    - generic [ref=e97]:
+      - generic [ref=e98]: GOOGL
+      - generic [ref=e99]: —
+      - generic [ref=e100]: ·
+      - generic [ref=e101]: ·
+    - generic [ref=e102]:
+      - generic [ref=e103]: AMZN
+      - generic [ref=e104]: —
+      - generic [ref=e105]: ·
+      - generic [ref=e106]: ·
+    - generic [ref=e107]:
+      - generic [ref=e108]: TSLA
+      - generic [ref=e109]: —
+      - generic [ref=e110]: ·
+      - generic [ref=e111]: ·
+    - generic [ref=e112]:
+      - generic [ref=e113]: META
+      - generic [ref=e114]: —
+      - generic [ref=e115]: ·
+      - generic [ref=e116]: ·
+    - generic [ref=e117]:
+      - generic [ref=e118]: JPM
+      - generic [ref=e119]: —
+      - generic [ref=e120]: ·
+      - generic [ref=e121]: ·

@@ -53,20 +53,20 @@ export function ActiveAlertsTile({ alerts }: { alerts: AlertRow[] }) {
         {alerts.map((a) => (
           <li key={a.id} data-testid={`alert-row-${a.provider_id}`}>
             <span className="font-semibold">{a.provider_id}</span>
-            <span className="text-zinc-500 dark:text-zinc-400">
+            <span className="text-on-surface-variant dark:text-on-surface-variant">
               {' '}
               — {(a.error_rate * 100).toFixed(1)}% error rate
             </span>
-            <span className="text-zinc-400">
+            <span className="text-on-surface-variant">
               {' '}
               ({a.error_count}/{a.total_count})
             </span>
             {a.dominant_error_class && (
-              <span className="ml-2 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <span className="ml-2 text-xs uppercase tracking-wide text-on-surface-variant dark:text-on-surface-variant">
                 [{a.dominant_error_class}]
               </span>
             )}
-            <span className="ml-2 text-xs text-zinc-400">
+            <span className="ml-2 text-xs text-on-surface-variant">
               {relativeAge(a.breached_at)}
             </span>
           </li>

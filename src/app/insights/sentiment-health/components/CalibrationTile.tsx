@@ -44,7 +44,7 @@ function statusColor(status: string): string {
     case 'nonconvergent':
       return 'text-red-600 dark:text-red-400';
     default:
-      return 'text-zinc-500 dark:text-zinc-400';
+      return 'text-on-surface-variant dark:text-on-surface-variant';
   }
 }
 
@@ -67,11 +67,11 @@ export async function CalibrationTile({ classifierVersion }: Props) {
   if (!row) {
     return (
       <div
-        className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-900"
+        className="rounded-lg border border-outline-variant dark:border-outline-variant p-4 bg-white dark:bg-surface"
         data-testid={`calibration-tile-${classifierVersion}`}
       >
         <h3 className="font-semibold text-lg">{classifierVersion}</h3>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+        <p className="text-sm text-on-surface-variant dark:text-on-surface-variant mt-2">
           No calibration data — run{' '}
           <code className="text-xs">scripts/calibrate-temperature.ts</code> or
           wait for the monthly cron.
@@ -87,7 +87,7 @@ export async function CalibrationTile({ classifierVersion }: Props) {
 
   return (
     <div
-      className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-900"
+      className="rounded-lg border border-outline-variant dark:border-outline-variant p-4 bg-white dark:bg-surface"
       data-testid={`calibration-tile-${classifierVersion}`}
     >
       <div className="flex items-baseline justify-between">
@@ -96,21 +96,21 @@ export async function CalibrationTile({ classifierVersion }: Props) {
           {row.status}
         </span>
       </div>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="text-sm text-on-surface-variant dark:text-on-surface-variant">
         T = {row.temperature.toFixed(4)} · {relative(row.computed_at)}
       </p>
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <dt className="text-zinc-500 dark:text-zinc-400">ECE pre</dt>
+        <dt className="text-on-surface-variant dark:text-on-surface-variant">ECE pre</dt>
         <dd>{row.ece_pre_scaling.toFixed(4)}</dd>
-        <dt className="text-zinc-500 dark:text-zinc-400">ECE post</dt>
+        <dt className="text-on-surface-variant dark:text-on-surface-variant">ECE post</dt>
         <dd className="font-semibold">{ece_post_scaling.toFixed(4)}</dd>
-        <dt className="text-zinc-500 dark:text-zinc-400">Brier pre</dt>
+        <dt className="text-on-surface-variant dark:text-on-surface-variant">Brier pre</dt>
         <dd>{row.brier_pre_scaling.toFixed(4)}</dd>
-        <dt className="text-zinc-500 dark:text-zinc-400">Brier post</dt>
+        <dt className="text-on-surface-variant dark:text-on-surface-variant">Brier post</dt>
         <dd className="font-semibold">{row.brier_post_scaling.toFixed(4)}</dd>
-        <dt className="text-zinc-500 dark:text-zinc-400">CV ECE mean</dt>
+        <dt className="text-on-surface-variant dark:text-on-surface-variant">CV ECE mean</dt>
         <dd>{row.cv_ece_mean.toFixed(4)} ± {row.cv_ece_std.toFixed(4)}</dd>
-        <dt className="text-zinc-500 dark:text-zinc-400">n (FPB + prod)</dt>
+        <dt className="text-on-surface-variant dark:text-on-surface-variant">n (FPB + prod)</dt>
         <dd>
           {row.n_fpb_samples.toLocaleString()} + {row.n_production_samples.toLocaleString()}
         </dd>
@@ -127,7 +127,7 @@ export async function CalibrationTile({ classifierVersion }: Props) {
         <circle cx={preDot * 160} cy="10" r="4" fill="#fb923c" />
         <circle cx={postDot * 160} cy="10" r="4" fill="#10b981" />
       </svg>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+      <p className="text-xs text-on-surface-variant dark:text-on-surface-variant mt-1">
         ECE pre (orange) → post (emerald) on [0, 0.1] axis
       </p>
     </div>

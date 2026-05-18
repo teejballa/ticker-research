@@ -31,7 +31,7 @@ export function ReliabilityDiagram({ result }: { result: EvalBrierResult }) {
   if (result.status === 'insufficient_data') {
     return (
       <div
-        className="rounded-lg border border-zinc-700 bg-zinc-900/40 p-4 text-xs text-zinc-500"
+        className="rounded-lg border border-outline-variant bg-surface/40 p-4 text-xs text-on-surface-variant"
         data-testid={`reliability-diagram-${result.classifier_version}`}
       >
         Reliability diagram unavailable — n = {result.n} below the
@@ -54,10 +54,10 @@ export function ReliabilityDiagram({ result }: { result: EvalBrierResult }) {
 
   return (
     <figure
-      className="rounded-lg border border-zinc-700 bg-zinc-900/40 p-4"
+      className="rounded-lg border border-outline-variant bg-surface/40 p-4"
       data-testid={`reliability-diagram-${result.classifier_version}`}
     >
-      <figcaption className="mb-2 text-xs text-zinc-400">
+      <figcaption className="mb-2 text-xs text-on-surface-variant">
         CORP reliability — {result.classifier_version}
       </figcaption>
       <svg

@@ -1,0 +1,1253 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - button "Switch to dark mode" [ref=e4] [cursor=pointer]:
+        - img [ref=e5]
+      - link "CIPHER" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - text: CIPHER
+      - navigation [ref=e10]:
+        - link "Research" [ref=e11] [cursor=pointer]:
+          - /url: /terminal
+        - link "Insights" [ref=e12] [cursor=pointer]:
+          - /url: /insights
+        - generic [ref=e13]: NYSE
+        - generic [ref=e14]: NASDAQ
+    - generic [ref=e15]:
+      - generic [ref=e16]: Markets closed · Weekend
+      - link "Sign in" [ref=e18] [cursor=pointer]:
+        - /url: /auth/signin
+      - link "Analyze a ticker →" [ref=e19] [cursor=pointer]:
+        - /url: /terminal
+        - text: Analyze a ticker
+        - generic [ref=e20]: →
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - link "Cipher" [ref=e24] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e25]: /
+        - generic [ref=e26]: Insights
+      - heading "How we're doing." [level=1] [ref=e27]:
+        - text: How we're
+        - emphasis [ref=e28]: doing.
+      - paragraph [ref=e29]: "Cipher's live track record by signal class: how each pattern has performed against the S&P 500, with credible intervals and out-of-sample Brier scores."
+    - generic [ref=e31]:
+      - img [ref=e33]:
+        - generic [ref=e35]: TICKER
+        - generic [ref=e37]:
+          - generic [ref=e39]:
+            - generic [ref=e41]: NICHE
+            - generic [ref=e42]: tier 01 · 2 signals
+          - generic "r/wallstreetbets" [ref=e44]
+          - generic "earnings whispers" [ref=e47]
+        - generic [ref=e49]:
+          - generic [ref=e51]:
+            - generic [ref=e53]: TRANSITIONAL
+            - generic [ref=e54]: tier 02 · 3 signals
+          - generic "Bloomberg terminals" [ref=e56]
+          - generic "FactSet alerts" [ref=e59]
+          - generic "sell-side notes" [ref=e62]
+        - generic [ref=e64]:
+          - generic [ref=e66]:
+            - generic [ref=e68]: MAINSTREAM
+            - generic [ref=e69]: tier 03 · 3 signals
+          - generic "WSJ · NYT" [ref=e71]
+          - generic "CNBC tickers" [ref=e74]
+          - generic "sector ETF flow" [ref=e77]
+      - generic [ref=e79]:
+        - generic [ref=e80]: Sentiment diffusion
+        - heading "From niche chatter to mainstream tape." [level=2] [ref=e81]:
+          - text: From
+          - emphasis [ref=e82]: niche
+          - text: chatter to
+          - emphasis [ref=e83]: mainstream
+          - text: tape.
+        - paragraph [ref=e84]: Every sentiment signal Cipher tracks lives in one of three tiers. Most opportunities surface in the inner rings before they reach the outer ones — and the gap is where alpha decays.
+        - generic [ref=e85]:
+          - generic [ref=e88]:
+            - generic [ref=e89]: Niche
+            - generic [ref=e90]: Reddit, Discord, niche newsletters · Tier 01
+          - generic [ref=e93]:
+            - generic [ref=e94]: Transitional
+            - generic [ref=e95]: Sell-side notes, FactSet, Bloomberg · Tier 02
+          - generic [ref=e98]:
+            - generic [ref=e99]: Mainstream
+            - generic [ref=e100]: Major media, ETF flows, indices · Tier 03
+    - generic [ref=e101]:
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - generic [ref=e104]: Data points indexed
+          - emphasis [ref=e106]: "0"
+          - generic [ref=e107]: loading…
+        - generic [ref=e108]:
+          - generic [ref=e109]: Rotating watchlist
+          - emphasis [ref=e111]: "0"
+          - generic [ref=e112]: loading…
+        - generic [ref=e113]:
+          - generic [ref=e114]: Resolved outcomes
+          - emphasis [ref=e116]: "0"
+          - generic [ref=e117]: loading…
+        - generic [ref=e118]:
+          - generic [ref=e119]: Thesis confidence
+          - emphasis [ref=e121]: 0%
+          - generic [ref=e122]: loading…
+      - generic [ref=e123]:
+        - button "Patterns" [ref=e124] [cursor=pointer]
+        - button "Calibration" [ref=e125] [cursor=pointer]
+        - button "Sentiment sources" [ref=e126] [cursor=pointer]
+        - button "Health" [ref=e127] [cursor=pointer]
+      - generic [ref=e129]:
+        - generic [ref=e130]: Pattern library · 96 cells · 95% credible intervals
+        - table [ref=e132]:
+          - rowgroup [ref=e133]:
+            - row "Signal × Pattern Cap Horizon ESS 95% CI Status" [ref=e134]:
+              - columnheader "Signal × Pattern" [ref=e135]
+              - columnheader "Cap" [ref=e136]
+              - columnheader "Horizon" [ref=e137]
+              - columnheader "ESS" [ref=e138]
+              - columnheader "95% CI" [ref=e139]
+              - columnheader "Status" [ref=e140]
+          - rowgroup [ref=e141]:
+            - row "DIFFUSION mainstream first LARGE 3d 5.0(N=14) [22.7%–92.1%] EXPLORATORY" [ref=e142]:
+              - cell "DIFFUSION mainstream first" [ref=e143]:
+                - generic [ref=e144]: DIFFUSION
+                - generic [ref=e145]: mainstream first
+              - cell "LARGE" [ref=e146]
+              - cell "3d" [ref=e147]
+              - cell "5.0(N=14)" [ref=e148]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e149]: (N=14)
+              - cell "[22.7%–92.1%]" [ref=e150]
+              - cell "EXPLORATORY" [ref=e151]
+            - row "DIFFUSION mainstream first LARGE 7d 1.0(N=6) [19.8%–100.0%] EXPLORATORY" [ref=e152]:
+              - cell "DIFFUSION mainstream first" [ref=e153]:
+                - generic [ref=e154]: DIFFUSION
+                - generic [ref=e155]: mainstream first
+              - cell "LARGE" [ref=e156]
+              - cell "7d" [ref=e157]
+              - cell "1.0(N=6)" [ref=e158]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e159]: (N=6)
+              - cell "[19.8%–100.0%]" [ref=e160]
+              - cell "EXPLORATORY" [ref=e161]
+            - row "DIFFUSION mainstream first MID 3d 0.0(N=2) [0.0%–79.5%] EXPLORATORY" [ref=e162]:
+              - cell "DIFFUSION mainstream first" [ref=e163]:
+                - generic [ref=e164]: DIFFUSION
+                - generic [ref=e165]: mainstream first
+              - cell "MID" [ref=e166]
+              - cell "3d" [ref=e167]
+              - cell "0.0(N=2)" [ref=e168]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e169]: (N=2)
+              - cell "[0.0%–79.5%]" [ref=e170]
+              - cell "EXPLORATORY" [ref=e171]
+            - row "DIFFUSION mainstream first MID 7d 0.0(N=1) [0.0%–79.5%] EXPLORATORY" [ref=e172]:
+              - cell "DIFFUSION mainstream first" [ref=e173]:
+                - generic [ref=e174]: DIFFUSION
+                - generic [ref=e175]: mainstream first
+              - cell "MID" [ref=e176]
+              - cell "7d" [ref=e177]
+              - cell "0.0(N=1)" [ref=e178]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e179]: (N=1)
+              - cell "[0.0%–79.5%]" [ref=e180]
+              - cell "EXPLORATORY" [ref=e181]
+            - row "DIFFUSION mainstream first SMALL 3d 0.0(N=1) [0.0%–79.5%] EXPLORATORY" [ref=e182]:
+              - cell "DIFFUSION mainstream first" [ref=e183]:
+                - generic [ref=e184]: DIFFUSION
+                - generic [ref=e185]: mainstream first
+              - cell "SMALL" [ref=e186]
+              - cell "3d" [ref=e187]
+              - cell "0.0(N=1)" [ref=e188]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e189]: (N=1)
+              - cell "[0.0%–79.5%]" [ref=e190]
+              - cell "EXPLORATORY" [ref=e191]
+            - row "INSIDER cluster buying LARGE 3d 8.0(N=8) [27.3%–88.1%] EXPLORATORY" [ref=e192]:
+              - cell "INSIDER cluster buying" [ref=e193]:
+                - generic [ref=e194]: INSIDER
+                - generic [ref=e195]: cluster buying
+              - cell "LARGE" [ref=e196]
+              - cell "3d" [ref=e197]
+              - cell "8.0(N=8)" [ref=e198]:
+                - text: "8.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e199]: (N=8)
+              - cell "[27.3%–88.1%]" [ref=e200]
+              - cell "EXPLORATORY" [ref=e201]
+            - row "INSIDER cluster buying LARGE 7d 6.0(N=6) [23.5%–88.3%] EXPLORATORY" [ref=e202]:
+              - cell "INSIDER cluster buying" [ref=e203]:
+                - generic [ref=e204]: INSIDER
+                - generic [ref=e205]: cluster buying
+              - cell "LARGE" [ref=e206]
+              - cell "7d" [ref=e207]
+              - cell "6.0(N=6)" [ref=e208]:
+                - text: "6.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e209]: (N=6)
+              - cell "[23.5%–88.3%]" [ref=e210]
+              - cell "EXPLORATORY" [ref=e211]
+            - row "INSIDER cluster buying LARGE 14d 3.0(N=3) [6.2%–72.6%] EXPLORATORY" [ref=e212]:
+              - cell "INSIDER cluster buying" [ref=e213]:
+                - generic [ref=e214]: INSIDER
+                - generic [ref=e215]: cluster buying
+              - cell "LARGE" [ref=e216]
+              - cell "14d" [ref=e217]
+              - cell "3.0(N=3)" [ref=e218]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e219]: (N=3)
+              - cell "[6.2%–72.6%]" [ref=e220]
+              - cell "EXPLORATORY" [ref=e221]
+            - row "INSIDER cluster buying MID 3d 3.0(N=3) [12.6%–85.6%] EXPLORATORY" [ref=e222]:
+              - cell "INSIDER cluster buying" [ref=e223]:
+                - generic [ref=e224]: INSIDER
+                - generic [ref=e225]: cluster buying
+              - cell "MID" [ref=e226]
+              - cell "3d" [ref=e227]
+              - cell "3.0(N=3)" [ref=e228]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e229]: (N=3)
+              - cell "[12.6%–85.6%]" [ref=e230]
+              - cell "EXPLORATORY" [ref=e231]
+            - row "INSIDER cluster buying MID 7d 2.0(N=2) [21.6%–94.7%] EXPLORATORY" [ref=e232]:
+              - cell "INSIDER cluster buying" [ref=e233]:
+                - generic [ref=e234]: INSIDER
+                - generic [ref=e235]: cluster buying
+              - cell "MID" [ref=e236]
+              - cell "7d" [ref=e237]
+              - cell "2.0(N=2)" [ref=e238]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e239]: (N=2)
+              - cell "[21.6%–94.7%]" [ref=e240]
+              - cell "EXPLORATORY" [ref=e241]
+            - row "INSIDER cluster selling LARGE 3d 13.9(N=14) [12.8%–64.6%] EXPLORATORY" [ref=e242]:
+              - cell "INSIDER cluster selling" [ref=e243]:
+                - generic [ref=e244]: INSIDER
+                - generic [ref=e245]: cluster selling
+              - cell "LARGE" [ref=e246]
+              - cell "3d" [ref=e247]
+              - cell "13.9(N=14)" [ref=e248]:
+                - text: "13.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e249]: (N=14)
+              - cell "[12.8%–64.6%]" [ref=e250]
+              - cell "EXPLORATORY" [ref=e251]
+            - row "INSIDER cluster selling LARGE 7d 17.9(N=18) [12.9%–60.6%] EXPLORATORY" [ref=e252]:
+              - cell "INSIDER cluster selling" [ref=e253]:
+                - generic [ref=e254]: INSIDER
+                - generic [ref=e255]: cluster selling
+              - cell "LARGE" [ref=e256]
+              - cell "7d" [ref=e257]
+              - cell "17.9(N=18)" [ref=e258]:
+                - text: "17.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e259]: (N=18)
+              - cell "[12.9%–60.6%]" [ref=e260]
+              - cell "EXPLORATORY" [ref=e261]
+            - row "INSIDER cluster selling LARGE 14d 11.0(N=11) [22.2%–79.7%] EXPLORATORY" [ref=e262]:
+              - cell "INSIDER cluster selling" [ref=e263]:
+                - generic [ref=e264]: INSIDER
+                - generic [ref=e265]: cluster selling
+              - cell "LARGE" [ref=e266]
+              - cell "14d" [ref=e267]
+              - cell "11.0(N=11)" [ref=e268]:
+                - text: "11.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e269]: (N=11)
+              - cell "[22.2%–79.7%]" [ref=e270]
+              - cell "EXPLORATORY" [ref=e271]
+            - row "INSIDER cluster selling MID 3d 1.0(N=1) [17.7%–91.9%] EXPLORATORY" [ref=e272]:
+              - cell "INSIDER cluster selling" [ref=e273]:
+                - generic [ref=e274]: INSIDER
+                - generic [ref=e275]: cluster selling
+              - cell "MID" [ref=e276]
+              - cell "3d" [ref=e277]
+              - cell "1.0(N=1)" [ref=e278]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e279]: (N=1)
+              - cell "[17.7%–91.9%]" [ref=e280]
+              - cell "EXPLORATORY" [ref=e281]
+            - row "INSIDER cluster selling MID 7d 1.0(N=1) [17.9%–92.1%] EXPLORATORY" [ref=e282]:
+              - cell "INSIDER cluster selling" [ref=e283]:
+                - generic [ref=e284]: INSIDER
+                - generic [ref=e285]: cluster selling
+              - cell "MID" [ref=e286]
+              - cell "7d" [ref=e287]
+              - cell "1.0(N=1)" [ref=e288]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e289]: (N=1)
+              - cell "[17.9%–92.1%]" [ref=e290]
+              - cell "EXPLORATORY" [ref=e291]
+            - row "INSIDER cluster selling SMALL 3d 5.0(N=5) [42.0%–86.6%] EXPLORATORY" [ref=e292]:
+              - cell "INSIDER cluster selling" [ref=e293]:
+                - generic [ref=e294]: INSIDER
+                - generic [ref=e295]: cluster selling
+              - cell "SMALL" [ref=e296]
+              - cell "3d" [ref=e297]
+              - cell "5.0(N=5)" [ref=e298]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e299]: (N=5)
+              - cell "[42.0%–86.6%]" [ref=e300]
+              - cell "EXPLORATORY" [ref=e301]
+            - row "INSIDER cluster selling SMALL 7d 5.0(N=5) [42.1%–86.7%] EXPLORATORY" [ref=e302]:
+              - cell "INSIDER cluster selling" [ref=e303]:
+                - generic [ref=e304]: INSIDER
+                - generic [ref=e305]: cluster selling
+              - cell "SMALL" [ref=e306]
+              - cell "7d" [ref=e307]
+              - cell "5.0(N=5)" [ref=e308]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e309]: (N=5)
+              - cell "[42.1%–86.7%]" [ref=e310]
+              - cell "EXPLORATORY" [ref=e311]
+            - row "INSIDER cluster selling SMALL 14d 3.0(N=3) [40.1%–84.8%] EXPLORATORY" [ref=e312]:
+              - cell "INSIDER cluster selling" [ref=e313]:
+                - generic [ref=e314]: INSIDER
+                - generic [ref=e315]: cluster selling
+              - cell "SMALL" [ref=e316]
+              - cell "14d" [ref=e317]
+              - cell "3.0(N=3)" [ref=e318]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e319]: (N=3)
+              - cell "[40.1%–84.8%]" [ref=e320]
+              - cell "EXPLORATORY" [ref=e321]
+            - row "INSIDER lone buy LARGE 3d 9.9(N=10) [8.9%–67.2%] EXPLORATORY" [ref=e322]:
+              - cell "INSIDER lone buy" [ref=e323]:
+                - generic [ref=e324]: INSIDER
+                - generic [ref=e325]: lone buy
+              - cell "LARGE" [ref=e326]
+              - cell "3d" [ref=e327]
+              - cell "9.9(N=10)" [ref=e328]:
+                - text: "9.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e329]: (N=10)
+              - cell "[8.9%–67.2%]" [ref=e330]
+              - cell "EXPLORATORY" [ref=e331]
+            - row "INSIDER lone buy LARGE 7d 13.9(N=14) [25.5%–79.8%] EXPLORATORY" [ref=e332]:
+              - cell "INSIDER lone buy" [ref=e333]:
+                - generic [ref=e334]: INSIDER
+                - generic [ref=e335]: lone buy
+              - cell "LARGE" [ref=e336]
+              - cell "7d" [ref=e337]
+              - cell "13.9(N=14)" [ref=e338]:
+                - text: "13.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e339]: (N=14)
+              - cell "[25.5%–79.8%]" [ref=e340]
+              - cell "EXPLORATORY" [ref=e341]
+            - row "INSIDER lone buy LARGE 14d 10.0(N=10) [18.9%–77.6%] EXPLORATORY" [ref=e342]:
+              - cell "INSIDER lone buy" [ref=e343]:
+                - generic [ref=e344]: INSIDER
+                - generic [ref=e345]: lone buy
+              - cell "LARGE" [ref=e346]
+              - cell "14d" [ref=e347]
+              - cell "10.0(N=10)" [ref=e348]:
+                - text: "10.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e349]: (N=10)
+              - cell "[18.9%–77.6%]" [ref=e350]
+              - cell "EXPLORATORY" [ref=e351]
+            - row "INSIDER lone buy SMALL 3d 1.0(N=1) [42.1%–85.5%] EXPLORATORY" [ref=e352]:
+              - cell "INSIDER lone buy" [ref=e353]:
+                - generic [ref=e354]: INSIDER
+                - generic [ref=e355]: lone buy
+              - cell "SMALL" [ref=e356]
+              - cell "3d" [ref=e357]
+              - cell "1.0(N=1)" [ref=e358]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e359]: (N=1)
+              - cell "[42.1%–85.5%]" [ref=e360]
+              - cell "EXPLORATORY" [ref=e361]
+            - row "INSIDER lone buy SMALL 7d 3.0(N=3) [41.4%–85.7%] EXPLORATORY" [ref=e362]:
+              - cell "INSIDER lone buy" [ref=e363]:
+                - generic [ref=e364]: INSIDER
+                - generic [ref=e365]: lone buy
+              - cell "SMALL" [ref=e366]
+              - cell "7d" [ref=e367]
+              - cell "3.0(N=3)" [ref=e368]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e369]: (N=3)
+              - cell "[41.4%–85.7%]" [ref=e370]
+              - cell "EXPLORATORY" [ref=e371]
+            - row "INSIDER lone buy SMALL 14d 2.0(N=2) [42.2%–86.0%] EXPLORATORY" [ref=e372]:
+              - cell "INSIDER lone buy" [ref=e373]:
+                - generic [ref=e374]: INSIDER
+                - generic [ref=e375]: lone buy
+              - cell "SMALL" [ref=e376]
+              - cell "14d" [ref=e377]
+              - cell "2.0(N=2)" [ref=e378]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e379]: (N=2)
+              - cell "[42.2%–86.0%]" [ref=e380]
+              - cell "EXPLORATORY" [ref=e381]
+            - row "INSIDER lone sell LARGE 3d 8.9(N=9) [9.8%–69.3%] EXPLORATORY" [ref=e382]:
+              - cell "INSIDER lone sell" [ref=e383]:
+                - generic [ref=e384]: INSIDER
+                - generic [ref=e385]: lone sell
+              - cell "LARGE" [ref=e386]
+              - cell "3d" [ref=e387]
+              - cell "8.9(N=9)" [ref=e388]:
+                - text: "8.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e389]: (N=9)
+              - cell "[9.8%–69.3%]" [ref=e390]
+              - cell "EXPLORATORY" [ref=e391]
+            - row "INSIDER lone sell LARGE 7d 11.9(N=12) [7.3%–61.2%] EXPLORATORY" [ref=e392]:
+              - cell "INSIDER lone sell" [ref=e393]:
+                - generic [ref=e394]: INSIDER
+                - generic [ref=e395]: lone sell
+              - cell "LARGE" [ref=e396]
+              - cell "7d" [ref=e397]
+              - cell "11.9(N=12)" [ref=e398]:
+                - text: "11.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e399]: (N=12)
+              - cell "[7.3%–61.2%]" [ref=e400]
+              - cell "EXPLORATORY" [ref=e401]
+            - row "INSIDER lone sell LARGE 14d 8.0(N=8) [12.0%–73.1%] EXPLORATORY" [ref=e402]:
+              - cell "INSIDER lone sell" [ref=e403]:
+                - generic [ref=e404]: INSIDER
+                - generic [ref=e405]: lone sell
+              - cell "LARGE" [ref=e406]
+              - cell "14d" [ref=e407]
+              - cell "8.0(N=8)" [ref=e408]:
+                - text: "8.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e409]: (N=8)
+              - cell "[12.0%–73.1%]" [ref=e410]
+              - cell "EXPLORATORY" [ref=e411]
+            - row "INSIDER lone sell MID 3d 4.0(N=4) [9.7%–81.2%] EXPLORATORY" [ref=e412]:
+              - cell "INSIDER lone sell" [ref=e413]:
+                - generic [ref=e414]: INSIDER
+                - generic [ref=e415]: lone sell
+              - cell "MID" [ref=e416]
+              - cell "3d" [ref=e417]
+              - cell "4.0(N=4)" [ref=e418]:
+                - text: "4.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e419]: (N=4)
+              - cell "[9.7%–81.2%]" [ref=e420]
+              - cell "EXPLORATORY" [ref=e421]
+            - row "INSIDER lone sell MID 7d 3.0(N=3) [12.4%–85.5%] EXPLORATORY" [ref=e422]:
+              - cell "INSIDER lone sell" [ref=e423]:
+                - generic [ref=e424]: INSIDER
+                - generic [ref=e425]: lone sell
+              - cell "MID" [ref=e426]
+              - cell "7d" [ref=e427]
+              - cell "3.0(N=3)" [ref=e428]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e429]: (N=3)
+              - cell "[12.4%–85.5%]" [ref=e430]
+              - cell "EXPLORATORY" [ref=e431]
+            - row "INSIDER lone sell SMALL 7d 1.0(N=1) [42.1%–85.5%] EXPLORATORY" [ref=e432]:
+              - cell "INSIDER lone sell" [ref=e433]:
+                - generic [ref=e434]: INSIDER
+                - generic [ref=e435]: lone sell
+              - cell "SMALL" [ref=e436]
+              - cell "7d" [ref=e437]
+              - cell "1.0(N=1)" [ref=e438]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e439]: (N=1)
+              - cell "[42.1%–85.5%]" [ref=e440]
+              - cell "EXPLORATORY" [ref=e441]
+            - row "INSIDER lone sell SMALL 14d 1.0(N=1) [42.1%–85.5%] EXPLORATORY" [ref=e442]:
+              - cell "INSIDER lone sell" [ref=e443]:
+                - generic [ref=e444]: INSIDER
+                - generic [ref=e445]: lone sell
+              - cell "SMALL" [ref=e446]
+              - cell "14d" [ref=e447]
+              - cell "1.0(N=1)" [ref=e448]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e449]: (N=1)
+              - cell "[42.1%–85.5%]" [ref=e450]
+              - cell "EXPLORATORY" [ref=e451]
+            - row "INSTITUTIONAL contrarian inflow LARGE 3d 5.9(N=13) [26.7%–88.5%] EXPLORATORY" [ref=e452]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e453]:
+                - generic [ref=e454]: INSTITUTIONAL
+                - generic [ref=e455]: contrarian inflow
+              - cell "LARGE" [ref=e456]
+              - cell "3d" [ref=e457]
+              - cell "5.9(N=13)" [ref=e458]:
+                - text: "5.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e459]: (N=13)
+              - cell "[26.7%–88.5%]" [ref=e460]
+              - cell "EXPLORATORY" [ref=e461]
+            - row "INSTITUTIONAL contrarian inflow LARGE 7d 2.0(N=5) [25.9%–90.0%] EXPLORATORY" [ref=e462]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e463]:
+                - generic [ref=e464]: INSTITUTIONAL
+                - generic [ref=e465]: contrarian inflow
+              - cell "LARGE" [ref=e466]
+              - cell "7d" [ref=e467]
+              - cell "2.0(N=5)" [ref=e468]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e469]: (N=5)
+              - cell "[25.9%–90.0%]" [ref=e470]
+              - cell "EXPLORATORY" [ref=e471]
+            - row "INSTITUTIONAL contrarian inflow LARGE 14d 2.0(N=4) [26.4%–90.4%] EXPLORATORY" [ref=e472]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e473]:
+                - generic [ref=e474]: INSTITUTIONAL
+                - generic [ref=e475]: contrarian inflow
+              - cell "LARGE" [ref=e476]
+              - cell "14d" [ref=e477]
+              - cell "2.0(N=4)" [ref=e478]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e479]: (N=4)
+              - cell "[26.4%–90.4%]" [ref=e480]
+              - cell "EXPLORATORY" [ref=e481]
+            - row "INSTITUTIONAL contrarian inflow MID 3d 1.0(N=1) [0.0%–82.7%] EXPLORATORY" [ref=e482]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e483]:
+                - generic [ref=e484]: INSTITUTIONAL
+                - generic [ref=e485]: contrarian inflow
+              - cell "MID" [ref=e486]
+              - cell "3d" [ref=e487]
+              - cell "1.0(N=1)" [ref=e488]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e489]: (N=1)
+              - cell "[0.0%–82.7%]" [ref=e490]
+              - cell "EXPLORATORY" [ref=e491]
+            - row "INSTITUTIONAL contrarian inflow MID 7d 1.0(N=1) [6.0%–90.9%] EXPLORATORY" [ref=e492]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e493]:
+                - generic [ref=e494]: INSTITUTIONAL
+                - generic [ref=e495]: contrarian inflow
+              - cell "MID" [ref=e496]
+              - cell "7d" [ref=e497]
+              - cell "1.0(N=1)" [ref=e498]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e499]: (N=1)
+              - cell "[6.0%–90.9%]" [ref=e500]
+              - cell "EXPLORATORY" [ref=e501]
+            - row "INSTITUTIONAL contrarian inflow MID 14d 1.0(N=1) [6.6%–91.4%] EXPLORATORY" [ref=e502]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e503]:
+                - generic [ref=e504]: INSTITUTIONAL
+                - generic [ref=e505]: contrarian inflow
+              - cell "MID" [ref=e506]
+              - cell "14d" [ref=e507]
+              - cell "1.0(N=1)" [ref=e508]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e509]: (N=1)
+              - cell "[6.6%–91.4%]" [ref=e510]
+              - cell "EXPLORATORY" [ref=e511]
+            - row "INSTITUTIONAL contrarian inflow SMALL 3d 5.0(N=5) [22.8%–79.8%] EXPLORATORY" [ref=e512]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e513]:
+                - generic [ref=e514]: INSTITUTIONAL
+                - generic [ref=e515]: contrarian inflow
+              - cell "SMALL" [ref=e516]
+              - cell "3d" [ref=e517]
+              - cell "5.0(N=5)" [ref=e518]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e519]: (N=5)
+              - cell "[22.8%–79.8%]" [ref=e520]
+              - cell "EXPLORATORY" [ref=e521]
+            - row "INSTITUTIONAL contrarian inflow SMALL 7d 1.0(N=2) [30.6%–86.1%] EXPLORATORY" [ref=e522]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e523]:
+                - generic [ref=e524]: INSTITUTIONAL
+                - generic [ref=e525]: contrarian inflow
+              - cell "SMALL" [ref=e526]
+              - cell "7d" [ref=e527]
+              - cell "1.0(N=2)" [ref=e528]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e529]: (N=2)
+              - cell "[30.6%–86.1%]" [ref=e530]
+              - cell "EXPLORATORY" [ref=e531]
+            - row "INSTITUTIONAL contrarian inflow SMALL 14d 0.0(N=1) [30.6%–86.3%] EXPLORATORY" [ref=e532]:
+              - cell "INSTITUTIONAL contrarian inflow" [ref=e533]:
+                - generic [ref=e534]: INSTITUTIONAL
+                - generic [ref=e535]: contrarian inflow
+              - cell "SMALL" [ref=e536]
+              - cell "14d" [ref=e537]
+              - cell "0.0(N=1)" [ref=e538]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e539]: (N=1)
+              - cell "[30.6%–86.3%]" [ref=e540]
+              - cell "EXPLORATORY" [ref=e541]
+            - row "INSTITUTIONAL contrarian outflow LARGE 3d 8.0(N=12) [23.0%–83.8%] EXPLORATORY" [ref=e542]:
+              - cell "INSTITUTIONAL contrarian outflow" [ref=e543]:
+                - generic [ref=e544]: INSTITUTIONAL
+                - generic [ref=e545]: contrarian outflow
+              - cell "LARGE" [ref=e546]
+              - cell "3d" [ref=e547]
+              - cell "8.0(N=12)" [ref=e548]:
+                - text: "8.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e549]: (N=12)
+              - cell "[23.0%–83.8%]" [ref=e550]
+              - cell "EXPLORATORY" [ref=e551]
+            - row "INSTITUTIONAL contrarian outflow LARGE 7d 10.9(N=17) [22.8%–79.6%] EXPLORATORY" [ref=e552]:
+              - cell "INSTITUTIONAL contrarian outflow" [ref=e553]:
+                - generic [ref=e554]: INSTITUTIONAL
+                - generic [ref=e555]: contrarian outflow
+              - cell "LARGE" [ref=e556]
+              - cell "7d" [ref=e557]
+              - cell "10.9(N=17)" [ref=e558]:
+                - text: "10.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e559]: (N=17)
+              - cell "[22.8%–79.6%]" [ref=e560]
+              - cell "EXPLORATORY" [ref=e561]
+            - row "INSTITUTIONAL contrarian outflow LARGE 14d 6.0(N=10) [23.0%–85.3%] EXPLORATORY" [ref=e562]:
+              - cell "INSTITUTIONAL contrarian outflow" [ref=e563]:
+                - generic [ref=e564]: INSTITUTIONAL
+                - generic [ref=e565]: contrarian outflow
+              - cell "LARGE" [ref=e566]
+              - cell "14d" [ref=e567]
+              - cell "6.0(N=10)" [ref=e568]:
+                - text: "6.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e569]: (N=10)
+              - cell "[23.0%–85.3%]" [ref=e570]
+              - cell "EXPLORATORY" [ref=e571]
+            - row "INSTITUTIONAL contrarian outflow SMALL 3d 1.0(N=1) [29.2%–84.9%] EXPLORATORY" [ref=e572]:
+              - cell "INSTITUTIONAL contrarian outflow" [ref=e573]:
+                - generic [ref=e574]: INSTITUTIONAL
+                - generic [ref=e575]: contrarian outflow
+              - cell "SMALL" [ref=e576]
+              - cell "3d" [ref=e577]
+              - cell "1.0(N=1)" [ref=e578]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e579]: (N=1)
+              - cell "[29.2%–84.9%]" [ref=e580]
+              - cell "EXPLORATORY" [ref=e581]
+            - row "INSTITUTIONAL contrarian outflow SMALL 7d 1.0(N=1) [30.5%–86.1%] EXPLORATORY" [ref=e582]:
+              - cell "INSTITUTIONAL contrarian outflow" [ref=e583]:
+                - generic [ref=e584]: INSTITUTIONAL
+                - generic [ref=e585]: contrarian outflow
+              - cell "SMALL" [ref=e586]
+              - cell "7d" [ref=e587]
+              - cell "1.0(N=1)" [ref=e588]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e589]: (N=1)
+              - cell "[30.5%–86.1%]" [ref=e590]
+              - cell "EXPLORATORY" [ref=e591]
+            - row "INSTITUTIONAL contrarian outflow SMALL 14d 1.0(N=1) [30.6%–86.2%] EXPLORATORY" [ref=e592]:
+              - cell "INSTITUTIONAL contrarian outflow" [ref=e593]:
+                - generic [ref=e594]: INSTITUTIONAL
+                - generic [ref=e595]: contrarian outflow
+              - cell "SMALL" [ref=e596]
+              - cell "14d" [ref=e597]
+              - cell "1.0(N=1)" [ref=e598]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e599]: (N=1)
+              - cell "[30.6%–86.2%]" [ref=e600]
+              - cell "EXPLORATORY" [ref=e601]
+            - row "INSTITUTIONAL net accumulation LARGE 3d 9.9(N=21) [32.3%–89.1%] EXPLORATORY" [ref=e602]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e603]:
+                - generic [ref=e604]: INSTITUTIONAL
+                - generic [ref=e605]: net accumulation
+              - cell "LARGE" [ref=e606]
+              - cell "3d" [ref=e607]
+              - cell "9.9(N=21)" [ref=e608]:
+                - text: "9.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e609]: (N=21)
+              - cell "[32.3%–89.1%]" [ref=e610]
+              - cell "EXPLORATORY" [ref=e611]
+            - row "INSTITUTIONAL net accumulation LARGE 7d 7.9(N=16) [22.0%–82.5%] EXPLORATORY" [ref=e612]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e613]:
+                - generic [ref=e614]: INSTITUTIONAL
+                - generic [ref=e615]: net accumulation
+              - cell "LARGE" [ref=e616]
+              - cell "7d" [ref=e617]
+              - cell "7.9(N=16)" [ref=e618]:
+                - text: "7.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e619]: (N=16)
+              - cell "[22.0%–82.5%]" [ref=e620]
+              - cell "EXPLORATORY" [ref=e621]
+            - row "INSTITUTIONAL net accumulation LARGE 14d 5.0(N=9) [35.0%–95.5%] EXPLORATORY" [ref=e622]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e623]:
+                - generic [ref=e624]: INSTITUTIONAL
+                - generic [ref=e625]: net accumulation
+              - cell "LARGE" [ref=e626]
+              - cell "14d" [ref=e627]
+              - cell "5.0(N=9)" [ref=e628]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e629]: (N=9)
+              - cell "[35.0%–95.5%]" [ref=e630]
+              - cell "EXPLORATORY" [ref=e631]
+            - row "INSTITUTIONAL net accumulation MID 3d 5.0(N=10) [0.0%–69.9%] EXPLORATORY" [ref=e632]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e633]:
+                - generic [ref=e634]: INSTITUTIONAL
+                - generic [ref=e635]: net accumulation
+              - cell "MID" [ref=e636]
+              - cell "3d" [ref=e637]
+              - cell "5.0(N=10)" [ref=e638]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e639]: (N=10)
+              - cell "[0.0%–69.9%]" [ref=e640]
+              - cell "EXPLORATORY" [ref=e641]
+            - row "INSTITUTIONAL net accumulation MID 7d 5.0(N=8) [0.0%–57.0%] EXPLORATORY" [ref=e642]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e643]:
+                - generic [ref=e644]: INSTITUTIONAL
+                - generic [ref=e645]: net accumulation
+              - cell "MID" [ref=e646]
+              - cell "7d" [ref=e647]
+              - cell "5.0(N=8)" [ref=e648]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e649]: (N=8)
+              - cell "[0.0%–57.0%]" [ref=e650]
+              - cell "EXPLORATORY" [ref=e651]
+            - row "INSTITUTIONAL net accumulation SMALL 3d 3.0(N=8) [29.8%–86.3%] EXPLORATORY" [ref=e652]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e653]:
+                - generic [ref=e654]: INSTITUTIONAL
+                - generic [ref=e655]: net accumulation
+              - cell "SMALL" [ref=e656]
+              - cell "3d" [ref=e657]
+              - cell "3.0(N=8)" [ref=e658]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e659]: (N=8)
+              - cell "[29.8%–86.3%]" [ref=e660]
+              - cell "EXPLORATORY" [ref=e661]
+            - row "INSTITUTIONAL net accumulation SMALL 7d 2.0(N=8) [29.4%–85.6%] EXPLORATORY" [ref=e662]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e663]:
+                - generic [ref=e664]: INSTITUTIONAL
+                - generic [ref=e665]: net accumulation
+              - cell "SMALL" [ref=e666]
+              - cell "7d" [ref=e667]
+              - cell "2.0(N=8)" [ref=e668]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e669]: (N=8)
+              - cell "[29.4%–85.6%]" [ref=e670]
+              - cell "EXPLORATORY" [ref=e671]
+            - row "INSTITUTIONAL net accumulation SMALL 14d 1.0(N=5) [30.6%–86.1%] EXPLORATORY" [ref=e672]:
+              - cell "INSTITUTIONAL net accumulation" [ref=e673]:
+                - generic [ref=e674]: INSTITUTIONAL
+                - generic [ref=e675]: net accumulation
+              - cell "SMALL" [ref=e676]
+              - cell "14d" [ref=e677]
+              - cell "1.0(N=5)" [ref=e678]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e679]: (N=5)
+              - cell "[30.6%–86.1%]" [ref=e680]
+              - cell "EXPLORATORY" [ref=e681]
+            - row "INSTITUTIONAL net distribution LARGE 3d 6.0(N=15) [18.2%–81.2%] EXPLORATORY" [ref=e682]:
+              - cell "INSTITUTIONAL net distribution" [ref=e683]:
+                - generic [ref=e684]: INSTITUTIONAL
+                - generic [ref=e685]: net distribution
+              - cell "LARGE" [ref=e686]
+              - cell "3d" [ref=e687]
+              - cell "6.0(N=15)" [ref=e688]:
+                - text: "6.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e689]: (N=15)
+              - cell "[18.2%–81.2%]" [ref=e690]
+              - cell "EXPLORATORY" [ref=e691]
+            - row "INSTITUTIONAL net distribution LARGE 7d 10.9(N=29) [26.9%–83.7%] EXPLORATORY" [ref=e692]:
+              - cell "INSTITUTIONAL net distribution" [ref=e693]:
+                - generic [ref=e694]: INSTITUTIONAL
+                - generic [ref=e695]: net distribution
+              - cell "LARGE" [ref=e696]
+              - cell "7d" [ref=e697]
+              - cell "10.9(N=29)" [ref=e698]:
+                - text: "10.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e699]: (N=29)
+              - cell "[26.9%–83.7%]" [ref=e700]
+              - cell "EXPLORATORY" [ref=e701]
+            - row "INSTITUTIONAL net distribution LARGE 14d 5.0(N=18) [20.0%–83.7%] EXPLORATORY" [ref=e702]:
+              - cell "INSTITUTIONAL net distribution" [ref=e703]:
+                - generic [ref=e704]: INSTITUTIONAL
+                - generic [ref=e705]: net distribution
+              - cell "LARGE" [ref=e706]
+              - cell "14d" [ref=e707]
+              - cell "5.0(N=18)" [ref=e708]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e709]: (N=18)
+              - cell "[20.0%–83.7%]" [ref=e710]
+              - cell "EXPLORATORY" [ref=e711]
+            - row "INSTITUTIONAL net distribution MID 3d 1.0(N=1) [0.0%–82.8%] EXPLORATORY" [ref=e712]:
+              - cell "INSTITUTIONAL net distribution" [ref=e713]:
+                - generic [ref=e714]: INSTITUTIONAL
+                - generic [ref=e715]: net distribution
+              - cell "MID" [ref=e716]
+              - cell "3d" [ref=e717]
+              - cell "1.0(N=1)" [ref=e718]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e719]: (N=1)
+              - cell "[0.0%–82.8%]" [ref=e720]
+              - cell "EXPLORATORY" [ref=e721]
+            - row "INSTITUTIONAL smart money concentration LARGE 3d 0.0(N=1) [21.6%–86.1%] EXPLORATORY" [ref=e722]:
+              - cell "INSTITUTIONAL smart money concentration" [ref=e723]:
+                - generic [ref=e724]: INSTITUTIONAL
+                - generic [ref=e725]: smart money concentration
+              - cell "LARGE" [ref=e726]
+              - cell "3d" [ref=e727]
+              - cell "0.0(N=1)" [ref=e728]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e729]: (N=1)
+              - cell "[21.6%–86.1%]" [ref=e730]
+              - cell "EXPLORATORY" [ref=e731]
+            - row "INSTITUTIONAL smart money concentration MID 3d 6.0(N=9) [3.4%–72.8%] EXPLORATORY" [ref=e732]:
+              - cell "INSTITUTIONAL smart money concentration" [ref=e733]:
+                - generic [ref=e734]: INSTITUTIONAL
+                - generic [ref=e735]: smart money concentration
+              - cell "MID" [ref=e736]
+              - cell "3d" [ref=e737]
+              - cell "6.0(N=9)" [ref=e738]:
+                - text: "6.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e739]: (N=9)
+              - cell "[3.4%–72.8%]" [ref=e740]
+              - cell "EXPLORATORY" [ref=e741]
+            - row "INSTITUTIONAL smart money concentration MID 7d 5.0(N=8) [5.9%–79.7%] EXPLORATORY" [ref=e742]:
+              - cell "INSTITUTIONAL smart money concentration" [ref=e743]:
+                - generic [ref=e744]: INSTITUTIONAL
+                - generic [ref=e745]: smart money concentration
+              - cell "MID" [ref=e746]
+              - cell "7d" [ref=e747]
+              - cell "5.0(N=8)" [ref=e748]:
+                - text: "5.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e749]: (N=8)
+              - cell "[5.9%–79.7%]" [ref=e750]
+              - cell "EXPLORATORY" [ref=e751]
+            - row "INSTITUTIONAL smart money concentration MID 14d 2.0(N=2) [13.5%–96.0%] EXPLORATORY" [ref=e752]:
+              - cell "INSTITUTIONAL smart money concentration" [ref=e753]:
+                - generic [ref=e754]: INSTITUTIONAL
+                - generic [ref=e755]: smart money concentration
+              - cell "MID" [ref=e756]
+              - cell "14d" [ref=e757]
+              - cell "2.0(N=2)" [ref=e758]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e759]: (N=2)
+              - cell "[13.5%–96.0%]" [ref=e760]
+              - cell "EXPLORATORY" [ref=e761]
+            - row "INSTITUTIONAL smart money concentration SMALL 3d 1.0(N=2) [30.5%–86.0%] EXPLORATORY" [ref=e762]:
+              - cell "INSTITUTIONAL smart money concentration" [ref=e763]:
+                - generic [ref=e764]: INSTITUTIONAL
+                - generic [ref=e765]: smart money concentration
+              - cell "SMALL" [ref=e766]
+              - cell "3d" [ref=e767]
+              - cell "1.0(N=2)" [ref=e768]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e769]: (N=2)
+              - cell "[30.5%–86.0%]" [ref=e770]
+              - cell "EXPLORATORY" [ref=e771]
+            - row "INSTITUTIONAL smart money concentration SMALL 7d 1.0(N=2) [30.5%–86.1%] EXPLORATORY" [ref=e772]:
+              - cell "INSTITUTIONAL smart money concentration" [ref=e773]:
+                - generic [ref=e774]: INSTITUTIONAL
+                - generic [ref=e775]: smart money concentration
+              - cell "SMALL" [ref=e776]
+              - cell "7d" [ref=e777]
+              - cell "1.0(N=2)" [ref=e778]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e779]: (N=2)
+              - cell "[30.5%–86.1%]" [ref=e780]
+              - cell "EXPLORATORY" [ref=e781]
+            - row "INSTITUTIONAL smart money concentration SMALL 14d 1.0(N=1) [30.6%–86.2%] EXPLORATORY" [ref=e782]:
+              - cell "INSTITUTIONAL smart money concentration" [ref=e783]:
+                - generic [ref=e784]: INSTITUTIONAL
+                - generic [ref=e785]: smart money concentration
+              - cell "SMALL" [ref=e786]
+              - cell "14d" [ref=e787]
+              - cell "1.0(N=1)" [ref=e788]:
+                - text: "1.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e789]: (N=1)
+              - cell "[30.6%–86.2%]" [ref=e790]
+              - cell "EXPLORATORY" [ref=e791]
+            - row "TECHNICAL breakdown LARGE 3d 13.9(N=30) [0.0%–43.7%] EXPLORATORY" [ref=e792]:
+              - cell "TECHNICAL breakdown" [ref=e793]:
+                - generic [ref=e794]: TECHNICAL
+                - generic [ref=e795]: breakdown
+              - cell "LARGE" [ref=e796]
+              - cell "3d" [ref=e797]
+              - cell "13.9(N=30)" [ref=e798]:
+                - text: "13.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e799]: (N=30)
+              - cell "[0.0%–43.7%]" [ref=e800]
+              - cell "EXPLORATORY" [ref=e801]
+            - row "TECHNICAL breakdown LARGE 7d 7.0(N=20) [0.0%–55.2%] EXPLORATORY" [ref=e802]:
+              - cell "TECHNICAL breakdown" [ref=e803]:
+                - generic [ref=e804]: TECHNICAL
+                - generic [ref=e805]: breakdown
+              - cell "LARGE" [ref=e806]
+              - cell "7d" [ref=e807]
+              - cell "7.0(N=20)" [ref=e808]:
+                - text: "7.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e809]: (N=20)
+              - cell "[0.0%–55.2%]" [ref=e810]
+              - cell "EXPLORATORY" [ref=e811]
+            - row "TECHNICAL breakdown LARGE 14d 4.0(N=15) [0.0%–57.3%] EXPLORATORY" [ref=e812]:
+              - cell "TECHNICAL breakdown" [ref=e813]:
+                - generic [ref=e814]: TECHNICAL
+                - generic [ref=e815]: breakdown
+              - cell "LARGE" [ref=e816]
+              - cell "14d" [ref=e817]
+              - cell "4.0(N=15)" [ref=e818]:
+                - text: "4.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e819]: (N=15)
+              - cell "[0.0%–57.3%]" [ref=e820]
+              - cell "EXPLORATORY" [ref=e821]
+            - row "TECHNICAL breakdown MID 3d 0.0(N=6) [0.0%–76.1%] EXPLORATORY" [ref=e822]:
+              - cell "TECHNICAL breakdown" [ref=e823]:
+                - generic [ref=e824]: TECHNICAL
+                - generic [ref=e825]: breakdown
+              - cell "MID" [ref=e826]
+              - cell "3d" [ref=e827]
+              - cell "0.0(N=6)" [ref=e828]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e829]: (N=6)
+              - cell "[0.0%–76.1%]" [ref=e830]
+              - cell "EXPLORATORY" [ref=e831]
+            - row "TECHNICAL breakdown MID 7d 0.0(N=5) [0.8%–82.2%] EXPLORATORY" [ref=e832]:
+              - cell "TECHNICAL breakdown" [ref=e833]:
+                - generic [ref=e834]: TECHNICAL
+                - generic [ref=e835]: breakdown
+              - cell "MID" [ref=e836]
+              - cell "7d" [ref=e837]
+              - cell "0.0(N=5)" [ref=e838]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e839]: (N=5)
+              - cell "[0.8%–82.2%]" [ref=e840]
+              - cell "EXPLORATORY" [ref=e841]
+            - row "TECHNICAL breakdown MID 14d 0.0(N=1) [6.3%–96.8%] EXPLORATORY" [ref=e842]:
+              - cell "TECHNICAL breakdown" [ref=e843]:
+                - generic [ref=e844]: TECHNICAL
+                - generic [ref=e845]: breakdown
+              - cell "MID" [ref=e846]
+              - cell "14d" [ref=e847]
+              - cell "0.0(N=1)" [ref=e848]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e849]: (N=1)
+              - cell "[6.3%–96.8%]" [ref=e850]
+              - cell "EXPLORATORY" [ref=e851]
+            - row "TECHNICAL breakdown SMALL 3d 0.0(N=3) [11.7%–81.6%] EXPLORATORY" [ref=e852]:
+              - cell "TECHNICAL breakdown" [ref=e853]:
+                - generic [ref=e854]: TECHNICAL
+                - generic [ref=e855]: breakdown
+              - cell "SMALL" [ref=e856]
+              - cell "3d" [ref=e857]
+              - cell "0.0(N=3)" [ref=e858]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e859]: (N=3)
+              - cell "[11.7%–81.6%]" [ref=e860]
+              - cell "EXPLORATORY" [ref=e861]
+            - row "TECHNICAL breakdown SMALL 7d 0.0(N=2) [13.9%–83.1%] EXPLORATORY" [ref=e862]:
+              - cell "TECHNICAL breakdown" [ref=e863]:
+                - generic [ref=e864]: TECHNICAL
+                - generic [ref=e865]: breakdown
+              - cell "SMALL" [ref=e866]
+              - cell "7d" [ref=e867]
+              - cell "0.0(N=2)" [ref=e868]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e869]: (N=2)
+              - cell "[13.9%–83.1%]" [ref=e870]
+              - cell "EXPLORATORY" [ref=e871]
+            - row "TECHNICAL breakdown SMALL 14d 0.0(N=1) [15.5%–85.6%] EXPLORATORY" [ref=e872]:
+              - cell "TECHNICAL breakdown" [ref=e873]:
+                - generic [ref=e874]: TECHNICAL
+                - generic [ref=e875]: breakdown
+              - cell "SMALL" [ref=e876]
+              - cell "14d" [ref=e877]
+              - cell "0.0(N=1)" [ref=e878]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e879]: (N=1)
+              - cell "[15.5%–85.6%]" [ref=e880]
+              - cell "EXPLORATORY" [ref=e881]
+            - row "TECHNICAL breakout uptrend LARGE 3d 0.0(N=1) [0.0%–80.1%] EXPLORATORY" [ref=e882]:
+              - cell "TECHNICAL breakout uptrend" [ref=e883]:
+                - generic [ref=e884]: TECHNICAL
+                - generic [ref=e885]: breakout uptrend
+              - cell "LARGE" [ref=e886]
+              - cell "3d" [ref=e887]
+              - cell "0.0(N=1)" [ref=e888]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e889]: (N=1)
+              - cell "[0.0%–80.1%]" [ref=e890]
+              - cell "EXPLORATORY" [ref=e891]
+            - row "TECHNICAL breakout uptrend LARGE 14d 0.0(N=2) [13.0%–100.0%] EXPLORATORY" [ref=e892]:
+              - cell "TECHNICAL breakout uptrend" [ref=e893]:
+                - generic [ref=e894]: TECHNICAL
+                - generic [ref=e895]: breakout uptrend
+              - cell "LARGE" [ref=e896]
+              - cell "14d" [ref=e897]
+              - cell "0.0(N=2)" [ref=e898]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e899]: (N=2)
+              - cell "[13.0%–100.0%]" [ref=e900]
+              - cell "EXPLORATORY" [ref=e901]
+            - row "TECHNICAL consolidation LARGE 3d 20.9(N=75) [6.4%–49.6%] EXPLORATORY" [ref=e902]:
+              - cell "TECHNICAL consolidation" [ref=e903]:
+                - generic [ref=e904]: TECHNICAL
+                - generic [ref=e905]: consolidation
+              - cell "LARGE" [ref=e906]
+              - cell "3d" [ref=e907]
+              - cell "20.9(N=75)" [ref=e908]:
+                - text: "20.9"
+                - generic "Raw trial count — debug column per D-12" [ref=e909]: (N=75)
+              - cell "[6.4%–49.6%]" [ref=e910]
+              - cell "EXPLORATORY" [ref=e911]
+            - row "TECHNICAL consolidation LARGE 7d 3.0(N=51) [0.0%–68.0%] EXPLORATORY" [ref=e912]:
+              - cell "TECHNICAL consolidation" [ref=e913]:
+                - generic [ref=e914]: TECHNICAL
+                - generic [ref=e915]: consolidation
+              - cell "LARGE" [ref=e916]
+              - cell "7d" [ref=e917]
+              - cell "3.0(N=51)" [ref=e918]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e919]: (N=51)
+              - cell "[0.0%–68.0%]" [ref=e920]
+              - cell "EXPLORATORY" [ref=e921]
+            - row "TECHNICAL consolidation LARGE 14d 3.0(N=31) [0.0%–80.7%] EXPLORATORY" [ref=e922]:
+              - cell "TECHNICAL consolidation" [ref=e923]:
+                - generic [ref=e924]: TECHNICAL
+                - generic [ref=e925]: consolidation
+              - cell "LARGE" [ref=e926]
+              - cell "14d" [ref=e927]
+              - cell "3.0(N=31)" [ref=e928]:
+                - text: "3.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e929]: (N=31)
+              - cell "[0.0%–80.7%]" [ref=e930]
+              - cell "EXPLORATORY" [ref=e931]
+            - row "TECHNICAL consolidation MID 3d 2.0(N=17) [0.0%–80.2%] EXPLORATORY" [ref=e932]:
+              - cell "TECHNICAL consolidation" [ref=e933]:
+                - generic [ref=e934]: TECHNICAL
+                - generic [ref=e935]: consolidation
+              - cell "MID" [ref=e936]
+              - cell "3d" [ref=e937]
+              - cell "2.0(N=17)" [ref=e938]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e939]: (N=17)
+              - cell "[0.0%–80.2%]" [ref=e940]
+              - cell "EXPLORATORY" [ref=e941]
+            - row "TECHNICAL consolidation MID 7d 0.0(N=12) [1.3%–57.4%] EXPLORATORY" [ref=e942]:
+              - cell "TECHNICAL consolidation" [ref=e943]:
+                - generic [ref=e944]: TECHNICAL
+                - generic [ref=e945]: consolidation
+              - cell "MID" [ref=e946]
+              - cell "7d" [ref=e947]
+              - cell "0.0(N=12)" [ref=e948]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e949]: (N=12)
+              - cell "[1.3%–57.4%]" [ref=e950]
+              - cell "EXPLORATORY" [ref=e951]
+            - row "TECHNICAL consolidation MID 14d 0.0(N=2) [15.9%–100.0%] EXPLORATORY" [ref=e952]:
+              - cell "TECHNICAL consolidation" [ref=e953]:
+                - generic [ref=e954]: TECHNICAL
+                - generic [ref=e955]: consolidation
+              - cell "MID" [ref=e956]
+              - cell "14d" [ref=e957]
+              - cell "0.0(N=2)" [ref=e958]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e959]: (N=2)
+              - cell "[15.9%–100.0%]" [ref=e960]
+              - cell "EXPLORATORY" [ref=e961]
+            - row "TECHNICAL consolidation SMALL 3d 4.0(N=14) [6.6%–74.6%] EXPLORATORY" [ref=e962]:
+              - cell "TECHNICAL consolidation" [ref=e963]:
+                - generic [ref=e964]: TECHNICAL
+                - generic [ref=e965]: consolidation
+              - cell "SMALL" [ref=e966]
+              - cell "3d" [ref=e967]
+              - cell "4.0(N=14)" [ref=e968]:
+                - text: "4.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e969]: (N=14)
+              - cell "[6.6%–74.6%]" [ref=e970]
+              - cell "EXPLORATORY" [ref=e971]
+            - row "TECHNICAL consolidation SMALL 7d 0.0(N=10) [13.9%–83.1%] EXPLORATORY" [ref=e972]:
+              - cell "TECHNICAL consolidation" [ref=e973]:
+                - generic [ref=e974]: TECHNICAL
+                - generic [ref=e975]: consolidation
+              - cell "SMALL" [ref=e976]
+              - cell "7d" [ref=e977]
+              - cell "0.0(N=10)" [ref=e978]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e979]: (N=10)
+              - cell "[13.9%–83.1%]" [ref=e980]
+              - cell "EXPLORATORY" [ref=e981]
+            - row "TECHNICAL consolidation SMALL 14d 0.0(N=7) [23.0%–87.5%] EXPLORATORY" [ref=e982]:
+              - cell "TECHNICAL consolidation" [ref=e983]:
+                - generic [ref=e984]: TECHNICAL
+                - generic [ref=e985]: consolidation
+              - cell "SMALL" [ref=e986]
+              - cell "14d" [ref=e987]
+              - cell "0.0(N=7)" [ref=e988]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e989]: (N=7)
+              - cell "[23.0%–87.5%]" [ref=e990]
+              - cell "EXPLORATORY" [ref=e991]
+            - row "TECHNICAL overbought uptrend LARGE 3d 9.0(N=21) [0.0%–61.0%] EXPLORATORY" [ref=e992]:
+              - cell "TECHNICAL overbought uptrend" [ref=e993]:
+                - generic [ref=e994]: TECHNICAL
+                - generic [ref=e995]: overbought uptrend
+              - cell "LARGE" [ref=e996]
+              - cell "3d" [ref=e997]
+              - cell "9.0(N=21)" [ref=e998]:
+                - text: "9.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e999]: (N=21)
+              - cell "[0.0%–61.0%]" [ref=e1000]
+              - cell "EXPLORATORY" [ref=e1001]
+            - row "TECHNICAL overbought uptrend LARGE 7d 6.0(N=16) [0.0%–49.7%] EXPLORATORY" [ref=e1002]:
+              - cell "TECHNICAL overbought uptrend" [ref=e1003]:
+                - generic [ref=e1004]: TECHNICAL
+                - generic [ref=e1005]: overbought uptrend
+              - cell "LARGE" [ref=e1006]
+              - cell "7d" [ref=e1007]
+              - cell "6.0(N=16)" [ref=e1008]:
+                - text: "6.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1009]: (N=16)
+              - cell "[0.0%–49.7%]" [ref=e1010]
+              - cell "EXPLORATORY" [ref=e1011]
+            - row "TECHNICAL overbought uptrend LARGE 14d 6.0(N=11) [0.0%–61.2%] EXPLORATORY" [ref=e1012]:
+              - cell "TECHNICAL overbought uptrend" [ref=e1013]:
+                - generic [ref=e1014]: TECHNICAL
+                - generic [ref=e1015]: overbought uptrend
+              - cell "LARGE" [ref=e1016]
+              - cell "14d" [ref=e1017]
+              - cell "6.0(N=11)" [ref=e1018]:
+                - text: "6.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1019]: (N=11)
+              - cell "[0.0%–61.2%]" [ref=e1020]
+              - cell "EXPLORATORY" [ref=e1021]
+            - row "TECHNICAL overbought uptrend SMALL 3d 0.0(N=2) [13.9%–83.1%] EXPLORATORY" [ref=e1022]:
+              - cell "TECHNICAL overbought uptrend" [ref=e1023]:
+                - generic [ref=e1024]: TECHNICAL
+                - generic [ref=e1025]: overbought uptrend
+              - cell "SMALL" [ref=e1026]
+              - cell "3d" [ref=e1027]
+              - cell "0.0(N=2)" [ref=e1028]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1029]: (N=2)
+              - cell "[13.9%–83.1%]" [ref=e1030]
+              - cell "EXPLORATORY" [ref=e1031]
+            - row "TECHNICAL overbought uptrend SMALL 7d 0.0(N=2) [15.5%–85.6%] EXPLORATORY" [ref=e1032]:
+              - cell "TECHNICAL overbought uptrend" [ref=e1033]:
+                - generic [ref=e1034]: TECHNICAL
+                - generic [ref=e1035]: overbought uptrend
+              - cell "SMALL" [ref=e1036]
+              - cell "7d" [ref=e1037]
+              - cell "0.0(N=2)" [ref=e1038]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1039]: (N=2)
+              - cell "[15.5%–85.6%]" [ref=e1040]
+              - cell "EXPLORATORY" [ref=e1041]
+            - row "TECHNICAL overbought uptrend SMALL 14d 0.0(N=1) [15.5%–85.6%] EXPLORATORY" [ref=e1042]:
+              - cell "TECHNICAL overbought uptrend" [ref=e1043]:
+                - generic [ref=e1044]: TECHNICAL
+                - generic [ref=e1045]: overbought uptrend
+              - cell "SMALL" [ref=e1046]
+              - cell "14d" [ref=e1047]
+              - cell "0.0(N=1)" [ref=e1048]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1049]: (N=1)
+              - cell "[15.5%–85.6%]" [ref=e1050]
+              - cell "EXPLORATORY" [ref=e1051]
+            - row "TECHNICAL oversold downtrend SMALL 3d 0.0(N=1) [11.7%–81.6%] EXPLORATORY" [ref=e1052]:
+              - cell "TECHNICAL oversold downtrend" [ref=e1053]:
+                - generic [ref=e1054]: TECHNICAL
+                - generic [ref=e1055]: oversold downtrend
+              - cell "SMALL" [ref=e1056]
+              - cell "3d" [ref=e1057]
+              - cell "0.0(N=1)" [ref=e1058]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1059]: (N=1)
+              - cell "[11.7%–81.6%]" [ref=e1060]
+              - cell "EXPLORATORY" [ref=e1061]
+            - row "TECHNICAL pullback in uptrend LARGE 3d 2.0(N=12) [7.5%–97.6%] EXPLORATORY" [ref=e1062]:
+              - cell "TECHNICAL pullback in uptrend" [ref=e1063]:
+                - generic [ref=e1064]: TECHNICAL
+                - generic [ref=e1065]: pullback in uptrend
+              - cell "LARGE" [ref=e1066]
+              - cell "3d" [ref=e1067]
+              - cell "2.0(N=12)" [ref=e1068]:
+                - text: "2.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1069]: (N=12)
+              - cell "[7.5%–97.6%]" [ref=e1070]
+              - cell "EXPLORATORY" [ref=e1071]
+            - row "TECHNICAL pullback in uptrend LARGE 7d 0.0(N=8) [0.1%–87.5%] EXPLORATORY" [ref=e1072]:
+              - cell "TECHNICAL pullback in uptrend" [ref=e1073]:
+                - generic [ref=e1074]: TECHNICAL
+                - generic [ref=e1075]: pullback in uptrend
+              - cell "LARGE" [ref=e1076]
+              - cell "7d" [ref=e1077]
+              - cell "0.0(N=8)" [ref=e1078]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1079]: (N=8)
+              - cell "[0.1%–87.5%]" [ref=e1080]
+              - cell "EXPLORATORY" [ref=e1081]
+            - row "TECHNICAL pullback in uptrend LARGE 14d 0.0(N=4) [13.0%–100.0%] EXPLORATORY" [ref=e1082]:
+              - cell "TECHNICAL pullback in uptrend" [ref=e1083]:
+                - generic [ref=e1084]: TECHNICAL
+                - generic [ref=e1085]: pullback in uptrend
+              - cell "LARGE" [ref=e1086]
+              - cell "14d" [ref=e1087]
+              - cell "0.0(N=4)" [ref=e1088]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1089]: (N=4)
+              - cell "[13.0%–100.0%]" [ref=e1090]
+              - cell "EXPLORATORY" [ref=e1091]
+            - row "TECHNICAL pullback in uptrend SMALL 3d 0.0(N=1) [11.7%–81.6%] EXPLORATORY" [ref=e1092]:
+              - cell "TECHNICAL pullback in uptrend" [ref=e1093]:
+                - generic [ref=e1094]: TECHNICAL
+                - generic [ref=e1095]: pullback in uptrend
+              - cell "SMALL" [ref=e1096]
+              - cell "3d" [ref=e1097]
+              - cell "0.0(N=1)" [ref=e1098]:
+                - text: "0.0"
+                - generic "Raw trial count — debug column per D-12" [ref=e1099]: (N=1)
+              - cell "[11.7%–81.6%]" [ref=e1100]
+              - cell "EXPLORATORY" [ref=e1101]
+    - generic [ref=e1102]:
+      - generic [ref=e1103]: Engine dashboard
+      - generic [ref=e1105]:
+        - generic [ref=e1106]: Loading
+        - generic [ref=e1107]: Fetching pattern data…
+  - generic [ref=e1109]:
+    - generic [ref=e1110]:
+      - generic [ref=e1111]: AAPL
+      - generic [ref=e1112]: —
+      - generic [ref=e1113]: ·
+      - generic [ref=e1114]: ·
+    - generic [ref=e1115]:
+      - generic [ref=e1116]: MSFT
+      - generic [ref=e1117]: —
+      - generic [ref=e1118]: ·
+      - generic [ref=e1119]: ·
+    - generic [ref=e1120]:
+      - generic [ref=e1121]: NVDA
+      - generic [ref=e1122]: —
+      - generic [ref=e1123]: ·
+      - generic [ref=e1124]: ·
+    - generic [ref=e1125]:
+      - generic [ref=e1126]: GOOGL
+      - generic [ref=e1127]: —
+      - generic [ref=e1128]: ·
+      - generic [ref=e1129]: ·
+    - generic [ref=e1130]:
+      - generic [ref=e1131]: AMZN
+      - generic [ref=e1132]: —
+      - generic [ref=e1133]: ·
+      - generic [ref=e1134]: ·
+    - generic [ref=e1135]:
+      - generic [ref=e1136]: TSLA
+      - generic [ref=e1137]: —
+      - generic [ref=e1138]: ·
+      - generic [ref=e1139]: ·
+    - generic [ref=e1140]:
+      - generic [ref=e1141]: META
+      - generic [ref=e1142]: —
+      - generic [ref=e1143]: ·
+      - generic [ref=e1144]: ·
+    - generic [ref=e1145]:
+      - generic [ref=e1146]: JPM
+      - generic [ref=e1147]: —
+      - generic [ref=e1148]: ·
+      - generic [ref=e1149]: ·
+    - generic [ref=e1150]:
+      - generic [ref=e1151]: AAPL
+      - generic [ref=e1152]: —
+      - generic [ref=e1153]: ·
+      - generic [ref=e1154]: ·
+    - generic [ref=e1155]:
+      - generic [ref=e1156]: MSFT
+      - generic [ref=e1157]: —
+      - generic [ref=e1158]: ·
+      - generic [ref=e1159]: ·
+    - generic [ref=e1160]:
+      - generic [ref=e1161]: NVDA
+      - generic [ref=e1162]: —
+      - generic [ref=e1163]: ·
+      - generic [ref=e1164]: ·
+    - generic [ref=e1165]:
+      - generic [ref=e1166]: GOOGL
+      - generic [ref=e1167]: —
+      - generic [ref=e1168]: ·
+      - generic [ref=e1169]: ·
+    - generic [ref=e1170]:
+      - generic [ref=e1171]: AMZN
+      - generic [ref=e1172]: —
+      - generic [ref=e1173]: ·
+      - generic [ref=e1174]: ·
+    - generic [ref=e1175]:
+      - generic [ref=e1176]: TSLA
+      - generic [ref=e1177]: —
+      - generic [ref=e1178]: ·
+      - generic [ref=e1179]: ·
+    - generic [ref=e1180]:
+      - generic [ref=e1181]: META
+      - generic [ref=e1182]: —
+      - generic [ref=e1183]: ·
+      - generic [ref=e1184]: ·
+    - generic [ref=e1185]:
+      - generic [ref=e1186]: JPM
+      - generic [ref=e1187]: —
+      - generic [ref=e1188]: ·
+      - generic [ref=e1189]: ·

@@ -576,7 +576,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           aria-live="polite"
           data-banner="manipulation-warning"
           data-testid="manipulation-warning-banner"
-          className="w-full bg-red-700 text-white px-4 py-3 flex items-center gap-3 border-b-2 border-red-900"
+          className="w-full bg-error text-on-error px-4 py-3 flex items-center gap-3 border-b-2 border-error"
         >
           <span className="text-xl" aria-hidden="true">⚠</span>
           <div className="flex-1 text-sm">
@@ -595,7 +595,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
             type="button"
             aria-label="Dismiss manipulation warning for 24 hours"
             onClick={handleDismissManipulationBanner}
-            className="text-white hover:bg-red-800 rounded px-2 py-1"
+            className="text-on-error hover:opacity-75 rounded px-2 py-1"
           >
             ×
           </button>

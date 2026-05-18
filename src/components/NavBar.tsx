@@ -1,19 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
+import { useTheme } from '@/lib/use-theme';
 
 function getMarketStatus(): { open: boolean; label: string } {
   const ny   = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const day  = ny.getDay();
   const mins = ny.getHours() * 60 + ny.getMinutes();
   const isWeekday = day >= 1 && day <= 5;
-  if (!isWeekday) return { open: false, label: 'WEEKEND' };
-  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return { open: true,  label: 'REGULAR SESSION' };
-  if (mins >= 4 * 60        && mins < 9 * 60 + 30) return { open: true,  label: 'PRE-MARKET' };
-  if (mins >= 16 * 60       && mins < 20 * 60) return { open: true,  label: 'AFTER-HOURS' };
-  return { open: false, label: 'CLOSED' };
+  if (!isWeekday) return { open: false, label: 'Markets closed · Weekend' };
+  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return { open: true,  label: 'Live · Regular session' };
+  if (mins >= 4 * 60        && mins < 9 * 60 + 30) return { open: true,  label: 'Live · Pre-market' };
+  if (mins >= 16 * 60       && mins < 20 * 60) return { open: true,  label: 'Live · After-hours' };
+  return { open: false, label: 'Markets closed' };
 }
 
 interface NavBarProps {
@@ -35,7 +37,9 @@ export default function NavBar({
   userEmail,
   securityType,
 }: NavBarProps) {
-  const market = getMarketStatus();
+  const market   = getMarketStatus();
+  const pathname = usePathname();
+  const { dark, toggle } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -45,85 +49,103 @@ export default function NavBar({
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
 
-  // Format email as "CONNECTED AS {truncated email}" per UI-SPEC NavIdentity contract
+  // "CONNECTED AS {truncated email}" per UI-SPEC NavIdentity contract
   const displayEmail = userEmail
-    ? userEmail.length > 24
-      ? userEmail.slice(0, 21) + '...'
-      : userEmail
+    ? userEmail.length > 24 ? userEmail.slice(0, 21) + '…' : userEmail
     : null;
-  const navIdentityText = displayEmail ?? '';
+
+  const links = [
+    { to: '/terminal', label: 'Research' },
+    { to: '/insights', label: 'Insights' },
+  ];
 
   return (
     <>
       {/* Main nav */}
-      <header className="flex justify-between items-center w-full px-4 fixed top-0 z-50 bg-surface h-[44px] border-b border-surface-container">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-lg font-black text-primary-container flex items-center gap-2">
+      <header className="nav">
+        <div className="nav-left">
+          <button
+            type="button"
+            className="theme-gear"
+            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={toggle}
+          >
+            {dark ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="4.2" />
+                <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="2.6" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            )}
+          </button>
+
+          <Link href="/" className="nav-brand">
+            <span className="dot" />
             CIPHER
           </Link>
-          <nav className="hidden md:flex items-center gap-4">
-            <Link
-              href="/terminal"
-              className="text-sm font-bold text-on-surface/70 hover:bg-surface-container hover:text-on-surface transition-colors duration-200 px-2 py-1"
-            >
-              Research
-            </Link>
-            <Link
-              href="/insights"
-              className="text-sm font-bold text-on-surface/50 hover:bg-surface-container hover:text-secondary transition-colors duration-200 px-2 py-1"
-            >
-              Insights
-            </Link>
-            <span className="text-sm font-bold text-on-surface/30 px-2 py-1 cursor-default">NYSE</span>
-            <span className="text-sm font-bold text-on-surface/30 px-2 py-1 cursor-default">NASDAQ</span>
+
+          <nav className="nav-links">
+            {links.map((l) => {
+              const active = pathname === l.to || pathname.startsWith(l.to + '/');
+              return (
+                <Link key={l.to} href={l.to} className={`nav-link${active ? ' active' : ''}`}>
+                  {l.label}
+                </Link>
+              );
+            })}
+            <span className="nav-link muted">NYSE</span>
+            <span className="nav-link muted">NASDAQ</span>
           </nav>
         </div>
-        <div className="flex items-center gap-4">
-          <span
-            data-testid="nav-identity"
-            className="text-[11px] tracking-widest uppercase text-on-surface/50 font-bold font-mono hidden sm:block"
-          >
-            {navIdentityText}
+
+        <div className="nav-right">
+          <span className="market-pill">
+            <span className="live" style={{ background: market.open ? 'var(--teal)' : 'var(--ink-3)' }} />
+            {market.label}
           </span>
+
+          {displayEmail && (
+            <span data-testid="nav-identity" className="nav-identity hidden sm:block">
+              Connected as {displayEmail}
+            </span>
+          )}
+
           {userEmail ? (
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
-            >
+            <button className="nav-link" onClick={() => setDrawerOpen(true)}>
               Account
             </button>
           ) : (
-            <Link
-              href="/auth/signin"
-              className="text-sm font-bold text-on-surface/50 hover:bg-surface-container transition-colors duration-200 px-2 py-1"
-            >
+            <Link href="/auth/signin" className="nav-link">
               Sign in
             </Link>
           )}
-          <Link
-            href={userEmail ? '/terminal' : '/auth/signin'}
-            className="bg-primary-container text-on-primary-container px-3 py-1 text-xs font-bold rounded hover:bg-primary transition-colors active:scale-95 duration-100"
-          >
-            Research a ticker
+
+          <Link href="/terminal" className="nav-cta">
+            Analyze a ticker
+            <span style={{ fontSize: '14px' }}>→</span>
           </Link>
-          <div className="flex items-center gap-2 text-on-surface/50">
-            <span className="material-symbols-outlined text-sm">schedule</span>
-            <span
-              className={`material-symbols-outlined text-sm ${market.open ? 'text-secondary' : 'text-outline-variant'}`}
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              fiber_manual_record
-            </span>
-          </div>
         </div>
       </header>
 
-      {/* Sticky sub-bar — only on report pages */}
+      {/* Sticky sub-bar — report pages only */}
       {showSubBar && (
-        <div className="fixed top-[44px] w-full z-40 bg-surface-container-high/80 backdrop-blur-md border-b border-outline-variant/20 px-4 py-2 flex items-center justify-between">
+        <div
+          className="fixed top-[56px] w-full z-40 px-4 py-2 flex items-center justify-between border-b"
+          style={{
+            background: 'color-mix(in srgb, var(--surface) 85%, transparent)',
+            borderColor: 'var(--rule)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
           <div className="flex items-center gap-4">
             {ticker && (
-              <div className="bg-primary-container text-on-primary-container px-2 py-0.5 font-mono font-bold text-sm tracking-tighter">
+              <div className="bg-primary-container text-on-primary-container px-2 py-0.5 font-mono font-bold text-sm tracking-tight rounded-[3px]">
                 {ticker}
               </div>
             )}
@@ -133,7 +155,7 @@ export default function NavBar({
             {securityType && securityType !== 'unknown' && securityType !== 'equity' && (
               <span
                 data-testid="security-type-badge"
-                className="text-[10px] font-bold tracking-widest uppercase text-amber-400 border border-amber-400/40 px-1.5 py-0.5 font-mono"
+                className="text-[10px] font-bold tracking-widest uppercase text-tertiary border border-tertiary/40 px-1.5 py-0.5 font-mono rounded-[3px]"
               >
                 {securityType.toUpperCase()}
               </span>
@@ -149,7 +171,7 @@ export default function NavBar({
                 New report
               </button>
             )}
-            <div className="w-px h-4 bg-outline-variant/30" />
+            <div className="w-px h-4 bg-outline-variant" />
             {onExportPdf && (
               <button
                 onClick={onExportPdf}
@@ -166,21 +188,15 @@ export default function NavBar({
       {/* Account drawer */}
       {drawerOpen && (
         <>
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
             onClick={() => setDrawerOpen(false)}
           />
-          {/* Panel */}
           <div
-            className="fixed right-0 top-0 h-full w-80 bg-surface-container border-l border-outline-variant/20 z-50 flex flex-col"
-            style={{
-              transform: drawerOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.25s ease',
-            }}
+            className="fixed right-0 top-0 h-full w-80 bg-surface border-l border-outline-variant z-50 flex flex-col"
+            style={{ transform: 'translateX(0)', transition: 'transform 0.25s ease' }}
           >
-            {/* Drawer header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/20">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
               <span className="text-[10px] font-bold tracking-[0.3em] text-outline uppercase">Account</span>
               <button
                 onClick={() => setDrawerOpen(false)}
@@ -191,33 +207,26 @@ export default function NavBar({
               </button>
             </div>
 
-            {/* Drawer body */}
             <div className="flex-1 px-5 py-6 space-y-6 overflow-y-auto">
-              {/* Email */}
               <div>
-                <div className="text-[10px] text-primary/50 tracking-widest uppercase mb-1">Connected as</div>
-                <div className="text-xs font-mono text-on-surface">
-                  {userEmail ?? '—'}
-                </div>
+                <div className="text-[10px] text-primary/60 tracking-widest uppercase mb-1">Connected as</div>
+                <div className="text-xs font-mono text-on-surface break-all">{userEmail ?? '—'}</div>
               </div>
-
-              {/* Dashboard link */}
               <div>
                 <Link
                   href="/dashboard"
                   onClick={() => setDrawerOpen(false)}
-                  className="text-[10px] font-bold tracking-widest uppercase text-primary/70 hover:text-primary transition-colors"
+                  className="text-[10px] font-bold tracking-widest uppercase text-primary hover:opacity-70 transition-opacity"
                 >
-                  ← Dashboard
+                  → Dashboard
                 </Link>
               </div>
             </div>
 
-            {/* Sign out */}
-            <div className="px-5 py-4 border-t border-outline-variant/20">
+            <div className="px-5 py-4 border-t border-outline-variant">
               <button
                 onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-                className="text-[10px] font-bold tracking-widest uppercase text-outline hover:text-error/70 transition-colors"
+                className="text-[10px] font-bold tracking-widest uppercase text-outline hover:text-error transition-colors"
               >
                 Sign out
               </button>

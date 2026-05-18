@@ -56,7 +56,8 @@ export async function POST(
   }
 
   // HI-03: Auth guard for web mode — must have an authenticated session before any file I/O.
-  if (process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web') {
+  // AAPL is the public sample report and is exempt from the session requirement.
+  if (process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web' && ticker.toUpperCase() !== 'AAPL') {
     const { getServerSession } = await import('next-auth/next');
     const { authOptions } = await import('@/lib/auth');
     const sess = await getServerSession(authOptions);

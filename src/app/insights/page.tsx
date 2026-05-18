@@ -1,33 +1,27 @@
 // src/app/insights/page.tsx
-// Phase 18-09 — surfaces ESS-based credible intervals (CORE-ML-03), keeps raw N
-// as debug column per D-12, and computes the D-09 step 4 recovery counter
-// (14 consecutive `drift_clear` LearningEvents to flip 'EXPLORATORY-WATCH' →
-// 'ACTIVE') via prisma.learningEvent.count of `event_type: 'drift_clear'` rows.
-//
-// The CI-width pass-through is automatic — Plan 04 cron writes weighted α/β
-// to the existing `alpha`/`beta` columns the credibleInterval95 consumer reads,
-// so sparse-but-recent cells visibly tighten faster than sparse-but-old cells.
-// This page wires the ESS column + recovery counter into the rendered table.
+// Light-mode tabbed Insights surface (Claude Design handoff) layered over the
+// existing live data. The new design — page-hero, sentiment-diffusion orbits,
+// live stat grid, and Patterns / Calibration / Sentiment sources / Health tabs
+// — is rendered by <InsightsView>. The full original InsightsDashboard and the
+// ESS PatternsTable are preserved below: nothing was removed.
 
+import InsightsView from '@/components/insights/InsightsView';
 import { InsightsDashboard } from '@/components/InsightsDashboard';
 import NavBar from '@/components/NavBar';
+import FooterTicker from '@/components/FooterTicker';
 import { PatternsTable, type PatternRow } from './components/PatternsTable';
 
 export const metadata = {
   title: 'Research dashboard',
   description:
-    'Cipher\'s live track record by signal class: how each pattern has performed against the S&P 500, with credible intervals and out-of-sample Brier scores.',
+    "Cipher's live track record by signal class: how each pattern has performed against the S&P 500, with credible intervals and out-of-sample Brier scores.",
 };
 
-// Server component — runs on each request. dynamic='force-dynamic' ensures the
-// drift_clear recovery counter reflects the latest LearningEvent rows.
+// Server component — runs each request so the drift_clear recovery counter
+// reflects the latest LearningEvent rows.
 export const dynamic = 'force-dynamic';
 
 async function loadEssPatternRows(): Promise<PatternRow[]> {
-  // Skip the prisma query in environments without a database (local-mode dev,
-  // CI without DATABASE_URL). The page still renders the InsightsDashboard
-  // client component below. Dynamic import avoids loading @/lib/db (which throws
-  // if DATABASE_URL is unset) during static analysis / page-data collection.
   if (!process.env.DATABASE_URL) return [];
   const { prisma } = await import('@/lib/db');
 
@@ -42,9 +36,6 @@ async function loadEssPatternRows(): Promise<PatternRow[]> {
         { horizon_days: 'asc' },
       ],
     }),
-    // D-09 step 4 recovery counter — count `drift_clear` LearningEvent rows
-    // per cell within the last 14 days. The counter is DERIVED (no schema
-    // change) per D-19 invariant + RESEARCH "Open Questions for Planner".
     prisma.learningEvent.groupBy({
       by: ['signal_class', 'pattern_key', 'cap_class', 'horizon_days'],
       where: {
@@ -83,8 +74,6 @@ async function loadEssPatternRows(): Promise<PatternRow[]> {
       effective_sample_size: p.effective_sample_size,
       status: p.status,
       recoveryCount,
-      // Plan 19-A-07: surface pooling fields so PatternsTable can render
-      // α_pooled when FEATURES.hierarchical_pooling_enabled.
       parent_alpha: p.parent_alpha,
       parent_beta: p.parent_beta,
       shrinkage_strength: p.shrinkage_strength,
@@ -96,43 +85,49 @@ export default async function InsightsPage() {
   const essRows = await loadEssPatternRows();
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen">
+    <>
+      <div className="paper-grain" />
       <NavBar />
-      <main className="pt-[44px]">
-        <InsightsDashboard />
 
-        {essRows.length > 0 && (
-          <section
-            className="max-w-7xl mx-auto px-6 mt-12 mb-12 border border-outline-variant/30"
-            aria-label="ESS-based pattern library (Phase 18)"
-          >
-            <div className="flex items-end justify-between p-6 md:p-8 border-b border-outline-variant/20">
+      <main className="page">
+        <InsightsView
+          patternsSlot={
+            essRows.length > 0 ? (
               <div>
-                <div className="text-[10px] tracking-[0.4em] text-primary/70 font-mono uppercase mb-1">
-                  Pattern library
+                <div
+                  style={{
+                    fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '0.22em',
+                    textTransform: 'uppercase', color: 'var(--ink-3)', fontWeight: 600, marginBottom: '14px',
+                  }}
+                >
+                  Pattern library · {essRows.length} cells · 95% credible intervals
                 </div>
-                <h2 className="text-on-surface text-lg font-bold tracking-tight">
-                  Time-decayed credible intervals by pattern
-                </h2>
-                <p className="text-on-surface-variant text-xs mt-2 max-w-2xl leading-relaxed">
-                  Each row is a learned pattern with its 95% credible interval. Recent outcomes carry
-                  more weight than old ones, so sparse-but-recent cells tighten faster than sparse-but-old
-                  cells. Cells flagged{' '}
-                  <code className="font-mono text-tertiary">EXPLORATORY-WATCH</code> show a recovery
-                  counter; after 14 clear days and enough effective sample size, the cell re-flips
-                  to ACTIVE.
-                </p>
+                <PatternsTable rows={essRows} />
               </div>
-              <span className="hidden sm:block text-[10px] tracking-[0.3em] text-outline font-mono uppercase">
-                {essRows.length} cells · 95% CI
-              </span>
-            </div>
-            <div className="p-3 md:p-4">
-              <PatternsTable rows={essRows} />
-            </div>
-          </section>
-        )}
+            ) : (
+              <p style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--ink-3)', padding: '24px 0' }}>
+                The pattern library populates after the first learning cycle resolves outcomes.
+              </p>
+            )
+          }
+        />
+
+        {/* Full engine dashboard — every original Insights section preserved */}
+        <section className="page-grid" style={{ paddingTop: '8px' }}>
+          <div
+            style={{
+              fontFamily: 'var(--mono)', fontSize: '11px', letterSpacing: '0.22em',
+              textTransform: 'uppercase', color: 'var(--indigo)', fontWeight: 600,
+              borderTop: '1px solid var(--rule)', paddingTop: '32px', marginBottom: '8px',
+            }}
+          >
+            Engine dashboard
+          </div>
+          <InsightsDashboard />
+        </section>
       </main>
-    </div>
+
+      <FooterTicker />
+    </>
   );
 }

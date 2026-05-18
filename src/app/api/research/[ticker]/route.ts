@@ -43,6 +43,17 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid ticker format' }, { status: 400 });
   }
 
+  // Auth guard for web mode — AAPL is the public sample, every other ticker
+  // requires an authenticated session. Defense-in-depth alongside middleware.
+  if (process.env.NEXT_PUBLIC_DEPLOYMENT_MODE === 'web' && upperTicker !== 'AAPL') {
+    const { getServerSession } = await import('next-auth/next');
+    const { authOptions } = await import('@/lib/auth');
+    const sess = await getServerSession(authOptions);
+    if (!sess?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
   try {
     // Resolve company name and exchange for the source package metadata
     let companyName = upperTicker;
