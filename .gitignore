@@ -162,4 +162,11 @@ calibration-reports/
 # Operator-readable per-provider gate verdict. Regenerated on demand;
 # NEVER committed (no fixed historical artifact value).
 /reports/provider-health-*.md
+
+# ========================
+# Phase 30.1 per-provider verdict tables (D-30). One markdown file per cutover
+# verification window — operator-generated artifact, never committed.
+# ========================
+/reports/phase-30.1-providers-*.md
+
 .env.vercel.*
