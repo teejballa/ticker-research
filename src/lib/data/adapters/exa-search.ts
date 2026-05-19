@@ -42,6 +42,7 @@ import { Exa } from 'exa-js';
 import { cached } from '@/lib/data/cache/upstash';
 import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withRetry } from '@/lib/data/retry';
+import { NEWS_WINDOW_MS } from '@/lib/data/recency';
 // Plan 20-Z-03: telemetry for external calls.
 // provider_id 'anthropic-search' is the umbrella for all LLM-search vendors
 // in v1; per-vendor split (Exa as its own id) deferred — see 20-Z-03-PLAN.md
@@ -219,7 +220,7 @@ function mapAnalystResults(
 // SDK-call fetchers (uncached, unretried — wrapped below)
 // ---------------------------------------------------------------------------
 
-const NEWS_LOOKBACK_MS = 30 * 86_400_000; // 30 days, matches anthropic-search.ts prompt
+const NEWS_LOOKBACK_MS = NEWS_WINDOW_MS; // RECENCY_WINDOWS.news_days — matches anthropic-search.ts prompt
 
 async function doFetchExaNews(ticker: string): Promise<NewsSection | null> {
   const client = getClient();

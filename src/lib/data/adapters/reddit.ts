@@ -32,6 +32,7 @@ import {
 import { withRetry, withTimeout } from '@/lib/data/retry';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { withBreaker } from '@/lib/data/circuit-breaker';
+import { COMMUNITY_WINDOW_SECONDS } from '@/lib/data/recency';
 
 /** D-37 — structured Reddit post matching the pre-pivot writer contract. */
 export interface RedditPost {
@@ -174,9 +175,13 @@ export async function fetchRedditCommunity(
             ],
           });
           const data = result?.data ?? [];
+          // Xpoz `time` is a Reddit-style enum (hour/day/week/month/...), so
+          // it cannot express the 5-day community window directly. Fetch the
+          // 'week' bucket and trim client-side to RECENCY_WINDOWS.community_days.
+          const cutoffSec = Math.floor(Date.now() / 1000) - COMMUNITY_WINDOW_SECONDS;
           return data
             .map((p) => normalizeRedditPost(p))
-            .filter((p) => p.id !== '' && p.created_utc > 0);
+            .filter((p) => p.id !== '' && p.created_utc >= cutoffSec);
         }), 12000, `reddit-xpoz:${subreddit}`),
       ),
     );

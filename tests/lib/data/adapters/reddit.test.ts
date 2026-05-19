@@ -108,6 +108,16 @@ describe('reddit adapter (Xpoz) — fetchRedditCommunity (Plan 30.1-pivot Task 2
     withRetryMock.mockClear();
     withTimeoutMock.mockClear();
     vi.stubEnv('XPOZ_API_KEY', 'fake-key-from-env');
+    // Pin the clock just after the fixture timestamps (2026-01-08) so the
+    // 5-day recency filter in the adapter does not drop them. Without this,
+    // the wall-clock test run would compare fixture timestamps against the
+    // real "now" and reject every fixture as stale.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-09T00:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   afterEach(() => {
@@ -235,13 +245,32 @@ describe('reddit adapter (Xpoz) — fetchRedditCommunity (Plan 30.1-pivot Task 2
   });
 
   it('falls back to createdAtTimestamp when createdAtDate is missing', async () => {
+    // Timestamp must be within the 5-day recency window relative to the
+    // fake-clock pin (2026-01-09 in beforeEach). 2026-01-08 = 1 day prior.
+    const tsSec = Math.floor(Date.parse('2026-01-08T00:00:00.000Z') / 1000);
     const xpozPost = buildXpozPost({
       createdAtDate: null,
-      createdAtTimestamp: 1715200000,
+      createdAtTimestamp: tsSec,
     });
     searchPostsMock.mockResolvedValueOnce({ data: [xpozPost] });
     const posts = await fetchRedditCommunity('AAPL', 'stocks');
-    expect(posts[0].created_utc).toBe(1715200000);
+    expect(posts[0].created_utc).toBe(tsSec);
+  });
+
+  it('filters out posts older than the community recency window (5 days)', async () => {
+    // Fake clock is pinned to 2026-01-09T00Z. Cutoff = 2026-01-04T00Z.
+    const recent = buildXpozPost({
+      id: 'recent',
+      createdAtDate: '2026-01-08T12:00:00.000Z', // 12h ago, well inside window
+    });
+    const stale = buildXpozPost({
+      id: 'stale',
+      createdAtDate: '2025-12-15T00:00:00.000Z', // ~3 weeks ago, outside window
+    });
+    searchPostsMock.mockResolvedValueOnce({ data: [recent, stale] });
+    const posts = await fetchRedditCommunity('AAPL', 'stocks');
+    expect(posts).toHaveLength(1);
+    expect(posts[0].id).toBe('recent');
   });
 
   it('filters out posts with empty id', async () => {
