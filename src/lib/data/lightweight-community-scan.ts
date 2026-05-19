@@ -148,9 +148,32 @@ export async function lightweightCommunityScan(
   const upper = ticker.toUpperCase();
   const subs = [...COMMUNITY_SUBS.map(s => s.name), upper];
 
+  // Resolve a short company name from Yahoo so adapter queries can include
+  // both the ticker and the brand (e.g. "AAPL" → also search "Apple stock").
+  // Stripping common entity suffixes turns "Apple Inc." into "Apple" and
+  // "Microsoft Corporation" into "Microsoft". `null` falls back to
+  // ticker-only search per adapter contract.
+  let companyShortName: string | null = null;
+  let marketCapFromQuote: number | null = null;
+  try {
+    const quote = await yf.quote(upper);
+    marketCapFromQuote = quote.marketCap ?? null;
+    const raw =
+      (typeof quote.longName === 'string' && quote.longName) ||
+      (typeof quote.shortName === 'string' && quote.shortName) ||
+      '';
+    const cleaned = raw
+      .replace(/,?\s+(Inc|Inc\.|Incorporated|Corp|Corp\.|Corporation|Ltd|Ltd\.|Limited|LLC|L\.L\.C\.|Co|Co\.|Company|PLC|P\.L\.C\.|S\.A\.|S\.A|N\.V\.|N\.V|AG|S\.E\.|Holdings|Group)\b\.?\s*$/i, '')
+      .trim();
+    companyShortName = cleaned && cleaned.toUpperCase() !== upper ? cleaned : null;
+  } catch {
+    companyShortName = null;
+    marketCapFromQuote = null;
+  }
+
   // Per-sub fan-out via Promise.allSettled so one 403/404 doesn't drop the rest.
   const subResults = await Promise.allSettled(
-    subs.map((sub) => fetchRedditCommunity(upper, sub)),
+    subs.map((sub) => fetchRedditCommunity(upper, sub, { companyName: companyShortName })),
   );
   const reddit_posts: RedditPost[] = subResults.flatMap((r) =>
     r.status === 'fulfilled' ? r.value : [],
@@ -166,20 +189,17 @@ export async function lightweightCommunityScan(
     quiverInsiderRes,
     quiverCongressRes,
   ] = await Promise.all([
-    fetchTwitterCommunity(upper).catch((err: unknown) => {
+    fetchTwitterCommunity(upper, { companyName: companyShortName }).catch((err: unknown) => {
       console.warn(
         '[community-scan twitter] failed:',
         err instanceof Error ? err.message : String(err),
       );
       return [] as TwitterPost[];
     }),
-    fetchHackerNewsStories(upper),
+    fetchHackerNewsStories(upper, { companyName: companyShortName }),
     fetchStockTwitsSentiment(upper),
     fetchStockTwitsRaw(upper),
-    yf
-      .quote(upper)
-      .then(q => q.marketCap ?? null)
-      .catch(() => null),
+    Promise.resolve(marketCapFromQuote),
     fetchQuiverInsider(upper).catch(() => null),
     fetchQuiverCongressional(upper).catch(() => null),
   ]);

@@ -75,10 +75,10 @@ function statusError(prefix: string, status: number): Error & { status: number }
  * untrusted JSON; we filter rows missing the two PIT-critical fields
  * (`objectID` + `created_at_i`) and coerce the rest to safe defaults.
  */
-async function doFetchHN(ticker: string): Promise<HNStory[]> {
+async function doFetchHNQuery(query: string): Promise<HNStory[]> {
   const weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
   const url =
-    `${HN_SEARCH_ENDPOINT}?query=${encodeURIComponent(ticker.toUpperCase())}` +
+    `${HN_SEARCH_ENDPOINT}?query=${encodeURIComponent(query)}` +
     `&tags=story&numericFilters=created_at_i>${weekAgo}&hitsPerPage=25`;
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) throw statusError('hackernews', res.status);
@@ -99,6 +99,30 @@ async function doFetchHN(ticker: string): Promise<HNStory[]> {
     }));
 }
 
+async function doFetchHN(ticker: string, companyName?: string | null): Promise<HNStory[]> {
+  // Algolia free-text search treats spaces as AND, so the ticker and the
+  // company-name queries must run as separate calls and merge by objectID.
+  // Company-name query targets stock-specific noise filtering ("Apple stock")
+  // to keep generic product chatter ("new Apple Watch") out of the bag.
+  const tickerHits = await doFetchHNQuery(ticker.toUpperCase());
+  const name = companyName ? companyName.trim() : '';
+  if (!name) return tickerHits;
+  let nameHits: HNStory[] = [];
+  try {
+    nameHits = await doFetchHNQuery(`${name} stock`);
+  } catch {
+    nameHits = [];
+  }
+  const seen = new Set<string>();
+  const merged: HNStory[] = [];
+  for (const h of [...tickerHits, ...nameHits]) {
+    if (seen.has(h.objectID)) continue;
+    seen.add(h.objectID);
+    merged.push(h);
+  }
+  return merged;
+}
+
 /**
  * Fetch up to 25 HN stories matching `ticker` from the last 7 days.
  *
@@ -110,17 +134,31 @@ async function doFetchHN(ticker: string): Promise<HNStory[]> {
  *
  * Cached 10min via `comm:TICKER:hackernews` namespace per TTL_SECONDS.community.
  */
-export async function fetchHackerNewsStories(ticker: string): Promise<HNStory[]> {
+export async function fetchHackerNewsStories(
+  ticker: string,
+  opts: { companyName?: string | null } = {},
+): Promise<HNStory[]> {
+  // Cache key includes a stable company-name slug so the ticker-only result
+  // (cron) and the ticker+name result (on-demand report) don't collide.
+  const nameSlug = opts.companyName
+    ? opts.companyName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)
+    : '';
+  const cacheKey = nameSlug
+    ? `${CACHE_KEYS.community(ticker)}:hackernews:${nameSlug}`
+    : `${CACHE_KEYS.community(ticker)}:hackernews`;
   try {
     return await cached(
-      `${CACHE_KEYS.community(ticker)}:hackernews`,
+      cacheKey,
       async () => {
         try {
           return await withTelemetry(
             'hackernews',
             () =>
               withBreaker('hackernews', () =>
-                withRetry(() => doFetchHN(ticker), { maxAttempts: 3, baseDelayMs: 100 }),
+                withRetry(() => doFetchHN(ticker, opts.companyName), {
+                  maxAttempts: 3,
+                  baseDelayMs: 100,
+                }),
               ),
             { ticker },
           );

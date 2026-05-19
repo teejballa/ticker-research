@@ -110,7 +110,7 @@ function normalizeTwitterPost(p: XpozTwitterPost): TwitterPost {
  */
 export async function fetchTwitterCommunity(
   ticker: string,
-  opts: { limit?: number; sinceDays?: number } = {},
+  opts: { limit?: number; sinceDays?: number; companyName?: string | null } = {},
 ): Promise<TwitterPost[]> {
   if (!ticker) return [];
   const sinceDays = opts.sinceDays ?? 7;
@@ -121,7 +121,13 @@ export async function fetchTwitterCommunity(
         withRetry(async () => {
           const client = await getClient();
           const upper = ticker.toUpperCase();
-          const q = `"$${upper}" OR "${upper} stock"`;
+          const name = opts.companyName ? opts.companyName.trim() : '';
+          // Expand to include company-name forms (e.g. "Apple stock") so a
+          // ticker like AAPL also surfaces tweets that only mention "Apple".
+          // OR'd into one Xpoz call — no extra request cost.
+          const tickerTerms = `"$${upper}" OR "${upper} stock"`;
+          const nameTerms = name ? ` OR "${name} stock"` : '';
+          const q = tickerTerms + nameTerms;
           const result = await client.twitter.searchPosts(q, {
             startDate,
             language: 'en',
