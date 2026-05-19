@@ -257,8 +257,8 @@ describe('reddit adapter (Xpoz) — fetchRedditCommunity (Plan 30.1-pivot Task 2
     expect(posts[0].created_utc).toBe(tsSec);
   });
 
-  it('filters out posts older than the community recency window (5 days)', async () => {
-    // Fake clock is pinned to 2026-01-09T00Z. Cutoff = 2026-01-04T00Z.
+  it('filters out posts older than the community recency window (7 days)', async () => {
+    // Fake clock is pinned to 2026-01-09T00Z. Cutoff = 2026-01-02T00Z.
     const recent = buildXpozPost({
       id: 'recent',
       createdAtDate: '2026-01-08T12:00:00.000Z', // 12h ago, well inside window
