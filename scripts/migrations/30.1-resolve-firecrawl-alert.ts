@@ -16,6 +16,9 @@
  *   0  resolved row count >= 0 and no rows remain open
  *   1  unexpected error OR rows still open after update (something is wrong)
  */
+import { config as loadDotenv } from 'dotenv';
+loadDotenv({ path: '.env.local' });
+
 import { prisma } from '@/lib/db';
 
 const TARGET_PROVIDER_ID = 'firecrawl';

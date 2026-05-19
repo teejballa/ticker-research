@@ -39,6 +39,9 @@
 // module without booting the Prisma client). This mirrors the lazy-import
 // pattern used by bot-filter.integration.test.ts and the Plan 30.1-04
 // sentiment-scan-reddit integration test.
+import { config as loadDotenv } from 'dotenv';
+loadDotenv({ path: '.env.local' });
+
 import { ENGAGEMENT_TIER_THRESHOLDS } from '@/lib/data/lightweight-community-scan';
 import {
   allWithinTolerance,
