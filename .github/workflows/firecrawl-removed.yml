@@ -1,0 +1,23 @@
+name: Firecrawl Removal Guard
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Enforce Firecrawl removal (D-26)
+        run: npm run check-firecrawl-removed
+      - name: Run guard unit test
+        run: npx vitest run tests/scripts/check-firecrawl-removed.unit.test.ts
