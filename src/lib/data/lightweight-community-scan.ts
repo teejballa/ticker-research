@@ -134,9 +134,26 @@ export interface EnrichedSnapshot extends SentimentDimensions {
  * Default `priority: 'cron'` because both the cron and `/api/research/[ticker]`
  * call this function and the cron is the dominant caller (D-21).
  */
+/**
+ * Strips common corporate-entity suffixes so adapter queries search the brand
+ * ("Apple") rather than the legal entity ("Apple Inc."). Returns `null` when
+ * the cleaned name is empty or collapses to the ticker itself — adapters then
+ * fall back to ticker-only search per their contract.
+ */
+function normalizeCompanyName(raw: string, ticker: string): string | null {
+  const cleaned = raw
+    .replace(
+      /,?\s+(Inc|Inc\.|Incorporated|Corp|Corp\.|Corporation|Ltd|Ltd\.|Limited|LLC|L\.L\.C\.|Co|Co\.|Company|PLC|P\.L\.C\.|S\.A\.|S\.A|N\.V\.|N\.V|AG|S\.E\.|Holdings|Group)\b\.?\s*$/i,
+      '',
+    )
+    .trim();
+  return cleaned && cleaned.toUpperCase() !== ticker.toUpperCase() ? cleaned : null;
+}
+
 export async function lightweightCommunityScan(
   ticker: string,
   _priority: 'report' | 'cron' = 'cron',
+  companyName?: string | null,
 ): Promise<EnrichedSnapshot | null> {
   if (!process.env.XPOZ_API_KEY) {
     console.warn(
@@ -148,27 +165,28 @@ export async function lightweightCommunityScan(
   const upper = ticker.toUpperCase();
   const subs = [...COMMUNITY_SUBS.map(s => s.name), upper];
 
-  // Resolve a short company name from Yahoo so adapter queries can include
-  // both the ticker and the brand (e.g. "AAPL" → also search "Apple stock").
-  // Stripping common entity suffixes turns "Apple Inc." into "Apple" and
-  // "Microsoft Corporation" into "Microsoft". `null` falls back to
-  // ticker-only search per adapter contract.
+  // Resolve a short company name so adapter queries search both the ticker
+  // and the brand (e.g. "AAPL" → also "Apple stock"). When the caller supplies
+  // a name (the report path passes pkg.company_name), use it directly — no
+  // extra Yahoo round-trip on the latency-sensitive path. When it is absent
+  // (cron), look it up from Yahoo; that lookup also yields marketCap so the
+  // parallel fan-out below can skip its own quote call.
   let companyShortName: string | null = null;
-  let marketCapFromQuote: number | null = null;
-  try {
-    const quote = await yf.quote(upper);
-    marketCapFromQuote = quote.marketCap ?? null;
-    const raw =
-      (typeof quote.longName === 'string' && quote.longName) ||
-      (typeof quote.shortName === 'string' && quote.shortName) ||
-      '';
-    const cleaned = raw
-      .replace(/,?\s+(Inc|Inc\.|Incorporated|Corp|Corp\.|Corporation|Ltd|Ltd\.|Limited|LLC|L\.L\.C\.|Co|Co\.|Company|PLC|P\.L\.C\.|S\.A\.|S\.A|N\.V\.|N\.V|AG|S\.E\.|Holdings|Group)\b\.?\s*$/i, '')
-      .trim();
-    companyShortName = cleaned && cleaned.toUpperCase() !== upper ? cleaned : null;
-  } catch {
-    companyShortName = null;
-    marketCapFromQuote = null;
+  let marketCapPrefetched: number | null | undefined;
+  if (companyName != null && companyName !== '') {
+    companyShortName = normalizeCompanyName(companyName, upper);
+  } else {
+    try {
+      const quote = await yf.quote(upper);
+      marketCapPrefetched = quote.marketCap ?? null;
+      const raw =
+        (typeof quote.longName === 'string' && quote.longName) ||
+        (typeof quote.shortName === 'string' && quote.shortName) ||
+        '';
+      companyShortName = normalizeCompanyName(raw, upper);
+    } catch {
+      companyShortName = null;
+    }
   }
 
   // Per-sub fan-out via Promise.allSettled so one 403/404 doesn't drop the rest.
@@ -179,7 +197,9 @@ export async function lightweightCommunityScan(
     r.status === 'fulfilled' ? r.value : [],
   );
 
-  // Remaining fetchers — single parallel fan-out.
+  // Remaining fetchers — single parallel fan-out. marketCap is fetched here
+  // (not blocking the fan-out) unless the cron-path Yahoo lookup above already
+  // resolved it.
   const [
     twitterRes,
     hnRes,
@@ -199,7 +219,9 @@ export async function lightweightCommunityScan(
     fetchHackerNewsStories(upper, { companyName: companyShortName }),
     fetchStockTwitsSentiment(upper),
     fetchStockTwitsRaw(upper),
-    Promise.resolve(marketCapFromQuote),
+    marketCapPrefetched !== undefined
+      ? Promise.resolve(marketCapPrefetched)
+      : yf.quote(upper).then(q => q.marketCap ?? null).catch(() => null),
     fetchQuiverInsider(upper).catch(() => null),
     fetchQuiverCongressional(upper).catch(() => null),
   ]);
