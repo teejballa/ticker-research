@@ -19,12 +19,14 @@
 import { config as loadDotenv } from 'dotenv';
 loadDotenv({ path: '.env.local' });
 
-import { prisma } from '@/lib/db';
+import type { PrismaClient } from '@prisma/client';
 
 const TARGET_PROVIDER_ID = 'firecrawl';
 
+type AlertClient = Pick<PrismaClient, 'providerHealthAlert'>;
+
 export async function resolveOpenAlerts(
-  client: typeof prisma = prisma,
+  client: AlertClient,
 ): Promise<{ before: number; resolved: number; after: number }> {
   const before = await client.providerHealthAlert.count({
     where: { provider_id: TARGET_PROVIDER_ID, resolved_at: null },
@@ -40,7 +42,12 @@ export async function resolveOpenAlerts(
 }
 
 async function main(): Promise<void> {
-  const { before, resolved, after } = await resolveOpenAlerts();
+  // Lazy-imported so dotenv populates DATABASE_URL before @/lib/db evaluates.
+  // (TypeScript hoists top-level `import` statements above the `loadDotenv()`
+  // call when compiling to CommonJS, so the import has to be inside the
+  // async runtime.)
+  const { prisma } = await import('@/lib/db');
+  const { before, resolved, after } = await resolveOpenAlerts(prisma);
   console.log(
     `[30.1-resolve-firecrawl-alert] open before=${before}, resolved=${resolved}, open after=${after}`,
   );
