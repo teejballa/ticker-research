@@ -14,8 +14,10 @@ import { getPrompt, listPrompts } from '@/lib/prompts/registry';
 describe('renderPrompt — substitution + guards', () => {
   it('renderPrompt("gemini-research-brief-system", {}) returns the SYSTEM_PROMPT body byte-for-byte', () => {
     const rendered = renderPrompt('gemini-research-brief-system', {});
-    // The v1 body has zero placeholders; rendered must equal the template.
-    const reg = getPrompt('gemini-research-brief-system', 'v1');
+    // The body has zero placeholders; rendered must equal the default-version
+    // template (v2 since the 2026-05-19 community-write-up tightening bump).
+    const reg = getPrompt('gemini-research-brief-system');
+    expect(reg.version).toBe('v2');
     expect(rendered).toBe(reg.template);
     expect(rendered.length).toBeGreaterThan(0);
   });
