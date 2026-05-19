@@ -13,8 +13,8 @@
  * a stock), so the news window stays at 30 days.
  */
 export const RECENCY_WINDOWS = {
-  /** Community sentiment — Reddit, Twitter, HackerNews. One trading week. */
-  community_days: 5,
+  /** Community sentiment — Reddit, Twitter, HackerNews. One calendar week. */
+  community_days: 7,
   /** News + analyst commentary — anthropic-search, Exa. */
   news_days: 30,
 } as const;
