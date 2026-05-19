@@ -12,7 +12,11 @@ import { readFile } from 'fs/promises';
 import { resolve, join as pathJoin } from 'path';
 import { realpathSync } from 'fs';
 import { tmpdir } from 'os';
-import { runGeminiAnalysis, scrapeCommunitySentiment, extractCommunityHighlights } from '@/lib/gemini-analysis';
+import { runGeminiAnalysis } from '@/lib/gemini-analysis';
+import {
+  lightweightCommunityScan,
+  buildCommunityDataForLLM,
+} from '@/lib/data/lightweight-community-scan';
 import { cleanupSourcePackage } from '@/lib/temp-file';
 import type { SourcePackage } from '@/lib/types';
 import { computeSentimentDimensions, type SentimentDimensions } from '@/lib/sentiment-dimensions';
@@ -108,16 +112,18 @@ export async function POST(
       // path was removed in plan 30.1-05 Task 5 (D-26); the call site is kept
       // as a stub for back-compat — pkg.community_aggregated carries the data.
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying community sentiment sources...' }));
-      const scraped = await scrapeCommunitySentiment(ticker, pkg.company_name);
-      const highlights = await extractCommunityHighlights(
-        scraped.pinnedContent,
-        scraped.nicheContent,
-        scraped.nicheUrls,
-      );
+      const scan = await lightweightCommunityScan(ticker, 'report').catch((err: unknown) => {
+        console.warn(
+          '[analysis] lightweightCommunityScan failed:',
+          err instanceof Error ? err.message : String(err),
+        );
+        return null;
+      });
+      const communityForLLM = buildCommunityDataForLLM(scan, ticker);
 
       // Step 4: Gemini call — emit 'querying sentiment' to trigger stepper step 3
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying sentiment analysis via Gemini...' }));
-      const result = await runGeminiAnalysis(ticker, pkg, { ...scraped, highlights });
+      const result = await runGeminiAnalysis(ticker, pkg, communityForLLM);
 
       // Step 5: emit 'querying confidence' to trigger stepper step 4
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying confidence and source attribution...' }));
