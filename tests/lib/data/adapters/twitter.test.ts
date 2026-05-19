@@ -16,6 +16,7 @@ const {
   withTelemetryMock,
   withBreakerMock,
   withRetryMock,
+  withTimeoutMock,
 } = vi.hoisted(() => {
   const searchPostsMock = vi.fn();
   const getUserMock = vi.fn();
@@ -30,6 +31,7 @@ const {
   const withTelemetryMock = vi.fn(<T,>(_id: string, fn: () => Promise<T>) => fn());
   const withBreakerMock = vi.fn(<T,>(_id: string, fn: () => Promise<T>) => fn());
   const withRetryMock = vi.fn(<T,>(fn: () => Promise<T>) => fn());
+  const withTimeoutMock = vi.fn(<T,>(fn: () => Promise<T>) => fn());
   return {
     searchPostsMock,
     getUserMock,
@@ -38,6 +40,7 @@ const {
     withTelemetryMock,
     withBreakerMock,
     withRetryMock,
+    withTimeoutMock,
   };
 });
 
@@ -54,6 +57,7 @@ vi.mock('@/lib/data/circuit-breaker', () => ({
 }));
 vi.mock('@/lib/data/retry', () => ({
   withRetry: withRetryMock,
+  withTimeout: withTimeoutMock,
 }));
 
 import {
@@ -90,6 +94,7 @@ describe('twitter adapter — fetchTwitterCommunity (Plan 30.1-pivot Task 3)', (
     withTelemetryMock.mockClear();
     withBreakerMock.mockClear();
     withRetryMock.mockClear();
+    withTimeoutMock.mockClear();
     vi.stubEnv('XPOZ_API_KEY', 'fake-xpoz-key');
   });
 

@@ -122,6 +122,7 @@ async function doFetchInsider(ticker: string): Promise<QuiverInsiderData | null>
   // never in error messages. Quiver expects "Bearer <token>" per their docs.
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
     throw statusError('quiver insider', res.status);
@@ -156,6 +157,7 @@ async function doFetchCongressional(
   const url = `${QUIVER_BASE}/beta/historical/congresstrading/${encodeURIComponent(ticker)}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
     throw statusError('quiver congressional', res.status);
