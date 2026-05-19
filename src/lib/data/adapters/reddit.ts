@@ -29,7 +29,7 @@ import {
   ResponseType,
   type RedditPost as XpozRedditPost,
 } from '@xpoz/xpoz';
-import { withRetry } from '@/lib/data/retry';
+import { withRetry, withTimeout } from '@/lib/data/retry';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { withBreaker } from '@/lib/data/circuit-breaker';
 
@@ -138,7 +138,9 @@ export async function fetchRedditCommunity(
   try {
     return await withTelemetry('reddit-xpoz', () =>
       withBreaker('reddit-xpoz', () =>
-        withRetry(async () => {
+        // 12s hard cap — the Xpoz SDK has no native timeout, and one hung
+        // sub search must not stall the whole community-scan fan-out.
+        withTimeout(() => withRetry(async () => {
           const client = await getClient();
           const upper = ticker.toUpperCase();
           const name = opts.companyName ? opts.companyName.trim() : '';
@@ -175,7 +177,7 @@ export async function fetchRedditCommunity(
           return data
             .map((p) => normalizeRedditPost(p))
             .filter((p) => p.id !== '' && p.created_utc > 0);
-        }),
+        }), 12000, `reddit-xpoz:${subreddit}`),
       ),
     );
   } catch {

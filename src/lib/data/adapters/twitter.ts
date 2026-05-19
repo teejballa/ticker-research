@@ -24,7 +24,7 @@
  * defaults to TRUE on error so a single Xpoz hiccup doesn't drop the post.
  */
 import { XpozClient, ResponseType, type TwitterPost as XpozTwitterPost } from '@xpoz/xpoz';
-import { withRetry } from '@/lib/data/retry';
+import { withRetry, withTimeout } from '@/lib/data/retry';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { withBreaker } from '@/lib/data/circuit-breaker';
 
@@ -118,7 +118,8 @@ export async function fetchTwitterCommunity(
   try {
     return await withTelemetry('twitter-xpoz', () =>
       withBreaker('twitter-xpoz', () =>
-        withRetry(async () => {
+        // 12s hard cap — the Xpoz SDK has no native timeout.
+        withTimeout(() => withRetry(async () => {
           const client = await getClient();
           const upper = ticker.toUpperCase();
           const name = opts.companyName ? opts.companyName.trim() : '';
@@ -152,7 +153,7 @@ export async function fetchTwitterCommunity(
           return data
             .map((p) => normalizeTwitterPost(p))
             .filter((p) => p.id !== '' && p.created_utc > 0);
-        }),
+        }), 12000, 'twitter-xpoz'),
       ),
     );
   } catch {

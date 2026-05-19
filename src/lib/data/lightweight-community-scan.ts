@@ -189,18 +189,13 @@ export async function lightweightCommunityScan(
     }
   }
 
-  // Per-sub fan-out via Promise.allSettled so one 403/404 doesn't drop the rest.
-  const subResults = await Promise.allSettled(
-    subs.map((sub) => fetchRedditCommunity(upper, sub, { companyName: companyShortName })),
-  );
-  const reddit_posts: RedditPost[] = subResults.flatMap((r) =>
-    r.status === 'fulfilled' ? r.value : [],
-  );
-
-  // Remaining fetchers — single parallel fan-out. marketCap is fetched here
-  // (not blocking the fan-out) unless the cron-path Yahoo lookup above already
-  // resolved it.
+  // Single parallel fan-out: the per-sub Reddit searches run CONCURRENTLY with
+  // Twitter / HN / StockTwits / Quiver instead of blocking ahead of them. Each
+  // adapter call is independently timeout-bounded, so the whole scan settles
+  // in roughly the slowest single call (~12s) rather than the sum. marketCap
+  // is fetched here unless the cron-path Yahoo lookup above already resolved it.
   const [
+    subResults,
     twitterRes,
     hnRes,
     stocktwitsResult,
@@ -209,6 +204,10 @@ export async function lightweightCommunityScan(
     quiverInsiderRes,
     quiverCongressRes,
   ] = await Promise.all([
+    // Promise.allSettled so one 403/404 (banned/quarantined sub) doesn't drop the rest.
+    Promise.allSettled(
+      subs.map((sub) => fetchRedditCommunity(upper, sub, { companyName: companyShortName })),
+    ),
     fetchTwitterCommunity(upper, { companyName: companyShortName }).catch((err: unknown) => {
       console.warn(
         '[community-scan twitter] failed:',
@@ -225,6 +224,10 @@ export async function lightweightCommunityScan(
     fetchQuiverInsider(upper).catch(() => null),
     fetchQuiverCongressional(upper).catch(() => null),
   ]);
+
+  const reddit_posts: RedditPost[] = subResults.flatMap((r) =>
+    r.status === 'fulfilled' ? r.value : [],
+  );
 
   // D-39 — authenticity gate on top-3 highest-engagement Twitter posts.
   // Default-true on lookup error keeps legitimate posts from being dropped.

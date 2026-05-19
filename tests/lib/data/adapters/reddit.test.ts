@@ -22,6 +22,7 @@ const {
   withTelemetryMock,
   withBreakerMock,
   withRetryMock,
+  withTimeoutMock,
 } = vi.hoisted(() => {
   const searchPostsMock = vi.fn();
   const connectMock = vi.fn(async () => {});
@@ -36,6 +37,7 @@ const {
   const withTelemetryMock = vi.fn(<T,>(_id: string, fn: () => Promise<T>) => fn());
   const withBreakerMock = vi.fn(<T,>(_id: string, fn: () => Promise<T>) => fn());
   const withRetryMock = vi.fn(<T,>(fn: () => Promise<T>) => fn());
+  const withTimeoutMock = vi.fn(<T,>(fn: () => Promise<T>) => fn());
   return {
     searchPostsMock,
     connectMock,
@@ -44,6 +46,7 @@ const {
     withTelemetryMock,
     withBreakerMock,
     withRetryMock,
+    withTimeoutMock,
   };
 });
 
@@ -65,6 +68,7 @@ vi.mock('@/lib/data/circuit-breaker', () => ({
 }));
 vi.mock('@/lib/data/retry', () => ({
   withRetry: withRetryMock,
+  withTimeout: withTimeoutMock,
 }));
 
 import {
@@ -102,6 +106,7 @@ describe('reddit adapter (Xpoz) — fetchRedditCommunity (Plan 30.1-pivot Task 2
     withTelemetryMock.mockClear();
     withBreakerMock.mockClear();
     withRetryMock.mockClear();
+    withTimeoutMock.mockClear();
     vi.stubEnv('XPOZ_API_KEY', 'fake-key-from-env');
   });
 

@@ -1055,6 +1055,10 @@ async function generateAnalysis(
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
+          // 150s hard cap — without this a hung AI Gateway / Gemini request
+          // rides the route's 300s maxDuration ceiling. 150s leaves headroom
+          // for the community scan + post-processing inside the 300s budget.
+          abortSignal: AbortSignal.timeout(150_000),
         }),
       {
         ticker,

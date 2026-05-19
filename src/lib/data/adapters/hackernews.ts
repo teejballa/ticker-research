@@ -80,7 +80,10 @@ async function doFetchHNQuery(query: string): Promise<HNStory[]> {
   const url =
     `${HN_SEARCH_ENDPOINT}?query=${encodeURIComponent(query)}` +
     `&tags=story&numericFilters=created_at_i>${weekAgo}&hitsPerPage=25`;
-  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  const res = await fetch(url, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  });
   if (!res.ok) throw statusError('hackernews', res.status);
   const env = (await res.json()) as HNSearchEnvelope;
   const hits = Array.isArray(env.hits) ? env.hits : [];

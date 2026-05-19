@@ -68,6 +68,39 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
+ * withTimeout — races an async fn against a hard deadline.
+ *
+ * Rejects with a `[timeout]` Error if `fn` does not settle within `ms`. The
+ * underlying call is NOT cancelled (most SDKs expose no abort handle) — it is
+ * abandoned; the serverless function reclaims it on completion. Use this to
+ * bound third-party SDK calls (Xpoz, etc.) that have no native timeout, so a
+ * single hung upstream cannot stall a whole `Promise.all` fan-out.
+ *
+ * Pair with the adapter's existing try/catch: a timeout rejection then
+ * degrades to the adapter's empty-result fallback exactly like any other
+ * upstream failure, and `withBreaker` records it so repeated hangs trip the
+ * breaker.
+ */
+export async function withTimeout<T>(
+  fn: () => Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`[timeout] ${label} exceeded ${ms}ms`)),
+      ms,
+    );
+  });
+  try {
+    return await Promise.race([fn(), timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
  * withRetry — wraps an async fn with classified retries + exponential backoff.
  *
  * @example
