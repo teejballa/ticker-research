@@ -285,7 +285,7 @@ model EngineThesis {
 model SentimentObservation {
   id                       String    @id @default(uuid())
   ticker                   String
-  source                   String // 'stocktwits' | 'reddit' | 'x' | 'news' | 'sec' | 'apewisdom' | 'firecrawl'
+  source                   String // 'stocktwits' | 'reddit' | 'twitter' | 'x' | 'news' | 'sec' | 'apewisdom' | 'hackernews' (historical rows may carry legacy values from removed providers)
   message_id               String // upstream-provided message ID
   // PIT-INVARIANT — queryable join key; never join on published_at for backtests (enforced by 20-Z-07)
   fetched_at               DateTime  @default(now()) @db.Timestamptz
@@ -327,7 +327,7 @@ model SentimentObservation {
 // icir_20d < 0.3 (CONTEXT.md §20-C-01 spec line 124 verbatim).
 model PerSourceIC {
   id                   String   @id @default(uuid())
-  source_id            String // 'stocktwits' | 'reddit' | 'x' | 'news' | 'apewisdom' | 'firecrawl'
+  source_id            String // 'stocktwits' | 'reddit' | 'twitter' | 'x' | 'news' | 'apewisdom' | 'hackernews' (historical rows may carry legacy values from removed providers)
   computed_at          DateTime @default(now()) @db.Timestamptz // wall-clock when row was computed; PIT-safe for readers
   forward_horizon_days Int // 7 | 30
   ic_20d               Float // rolling-20d Spearman IC across cross-section × days
