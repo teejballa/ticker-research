@@ -104,15 +104,14 @@ async function doFetchHN(ticker: string, companyName?: string | null): Promise<H
   // company-name queries must run as separate calls and merge by objectID.
   // Company-name query targets stock-specific noise filtering ("Apple stock")
   // to keep generic product chatter ("new Apple Watch") out of the bag.
-  const tickerHits = await doFetchHNQuery(ticker.toUpperCase());
   const name = companyName ? companyName.trim() : '';
-  if (!name) return tickerHits;
-  let nameHits: HNStory[] = [];
-  try {
-    nameHits = await doFetchHNQuery(`${name} stock`);
-  } catch {
-    nameHits = [];
-  }
+  if (!name) return doFetchHNQuery(ticker.toUpperCase());
+  // Both queries run in parallel — the name query soft-fails to [] so a slow
+  // or failing second call never blocks the ticker result.
+  const [tickerHits, nameHits] = await Promise.all([
+    doFetchHNQuery(ticker.toUpperCase()),
+    doFetchHNQuery(`${name} stock`).catch(() => [] as HNStory[]),
+  ]);
   const seen = new Set<string>();
   const merged: HNStory[] = [];
   for (const h of [...tickerHits, ...nameHits]) {

@@ -112,7 +112,11 @@ export async function POST(
       // path was removed in plan 30.1-05 Task 5 (D-26); the call site is kept
       // as a stub for back-compat — pkg.community_aggregated carries the data.
       enqueue(JSON.stringify({ type: 'progress', message: 'Querying community sentiment sources...' }));
-      const scan = await lightweightCommunityScan(ticker, 'report').catch((err: unknown) => {
+      const scan = await lightweightCommunityScan(
+        ticker,
+        'report',
+        pkg.company_name,
+      ).catch((err: unknown) => {
         console.warn(
           '[analysis] lightweightCommunityScan failed:',
           err instanceof Error ? err.message : String(err),
