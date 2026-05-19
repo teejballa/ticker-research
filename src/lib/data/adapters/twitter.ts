@@ -3,7 +3,7 @@
  * (D-35, D-38, D-39).
  *
  * Twitter joins the community-scan via Xpoz Pro. One Twitter search per
- * ticker per run, English-only, 7-day window, ≤25 results. Optional
+ * ticker per run, English-only, community-window, ≤25 results. Optional
  * author-authenticity gate via Xpoz `isInauthentic` / `isInauthenticProbScore`
  * for the top citations (≤3 per ticker per run).
  *
@@ -27,6 +27,7 @@ import { XpozClient, ResponseType, type TwitterPost as XpozTwitterPost } from '@
 import { withRetry, withTimeout } from '@/lib/data/retry';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { withBreaker } from '@/lib/data/circuit-breaker';
+import { RECENCY_WINDOWS } from '@/lib/data/recency';
 
 /** D-38 — structured Twitter post matching the writer contract. */
 export interface TwitterPost {
@@ -102,7 +103,7 @@ function normalizeTwitterPost(p: XpozTwitterPost): TwitterPost {
  *
  * Defaults:
  *   - English only (`language: 'en'`)
- *   - 7-day window via `startDate` (ISO 8601)
+ *   - community-window via `startDate` (ISO 8601)
  *   - 25 results cap (ResponseType.Fast)
  *
  * Soft-fails to [] on adapter / SDK errors — the surrounding cron must never
@@ -113,7 +114,7 @@ export async function fetchTwitterCommunity(
   opts: { limit?: number; sinceDays?: number; companyName?: string | null } = {},
 ): Promise<TwitterPost[]> {
   if (!ticker) return [];
-  const sinceDays = opts.sinceDays ?? 7;
+  const sinceDays = opts.sinceDays ?? RECENCY_WINDOWS.community_days;
   const startDate = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
   try {
     return await withTelemetry('twitter-xpoz', () =>

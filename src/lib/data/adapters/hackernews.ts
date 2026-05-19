@@ -25,6 +25,7 @@ import { CACHE_KEYS, TTL_SECONDS } from '@/lib/data/cache/cache-keys';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withRetry } from '@/lib/data/retry';
+import { COMMUNITY_WINDOW_SECONDS } from '@/lib/data/recency';
 
 export const HN_SEARCH_ENDPOINT = 'https://hn.algolia.com/api/v1/search';
 
@@ -76,10 +77,10 @@ function statusError(prefix: string, status: number): Error & { status: number }
  * (`objectID` + `created_at_i`) and coerce the rest to safe defaults.
  */
 async function doFetchHNQuery(query: string): Promise<HNStory[]> {
-  const weekAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
+  const cutoff = Math.floor(Date.now() / 1000) - COMMUNITY_WINDOW_SECONDS;
   const url =
     `${HN_SEARCH_ENDPOINT}?query=${encodeURIComponent(query)}` +
-    `&tags=story&numericFilters=created_at_i>${weekAgo}&hitsPerPage=25`;
+    `&tags=story&numericFilters=created_at_i>${cutoff}&hitsPerPage=25`;
   const res = await fetch(url, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(8000),
@@ -126,7 +127,7 @@ async function doFetchHN(ticker: string, companyName?: string | null): Promise<H
 }
 
 /**
- * Fetch up to 25 HN stories matching `ticker` from the last 7 days.
+ * Fetch up to 25 HN stories matching `ticker` within the community recency window.
  *
  * Returns [] (graceful degrade — never throws) on:
  *   - HTTP 4xx (incl. 429 — no retry per D-25)

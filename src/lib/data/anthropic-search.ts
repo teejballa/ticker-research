@@ -15,6 +15,7 @@ import type {
 import type { SecurityType } from '@/lib/types';
 import { withBreaker } from '@/lib/data/circuit-breaker';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
+import { RECENCY_WINDOWS } from '@/lib/data/recency';
 
 const client = new Anthropic();
 // Anthropic SDK reads ANTHROPIC_API_KEY from process.env automatically.
@@ -39,7 +40,7 @@ function parseJsonFromResponse<T>(text: string): T | null {
   }
 }
 
-// DATA-03: Recent news headlines (past 30 days)
+// DATA-03: Recent news headlines (RECENCY_WINDOWS.news_days)
 export async function fetchNews(ticker: string, securityType: SecurityType = 'equity'): Promise<NewsSection> {
   const collected_at = new Date().toISOString();
 
@@ -49,11 +50,11 @@ export async function fetchNews(ticker: string, securityType: SecurityType = 'eq
   } else if (securityType === 'etf') {
     prompt = `Search for recent news about ${ticker} ETF. Focus specifically on: fund flows and AUM changes, index rebalancing events or composition changes, expense ratio changes, creation/redemption activity, tracking error or premium/discount to NAV. Return a JSON array of objects with fields: { "headline": string, "url": string, "published_date": "YYYY-MM-DD", "source": string }. Return an empty array [] if no relevant news is found.`;
   } else {
-    prompt = `Search for recent news headlines about ${ticker} stock from the past 30 days.
+    prompt = `Search for recent news headlines about ${ticker} stock from the past ${RECENCY_WINDOWS.news_days} days.
 Return a JSON array (no markdown, just raw JSON) of objects with these fields:
 { "headline": string, "url": string, "published_date": "YYYY-MM-DD", "source": string }
 Focus on: earnings reports, analyst upgrades/downgrades, product launches, regulatory events.
-Only include articles from the last 30 days with clear publication dates.
+Only include articles from the last ${RECENCY_WINDOWS.news_days} days with clear publication dates.
 Return an empty array [] if no relevant news is found.`;
   }
 
@@ -123,7 +124,7 @@ Return a JSON object (no markdown, raw JSON only):
   "analyst_count": number | null,
   "recent_changes": [{ "analyst": string, "firm": string, "action": string, "date": "YYYY-MM-DD" }]
 }
-Focus on: Wall Street consensus rating, average price target, recent upgrades/downgrades in the past 30 days.`;
+Focus on: Wall Street consensus rating, average price target, recent upgrades/downgrades in the past ${RECENCY_WINDOWS.news_days} days.`;
   }
 
   try {
