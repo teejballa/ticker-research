@@ -21,19 +21,21 @@ import { renderPrompt } from '@/lib/prompts/render';
 import { PromptVarMissingError } from '@/lib/prompts/render';
 
 describe('registry — getPrompt + listPrompts contract', () => {
-  it('getPrompt("gemini-research-brief-system") returns RegisteredPrompt with version v1, non-empty template, deprecated_at:null', () => {
+  it('getPrompt("gemini-research-brief-system") returns the latest non-deprecated version (v2), non-empty template, deprecated_at:null', () => {
     const p = getPrompt('gemini-research-brief-system');
     expect(p.id).toBe('gemini-research-brief-system');
-    expect(p.version).toBe('v1');
+    expect(p.version).toBe('v2');
     expect(p.template.length).toBeGreaterThan(0);
     expect(p.deprecated_at).toBeNull();
     expect(Array.isArray(p.variables)).toBe(true);
   });
 
-  it('getPrompt("gemini-research-brief-system", "v1") returns the same RegisteredPrompt as default', () => {
+  it('getPrompt("gemini-research-brief-system", "v1") returns the deprecated historical pin (not the default)', () => {
     const def = getPrompt('gemini-research-brief-system');
     const v1 = getPrompt('gemini-research-brief-system', 'v1');
-    expect(v1).toEqual(def);
+    expect(def.version).toBe('v2');
+    expect(v1.version).toBe('v1');
+    expect(v1.deprecated_at).not.toBeNull();
   });
 
   it('getPrompt("gemini-cove-pass1-instruction") returns v2 (latest non-deprecated)', () => {
