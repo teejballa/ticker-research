@@ -110,6 +110,16 @@ export interface EnrichedSnapshot extends SentimentDimensions {
   reddit_posts?: RedditPost[];
   hackernews_stories?: HNStory[];
   twitter_posts?: TwitterPost[];
+  /**
+   * Plan 30.1-05 follow-up (2026-05-19) — typed CommunityHighlight[] for the
+   * on-demand report path. Same array that previously fed
+   * `computeSentimentDimensions` in-process; now also returned so
+   * `/api/analysis/[ticker]/route.ts` can pass it through to
+   * `runGeminiAnalysis` without re-building. Fixes the regression where
+   * every production report rendered "Community sources unavailable"
+   * because the legacy stub returned [].
+   */
+  community_highlights?: CommunityHighlight[];
 }
 
 /**
@@ -344,6 +354,82 @@ export async function lightweightCommunityScan(
     reddit_posts,
     hackernews_stories,
     twitter_posts,
+    community_highlights: highlights,
+  };
+}
+
+/**
+ * Plan 30.1-05 follow-up (2026-05-19) — produce the shape consumed by
+ * `runGeminiAnalysis(ticker, pkg, communityData)` from a fresh
+ * `EnrichedSnapshot`. Fixes the regression where the on-demand report path
+ * called a stub returning `pageCount: 0`, rendering "Community sources
+ * unavailable" on every report regardless of what Reddit/Twitter/HN returned.
+ *
+ * `pinnedContent` (mainstream + middle community markdown) is the dominant
+ * Gemini input; `nicheContent` is the per-ticker-subreddit slice that gets
+ * separate treatment in `buildUserPrompt` for niche-specific signal.
+ */
+export function buildCommunityDataForLLM(
+  scan: EnrichedSnapshot | null,
+  ticker: string,
+): {
+  pinnedContent: string;
+  nicheContent: string;
+  nicheUrls: string[];
+  pageCount: number;
+  highlights: CommunityHighlight[];
+} {
+  if (!scan) {
+    return { pinnedContent: '', nicheContent: '', nicheUrls: [], pageCount: 0, highlights: [] };
+  }
+  const upper = ticker.toUpperCase();
+  const reddit = scan.reddit_posts ?? [];
+  const twitter = scan.twitter_posts ?? [];
+  const hn = scan.hackernews_stories ?? [];
+  const highlights = scan.community_highlights ?? [];
+
+  const nicheReddit = reddit.filter((p) => p.subreddit.toLowerCase() === upper.toLowerCase());
+  const mainstreamReddit = reddit.filter((p) => p.subreddit.toLowerCase() !== upper.toLowerCase());
+
+  const renderRedditPost = (p: RedditPost): string => {
+    const body = (p.selftext || '').slice(0, 280);
+    const url = `https://www.reddit.com${p.permalink}`;
+    return `**r/${p.subreddit}** — ${p.title} _(score ${p.score}, ${p.num_comments} comments)_\n${body ? body + '\n' : ''}${url}`;
+  };
+  const renderTwitterPost = (p: TwitterPost): string => {
+    const eng = p.like_count + p.retweet_count + p.reply_count;
+    return `**@${p.author}** _(engagement ${eng})_: ${p.text.slice(0, 280)}\n${p.url ?? ''}`.trim();
+  };
+  const renderHNStory = (s: HNStory): string => {
+    return `**HackerNews** — ${s.title} _(${s.points} points, ${s.num_comments} comments)_\n${s.url ?? `https://news.ycombinator.com/item?id=${s.objectID}`}`;
+  };
+
+  const pinnedBlocks: string[] = [];
+  if (mainstreamReddit.length > 0) {
+    pinnedBlocks.push('### Reddit (mainstream / middle subs)\n' + mainstreamReddit.slice(0, 10).map(renderRedditPost).join('\n\n'));
+  }
+  if (twitter.length > 0) {
+    pinnedBlocks.push('### Twitter\n' + twitter.slice(0, 10).map(renderTwitterPost).join('\n\n'));
+  }
+  if (hn.length > 0) {
+    pinnedBlocks.push('### HackerNews\n' + hn.slice(0, 10).map(renderHNStory).join('\n\n'));
+  }
+
+  const nicheBlocks: string[] = [];
+  const nicheUrls: string[] = [];
+  if (nicheReddit.length > 0) {
+    nicheBlocks.push(`### r/${upper}\n` + nicheReddit.slice(0, 10).map(renderRedditPost).join('\n\n'));
+    nicheUrls.push(...nicheReddit.slice(0, 10).map((p) => `https://www.reddit.com${p.permalink}`));
+  }
+
+  const pageCount = reddit.length + twitter.length + hn.length;
+
+  return {
+    pinnedContent: pinnedBlocks.join('\n\n'),
+    nicheContent: nicheBlocks.join('\n\n'),
+    nicheUrls,
+    pageCount,
+    highlights,
   };
 }
 
