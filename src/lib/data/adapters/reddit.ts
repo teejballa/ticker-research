@@ -132,7 +132,7 @@ function normalizeRedditPost(p: XpozRedditPost): RedditPost {
 export async function fetchRedditCommunity(
   ticker: string,
   subreddit: string,
-  opts: { limit?: number } = {},
+  opts: { limit?: number; companyName?: string | null } = {},
 ): Promise<RedditPost[]> {
   if (!ticker || !subreddit) return [];
   try {
@@ -141,7 +141,13 @@ export async function fetchRedditCommunity(
         withRetry(async () => {
           const client = await getClient();
           const upper = ticker.toUpperCase();
-          const q = `"$${upper}" OR "${upper} stock" OR "${upper} shares"`;
+          const name = opts.companyName ? opts.companyName.trim() : '';
+          // Expand the query to include company-name forms (e.g. "Apple stock")
+          // so a ticker like AAPL also surfaces posts that only mention "Apple".
+          // OR'd into the same Xpoz call — no extra request cost.
+          const tickerTerms = `"$${upper}" OR "${upper} stock" OR "${upper} shares"`;
+          const nameTerms = name ? ` OR "${name} stock" OR "${name} shares"` : '';
+          const q = tickerTerms + nameTerms;
           const result = await client.reddit.searchPosts(q, {
             subreddit,
             sort: 'new',
