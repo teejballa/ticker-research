@@ -68,6 +68,15 @@ model PriceOutcome {
   price       Float
   pct_change  Float
   recorded_at DateTime @db.Timestamptz
+  // Phase 21 — Sector-Relative Outcome Labels (additive, nullable).
+  // sector_etf: SPDR ETF code (XLK/XLF/XLE/XLV/XLY/XLP/XLI/XLU/XLB/XLRE/XLC) or 'SPY' fallback.
+  // SNAPSHOTTED AT PREDICTION TIME — never re-resolve at relabel time (avoids reconstitution drift).
+  // forward_return_raw: absolute pct_change with NO benchmark subtraction.
+  // forward_return_sector_rel: (ticker_return - sector_etf_return) over the same window.
+  // Existing pct_change column (alpha-vs-SPY) preserved as "vs market" secondary diagnostic.
+  sector_etf                String?
+  forward_return_raw        Float?
+  forward_return_sector_rel Float?
 
   report   Report?            @relation(fields: [report_id], references: [id])
   snapshot SentimentSnapshot? @relation(fields: [snapshot_id], references: [id])
