@@ -167,7 +167,7 @@ Plans:
 
 Plans:
 - [x] 21-0-01-PLAN.md — Wave 0: TDD red-phase scaffolding — SectorETF type union stub + 22+ failing vitest cases (sector-mapping × 13, relabel route × 5, classifyHit sector × 4) + 2 failing Playwright tests
-- [ ] 21-1-02-PLAN.md — Wave 1: Additive Prisma migration on PriceOutcome (sector_etf TEXT, forward_return_raw + forward_return_sector_rel DOUBLE PRECISION) + [BLOCKING] npx prisma db push + prisma generate
+- [x] 21-1-02-PLAN.md — Wave 1: Additive Prisma migration on PriceOutcome (sector_etf TEXT, forward_return_raw + forward_return_sector_rel DOUBLE PRECISION) + [BLOCKING] npx prisma db push + prisma generate
 - [ ] 21-1-03-PLAN.md — Wave 1: getSectorETF implementation — Yahoo quoteSummary lookup + 11 SPDR sectors map + SPY fallback + Phase 19-B-01 Upstash 24h cache; drives 13+ sector-mapping tests green
 - [ ] 21-2-04-PLAN.md — Wave 2: /api/cron/relabel one-shot idempotent backfill — Bearer CRON_SECRET, walks PriceOutcome WHERE sector_etf IS NULL, snapshot-at-prediction discipline via getSectorETF(asOfDate=analyzed_at), SPY-fallback path, scanned/labeled/skipped/fallback_to_spy counters; vercel.json schedule "15 6 * * *"; drives 5+ relabel route tests green
 - [ ] 21-2-05-PLAN.md — Wave 2: /api/cron/price-followup rewrite — writes all four columns (legacy pct_change + sector_etf + forward_return_raw + forward_return_sector_rel) on every new PriceOutcome via computeSectorLabels helper; back-compat pct_change preserved; live-Neon integration test gated by RUN_LIVE_INTEGRATION
