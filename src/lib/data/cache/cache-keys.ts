@@ -18,6 +18,8 @@ export const CACHE_KEYS = {
   source_pkg:   (ticker: string) => `pkg:${ticker.toUpperCase()}`,
   // Phase 21 — sector-relative outcome labels.
   sectorEtf:    (ticker: string) => `sector-etf:${ticker.toUpperCase()}`,
+  // Phase 21 — Sector ETF chart data, cached per (ETF, YYYY-MM).
+  sectorEtfChart: (etf: string, monthKey: string) => `sector-etf-chart:${etf}:${monthKey}`,
 } as const;
 
 export const TTL_SECONDS = {
@@ -36,4 +38,6 @@ export const TTL_SECONDS = {
   source_pkg: 600,      // 10min
   // Phase 21 — 24h; sectors change only on reconstitution events.
   sector_etf: 86_400,
+  // Phase 21 — historical ETF closes don't change; 30d TTL.
+  sector_etf_chart: 30 * 86_400,
 } as const;
