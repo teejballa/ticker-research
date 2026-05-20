@@ -146,6 +146,25 @@ Plans:
 - [x] 19-C-10: Cross-class contradiction detector (NLI on class posteriors) (completed 2026-05-09; detectContradictions runs NLI on 4-choose-2=6 pairs of class posteriors per D-42; severity threshold 0.3; warnings surfaced additively in EngineCalibrationPanel; DETECTION-ONLY mode permanent for Phase 19 — never gates report output; 6/6 unit tests GREEN; full vitest suite 577 passed; pre-19-C-08 NLI shim at src/lib/sentiment/nli-verifier.ts; shadow lifecycle deferred to operator)
 - [x] 19-C-11: Arctic Shift one-time historical Reddit backfill (training corpus)
 
+### Phase 21: Sector-Relative Outcome Labels
+**Goal**: Switch Cipher's primary outcome label from `alpha-vs-SPY` to `alpha-vs-sector-ETF`; keep SPY-alpha as a secondary "vs market" diagnostic. Driven by 4-agent research convergence (academic / practitioner / ML-finance / signal-specific) that SPY-alpha confounds signal information with sector beta — sector- or industry-relative returns are the consensus literature benchmark for the signals Cipher tracks (insider, institutional, sentiment, technical patterns).
+**Depends on**: Phase 19 (complete), Phase 17 (complete)
+**Requirements**: (none mapped — phase pre-dates the v2.0 REQ-ID catalog; success criteria below are normative)
+**Success Criteria** (what must be TRUE):
+  1. Prisma migration applied: `PriceOutcome` has `sector_etf` (TEXT), `forward_return_raw` (DOUBLE PRECISION), `forward_return_sector_rel` (DOUBLE PRECISION) columns; existing `pct_change` preserved for back-compat
+  2. `src/lib/data/sector-mapping.ts` maps `quoteSummary.sector` from yahoo-finance2 → SPDR sector ETF (XLK/XLF/XLE/XLV/XLY/XLP/XLI/XLU/XLB/XLRE/XLC); SPY fallback when sector unknown
+  3. Sector ETF is **snapshotted at prediction time** (written to `PriceOutcome.sector_etf` on row creation) to avoid reconstitution drift
+  4. One-shot `/api/cron/relabel` backfill walks every `PriceOutcome`, computes sector-relative return from cached prices, populates the new columns; idempotent; logs scanned/labeled/skipped counts
+  5. `/api/cron/price-followup` writes all three labels (raw / vs-SPY / vs-sector) on outcome creation going forward
+  6. `learning.isHit()` primary path uses `forward_return_sector_rel` (configurable threshold; default `+1%` or `k·σ_sector`); SPY-alpha reachable only as fallback when sector mapping unavailable
+  7. Full relearn pass via `/api/cron/learn` completes after backfill; `LearnedPattern.last_updated` advances for every cell with ≥1 outcome
+  8. `EngineCalibrationPanel` renders sector-relative as the headline number; SPY-alpha shown as smaller "vs market" diagnostic underneath
+  9. `/insights` Overview tab plain-English copy reads "beat its sector" (not "beat the S&P 500"); `EngineThesis.narrative` regenerated post-relearn
+  10. Vitest suite green; `tsc --noEmit` clean; Playwright e2e on `/research/[ticker]` and `/insights` green with both labels co-existing during migration
+  11. **Sanity check (not pass/fail):** aggregate hit-rates compress toward 0.5 (lower variance, wider credible intervals); direction of headline thesis does not invert
+  12. Explicit non-goals deferred (do NOT ship): rank-IC per cell, triple-barrier labels, hierarchical sector pooling, conformal intervals on returns, Lo-Mamaysky-Wang conditional-distribution chart-pattern evaluation
+**Plans**: TBD (this run)
+
 ---
 
 ## Phase Numbering
