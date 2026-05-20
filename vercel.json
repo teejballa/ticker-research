@@ -18,6 +18,7 @@
     { "path": "/api/cron/sentiment-scan", "schedule": "0 14 * * *" },
     { "path": "/api/cron/sentiment-scan", "schedule": "0 20 * * *" },
     { "path": "/api/cron/price-followup", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/relabel", "schedule": "15 6 * * *" },
     { "path": "/api/cron/learn", "schedule": "30 7 * * *" },
     { "path": "/api/cron/alpha-decay-watch", "schedule": "0 6 * * *" },
     { "path": "/api/cron/cost-budget-check", "schedule": "0 9 * * *" },
