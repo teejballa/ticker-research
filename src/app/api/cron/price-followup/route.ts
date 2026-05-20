@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import YahooFinance from 'yahoo-finance2';
+import { getSectorETF } from '@/lib/data/sector-mapping';
+import { fetchSectorETFReturn } from '@/lib/data/sector-prices';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -21,12 +23,75 @@ async function fetchPrice(ticker: string): Promise<number | null> {
   } catch { return null; }
 }
 
+/**
+ * Phase 21 — Sector-Relative Outcome Labels.
+ *
+ * UNIT CHOICE (BLOCKER-3 lock): every percent field in this module is in
+ * percentage-points (e.g. 2.34 means +2.34%). This matches the existing
+ * pct_change formula `((price - price_at_X) / price_at_X) * 100`. So
+ * `forward_return_raw === pct_change` for every row written here — the
+ * duplicated value is intentional: pct_change stays for back-compat
+ * (existing /api/insights and /api/cron/learn consumers read it),
+ * forward_return_raw is the semantically-clear column name going forward.
+ * SPY-alpha continues to be DERIVED at read time downstream in
+ * `classifyHit` — there is NO new stored SPY-relative column.
+ *
+ * Fallback ladder:
+ *   1. getSectorETF returns the SPDR ETF (or 'SPY' sentinel) for the ticker
+ *      at prediction time, honoring the 2018-09-28 reconstitution override.
+ *   2. fetchSectorETFReturn returns the ETF's pct return over the window.
+ *   3. If sector return is null → fetch SPY return as a fallback.
+ *   4. If BOTH null → write sector_etf='SPY' + forward_return_sector_rel=null
+ *      and let the relabel cron retry on the next sweep.
+ */
+async function computeSectorLabels(args: {
+  ticker: string;
+  fromDate: Date;
+  toDate: Date;
+  absoluteReturnPct: number;
+}): Promise<{
+  sector_etf: string;
+  forward_return_raw: number;
+  forward_return_sector_rel: number | null;
+  fallback: boolean;
+}> {
+  const sectorEtf = await getSectorETF({ ticker: args.ticker, asOfDate: args.fromDate });
+  const sectorReturn = await fetchSectorETFReturn(sectorEtf, args.fromDate, args.toDate);
+  if (sectorReturn != null) {
+    return {
+      sector_etf: sectorEtf,
+      forward_return_raw: args.absoluteReturnPct,
+      forward_return_sector_rel: args.absoluteReturnPct - sectorReturn,
+      fallback: false,
+    };
+  }
+  // Sector ETF prices unavailable — fall back to SPY.
+  const spyReturn = await fetchSectorETFReturn('SPY', args.fromDate, args.toDate);
+  if (spyReturn == null) {
+    // Neither sector nor SPY available — write SPY sentinel + null relative.
+    // /api/cron/relabel will retry on subsequent sweeps via a follow-up
+    // WHERE forward_return_sector_rel IS NULL filter (v1.1 enhancement).
+    return {
+      sector_etf: 'SPY',
+      forward_return_raw: args.absoluteReturnPct,
+      forward_return_sector_rel: null,
+      fallback: true,
+    };
+  }
+  return {
+    sector_etf: 'SPY',
+    forward_return_raw: args.absoluteReturnPct,
+    forward_return_sector_rel: args.absoluteReturnPct - spyReturn,
+    fallback: true,
+  };
+}
+
 export async function GET(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const results = { outcomes_recorded: 0, skipped: 0, failed: 0 };
+  const results = { outcomes_recorded: 0, skipped: 0, failed: 0, sector_fallback_to_spy: 0 };
   // Phase 16: window widened from 15d to 95d so we still see snapshots/reports
   // that are 90 days old (90d horizon + 0.6d slack + safety).
   const windowMs = 95 * 24 * 60 * 60 * 1000;
@@ -44,13 +109,25 @@ export async function GET(request: NextRequest) {
       if (report.outcomes.some(o => o.days_after === day)) { results.skipped++; continue; }
       const price = await fetchPrice(report.ticker);
       if (!price || !report.price_at_report) { results.failed++; continue; }
+      // percentage-points unit: 2.34 means +2.34%. pct_change and forward_return_raw share this exact value.
+      const absoluteReturnPct = ((price - report.price_at_report) / report.price_at_report) * 100;
+      const sectorLabels = await computeSectorLabels({
+        ticker: report.ticker,
+        fromDate: report.analyzed_at,
+        toDate: new Date(),
+        absoluteReturnPct,
+      });
+      if (sectorLabels.fallback) results.sector_fallback_to_spy++;
       await prisma.priceOutcome.create({
         data: {
           report_id: report.id,
           days_after: day,
           price,
-          pct_change: ((price - report.price_at_report) / report.price_at_report) * 100,
+          pct_change: absoluteReturnPct,
           recorded_at: new Date(),
+          sector_etf: sectorLabels.sector_etf,
+          forward_return_raw: sectorLabels.forward_return_raw,
+          forward_return_sector_rel: sectorLabels.forward_return_sector_rel,
         },
       });
       results.outcomes_recorded++;
@@ -74,13 +151,25 @@ export async function GET(request: NextRequest) {
       if (snap.outcomes.some(o => o.days_after === day)) { results.skipped++; continue; }
       const price = await fetchPrice(snap.ticker);
       if (!price) { results.failed++; continue; }
+      // percentage-points unit: 2.34 means +2.34%. pct_change and forward_return_raw share this exact value.
+      const absoluteReturnPct = ((price - snap.price_at_scan) / snap.price_at_scan) * 100;
+      const sectorLabels = await computeSectorLabels({
+        ticker: snap.ticker,
+        fromDate: snap.scanned_at,
+        toDate: new Date(),
+        absoluteReturnPct,
+      });
+      if (sectorLabels.fallback) results.sector_fallback_to_spy++;
       await prisma.priceOutcome.create({
         data: {
           snapshot_id: snap.id,
           days_after: day,
           price,
-          pct_change: ((price - snap.price_at_scan) / snap.price_at_scan) * 100,
+          pct_change: absoluteReturnPct,
           recorded_at: new Date(),
+          sector_etf: sectorLabels.sector_etf,
+          forward_return_raw: sectorLabels.forward_return_raw,
+          forward_return_sector_rel: sectorLabels.forward_return_sector_rel,
         },
       });
       results.outcomes_recorded++;
