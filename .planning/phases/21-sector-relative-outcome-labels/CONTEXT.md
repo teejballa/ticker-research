@@ -103,8 +103,14 @@ because it credits sector beta as signal skill.
    - `sector_etf` (TEXT) — the ETF used at prediction time
    - `forward_return_raw` (DOUBLE PRECISION) — absolute pct_change
    - `forward_return_sector_rel` (DOUBLE PRECISION) — alpha vs sector ETF
-   - Existing `pct_change` (currently alpha-vs-SPY) stays for backward
-     compatibility and becomes the "vs market" secondary diagnostic.
+   - Existing `pct_change` (which is the **absolute** forward return —
+     `(price - price_at_X) / price_at_X * 100`; SPY-alpha is computed
+     downstream in `classifyHit()` at decision time) stays for back-compat.
+     `forward_return_raw` is its forward-going twin (same value, semantically
+     clearer name). SPY-alpha continues to be derived at read time from
+     `pct_change` minus a contemporaneous SPY return — there is NO stored
+     SPY-alpha column. The "vs market (SPY)" diagnostic in 21-4-07 computes
+     SPY-alpha on the fly via the same SPY-return lookup `classifyHit` uses.
 
 2. **Ticker → sector ETF map** — `src/lib/data/sector-mapping.ts`:
    - Pulls `quoteSummary.sector` from yahoo-finance2
