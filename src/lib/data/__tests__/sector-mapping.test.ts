@@ -1,143 +1,168 @@
 // src/lib/data/__tests__/sector-mapping.test.ts
 //
-// Phase 21 — Sector-Relative Outcome Labels (21-0-01 TDD red-phase scaffolding).
+// Phase 21 — Sector-Relative Outcome Labels.
 //
-// Every it() block currently fails with "Not implemented" because the stub in
-// src/lib/data/sector-mapping.ts throws. 21-1-03 implements getSectorETF with
-// yahoo-finance2 + Upstash cache + the 2018-09-28 GICS reconstitution override
-// table, at which point every test in this file flips to green.
+// Plan 21-0-01 wrote the red-phase scaffolding (all tests failed with
+// 'Not implemented'). Plan 21-1-03 wires per-test vi.mock for the
+// yahoo-finance2 module so the 11 sector mappings + SPY fallback + 6
+// META/GOOGL reconstitution-override cases + cache-hit semantics all
+// resolve green against the real getSectorETF implementation.
 //
-// Coverage:
-//   • 11 SPDR sector mappings (Test 1–11)
-//   • Null/unknown sector → SPY fallback (Test 12)
-//   • asOfDate sector-reconstitution drift — META XLK→XLC on 2018-09-28 cutover
-//     (Test 13a pre, 13b on-cutover, 13c day-after, 13d sticky-post, 13e
-//     no-date-defaults-today)
-//   • GOOGL cutover case (Test 13f) — same 2018-09-28 Telecom→Comm-Services event
-//   • Cache-hit smoke test (Test 14) — second call does not re-issue Yahoo fetch
+// Mocking strategy:
+//   • Single shared `mockQuoteSummary = vi.fn()` is installed by
+//     vi.mock('yahoo-finance2') at module load. Each test arms exactly
+//     one mockResolvedValueOnce / mockRejectedValueOnce before invoking
+//     getSectorETF — guarantees cross-test isolation.
+//   • Upstash cache cleared between tests via
+//     __resetUpstashClientForTests() so cache hits from prior cases
+//     don't leak into the next ticker.
+//   • SECTOR_RECONSTITUTIONS override cases (META/GOOGL with asOfDate)
+//     intentionally do NOT install a mock — the test then asserts
+//     `mockQuoteSummary` was NEVER called. This proves the override
+//     path executes before any Yahoo lookup.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// `vi.hoisted` ensures mockQuoteSummary exists before vi.mock's factory runs
+// (vi.mock is hoisted above all imports; without vi.hoisted the mock factory
+// would reference an undefined `mockQuoteSummary`).
+const { mockQuoteSummary } = vi.hoisted(() => ({ mockQuoteSummary: vi.fn() }));
+
+vi.mock('yahoo-finance2', () => ({
+  default: class {
+    quoteSummary = mockQuoteSummary;
+  },
+}));
+
+// Use the Phase 30 in-memory Upstash mock so the cache-hit test actually
+// observes a hit between two getSectorETF calls (real upstash.ts no-ops
+// without UPSTASH env vars, which would defeat the cache-hit assertion).
+vi.mock('@/lib/data/cache/upstash', async () =>
+  import('@/lib/data/cache/__mocks__/upstash'),
+);
+
+import { __resetUpstashClientForTests } from '@/lib/data/cache';
 import { getSectorETF, type SectorETF } from '../sector-mapping';
 
 describe('getSectorETF', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockQuoteSummary.mockReset();
+    __resetUpstashClientForTests();
   });
 
-  // ─── Test 1–11: 11 SPDR sector mappings ─────────────────────────────────
+  // ─── 11 SPDR sector mappings (Yahoo → ETF) ──────────────────────────────
 
   it('maps AAPL to XLK (Technology)', async () => {
-    const etf = await getSectorETF({ ticker: 'AAPL' });
-    expect(etf).toBe('XLK' satisfies SectorETF);
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Technology' } });
+    expect(await getSectorETF({ ticker: 'AAPL' })).toBe('XLK' satisfies SectorETF);
   });
 
   it('maps JPM to XLF (Financials)', async () => {
-    const etf = await getSectorETF({ ticker: 'JPM' });
-    expect(etf).toBe('XLF' satisfies SectorETF);
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Financial Services' } });
+    expect(await getSectorETF({ ticker: 'JPM' })).toBe('XLF' satisfies SectorETF);
   });
 
   it('maps XOM to XLE (Energy)', async () => {
-    const etf = await getSectorETF({ ticker: 'XOM' });
-    expect(etf).toBe('XLE' satisfies SectorETF);
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Energy' } });
+    expect(await getSectorETF({ ticker: 'XOM' })).toBe('XLE' satisfies SectorETF);
   });
 
-  it('maps UNH to XLV (Health Care)', async () => {
-    const etf = await getSectorETF({ ticker: 'UNH' });
-    expect(etf).toBe('XLV' satisfies SectorETF);
+  it('maps UNH to XLV (Healthcare)', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Healthcare' } });
+    expect(await getSectorETF({ ticker: 'UNH' })).toBe('XLV' satisfies SectorETF);
   });
 
-  it('maps AMZN to XLY (Consumer Discretionary)', async () => {
-    const etf = await getSectorETF({ ticker: 'AMZN' });
-    expect(etf).toBe('XLY' satisfies SectorETF);
+  it('maps AMZN to XLY (Consumer Cyclical)', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Consumer Cyclical' } });
+    expect(await getSectorETF({ ticker: 'AMZN' })).toBe('XLY' satisfies SectorETF);
   });
 
-  it('maps PG to XLP (Consumer Staples)', async () => {
-    const etf = await getSectorETF({ ticker: 'PG' });
-    expect(etf).toBe('XLP' satisfies SectorETF);
+  it('maps PG to XLP (Consumer Defensive)', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Consumer Defensive' } });
+    expect(await getSectorETF({ ticker: 'PG' })).toBe('XLP' satisfies SectorETF);
   });
 
   it('maps CAT to XLI (Industrials)', async () => {
-    const etf = await getSectorETF({ ticker: 'CAT' });
-    expect(etf).toBe('XLI' satisfies SectorETF);
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Industrials' } });
+    expect(await getSectorETF({ ticker: 'CAT' })).toBe('XLI' satisfies SectorETF);
   });
 
   it('maps NEE to XLU (Utilities)', async () => {
-    const etf = await getSectorETF({ ticker: 'NEE' });
-    expect(etf).toBe('XLU' satisfies SectorETF);
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Utilities' } });
+    expect(await getSectorETF({ ticker: 'NEE' })).toBe('XLU' satisfies SectorETF);
   });
 
-  it('maps LIN to XLB (Materials)', async () => {
-    const etf = await getSectorETF({ ticker: 'LIN' });
-    expect(etf).toBe('XLB' satisfies SectorETF);
+  it('maps LIN to XLB (Basic Materials)', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Basic Materials' } });
+    expect(await getSectorETF({ ticker: 'LIN' })).toBe('XLB' satisfies SectorETF);
   });
 
   it('maps AMT to XLRE (Real Estate)', async () => {
-    const etf = await getSectorETF({ ticker: 'AMT' });
-    expect(etf).toBe('XLRE' satisfies SectorETF);
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Real Estate' } });
+    expect(await getSectorETF({ ticker: 'AMT' })).toBe('XLRE' satisfies SectorETF);
   });
 
-  it('maps GOOGL to XLC (Communication Services)', async () => {
-    const etf = await getSectorETF({ ticker: 'GOOGL' });
-    expect(etf).toBe('XLC' satisfies SectorETF);
+  it('maps GOOGL (no asOfDate, today) to XLC (Communication Services)', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Communication Services' } });
+    expect(await getSectorETF({ ticker: 'GOOGL' })).toBe('XLC' satisfies SectorETF);
   });
 
-  // ─── Test 12: SPY fallback when sector is null/unknown ──────────────────
+  // ─── SPY fallback (null sector + thrown error) ──────────────────────────
 
-  it('falls back to SPY when sector is null/unknown', async () => {
-    const etf = await getSectorETF({ ticker: 'XYZUNKNOWN_FAKE_TICKER' });
-    expect(etf).toBe('SPY' satisfies SectorETF);
+  it('falls back to SPY when summary.sector is null/missing', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: {} });
+    expect(await getSectorETF({ ticker: 'XYZUNKNOWN_FAKE_TICKER' })).toBe('SPY' satisfies SectorETF);
   });
 
-  // ─── Test 13a–f: asOfDate reconstitution-drift handling ─────────────────
+  it('falls back to SPY when yf.quoteSummary throws', async () => {
+    mockQuoteSummary.mockRejectedValueOnce(new Error('404 Not Found'));
+    expect(await getSectorETF({ ticker: 'ANOTHER_UNKNOWN' })).toBe('SPY' satisfies SectorETF);
+  });
+
+  // ─── Reconstitution-override cases (asOfDate provided; NO Yahoo call) ──
   //
-  // The 2018-09-28 GICS reconstitution moved META, GOOGL, GOOG, NFLX, DIS, T,
-  // and VZ out of "Technology / Telecom" into the new "Communication Services"
-  // sector. XLK indexing of these names stops EOD 2018-09-28; XLC indexing
-  // begins 2018-09-29.
+  // The 2018-09-28 GICS reconstitution moved META, GOOGL, GOOG, NFLX, DIS,
+  // T, and VZ out of "Technology / Consumer Discretionary" into the new
+  // "Communication Services" sector. XLK/XLY indexing of these names stops
+  // EOD 2018-09-28; XLC indexing begins 2018-09-29.
 
-  it('respects asOfDate for sector reconstitution drift — META pre-2018-09-28 → XLK', async () => {
-    const etf = await getSectorETF({ ticker: 'META', asOfDate: new Date('2017-01-01') });
-    expect(etf).toBe('XLK' satisfies SectorETF);
+  it('respects asOfDate — META pre-2018-09-28 → XLK via override (no Yahoo call)', async () => {
+    expect(await getSectorETF({ ticker: 'META', asOfDate: new Date('2017-01-01') })).toBe('XLK');
+    expect(mockQuoteSummary).not.toHaveBeenCalled();
   });
 
-  it('respects asOfDate — META ON the 2018-09-28 cutover day → XLK (last day of XLK indexing)', async () => {
-    const etf = await getSectorETF({ ticker: 'META', asOfDate: new Date('2018-09-28') });
-    expect(etf).toBe('XLK' satisfies SectorETF);
+  it('respects asOfDate — META ON the 2018-09-28 cutover day → XLK via override (last day of XLK indexing)', async () => {
+    expect(await getSectorETF({ ticker: 'META', asOfDate: new Date('2018-09-28') })).toBe('XLK');
+    expect(mockQuoteSummary).not.toHaveBeenCalled();
   });
 
-  it('respects asOfDate — META 2018-09-29 (XLC indexing begins) → XLC', async () => {
-    const etf = await getSectorETF({ ticker: 'META', asOfDate: new Date('2018-09-29') });
-    expect(etf).toBe('XLC' satisfies SectorETF);
+  it('respects asOfDate — META 2018-09-29 → XLC via override (XLC indexing begins)', async () => {
+    expect(await getSectorETF({ ticker: 'META', asOfDate: new Date('2018-09-29') })).toBe('XLC');
+    expect(mockQuoteSummary).not.toHaveBeenCalled();
   });
 
-  it('respects asOfDate — META 2019-01-01 → XLC (post-reconstitution sticky)', async () => {
-    const etf = await getSectorETF({ ticker: 'META', asOfDate: new Date('2019-01-01') });
-    expect(etf).toBe('XLC' satisfies SectorETF);
+  it('respects asOfDate — META 2019-01-01 → XLC via override (post-reconstitution sticky)', async () => {
+    expect(await getSectorETF({ ticker: 'META', asOfDate: new Date('2019-01-01') })).toBe('XLC');
+    expect(mockQuoteSummary).not.toHaveBeenCalled();
   });
 
-  it('no asOfDate → today classification via quoteSummary.sector — META → XLC', async () => {
-    const etf = await getSectorETF({ ticker: 'META' });
-    expect(etf).toBe('XLC' satisfies SectorETF);
+  it('no asOfDate → today classification via Yahoo — META → XLC (override skipped without asOfDate)', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Communication Services' } });
+    expect(await getSectorETF({ ticker: 'META' })).toBe('XLC');
+    expect(mockQuoteSummary).toHaveBeenCalledTimes(1);
   });
 
-  it('GOOGL on 2018-09-28 cutover → XLK (same Telecom→Comm-Services event)', async () => {
-    const etf = await getSectorETF({ ticker: 'GOOGL', asOfDate: new Date('2018-09-28') });
-    expect(etf).toBe('XLK' satisfies SectorETF);
+  it('GOOGL on 2018-09-28 cutover → XLK via override (same Telecom→Comm-Services event)', async () => {
+    expect(await getSectorETF({ ticker: 'GOOGL', asOfDate: new Date('2018-09-28') })).toBe('XLK');
+    expect(mockQuoteSummary).not.toHaveBeenCalled();
   });
 
-  // ─── Test 14: Cache-hit smoke (21-1-03 wires full vi.mock) ──────────────
+  // ─── Cache-hit: second call does not re-fetch from Yahoo ────────────────
 
-  it('caches per-ticker lookup (second call does not re-fetch from Yahoo)', async () => {
-    // 21-1-03 will replace this body with full vi.mock('yahoo-finance2') wiring:
-    //   const yahooSpy = vi.fn().mockResolvedValue({ summaryProfile: { sector: 'Technology' } });
-    //   await getSectorETF({ ticker: 'AAPL' });
-    //   await getSectorETF({ ticker: 'AAPL' });
-    //   expect(yahooSpy).toHaveBeenCalledTimes(1);
-    //
-    // For now, the raw call below throws "Not implemented" (the stub),
-    // confirming red phase. expect(true).toBe(true) below never executes.
-    await getSectorETF({ ticker: 'AAPL' });
-    await getSectorETF({ ticker: 'AAPL' });
-    expect(true).toBe(true);
+  it('caches per-ticker — second call does not re-fetch from Yahoo', async () => {
+    mockQuoteSummary.mockResolvedValueOnce({ summaryProfile: { sector: 'Technology' } });
+    await getSectorETF({ ticker: 'AAPL_CACHE_PROBE' });
+    await getSectorETF({ ticker: 'AAPL_CACHE_PROBE' });
+    expect(mockQuoteSummary).toHaveBeenCalledTimes(1);
   });
 });
