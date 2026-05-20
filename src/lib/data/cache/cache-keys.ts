@@ -16,6 +16,8 @@ export const CACHE_KEYS = {
   community:    (ticker: string) => `comm:${ticker.toUpperCase()}`,
   news:         (ticker: string) => `news:${ticker.toUpperCase()}`,
   source_pkg:   (ticker: string) => `pkg:${ticker.toUpperCase()}`,
+  // Phase 21 — sector-relative outcome labels.
+  sectorEtf:    (ticker: string) => `sector-etf:${ticker.toUpperCase()}`,
 } as const;
 
 export const TTL_SECONDS = {
@@ -32,4 +34,6 @@ export const TTL_SECONDS = {
   community: 600,       // 10min
   news: 1_800,          // 30min
   source_pkg: 600,      // 10min
+  // Phase 21 — 24h; sectors change only on reconstitution events.
+  sector_etf: 86_400,
 } as const;
