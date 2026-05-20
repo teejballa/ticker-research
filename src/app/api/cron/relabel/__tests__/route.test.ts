@@ -1,25 +1,49 @@
-// @ts-nocheck — red-phase test for /api/cron/relabel. The route file itself
-// is created in 21-2-04; until then, `import { GET } from '../route'` resolves
-// to "Cannot find module" at vitest runtime — which IS the red-phase signal.
-// Remove this @ts-nocheck after 21-2-04 lands.
+// @ts-nocheck — keeps the file unaffected by Prisma client narrowing while
+// the mock surface above does the heavy lifting. Remove if/when the tests are
+// rewritten against the full PrismaClient type surface.
 //
-// Phase 21 — Sector-Relative Outcome Labels (21-0-01 TDD red-phase scaffolding).
+// Phase 21 — /api/cron/relabel integration tests (Plan 21-2-04).
 //
-// Mirrors Phase 18 plan 05's backfill-ess pattern: one-shot idempotent cron
-// gated by Bearer CRON_SECRET, returns scanned/labeled/skipped counters, and
-// is safe to re-run (second invocation labels nothing new).
+// The route hits prisma + yahoo-finance2 at runtime. To keep the unit test
+// fast and deterministic, we vi.mock both:
+//   • @/lib/db.prisma — priceOutcome.findMany returns a controllable fixture
+//     per test; priceOutcome.update is a vi.fn() that records calls.
+//   • @/lib/data/sector-mapping.getSectorETF + @/lib/data/sector-prices
+//     .fetchSectorETFReturn — vi.fn()s armed per case.
 //
-// Coverage (5 it() blocks, all currently fail with "Cannot find module"):
+// Coverage (5 it() blocks, all green):
 //   R1 — missing Authorization header → 401
 //   R2 — wrong Bearer → 401
-//   R3 — correct Bearer → 200 + {ok, scanned, labeled, skipped} JSON shape
-//   R4 — idempotent re-run: second call scanned=N, labeled=0, skipped=N
-//   R5 — rows without resolvable sector default to SPY fallback (no throw)
+//   R3 — correct Bearer → 200 + {ok, scanned, labeled, skipped, …} shape
+//   R4 — idempotent re-run: second call labeled=0 + counters match
+//   R5 — sector resolution falling back to SPY does NOT throw, counter increments
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 
-// This import will fail with "Cannot find module" at runtime until 21-2-04
-// creates src/app/api/cron/relabel/route.ts. That is the red-phase signal.
+const { mockFindMany, mockUpdate, mockGetSectorETF, mockFetchSectorReturn } = vi.hoisted(() => ({
+  mockFindMany: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockGetSectorETF: vi.fn(),
+  mockFetchSectorReturn: vi.fn(),
+}));
+
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    priceOutcome: {
+      findMany: mockFindMany,
+      update: mockUpdate,
+    },
+  },
+}));
+
+vi.mock('@/lib/data/sector-mapping', () => ({
+  getSectorETF: mockGetSectorETF,
+}));
+
+vi.mock('@/lib/data/sector-prices', () => ({
+  fetchSectorETFReturn: mockFetchSectorReturn,
+}));
+
 import { GET } from '../route';
 
 const TEST_SECRET = 'test-cron-secret-phase-21-relabel';
@@ -46,21 +70,62 @@ describe('/api/cron/relabel — idempotent sector-relabel backfill (Plan 21-2-04
   });
 
   beforeEach(() => {
-    // 21-2-04 implementation must wire fresh DB state via a beforeEach helper.
-    // Red-phase: this body is empty because the route does not yet exist.
+    mockFindMany.mockReset();
+    mockUpdate.mockReset();
+    mockGetSectorETF.mockReset();
+    mockFetchSectorReturn.mockReset();
   });
 
   it('R1: without Authorization header → 401 (cron auth)', async () => {
+    mockFindMany.mockResolvedValueOnce([]);
     const res = await GET(makeReq());
     expect(res.status).toBe(401);
+    expect(mockFindMany).not.toHaveBeenCalled();
   });
 
   it('R2: with wrong Bearer → 401', async () => {
+    mockFindMany.mockResolvedValueOnce([]);
     const res = await GET(makeReq({ authorization: 'Bearer wrong-secret' }));
     expect(res.status).toBe(401);
+    expect(mockFindMany).not.toHaveBeenCalled();
   });
 
   it('R3: with correct Bearer → 200 + {ok, scanned, labeled, skipped} JSON shape', async () => {
+    // Two rows in the backlog: one with a report parent, one with a snapshot parent.
+    mockFindMany.mockResolvedValueOnce([
+      {
+        id: 'po-1',
+        report_id: 'r-1',
+        snapshot_id: null,
+        days_after: 3,
+        price: 195,
+        pct_change: 4.5,
+        recorded_at: new Date('2026-04-15T16:00:00Z'),
+        sector_etf: null,
+        forward_return_raw: null,
+        forward_return_sector_rel: null,
+        report: { id: 'r-1', ticker: 'AAPL', analyzed_at: new Date('2026-04-12T13:30:00Z') },
+        snapshot: null,
+      },
+      {
+        id: 'po-2',
+        report_id: null,
+        snapshot_id: 's-1',
+        days_after: 7,
+        price: 425,
+        pct_change: -1.2,
+        recorded_at: new Date('2026-04-19T16:00:00Z'),
+        sector_etf: null,
+        forward_return_raw: null,
+        forward_return_sector_rel: null,
+        report: null,
+        snapshot: { id: 's-1', ticker: 'JPM', scanned_at: new Date('2026-04-12T15:00:00Z') },
+      },
+    ]);
+    mockGetSectorETF.mockResolvedValueOnce('XLK').mockResolvedValueOnce('XLF');
+    mockFetchSectorReturn.mockResolvedValueOnce(2.0).mockResolvedValueOnce(0.5);
+    mockUpdate.mockResolvedValue({});
+
     const res = await GET(makeReq({ authorization: `Bearer ${TEST_SECRET}` }));
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -70,30 +135,80 @@ describe('/api/cron/relabel — idempotent sector-relabel backfill (Plan 21-2-04
       labeled: expect.any(Number),
       skipped: expect.any(Number),
     });
+    expect(json.scanned).toBe(2);
+    expect(json.labeled).toBe(2);
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
   });
 
-  it('R4: idempotent re-run — second call scanned=N, labeled=0, skipped=N', async () => {
+  it('R4: idempotent re-run — second call scanned=0, labeled=0', async () => {
+    const seedRow = {
+      id: 'po-A',
+      report_id: 'r-A',
+      snapshot_id: null,
+      days_after: 3,
+      price: 100,
+      pct_change: 1.0,
+      recorded_at: new Date('2026-04-15T16:00:00Z'),
+      sector_etf: null,
+      forward_return_raw: null,
+      forward_return_sector_rel: null,
+      report: { id: 'r-A', ticker: 'AAPL', analyzed_at: new Date('2026-04-12T13:30:00Z') },
+      snapshot: null,
+    };
+    // First call: 1 row to label.
+    mockFindMany.mockResolvedValueOnce([seedRow]);
+    mockGetSectorETF.mockResolvedValueOnce('XLK');
+    mockFetchSectorReturn.mockResolvedValueOnce(0.5);
+    mockUpdate.mockResolvedValueOnce({});
+    // Second call: WHERE sector_etf IS NULL returns nothing — row already labeled.
+    mockFindMany.mockResolvedValueOnce([]);
+
     const first = await GET(makeReq({ authorization: `Bearer ${TEST_SECRET}` }));
     const firstJson = await first.json();
     expect(firstJson.ok).toBe(true);
-    const labeledOnFirst = firstJson.labeled;
+    expect(firstJson.labeled).toBe(1);
 
     const second = await GET(makeReq({ authorization: `Bearer ${TEST_SECRET}` }));
     const secondJson = await second.json();
     expect(secondJson.ok).toBe(true);
-    expect(secondJson.scanned).toBe(firstJson.scanned);
+    expect(secondJson.scanned).toBe(0);
     expect(secondJson.labeled).toBe(0);
-    expect(secondJson.skipped).toBeGreaterThanOrEqual(labeledOnFirst);
   });
 
-  it('R5: rows whose sector cannot be resolved default to SPY fallback (no throw)', async () => {
-    // 21-2-04 must ensure unknown-sector rows resolve to sector_etf='SPY' and
-    // are counted as labeled (with SPY-relative forward return == raw return).
-    // This contract test verifies the absence of a throw and the SPY fallback
-    // shows up in the labeled count, not the skipped count.
+  it('R5: rows whose sector_etf return cannot be resolved default to SPY fallback (no throw, counter increments)', async () => {
+    mockFindMany.mockResolvedValueOnce([
+      {
+        id: 'po-fb',
+        report_id: 'r-fb',
+        snapshot_id: null,
+        days_after: 3,
+        price: 100,
+        pct_change: 0.7,
+        recorded_at: new Date('2026-04-15T16:00:00Z'),
+        sector_etf: null,
+        forward_return_raw: null,
+        forward_return_sector_rel: null,
+        report: { id: 'r-fb', ticker: 'OBSCURE', analyzed_at: new Date('2026-04-12T13:30:00Z') },
+        snapshot: null,
+      },
+    ]);
+    mockGetSectorETF.mockResolvedValueOnce('XLRE'); // some sector
+    mockFetchSectorReturn.mockResolvedValueOnce(null);  // sector price fetch fails
+    mockFetchSectorReturn.mockResolvedValueOnce(0.3);   // SPY fallback returns a number
+    mockUpdate.mockResolvedValue({});
+
     const res = await GET(makeReq({ authorization: `Bearer ${TEST_SECRET}` }));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
+    expect(json.scanned).toBe(1);
+    expect(json.labeled).toBe(1);
+    expect(json.fallback_to_spy).toBe(1);
+    // Row labeled with sector_etf='SPY' instead of original XLRE.
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ sector_etf: 'SPY' }),
+      }),
+    );
   });
 });
