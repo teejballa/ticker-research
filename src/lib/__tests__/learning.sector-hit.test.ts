@@ -1,8 +1,6 @@
-// @ts-nocheck — red-phase tests against 21-3-06's extended classifyHit signature.
-// Remove this @ts-nocheck after 21-3-06 lands (which widens classifyHit to accept
-// sector_relative_pct + nullable spy_return_pct).
-//
-// Phase 21 — Sector-Relative Outcome Labels (21-0-01 TDD red-phase scaffolding).
+// Phase 21 — Sector-Relative Outcome Labels.
+// Green as of 21-3-06: classifyHit widened to accept sector_relative_pct +
+// nullable spy_return_pct + optional sector_sigma/k σ-driven threshold.
 //
 // The current classifyHit signature (src/lib/learning.ts:95) is:
 //   classifyHit({ ticker_return_pct, spy_return_pct, threshold_pct? }): boolean
@@ -63,5 +61,29 @@ describe('classifyHit (sector-relative primary, 21-3-06 extended signature)', ()
       threshold_pct: 1,
     });
     expect(hit).toBe(false);
+  });
+
+  // WARNING-1 — k·σ_sector volatility-aware threshold path.
+
+  it('uses k·σ_sector threshold when sector_sigma + k provided (1.8σ-alpha > 1.2σ gate → hit)', () => {
+    const hit = classifyHit({
+      ticker_return_pct: 5,
+      spy_return_pct: 3,
+      sector_relative_pct: 1.8,   // 1.8% sector alpha
+      sector_sigma: 1.2,          // sector stdev = 1.2%
+      k: 1,                       // 1-σ gate → threshold = 1.2
+    });
+    expect(hit).toBe(true); // 1.8 > 1.2
+  });
+
+  it('uses k·σ_sector threshold when sector_sigma + k provided (1.0σ-alpha < 1.2σ gate → miss)', () => {
+    const hit = classifyHit({
+      ticker_return_pct: 5,
+      spy_return_pct: 3,
+      sector_relative_pct: 1.0,   // 1.0% sector alpha
+      sector_sigma: 1.2,          // sector stdev = 1.2%
+      k: 1,                       // 1-σ gate → threshold = 1.2
+    });
+    expect(hit).toBe(false); // 1.0 < 1.2
   });
 });

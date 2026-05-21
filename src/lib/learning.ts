@@ -92,12 +92,44 @@ export function driftZ(args: {
   return (posteriorMean(args.rolling) - p) / se;
 }
 
+/**
+ * Phase 21 — Sector-Relative Outcome Labels.
+ *
+ * Primary path: `sector_relative_pct > threshold`. Use this when the
+ * outcome row has been labeled by /api/cron/relabel or written by the
+ * post-21-2-05 /api/cron/price-followup.
+ *
+ * Fallback path (legacy alpha-vs-SPY): `(ticker_return_pct - spy_return_pct) > threshold`.
+ * Used when sector_relative_pct is null (rows pre-dating Phase 21 backfill,
+ * or where /api/cron/relabel could not retrieve sector ETF prices).
+ *
+ * Threshold resolution (WARNING-1 fix — k·σ_sector enabling path):
+ * - If BOTH `sector_sigma` (positive) AND `k` are supplied → threshold = `k * sector_sigma`.
+ *   This is the volatility-aware gate; callers can wire a 60-day rolling stdev of
+ *   sector ETF daily returns to make "1-σ move" the hit criterion instead of a flat ±1%.
+ * - Otherwise → threshold = `threshold_pct ?? 1` (existing default; preserves
+ *   v1 behavior when σ-source isn't passed).
+ *
+ * Safety: when both sector_relative_pct AND spy_return_pct are null,
+ * returns false (no-data → safe default; the engine treats the outcome
+ * as a miss rather than throwing or guessing).
+ */
 export function classifyHit(args: {
   ticker_return_pct: number;
-  spy_return_pct: number;
+  spy_return_pct: number | null;
+  sector_relative_pct?: number | null;
+  sector_sigma?: number | null;   // optional: σ of sector ETF returns over the horizon
+  k?: number;                     // optional: σ-multiplier; default 1
   threshold_pct?: number;
 }): boolean {
-  const threshold = args.threshold_pct ?? 1;
+  const k = args.k ?? 1;
+  const threshold = args.sector_sigma != null && args.sector_sigma > 0
+    ? k * args.sector_sigma
+    : (args.threshold_pct ?? 1);
+  if (args.sector_relative_pct != null) {
+    return args.sector_relative_pct > threshold;
+  }
+  if (args.spy_return_pct == null) return false;
   return (args.ticker_return_pct - args.spy_return_pct) > threshold;
 }
 
