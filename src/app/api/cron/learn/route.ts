@@ -166,6 +166,9 @@ interface ResolvedOutcome {
   price_at_scan: number;
   price_at_outcome: number;
   ticker_return_pct: number;
+  // Phase 21 — sector-relative label fields (null when row pre-dates backfill).
+  sector_relative_pct: number | null;
+  sector_etf: string | null;
   source: 'report' | 'snapshot';
   source_id: string;
   snapshot_id: string | null;
@@ -202,6 +205,9 @@ async function loadUnprocessedOutcomes(opts: { isBackfill: boolean }): Promise<R
         price_at_scan: o.snapshot.price_at_scan,
         price_at_outcome: o.price,
         ticker_return_pct: o.pct_change,
+        // Phase 21 — sector-relative label fields (null when row pre-dates backfill).
+        sector_relative_pct: o.forward_return_sector_rel,
+        sector_etf: o.sector_etf,
         source: 'snapshot',
         source_id: o.snapshot.id,
         snapshot_id: o.snapshot.id,
@@ -218,6 +224,9 @@ async function loadUnprocessedOutcomes(opts: { isBackfill: boolean }): Promise<R
         price_at_scan: priceAt,
         price_at_outcome: o.price,
         ticker_return_pct: o.pct_change,
+        // Phase 21 — sector-relative label fields (null when row pre-dates backfill).
+        sector_relative_pct: o.forward_return_sector_rel,
+        sector_etf: o.sector_etf,
         source: 'report',
         source_id: o.report.id,
         snapshot_id: null,
@@ -941,7 +950,11 @@ async function processOneOutcome(
     return result;
   }
   const spyReturn = ((spyAtOutcome - spyAtScan) / spyAtScan) * 100;
-  const hit = classifyHit({ ticker_return_pct: outcome.ticker_return_pct, spy_return_pct: spyReturn });
+  const hit = classifyHit({
+    ticker_return_pct: outcome.ticker_return_pct,
+    spy_return_pct: spyReturn,
+    sector_relative_pct: outcome.sector_relative_pct,
+  });
   result.hit = hit;
 
   await prisma.$transaction(async (tx) => {
@@ -1112,7 +1125,7 @@ async function processOneOutcome(
           insider_bucket: insiderBucket,
           institutional_bucket: institutionalBucket,
         },
-        message: `${outcome.ticker} @${horizon}d: ${hit ? 'HIT' : 'MISS'} — ticker ${outcome.ticker_return_pct.toFixed(2)}% vs SPY ${spyReturn.toFixed(2)}% [flow=${trace?.flow_pattern ?? '–'} / tech=${techPattern ?? '–'} / insider=${insiderBucket ?? '–'} / inst=${institutionalBucket ?? '–'}]`,
+        message: `${outcome.ticker} @${horizon}d: ${hit ? 'HIT' : 'MISS'} — ticker ${outcome.ticker_return_pct.toFixed(2)}% vs SPY ${spyReturn.toFixed(2)}% / vs ${outcome.sector_etf ?? 'sector–'} ${outcome.sector_relative_pct?.toFixed(2) ?? '–'}% [flow=${trace?.flow_pattern ?? '–'} / tech=${techPattern ?? '–'} / insider=${insiderBucket ?? '–'} / inst=${institutionalBucket ?? '–'}]`,
       },
     });
   });
