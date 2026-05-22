@@ -554,6 +554,24 @@ export interface EngineCalibration {
   // OR null until 19-A-04 cron writes them).
   conformal_low?: number | null;
   conformal_high?: number | null;
+
+  // ── Phase 21 (21-4-07) — Sector-relative headline + SPY-alpha diagnostic ──
+  // The engine now grades calibration against the ticker's SECTOR ETF, not SPY
+  // (Phase 21 keystone). These fields drive the EngineCalibrationPanel headline
+  // ("Calibration vs. sector (XLK)") and the smaller "vs market (SPY-alpha,
+  // derived)" diagnostic tile. All OPTIONAL — old persisted reports lack them
+  // and must still typecheck + render (UI falls back to the legacy "market"
+  // headline when primary_sector_etf is undefined).
+  //
+  // primary_sector_etf: SPDR ETF code (XLK/…/SPY) the calibration is graded
+  //   against. Sourced from the most-recent labeled PriceOutcome (WARNING-2).
+  // primary_sector_etf_is_current: true when cold-start used TODAY's sector
+  //   rather than a historically-anchored one — UI shows "sector (current)".
+  // spy_alpha_hit_rate: legacy "vs market" hit rate, DERIVED ON THE FLY
+  //   (BLOCKER-3) — never a stored column. Null when no rows resolve.
+  primary_sector_etf?: string | null;
+  primary_sector_etf_is_current?: boolean;
+  spy_alpha_hit_rate?: number | null;
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----

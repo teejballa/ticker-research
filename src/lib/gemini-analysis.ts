@@ -1157,6 +1157,14 @@ async function generateAnalysis(
         institutional_ess:     engineCtx.institutional_ess,
         insider_ess:           engineCtx.insider_ess,
         logistic_ess:          engineCtx.logistic_ess,
+
+        // ── Phase 21 (21-4-07) — sector-relative headline + SPY-alpha diagnostic ──
+        // Authoritative numerics/categoricals — written by the engine, NEVER by
+        // the LLM (the LLM never sees these fields). Mirrors the ESS overwrite
+        // pattern above. Drive the panel headline + "vs market" tile.
+        primary_sector_etf:            engineCtx.primary_sector_etf,
+        primary_sector_etf_is_current: engineCtx.primary_sector_etf_is_current,
+        spy_alpha_hit_rate:            engineCtx.spy_alpha_hit_rate,
       };
     }
 

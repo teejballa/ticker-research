@@ -104,6 +104,9 @@ import { lightweightCommunityScan } from './data/lightweight-community-scan';
 import { computeTechnicalSnapshot } from './data/technical';
 import { fetchInsiderData } from './data/insider';
 import { fetchInstitutionalData } from './data/institutional';
+// Phase 21 (21-4-07) — sector-relative headline + SPY-alpha "vs market" diagnostic.
+import { getSectorETF } from './data/sector-mapping';
+import { computeSpyAlphaHitRate } from './data/spy-alpha';
 import type { TechPattern, TechnicalSnapshot, HorizonCalibration, InsiderSnapshot, InstitutionalSnapshot, InsiderBucket, InstitutionalBucket } from './types';
 // ─── Plan 19-C-10 (D-42) — Cross-class contradiction detector (DETECTION-ONLY) ──
 //
@@ -246,6 +249,20 @@ export interface EngineContext {
   // STILL detection-only. Flag removal does NOT change behavior; gating
   // mode is OUT OF SCOPE for Phase 19.
   contradiction_warnings: string[];
+
+  // ── Phase 21 (21-4-07) — Sector-relative headline + SPY-alpha diagnostic ──
+  // primary_sector_etf: the SPDR ETF code (XLK/XLF/…/SPY) the calibration is
+  //   graded against. Resolved from the MOST-RECENT labeled PriceOutcome's
+  //   sector_etf (WARNING-2) so the panel headline matches what the engine
+  //   actually learned from. Cold start (no labeled rows yet) falls back to
+  //   getSectorETF({ ticker }) — today's sector — and sets
+  //   primary_sector_etf_is_current=true so the UI labels it "sector (current)"
+  //   instead of pretending the prior is historically anchored.
+  // spy_alpha_hit_rate: the LEGACY "vs market" hit rate, DERIVED ON THE FLY
+  //   (BLOCKER-3) — never read from a stored column. Null when no rows resolve.
+  primary_sector_etf: string | null;
+  primary_sector_etf_is_current: boolean;
+  spy_alpha_hit_rate: number | null;
 }
 
 function sigmoid(z: number): number {
@@ -924,6 +941,43 @@ export async function getEngineContextForTicker(
     }
   }
 
+  // ── Phase 21 (21-4-07) — resolve the sector-relative headline ETF (WARNING-2)
+  // + the legacy SPY-alpha "vs market" diagnostic (BLOCKER-3). ──────────────
+  //
+  // WARNING-2: use the MOST-RECENT labeled PriceOutcome's snapshotted sector_etf
+  // so the headline matches what the engine actually graded against. NO silent
+  // hardcode-current fallback — cold start uses today's sector but flags it.
+  let primary_sector_etf: string | null = null;
+  let primary_sector_etf_is_current = false;
+  try {
+    const mostRecentOutcome = await prisma.priceOutcome.findFirst({
+      where: { report: { ticker: upperTicker } },
+      orderBy: { recorded_at: 'desc' },
+      select: { sector_etf: true },
+    });
+    primary_sector_etf = mostRecentOutcome?.sector_etf ?? null;
+    if (!primary_sector_etf) {
+      // Cold start — no labeled PriceOutcome rows for this ticker yet. Resolve
+      // TODAY's sector (no asOfDate) but mark it so the UI is honest about the
+      // prior NOT being historically anchored.
+      primary_sector_etf = await getSectorETF({ ticker: upperTicker });
+      primary_sector_etf_is_current = true;
+    }
+  } catch {
+    // Never fail the report render because the sector lookup failed.
+    primary_sector_etf = null;
+    primary_sector_etf_is_current = false;
+  }
+
+  // BLOCKER-3: SPY-alpha hit rate is DERIVED ON THE FLY from absolute returns
+  // minus the contemporaneous SPY return — never from a stored SPY column.
+  let spy_alpha_hit_rate: number | null = null;
+  try {
+    spy_alpha_hit_rate = await computeSpyAlphaHitRate(upperTicker);
+  } catch {
+    spy_alpha_hit_rate = null;
+  }
+
   return {
     flow_pattern,
     cap_class,
@@ -1009,6 +1063,11 @@ export async function getEngineContextForTicker(
 
     // ── Phase 19 Plan 19-C-10 (D-42) — DETECTION-ONLY warnings (additive) ───
     contradiction_warnings,
+
+    // ── Phase 21 (21-4-07) — sector-relative headline + SPY-alpha diagnostic ─
+    primary_sector_etf,
+    primary_sector_etf_is_current,
+    spy_alpha_hit_rate,
   };
 }
 

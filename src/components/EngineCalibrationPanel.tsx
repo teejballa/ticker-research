@@ -914,12 +914,34 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
     // DETECTION-ONLY mode per D-42 — warnings are informational; report output is NOT gated by them.
     // Upgrading to gating mode requires a separate plan and explicit decision.
     contradiction_warnings,
-  } = calibration;
+    // Phase 21 (21-4-07) — sector-relative headline + SPY-alpha "vs market" diagnostic.
+    primarySectorEtf = null,
+    primarySectorEtfIsCurrent = false,
+    spyAlphaHitRate = null,
+  } = {
+    ...calibration,
+    primarySectorEtf: calibration.primary_sector_etf,
+    primarySectorEtfIsCurrent: calibration.primary_sector_etf_is_current,
+    spyAlphaHitRate: calibration.spy_alpha_hit_rate,
+  };
 
   // Phase 17 gate: quad-class layout requires populated horizon_calibrations.
   // Old persisted reports (no horizon_calibrations) take the legacy single-column path.
   const showQuadClass = (horizon_calibrations?.length ?? 0) >= 1;
   const agreementState: AgreementState = agreement ?? 'unknown';
+
+  // ── Phase 21 (21-4-07) — headline benchmark resolution ────────────────────
+  // The engine now grades calibration against the ticker's SECTOR ETF (Phase 21
+  // keystone). The headline names that ETF; SPY-alpha is retained as a smaller
+  // "vs market (SPY-alpha, derived)" diagnostic so both framings co-exist during
+  // the migration window. When sector data is absent OR the sector resolves to
+  // SPY (the fallback sentinel), the headline collapses to the legacy "market
+  // (SPY)" wording and the secondary tile is suppressed (no duplicate info).
+  const hasSectorBenchmark = !!primarySectorEtf && primarySectorEtf !== 'SPY';
+  const headlineBenchmark = hasSectorBenchmark
+    ? (primarySectorEtfIsCurrent ? 'sector (current)' : `sector (${primarySectorEtf})`)
+    : 'market (SPY)';
+  const showSpyAlphaTile = hasSectorBenchmark && spyAlphaHitRate != null;
 
   return (
     <section
@@ -935,12 +957,30 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
             psychology
           </span>
           <div>
+            {/* Phase 21 (21-4-07) — PRIMARY headline names the sector ETF the
+                engine grades against. Falls back to "market (SPY)" when no
+                sector benchmark is available (old reports / SPY sentinel). */}
             <h3 className="text-[11px] font-bold tracking-widest uppercase text-tertiary">
-              Calibration vs. S&amp;P 500
+              Calibration vs. {headlineBenchmark}
             </h3>
             <p className="text-[12px] text-on-surface-variant mt-0.5 leading-snug max-w-xl">
-              Historical alpha for four independent signal classes on this ticker, and confidence in each.
+              Historical sector-relative alpha for four independent signal classes on this ticker, and confidence in each.
             </p>
+            {/* SECONDARY (smaller, dimmer) — legacy SPY-alpha "vs market"
+                diagnostic. DERIVED on the fly (BLOCKER-3), never a stored
+                column. Both framings co-exist during the migration window;
+                suppressed when the sector benchmark already IS SPY. */}
+            {showSpyAlphaTile && (
+              <div
+                data-testid="spy-alpha-diagnostic"
+                className="mt-2 flex items-baseline gap-2 text-[10px] font-mono text-on-surface-variant/70 tracking-wide"
+                title="Legacy benchmark, retained as a migration diagnostic. Derived on the fly: the ticker's absolute return minus the contemporaneous SPY return over the same window — not a stored column."
+              >
+                <span className="tracking-widest uppercase">vs market (SPY-alpha, derived)</span>
+                <span className="opacity-50">·</span>
+                <span className="tabular-nums">Hit rate: {spyAlphaHitRate!.toFixed(2)}</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-mono text-on-surface-variant tracking-widest uppercase shrink-0">

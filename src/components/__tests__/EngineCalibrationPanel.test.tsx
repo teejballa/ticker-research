@@ -42,11 +42,70 @@ describe('EngineCalibrationPanel', () => {
   it('renders cycle count, pattern, cap class, and ACTIVE badge', () => {
     render(<EngineCalibrationPanel calibration={ACTIVE_CALIBRATION} />);
     expect(screen.getByTestId('engine-calibration-panel')).toBeTruthy();
-    expect(screen.getByText(/Calibration vs\. S&P 500/)).toBeTruthy();
+    expect(screen.getByText(/Calibration vs\. (sector|market)/i)).toBeTruthy();
     expect(screen.getByText('Cycle 47')).toBeTruthy();
     expect(screen.getByText(/NICHE LEADS/)).toBeTruthy();
     expect(screen.getByText(/LARGE CAP/)).toBeTruthy();
     expect(screen.getByText('ACTIVE')).toBeTruthy();
+  });
+
+  // ── Phase 21 (21-4-07) — sector-relative headline + SPY-alpha diagnostic ──
+
+  it('renders headline "Calibration vs. market (SPY)" when no sector data is present', () => {
+    render(<EngineCalibrationPanel calibration={ACTIVE_CALIBRATION} />);
+    expect(screen.getByText(/Calibration vs\. market \(SPY\)/i)).toBeTruthy();
+  });
+
+  it('shows anchored label "sector (XLK)" when primary_sector_etf_is_current is false', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      primary_sector_etf: 'XLK',
+      primary_sector_etf_is_current: false,
+      spy_alpha_hit_rate: 0.54,
+    }} />);
+    expect(screen.getByText(/sector \(XLK\)/)).toBeTruthy();
+  });
+
+  it('shows cold-start honesty label "sector (current)" when primary_sector_etf_is_current is true', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      primary_sector_etf: 'XLK',
+      primary_sector_etf_is_current: true,
+    }} />);
+    expect(screen.getByText(/sector \(current\)/i)).toBeTruthy();
+  });
+
+  it('renders secondary "vs market (SPY-alpha, derived)" tile when sector is non-SPY', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      primary_sector_etf: 'XLK',
+      primary_sector_etf_is_current: false,
+      spy_alpha_hit_rate: 0.54,
+    }} />);
+    expect(screen.getByText(/SPY-alpha, derived/i)).toBeTruthy();
+    expect(screen.getByText(/0\.54/)).toBeTruthy();
+  });
+
+  it('omits the secondary SPY-alpha tile when sector resolves to SPY (fallback case)', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      primary_sector_etf: 'SPY',
+      spy_alpha_hit_rate: 0.54,
+    }} />);
+    expect(screen.queryByText(/SPY-alpha, derived/i)).toBeNull();
+    // Headline collapses to the legacy "market (SPY)" wording when sector === SPY.
+    expect(screen.getByText(/Calibration vs\. market \(SPY\)/i)).toBeTruthy();
+  });
+
+  it('omits the secondary SPY-alpha tile when spy_alpha_hit_rate is null even for a non-SPY sector', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      primary_sector_etf: 'XLK',
+      primary_sector_etf_is_current: false,
+      spy_alpha_hit_rate: null,
+    }} />);
+    expect(screen.getByText(/sector \(XLK\)/)).toBeTruthy();
+    expect(screen.queryByText(/SPY-alpha, derived/i)).toBeNull();
   });
 
   it('renders engine prior 71% with credible interval and sample size', () => {

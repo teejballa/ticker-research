@@ -117,6 +117,10 @@ function buildEngineCtx(overrides: Partial<EngineContext> = {}): EngineContext {
     // Phase 19-A-03 (D-19) — Conformal CI surface (null until 19-A-04 cron writes them).
     conformal_low: null,
     conformal_high: null,
+    // Phase 21 (21-4-07) — sector-relative headline + SPY-alpha diagnostic.
+    primary_sector_etf: null,
+    primary_sector_etf_is_current: false,
+    spy_alpha_hit_rate: null,
     ...overrides,
   };
 }
