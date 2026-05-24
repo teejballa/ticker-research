@@ -703,14 +703,18 @@ export function InsightsDashboard() {
         const families = data.thesis.families ?? [];
         const topFam = families.find(f => f.signal_class === data.thesis.top_family) ?? null;
         const headline = buildOverviewHeadline(families, data.thesis.top_family);
-        return <>
+        return (
+          // WARNING-4 (21-4-07): the Overview tab is a named landmark so the
+          // landmark-scoped Playwright spec can assert "beat its sector" lives
+          // INSIDE the Overview region (not a body-tail grep).
+          <section role="region" aria-label="Overview">
           {/* Plain-English intro — the page leads with what this thing actually is */}
           <section className="mb-12 max-w-3xl">
             <h1 className="text-on-surface text-3xl md:text-4xl font-black tracking-tight mb-4">
               What Cipher has learned so far
             </h1>
             <p className="text-on-surface-variant text-base md:text-lg leading-relaxed">
-              Cipher watches specific kinds of activity around a stock — chart patterns, online community chatter, insider trades, and big-fund flows — and then records what the price actually did afterwards. The numbers below describe the links it has found between those signals and how the stock moved, learned from real recorded outcomes.
+              Cipher watches specific kinds of activity around a stock — chart patterns, online community chatter, insider trades, and big-fund flows — and then records what the price actually did afterwards. The numbers below grade each call by whether the stock beat its sector in the 7- or 30-day window after the signal — sector-relative, not just absolute — learned from real recorded outcomes.
             </p>
           </section>
 
@@ -835,7 +839,8 @@ export function InsightsDashboard() {
               ))}
             </div>
           </section>
-        </>;
+          </section>
+        );
       })()}
 
       {/* ─────────────────────── Tabs 1 + 2: existing scroll layout ─────────────────────── */}
@@ -1014,7 +1019,7 @@ export function InsightsDashboard() {
               </h2>
               <p className="text-on-surface-variant text-xs mt-2 max-w-2xl leading-relaxed">
                 Each cell shows the engine&apos;s posterior probability that a given diffusion pattern
-                produces &gt;1% excess return vs SPY over 7 days, conditioned on the ticker&apos;s
+                produces &gt;1% excess return vs its sector ETF over 7 days, conditioned on the ticker&apos;s
                 market-cap class. Updated automatically every cycle.
               </p>
             </div>
@@ -1889,7 +1894,7 @@ function TechnicalPatternLibrarySection({
         </h2>
         <p className="text-on-surface-variant text-xs mt-2 max-w-3xl leading-relaxed">
           Each cell shows the engine&apos;s posterior probability that a given technical pattern
-          produces &gt;1% excess return vs SPY at the selected horizon, conditioned on the ticker&apos;s
+          produces &gt;1% excess return vs its sector ETF at the selected horizon, conditioned on the ticker&apos;s
           market-cap class. 8 TechPatterns × 3 cap_classes × 6 horizons = 144 cells.
         </p>
         <p className="text-on-surface-variant text-xs mt-3 max-w-3xl leading-relaxed">
@@ -2125,7 +2130,7 @@ function SmartMoneyPatternLibrarySection({
         </h2>
         <p className="text-on-surface-variant text-xs mt-2 max-w-3xl leading-relaxed">
           {subtitle} Each cell shows the engine&apos;s posterior probability that the pattern
-          produces &gt;1% excess return vs SPY at the selected horizon, conditioned on market-cap class.
+          produces &gt;1% excess return vs its sector ETF at the selected horizon, conditioned on market-cap class.
           8 buckets × 3 cap_classes × 6 horizons = 144 cells.
         </p>
         <p className="text-on-surface-variant text-xs mt-3 max-w-3xl leading-relaxed">

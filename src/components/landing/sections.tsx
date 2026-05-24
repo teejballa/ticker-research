@@ -58,7 +58,7 @@ export function PipelineSection() {
     {
       key: '03', id: 'p03', tag: 'Step · 03', label: 'Report',
       desc: 'A structured memo: recommendation with confidence, forward outlook with price-target context, and every claim linked to its source.',
-      tokens: ['CALIBRATION', 'VS_SPY', 'BACKTEST'],
+      tokens: ['CALIBRATION', 'VS_SECTOR', 'BACKTEST'],
       illust: <MemoIcon size={96} />,
     },
   ];
@@ -335,7 +335,7 @@ export function SampleReport() {
                 </div>
               </div>
               <div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: '6px' }}>vs. S&amp;P 500 · 12mo</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: '6px' }}>vs. sector · 12mo</div>
                 <div style={{ fontFamily: 'var(--display)', fontSize: '30px', color: 'var(--teal)' }}>+4.8 pp</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--ink-3)' }}>Back-tested · n=148</div>
               </div>
@@ -351,7 +351,7 @@ export function SampleReport() {
 export function HowItWorks() {
   const features = [
     { k: 'f1', icon: 'S/E', h: 'Primary sources, not summaries.', p: 'Cipher reads 10-Ks, 10-Qs, 8-Ks, and earnings transcripts directly. Bull and bear points cite the exact filing they came from.', toks: ['SEC_EDGAR', 'YAHOO_FINANCE'] },
-    { k: 'f2', icon: '± / σ', h: 'Calibrated against the market.', p: 'Each recommendation carries a confidence level back-tested against the S&P 500 — so a "bullish" call comes with its historical hit rate.', toks: ['CALIBRATION', 'VS_SPY'] },
+    { k: 'f2', icon: '± / σ', h: 'Calibrated against its sector.', p: 'Each recommendation carries a confidence level back-tested against its sector ETF — so a "bullish" call comes with its historical sector-relative hit rate.', toks: ['CALIBRATION', 'VS_SECTOR'] },
     { k: 'f3', icon: 'Δ /∇', h: 'Sentiment with receipts.', p: "We don't just count positive words. Cipher applies FinBERT and Loughran-McDonald to filings and call transcripts, with per-aspect aggregation.", toks: ['FINBERT', 'L-M', 'PER_ASPECT'] },
     { k: 'f4', icon: '</>', h: 'Auditable end-to-end.', p: 'Every model card, every dataset card, every calibration cron — published. Read the math, not just the recommendation.', toks: ['MODEL_CARDS', 'DATASET_CARDS'] },
   ];

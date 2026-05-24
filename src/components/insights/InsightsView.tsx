@@ -156,8 +156,8 @@ export default function InsightsView({ patternsSlot }: { patternsSlot: ReactNode
         </div>
         <h1 className="h-display" style={{ marginBottom: '14px' }}>How we&apos;re <em>doing.</em></h1>
         <p className="lede">
-          Cipher&apos;s live track record by signal class: how each pattern has performed against the
-          S&amp;P 500, with credible intervals and out-of-sample Brier scores.
+          Cipher&apos;s live track record by signal class: how often each pattern beat its sector,
+          with credible intervals and out-of-sample Brier scores.
         </p>
       </div>
 

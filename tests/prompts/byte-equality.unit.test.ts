@@ -164,7 +164,7 @@ describe('byte-equality — registry render matches legacy inline string', () =>
       drift_alerts: String(stats.drift_alerts),
       cells_active: String(stats.cells_active),
     });
-    const legacy = `Write a single-sentence research-log entry summarizing today's diffusion engine cycle. Do not use bullet points. Stats: ${stats.outcomes_processed} new outcomes resolved across all horizons, ${stats.hits} were hits (>1% excess vs SPY), ${stats.drift_alerts} drift alerts triggered, ${stats.cells_active} pattern cells currently ACTIVE. Keep under 30 words. Plain text, no quotes.`;
+    const legacy = `Write a single-sentence research-log entry summarizing today's diffusion engine cycle. Do not use bullet points. Stats: ${stats.outcomes_processed} new outcomes resolved across all horizons, ${stats.hits} beat their sector by >1% (sector-relative), ${stats.drift_alerts} drift alerts triggered, ${stats.cells_active} pattern cells currently ACTIVE. Keep under 30 words. Plain text, no quotes.`;
     expect(rendered).toBe(legacy);
   });
 
@@ -319,8 +319,9 @@ explaining that the engine has no prior to defer to (≤300 chars).
 ═══ ENGINE CALIBRATION CONTEXT ═══
 
 Cipher's self-supervised learning engine has accumulated ${ctx.cycle_count}
-cycles of evidence about how sentiment-diffusion patterns predict 7-day
-returns vs SPY (excess > +1%). For this ticker right now:
+cycles of evidence about how sentiment-diffusion patterns predict whether a
+ticker beats its sector (sector-relative excess > +1%) over 7 days. For this
+ticker right now:
 
   Pattern detected:    ${ctx.flow_pattern} × ${ctx.cap_class}
   Engine prior:        ${pct(ctx.posterior_mean)} [CI ${pct(ctx.ci_low)}–${pct(ctx.ci_high)}]
