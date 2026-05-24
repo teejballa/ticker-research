@@ -12,6 +12,10 @@ export default defineConfig({
     // from the fast unit run for the same reason (Phase 18 Wave 0 cron stubs).
     exclude: [
       'tests/e2e/**',
+      // tests/playwright/** are @playwright/test specs run via `npm run test:e2e`,
+      // not vitest — exclude so vitest doesn't mis-collect them (they import
+      // '@playwright/test', which throws under the vitest runner).
+      'tests/playwright/**',
       'tests/integration/**',
       'node_modules/**',
       '.claude/**',

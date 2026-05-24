@@ -582,7 +582,7 @@ function QuadClassPanel({
             subValue: posterior_mean != null
               ? `[${formatPct(ci_low)}–${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}`
               : essOrN(effective_sample_size, sample_size),
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this diffusion pattern × cap class produces a 7-day return >1% above SPY.',
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this diffusion pattern × cap class produces a 7-day return >1% above its sector ETF.',
           }}
           card2={{
             label: 'Logistic Score',
@@ -621,7 +621,7 @@ function QuadClassPanel({
             subValue: technical_posterior_mean != null
               ? `${formatCi(technical_ci ?? null)} · ${essOrN(technical_ess, technical_sample_size ?? 0)}`
               : essOrN(technical_ess, technical_sample_size ?? 0),
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this technical pattern × cap class produces a 30d return >1% above SPY.',
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this technical pattern × cap class produces a 30d return >1% above its sector ETF.',
           }}
           card2={{
             label: 'Combined Logistic',
@@ -653,7 +653,7 @@ function QuadClassPanel({
             subValue: institutional_posterior_mean != null
               ? `${formatCi(institutional_ci ?? null)} · ${essOrN(institutional_ess, institutional_sample_size ?? 0)}`
               : instIsNoData ? 'No recent filings' : essOrN(institutional_ess, institutional_sample_size ?? 0),
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this institutional pattern × cap class produces a 30d return >1% above SPY.',
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this institutional pattern × cap class produces a 30d return >1% above its sector ETF.',
           }}
           card2={{
             label: 'Inst. Sample',
@@ -685,7 +685,7 @@ function QuadClassPanel({
             subValue: insider_posterior_mean != null
               ? `${formatCi(insider_ci ?? null)} · ${essOrN(insider_ess, insider_sample_size ?? 0)}`
               : insdIsNoData ? 'No recent filings' : essOrN(insider_ess, insider_sample_size ?? 0),
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this insider pattern × cap class produces a 30d return >1% above SPY.',
+            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this insider pattern × cap class produces a 30d return >1% above its sector ETF.',
           }}
           card2={{
             label: 'Insider Sample',
@@ -867,7 +867,7 @@ function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibrationWit
           label="Engine Prior"
           value={formatPct(posterior_mean)}
           subValue={posterior_mean != null ? `[${formatPct(ci_low)} – ${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}` : essOrN(effective_sample_size, sample_size)}
-          tooltip="Bayesian Beta-Bernoulli posterior probability that this pattern × cap class produces a 7-day return >1% above SPY. The 95% credible interval shows the engine's uncertainty given effective sample size."
+          tooltip="Bayesian Beta-Bernoulli posterior probability that this pattern × cap class produces a 7-day return >1% above its sector ETF. The 95% credible interval shows the engine's uncertainty given effective sample size."
         />
         <MetricCard
           label="Logistic Score"
