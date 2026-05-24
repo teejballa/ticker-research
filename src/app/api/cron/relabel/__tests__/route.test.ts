@@ -1,7 +1,3 @@
-// @ts-nocheck — keeps the file unaffected by Prisma client narrowing while
-// the mock surface above does the heavy lifting. Remove if/when the tests are
-// rewritten against the full PrismaClient type surface.
-//
 // Phase 21 — /api/cron/relabel integration tests (Plan 21-2-04).
 //
 // The route hits prisma + yahoo-finance2 at runtime. To keep the unit test
@@ -19,6 +15,7 @@
 //   R5 — sector resolution falling back to SPY does NOT throw, counter increments
 
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+import type { NextRequest } from 'next/server';
 
 const { mockFindMany, mockUpdate, mockGetSectorETF, mockFetchSectorReturn } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
@@ -48,13 +45,16 @@ import { GET } from '../route';
 
 const TEST_SECRET = 'test-cron-secret-phase-21-relabel';
 
-function makeReq(opts: { authorization?: string } = {}): Request {
+function makeReq(opts: { authorization?: string } = {}): NextRequest {
   const headers = new Headers();
   if (opts.authorization) headers.set('authorization', opts.authorization);
+  // The route only reads `.headers`; a plain Request satisfies that surface.
+  // Cast to NextRequest so the GET(request: NextRequest) call sites type-check
+  // without pulling in the full NextRequest constructor.
   return new Request('http://test.local/api/cron/relabel', {
     method: 'GET',
     headers,
-  });
+  }) as unknown as NextRequest;
 }
 
 describe('/api/cron/relabel — idempotent sector-relabel backfill (Plan 21-2-04)', () => {
