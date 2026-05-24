@@ -994,7 +994,7 @@ export function InsightsDashboard() {
           <StepCard
             n="03"
             title="Verify"
-            body="3, 7, and 14 days later, fetch the actual price. Compare to SPY. Was the prediction right or wrong?"
+            body="3, 7, and 14 days later, fetch the actual price. Compare to its sector. Was the prediction right or wrong?"
             tone="tertiary"
           />
           <StepCard

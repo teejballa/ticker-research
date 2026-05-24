@@ -53,11 +53,11 @@ function familyLabel(sc: string): string {
 }
 
 function pctVerb(mean: number): string {
-  if (mean >= 0.58) return 'reliably beats the S&P';
-  if (mean >= 0.52) return 'edges out the S&P';
-  if (mean >= 0.48) return 'tracks the S&P roughly evenly';
-  if (mean >= 0.42) return 'tends to underperform the S&P';
-  return 'consistently lags the S&P';
+  if (mean >= 0.58) return 'reliably beats its sector';
+  if (mean >= 0.52) return 'edges out its sector';
+  if (mean >= 0.48) return 'tracks its sector roughly evenly';
+  if (mean >= 0.42) return 'tends to underperform its sector';
+  return 'consistently lags its sector';
 }
 
 export function computeEngineThesis(allCells: LearnedPattern[]): EngineThesisSnapshot {
