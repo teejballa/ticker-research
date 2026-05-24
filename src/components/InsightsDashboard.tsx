@@ -558,7 +558,7 @@ export function InsightsDashboard() {
                   Bayesian posteriors
                 </span>
                 <span className="border border-outline-variant/40 bg-surface-container-low/50 px-2 py-1 text-on-surface-variant">
-                  SPY-relative outcomes
+                  Sector-relative outcomes
                 </span>
                 <span className="border border-outline-variant/40 bg-surface-container-low/50 px-2 py-1 text-on-surface-variant">
                   Adversarial null test
@@ -584,7 +584,7 @@ export function InsightsDashboard() {
                     <div className="text-on-surface text-sm leading-snug mb-2">
                       of <span className="text-on-surface-variant">niche-leads</span> patterns
                       in <span className="text-on-surface-variant">{CAP_CLASS_LABEL[headlineCell.cap_class] ?? headlineCell.cap_class}</span>
-                      {' '}beat SPY by &gt;1% over 7d
+                      {' '}beat its sector by &gt;1% over 7d
                     </div>
                     <div className="text-[10px] font-mono text-outline tracking-widest uppercase">
                       n={headlineCell.sample_size} · {Math.round(headlineCell.ci_low * 100)}–{Math.round(headlineCell.ci_high * 100)}% credible interval

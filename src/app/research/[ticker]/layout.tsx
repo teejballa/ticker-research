@@ -6,7 +6,7 @@ export async function generateMetadata(
   const { ticker } = await params;
   const TICKER = (ticker ?? '').toUpperCase();
   const title = `${TICKER} Stock Research & Analysis`;
-  const description = `Source-cited research on ${TICKER}: market sentiment, bull and bear drivers, forward outlook, and a recommendation calibrated against the S&P 500.`;
+  const description = `Source-cited research on ${TICKER}: market sentiment, bull and bear drivers, forward outlook, and a recommendation calibrated against its sector.`;
   return {
     title,
     description,

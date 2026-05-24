@@ -1,6 +1,23 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { readFileSync } from 'fs';
+import { parse as parseEnv } from 'dotenv';
+
+// Make ONLY DATABASE_URL available to the unit run. Several modules import
+// @/lib/db at eval time and throw when DATABASE_URL is unset, which otherwise
+// fails those tests purely on environment rather than logic. We deliberately do
+// NOT load the rest of .env.local (API keys) — doing so lets un-mocked fetchers
+// make real network calls and flake the suite. Unit tests mock prisma, so no
+// real DB connection is opened; this only satisfies the import-time guard.
+if (!process.env.DATABASE_URL) {
+  try {
+    const parsed = parseEnv(readFileSync(path.resolve(__dirname, '.env.local')));
+    if (parsed.DATABASE_URL) process.env.DATABASE_URL = parsed.DATABASE_URL;
+  } catch {
+    /* .env.local absent (e.g. CI) — DATABASE_URL is expected from the real env */
+  }
+}
 
 export default defineConfig({
   plugins: [react()],

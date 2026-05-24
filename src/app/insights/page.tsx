@@ -14,7 +14,7 @@ import { PatternsTable, type PatternRow } from './components/PatternsTable';
 export const metadata = {
   title: 'Research dashboard',
   description:
-    "Cipher's live track record by signal class: how each pattern has performed against the S&P 500, with credible intervals and out-of-sample Brier scores.",
+    "Cipher's live track record by signal class: how each pattern has performed against its sector, with credible intervals and out-of-sample Brier scores.",
 };
 
 // Server component — runs each request so the drift_clear recovery counter

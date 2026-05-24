@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     template: '%s | Cipher',
   },
   description:
-    'Cited equity research on any ticker. Sentiment, bull and bear drivers, forward outlook, and a recommendation calibrated against the S&P 500 — with every claim linked to a source.',
+    'Cited equity research on any ticker. Sentiment, bull and bear drivers, forward outlook, and a recommendation calibrated against its sector — with every claim linked to a source.',
   keywords: [
     'equity research',
     'stock analysis',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Cipher — Source-cited equity research',
     description:
-      'Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500. Every claim linked to a source.',
+      'Sentiment, drivers, outlook, and a recommendation calibrated against its sector. Every claim linked to a source.',
     url: 'https://cipher.tools',
     siteName: 'Cipher',
     type: 'website',
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Cipher — Source-cited equity research',
     description:
-      'Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500.',
+      'Sentiment, drivers, outlook, and a recommendation calibrated against its sector.',
   },
   robots: { index: true, follow: true },
 };
@@ -67,7 +67,7 @@ const ORGANIZATION_LD = {
   name: 'Cipher',
   url: 'https://cipher.tools',
   description:
-    'Source-cited equity research. Sentiment, drivers, outlook, and a recommendation calibrated against the S&P 500.',
+    'Source-cited equity research. Sentiment, drivers, outlook, and a recommendation calibrated against its sector.',
 } as const;
 
 const WEBSITE_LD = {
