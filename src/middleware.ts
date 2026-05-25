@@ -28,6 +28,15 @@ export default function middleware(req: NextRequest) {
   ) {
     return NextResponse.next();
   }
+  // App-generated favicons (app/icon.tsx, app/apple-icon.tsx) serve at these
+  // extension-less paths, so they aren't covered by the static-asset exclusion
+  // in `config.matcher` — allow them through or the tab icon 307s for anon users.
+  if (
+    req.nextUrl.pathname === '/icon' ||
+    req.nextUrl.pathname === '/apple-icon'
+  ) {
+    return NextResponse.next();
+  }
   // Cron endpoints authenticate via Bearer CRON_SECRET inside the route handler — bypass NextAuth.
   // Insights API is public (anonymized aggregate data) — bypass NextAuth.
   // market-snapshot + sectors serve public market data (Yahoo quotes, no user
