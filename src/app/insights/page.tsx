@@ -94,6 +94,33 @@ const loadEssPatternRows = unstable_cache(
 export default async function InsightsPage() {
   const essRows = await loadEssPatternRows();
 
+  // Aggregate engine-maturity summary — computed from the same essRows the
+  // PatternsTable renders, so the headline band and the per-cell bars always
+  // agree. ESS≥30 is the cold-start graduation gate (see learning.patternStatus).
+  const GRAD_ESS = 30;
+  const totalCells = essRows.length;
+  const activeCells = essRows.filter((r) => r.status === 'ACTIVE').length;
+  const avgEss = totalCells
+    ? essRows.reduce((s, r) => s + r.effective_sample_size, 0) / totalCells
+    : 0;
+  const nonActive = essRows.filter((r) => r.status !== 'ACTIVE');
+  const closestCell = nonActive.length
+    ? nonActive.reduce((b, r) => (r.effective_sample_size > b.effective_sample_size ? r : b))
+    : null;
+  const maturity = {
+    totalCells,
+    activeCells,
+    avgEss,
+    gradEss: GRAD_ESS,
+    closest: closestCell
+      ? {
+          signal: closestCell.signal_class,
+          label: closestCell.pattern_key.replace(/_/g, ' '),
+          ess: closestCell.effective_sample_size,
+        }
+      : null,
+  };
+
   return (
     <>
       <div className="paper-grain" />
@@ -101,6 +128,7 @@ export default async function InsightsPage() {
 
       <main className="page">
         <InsightsView
+          maturity={maturity}
           patternsSlot={
             essRows.length > 0 ? (
               <div>

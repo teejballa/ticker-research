@@ -65,6 +65,13 @@ const CAP_LABELS: Record<string, string> = {
   small_cap: 'SMALL',
 };
 
+// A cell needs ESS ≥ 30 (the dominant cold-start gate in patternStatus) before
+// it can graduate EXPLORATORY → ACTIVE. We surface progress toward that gate.
+const GRAD_ESS = 30;
+function gradPct(ess: number): number {
+  return Math.max(0, Math.min(100, Math.round((ess / GRAD_ESS) * 100)));
+}
+
 export function PatternsTable({ rows }: { rows: PatternRow[] }) {
   if (rows.length === 0) {
     return (
@@ -83,6 +90,7 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
             <th className="text-left font-medium px-3 py-3">Cap</th>
             <th className="text-right font-medium px-3 py-3">Horizon</th>
             <th className="text-right font-medium px-3 py-3">ESS</th>
+            <th className="text-left font-medium px-3 py-3">→ Graduation</th>
             <th className="text-right font-medium px-3 py-3">95% CI</th>
             <th className="text-left font-medium px-3 py-3">Status</th>
           </tr>
@@ -96,6 +104,8 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
             // D-09 step 4: 14 consecutive clear days AND ESS≥30 → eligible to flip back to ACTIVE.
             const recoveryReady = cell.status === 'EXPLORATORY-WATCH'
               && recoveryCount >= 14 && cell.effective_sample_size >= 30;
+            const isActive = cell.status === 'ACTIVE';
+            const gradPctVal = isActive ? 100 : gradPct(cell.effective_sample_size);
             const rowKey = `${cell.signal_class}-${cell.pattern_key}-${cell.cap_class}-${cell.horizon_days}`;
             return (
               <tr
@@ -126,6 +136,35 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
                   >
                     (N={cell.sample_size})
                   </span>
+                </td>
+                <td className="px-3 py-3" data-testid="ess-graduation">
+                  <div className="w-28">
+                    <div
+                      className="h-1.5 w-full rounded-full overflow-hidden"
+                      style={{ background: 'var(--surface-3)' }}
+                      role="progressbar"
+                      aria-valuenow={gradPctVal}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${gradPctVal}% toward graduation`}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${gradPctVal}%`,
+                          background: isActive ? 'var(--teal)' : 'var(--indigo)',
+                          transition: 'width 0.4s ease',
+                        }}
+                      />
+                    </div>
+                    <div className="mt-1 text-[10px] font-mono text-outline tabular-nums">
+                      {isActive
+                        ? 'graduated'
+                        : cell.effective_sample_size >= GRAD_ESS
+                          ? 'ESS met · proving edge'
+                          : `${cell.effective_sample_size.toFixed(1)} / ${GRAD_ESS} ESS · ${gradPctVal}%`}
+                    </div>
+                  </div>
                 </td>
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-xs text-on-surface">
                   [

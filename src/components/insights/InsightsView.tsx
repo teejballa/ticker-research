@@ -120,7 +120,21 @@ function PipelineHealth({ providers }: { providers: HealthProvider[] }) {
 /* ─── Main view ─────────────────────────────────────────────────── */
 type Tab = 'patterns' | 'calib' | 'sources' | 'health';
 
-export default function InsightsView({ patternsSlot }: { patternsSlot: ReactNode }) {
+export interface MaturitySummary {
+  totalCells: number;
+  activeCells: number;
+  avgEss: number;
+  gradEss: number;
+  closest: { signal: string; label: string; ess: number } | null;
+}
+
+export default function InsightsView({
+  patternsSlot,
+  maturity,
+}: {
+  patternsSlot: ReactNode;
+  maturity: MaturitySummary;
+}) {
   const [tab, setTab] = useState<Tab>('patterns');
   const [api, setApi] = useState<InsightsApi | null>(null);
   const [health, setHealth] = useState<HealthProvider[]>([]);
@@ -202,6 +216,41 @@ export default function InsightsView({ patternsSlot }: { patternsSlot: ReactNode
       </div>
 
       <div className="page-grid">
+        {/* Engine maturity — aggregate progression toward graduation (ESS→30).
+            Server-computed from the same cells the patterns table renders. */}
+        {maturity.totalCells > 0 && (() => {
+          const pct = Math.max(0, Math.min(100, Math.round((maturity.avgEss / maturity.gradEss) * 100)));
+          const closestPct = maturity.closest
+            ? Math.max(0, Math.min(100, Math.round((maturity.closest.ess / maturity.gradEss) * 100)))
+            : 0;
+          return (
+            <div
+              data-testid="engine-maturity"
+              style={{
+                border: '1px solid var(--rule)', borderRadius: 'var(--radius-lg)',
+                background: 'var(--surface)', padding: '18px 22px', marginBottom: '18px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '8px' }}>
+                <span className="eyebrow" style={{ color: 'var(--ink-3)' }}>Engine maturity</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--ink-3)' }}>
+                  {maturity.activeCells} of {maturity.totalCells} cells active · avg {maturity.avgEss.toFixed(1)} / {maturity.gradEss} ESS
+                </span>
+              </div>
+              <div style={{ marginTop: '12px', height: '8px', borderRadius: '999px', background: 'var(--surface-3)', overflow: 'hidden' }}>
+                <div style={{ width: `${pct}%`, height: '100%', borderRadius: '999px', background: 'var(--indigo)', transition: 'width 0.6s ease' }} />
+              </div>
+              {maturity.closest && (
+                <div style={{ marginTop: '10px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--ink-2)' }}>
+                  Closest to graduating:{' '}
+                  <strong style={{ color: 'var(--ink)' }}>{maturity.closest.signal} · {maturity.closest.label}</strong>
+                  {' '}— {maturity.closest.ess.toFixed(1)} / {maturity.gradEss} ESS ({closestPct}%)
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Live stat grid */}
         <div className="stat-grid">
           {stats.map((s) => (
