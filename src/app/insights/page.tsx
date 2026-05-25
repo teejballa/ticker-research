@@ -103,9 +103,15 @@ export default async function InsightsPage() {
   const avgEss = totalCells
     ? essRows.reduce((s, r) => s + r.effective_sample_size, 0) / totalCells
     : 0;
+  // "Closest to graduating" = the cell with the most ESS that is still BELOW the
+  // sample gate (genuinely approaching it). Cells already past ESS≥30 but still
+  // EXPLORATORY are blocked on signal quality, not samples — surfacing them as
+  // "100% to graduating" would mislead, so they're excluded from this pick.
   const nonActive = essRows.filter((r) => r.status !== 'ACTIVE');
-  const closestCell = nonActive.length
-    ? nonActive.reduce((b, r) => (r.effective_sample_size > b.effective_sample_size ? r : b))
+  const belowGate = nonActive.filter((r) => r.effective_sample_size < GRAD_ESS);
+  const closestPool = belowGate.length ? belowGate : nonActive;
+  const closestCell = closestPool.length
+    ? closestPool.reduce((b, r) => (r.effective_sample_size > b.effective_sample_size ? r : b))
     : null;
   const maturity = {
     totalCells,
