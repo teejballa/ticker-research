@@ -28,5 +28,7 @@ playwright-report/
 playwright/.cache/
 coverage/
 
-# Stray local screenshots at repo root
-*.png
+# Stray local screenshots at the repo ROOT only. The leading slash anchors this
+# to the root — a bare `*.png` matches every directory and silently dropped
+# public/rocketship.png from the deploy (hero rocket 404'd in prod).
+/*.png
