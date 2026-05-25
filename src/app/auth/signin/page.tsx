@@ -69,6 +69,12 @@ function SignInInner() {
               Continue with Google
             </button>
 
+            <p className="signin-consent">
+              By continuing you agree to our{' '}
+              <Link href="/terms">Terms</Link> and{' '}
+              <Link href="/privacy">Privacy Policy</Link>.
+            </p>
+
             {gatedTicker && (
               <Link
                 href="/research/AAPL"

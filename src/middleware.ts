@@ -18,6 +18,16 @@ export default function middleware(req: NextRequest) {
   if (req.nextUrl.pathname === '/') {
     return NextResponse.next();
   }
+  // Legal/policy pages must be reachable without a session — they're linked from
+  // the sign-in page and footer and are legally required to be public.
+  if (
+    req.nextUrl.pathname === '/privacy' ||
+    req.nextUrl.pathname === '/terms' ||
+    req.nextUrl.pathname === '/disclaimer' ||
+    req.nextUrl.pathname === '/cookies'
+  ) {
+    return NextResponse.next();
+  }
   // Cron endpoints authenticate via Bearer CRON_SECRET inside the route handler — bypass NextAuth.
   // Insights API is public (anonymized aggregate data) — bypass NextAuth.
   // market-snapshot + sectors serve public market data (Yahoo quotes, no user

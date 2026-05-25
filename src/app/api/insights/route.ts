@@ -354,6 +354,11 @@ export async function GET() {
       logistic_epoch,
       // Phase 16-05: technical pattern library (signal_class='technical')
       technical_pattern_library,
+    }, {
+      // Global, non-personalized engine state assembled from ~7 heavy Postgres
+      // queries. Edge-cache briefly so bursts of dashboard traffic don't each
+      // re-run the full aggregation; the learning crons run far less often.
+      headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=600' },
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Insights query failed' }, { status: 500 });

@@ -48,7 +48,12 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ items, fetched_at: new Date().toISOString() });
+    return NextResponse.json(
+      { items, fetched_at: new Date().toISOString() },
+      // Global, non-personalized quotes — edge-cache briefly so the landing
+      // page doesn't re-hit Yahoo on every visit. SWR keeps it snappy.
+      { headers: { 'Cache-Control': 'public, s-maxage=45, stale-while-revalidate=120' } },
+    );
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'market-snapshot failed' },

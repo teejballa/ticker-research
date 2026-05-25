@@ -5,6 +5,7 @@
 // — is rendered by <InsightsView>. The full original InsightsDashboard and the
 // ESS PatternsTable are preserved below: nothing was removed.
 
+import { unstable_cache } from 'next/cache';
 import InsightsView from '@/components/insights/InsightsView';
 import { InsightsDashboard } from '@/components/InsightsDashboard';
 import NavBar from '@/components/NavBar';
@@ -21,7 +22,13 @@ export const metadata = {
 // reflects the latest LearningEvent rows.
 export const dynamic = 'force-dynamic';
 
-async function loadEssPatternRows(): Promise<PatternRow[]> {
+// The pattern-library scan + 14-day drift_clear groupBy is global (no per-user
+// data) and the underlying rows only change when the learning crons run. Cache
+// the result in the Next.js Data Cache for a couple of minutes so repeated
+// dashboard loads don't re-run two full-table reads each time. Tagged 'insights'
+// so a future cron can revalidateTag() on demand.
+const loadEssPatternRows = unstable_cache(
+  async (): Promise<PatternRow[]> => {
   if (!process.env.DATABASE_URL) return [];
   const { prisma } = await import('@/lib/db');
 
@@ -79,7 +86,10 @@ async function loadEssPatternRows(): Promise<PatternRow[]> {
       shrinkage_strength: p.shrinkage_strength,
     };
   });
-}
+  },
+  ['insights:ess-pattern-rows'],
+  { revalidate: 120, tags: ['insights'] },
+);
 
 export default async function InsightsPage() {
   const essRows = await loadEssPatternRows();

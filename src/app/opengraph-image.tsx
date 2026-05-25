@@ -63,7 +63,7 @@ export default async function OG() {
           }}
         >
           <span>Sentiment · Drivers · Outlook</span>
-          <span>cipher.tools</span>
+          <span>ciphersearch.app</span>
         </div>
       </div>
     ),

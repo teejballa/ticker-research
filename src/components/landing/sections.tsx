@@ -442,7 +442,7 @@ export function Footer() {
           <div className="h-display" style={{ fontSize: '32px', margin: 0 }}>Source-cited <em>equity research,</em> for everyone.</div>
           <div className="footer-meta" style={{ marginTop: '20px' }}>
             <span>© 2026 Cipher Research</span>
-            <span>Not investment advice</span>
+            <Link href="/disclaimer">Not investment advice</Link>
             <span>Educational use only</span>
           </div>
         </div>
@@ -471,6 +471,15 @@ export function Footer() {
             <li><Link href="/research/QQQ">Nasdaq 100 · QQQ</Link></li>
             <li><Link href="/terminal">Search a ticker</Link></li>
             <li><Link href="/insights">Methodology</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h6>Legal</h6>
+          <ul>
+            <li><Link href="/disclaimer">Disclaimer</Link></li>
+            <li><Link href="/privacy">Privacy policy</Link></li>
+            <li><Link href="/terms">Terms of service</Link></li>
+            <li><Link href="/cookies">Cookie policy</Link></li>
           </ul>
         </div>
       </div>

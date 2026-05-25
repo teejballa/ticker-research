@@ -106,5 +106,9 @@ export async function GET() {
     window_hours: 24,
     providers,
     degradation_rate_24h,
+  }, {
+    // 24h rolling provider-health aggregation — a couple of minutes of edge
+    // cache is imperceptible and spares the percentile_cont SQL on every load.
+    headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=600' },
   });
 }

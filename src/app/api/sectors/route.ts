@@ -43,7 +43,12 @@ export async function GET() {
       return { ...s, leadChange };
     });
 
-    return NextResponse.json({ sectors, fetched_at: new Date().toISOString() });
+    return NextResponse.json(
+      { sectors, fetched_at: new Date().toISOString() },
+      // Sector lead deltas move slowly intraday — a few minutes of edge cache
+      // spares Yahoo on every landing-page load.
+      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=900' } },
+    );
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'sectors failed' },

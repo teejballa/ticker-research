@@ -37,6 +37,24 @@ export async function readReport(filename: string): Promise<import('@/lib/types'
   return JSON.parse(content);
 }
 
+/**
+ * Delete a single report file by name. Returns true if a file was removed.
+ * Path-traversal guarded: the resolved path must stay inside REPORTS_DIR.
+ */
+export async function deleteReport(filename: string): Promise<boolean> {
+  const resolvedDir = path.resolve(REPORTS_DIR);
+  const resolvedFile = path.resolve(path.join(REPORTS_DIR, filename));
+  if (!resolvedFile.startsWith(resolvedDir + path.sep)) {
+    throw new Error('Invalid filename');
+  }
+  try {
+    await fs.unlink(resolvedFile);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function listReports(): Promise<import('@/lib/types').StoredReport[]> {
   try {
     const files = await fs.readdir(REPORTS_DIR);

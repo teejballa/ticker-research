@@ -78,6 +78,16 @@ function mapRow(r: {
 }
 
 /**
+ * Delete a single report by ID, scoped to the given user_id. Uses deleteMany so
+ * an id that belongs to another user (or does not exist) is a no-op rather than
+ * an error — returns true only when a row owned by this user was removed.
+ */
+export async function deleteReportFromDb(id: string, userId: string): Promise<boolean> {
+  const res = await prisma.report.deleteMany({ where: { id, user_id: userId } });
+  return res.count > 0;
+}
+
+/**
  * Read a single report by ID, scoped to the given user_id.
  * Throws if not found (user_id mismatch is treated as not found for security).
  */

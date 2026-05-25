@@ -3,6 +3,7 @@ import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from './providers';
 import { Analytics } from '@vercel/analytics/next';
+import { SITE_URL } from '@/lib/site';
 
 const inter = Inter({
   weight: ['400', '500', '700', '800', '900'],
@@ -26,7 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://cipher.tools'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Cipher — Source-cited equity research',
     template: '%s | Cipher',
@@ -48,7 +49,7 @@ export const metadata: Metadata = {
     title: 'Cipher — Source-cited equity research',
     description:
       'Sentiment, drivers, outlook, and a recommendation calibrated against its sector. Every claim linked to a source.',
-    url: 'https://cipher.tools',
+    url: SITE_URL,
     siteName: 'Cipher',
     type: 'website',
   },
@@ -65,7 +66,7 @@ const ORGANIZATION_LD = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Cipher',
-  url: 'https://cipher.tools',
+  url: SITE_URL,
   description:
     'Source-cited equity research. Sentiment, drivers, outlook, and a recommendation calibrated against its sector.',
 } as const;
@@ -74,10 +75,10 @@ const WEBSITE_LD = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Cipher',
-  url: 'https://cipher.tools',
+  url: SITE_URL,
   potentialAction: {
     '@type': 'SearchAction',
-    target: 'https://cipher.tools/research/{ticker}',
+    target: `${SITE_URL}/research/{ticker}`,
     'query-input': 'required name=ticker',
   },
 } as const;

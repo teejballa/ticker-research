@@ -76,7 +76,11 @@ export async function GET(request: NextRequest) {
       sector,
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      // 30-day daily chart + summary is the same for every user and barely
+      // changes intraday — edge-cache a couple of minutes with SWR.
+      headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=600' },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Ticker not found';
     return NextResponse.json({ error: message }, { status: 404 });

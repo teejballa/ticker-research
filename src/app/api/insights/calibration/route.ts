@@ -16,5 +16,9 @@ export async function GET() {
       { status: 404 },
     );
   }
-  return Response.json(payload);
+  return Response.json(payload, {
+    // Brier evaluation is written once per day by the eval-brier cron — safe to
+    // edge-cache for several minutes with a long stale-while-revalidate.
+    headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=86400' },
+  });
 }

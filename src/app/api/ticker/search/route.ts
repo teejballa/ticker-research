@@ -46,7 +46,11 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json(results);
+    return NextResponse.json(results, {
+      // Symbol search results for a given query are stable; cache at the edge
+      // so repeated/typeahead queries don't re-hit Yahoo each keystroke.
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400' },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Search failed';
     return NextResponse.json({ error: message }, { status: 500 });

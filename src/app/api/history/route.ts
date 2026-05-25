@@ -20,7 +20,11 @@ export async function GET() {
       // Dynamic import avoids loading Prisma in local mode (no DATABASE_URL)
       const { listReportsFromDb } = await import('@/lib/reports-db');
       const reports = await listReportsFromDb(session.user.email);
-      return NextResponse.json({ reports });
+      // Per-user data — must never be shared/edge-cached.
+      return NextResponse.json(
+        { reports },
+        { headers: { 'Cache-Control': 'private, no-store' } },
+      );
     } catch (err) {
       console.error('[api/history] Web mode: Failed to list reports from DB:', err);
       return NextResponse.json({ reports: [] });

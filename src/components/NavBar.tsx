@@ -5,17 +5,18 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
 import { useTheme } from '@/lib/use-theme';
+import { Tooltip } from '@/components/ui/Tooltip';
 
-function getMarketStatus(): { open: boolean; label: string } {
+function getMarketStatus(): { open: boolean; label: string; hint: string } {
   const ny   = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const day  = ny.getDay();
   const mins = ny.getHours() * 60 + ny.getMinutes();
   const isWeekday = day >= 1 && day <= 5;
-  if (!isWeekday) return { open: false, label: 'Markets closed · Weekend' };
-  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return { open: true,  label: 'Live · Regular session' };
-  if (mins >= 4 * 60        && mins < 9 * 60 + 30) return { open: true,  label: 'Live · Pre-market' };
-  if (mins >= 16 * 60       && mins < 20 * 60) return { open: true,  label: 'Live · After-hours' };
-  return { open: false, label: 'Markets closed' };
+  if (!isWeekday) return { open: false, label: 'Markets closed · Weekend', hint: 'U.S. equity markets are closed for the weekend. Regular hours are 9:30 AM – 4:00 PM ET, Mon–Fri.' };
+  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return { open: true,  label: 'Live · Regular session', hint: 'NYSE & Nasdaq regular session · 9:30 AM – 4:00 PM ET' };
+  if (mins >= 4 * 60        && mins < 9 * 60 + 30) return { open: true,  label: 'Live · Pre-market', hint: 'Pre-market trading · 4:00 – 9:30 AM ET' };
+  if (mins >= 16 * 60       && mins < 20 * 60) return { open: true,  label: 'Live · After-hours', hint: 'After-hours trading · 4:00 – 8:00 PM ET' };
+  return { open: false, label: 'Markets closed', hint: 'U.S. equity markets are closed. Regular hours are 9:30 AM – 4:00 PM ET, Mon–Fri.' };
 }
 
 interface NavBarProps {
@@ -64,11 +65,11 @@ export default function NavBar({
       {/* Main nav */}
       <header className="nav">
         <div className="nav-left">
+          <Tooltip label={dark ? 'Switch to light theme' : 'Switch to dark theme'} placement="bottom" align="start">
           <button
             type="button"
             className="theme-gear"
             aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
             onClick={toggle}
           >
             {dark ? (
@@ -83,6 +84,7 @@ export default function NavBar({
               </svg>
             )}
           </button>
+          </Tooltip>
 
           <Link href="/" className="nav-brand">
             <span className="dot" />
@@ -104,10 +106,12 @@ export default function NavBar({
         </div>
 
         <div className="nav-right">
-          <span className="market-pill">
-            <span className="live" style={{ background: market.open ? 'var(--teal)' : 'var(--ink-3)' }} />
-            {market.label}
-          </span>
+          <Tooltip label={market.hint} placement="bottom">
+            <span className="market-pill" tabIndex={0}>
+              <span className="live" style={{ background: market.open ? 'var(--teal)' : 'var(--ink-3)' }} />
+              {market.label}
+            </span>
+          </Tooltip>
 
           {displayEmail && (
             <span data-testid="nav-identity" className="nav-identity hidden sm:block">
@@ -163,23 +167,27 @@ export default function NavBar({
           </div>
           <div className="flex items-center gap-3">
             {onNewResearch && (
-              <button
-                onClick={onNewResearch}
-                className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
-              >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
-                New report
-              </button>
+              <Tooltip label="Start a fresh report — pick another ticker" placement="bottom">
+                <button
+                  onClick={onNewResearch}
+                  className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  <span className="material-symbols-outlined text-base">arrow_back</span>
+                  New report
+                </button>
+              </Tooltip>
             )}
             <div className="w-px h-4 bg-outline-variant" />
             {onExportPdf && (
-              <button
-                onClick={onExportPdf}
-                className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
-              >
-                <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-                Export PDF
-              </button>
+              <Tooltip label="Save this report as a PDF via your browser's print dialog" placement="bottom">
+                <button
+                  onClick={onExportPdf}
+                  className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                  Export PDF
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
