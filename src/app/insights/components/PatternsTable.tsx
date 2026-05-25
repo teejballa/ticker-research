@@ -105,7 +105,16 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
             const recoveryReady = cell.status === 'EXPLORATORY-WATCH'
               && recoveryCount >= 14 && cell.effective_sample_size >= 30;
             const isActive = cell.status === 'ACTIVE';
+            const isDeprecated = cell.status === 'DEPRECATED';
             const gradPctVal = isActive ? 100 : gradPct(cell.effective_sample_size);
+            const gradColor = isActive ? 'var(--teal)' : isDeprecated ? 'var(--ink-3)' : 'var(--indigo)';
+            const gradLabel = isActive
+              ? 'graduated'
+              : isDeprecated
+                ? 'deprecated'
+                : cell.effective_sample_size >= GRAD_ESS
+                  ? 'ESS met · proving edge'
+                  : `${cell.effective_sample_size.toFixed(1)} / ${GRAD_ESS} ESS · ${gradPctVal}%`;
             const rowKey = `${cell.signal_class}-${cell.pattern_key}-${cell.cap_class}-${cell.horizon_days}`;
             return (
               <tr
@@ -152,17 +161,14 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
                         className="h-full rounded-full"
                         style={{
                           width: `${gradPctVal}%`,
-                          background: isActive ? 'var(--teal)' : 'var(--indigo)',
+                          background: gradColor,
+                          opacity: isDeprecated ? 0.5 : 1,
                           transition: 'width 0.4s ease',
                         }}
                       />
                     </div>
                     <div className="mt-1 text-[10px] font-mono text-outline tabular-nums">
-                      {isActive
-                        ? 'graduated'
-                        : cell.effective_sample_size >= GRAD_ESS
-                          ? 'ESS met · proving edge'
-                          : `${cell.effective_sample_size.toFixed(1)} / ${GRAD_ESS} ESS · ${gradPctVal}%`}
+                      {gradLabel}
                     </div>
                   </div>
                 </td>
