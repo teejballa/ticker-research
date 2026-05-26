@@ -606,3 +606,20 @@ The `tag` stage means "tagged at ingest with no classifier score yet" — Phase 
 4. Old (`*-tag-v1`) rows remain queryable for backtest replay; downstream consumers should filter by `model_version` to avoid cross-pepper joins.
 
 Updated by: Plan 30.1-04 (2026-05-15).
+
+---
+
+## live_outcome_gate (Phase 27 / Plan 27-03)
+
+Source: `src/lib/learning.ts` constant `LIVE_OUTCOME_THRESHOLD`, enforced in
+`/api/cron/learn` `recomputeOneCell` via `enforceLiveOnlyGate`.
+
+| Parameter              | Value | Rationale                                                        |
+|------------------------|-------|------------------------------------------------------------------|
+| LIVE_OUTCOME_THRESHOLD | 10    | D-10: a cell needs >=10 live (non-backfill) outcomes before it can flip EXPLORATORY→ACTIVE; backfill alone never graduates a cell. |
+
+- **Provenance:** `live_outcome_count` = posterior_update LearningEvents whose `delta.source != 'backfill'` (legacy rows without `source` count as live).
+- **Posterior interaction (D-01):** the gate governs PROMOTION status only. Backfill rows still enter the lift-gate CV pool (raw membership) but Phase 18 decay (λ=60d) drives their live-posterior weight to ≈1.5e-13 — no exclusion filter needed.
+- **Recalibration cadence:** static; revisit only if Phase 23 lift-gate evidence argues for a different live-confirmation bar.
+
+Updated by: Plan 27-03 (2026-05-26).
