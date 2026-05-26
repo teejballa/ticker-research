@@ -443,22 +443,22 @@ export const HYPERPARAMETERS = {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `src/lib/data/sector-prices.ts` support arbitrary historical date ranges?**
    - What we know: `price-followup/route.ts` imports and calls `fetchSectorETFReturn(etf, fromDate, toDate)`.
    - What's unclear: Whether this function uses `yf.chart()` with the supplied dates (would work for historical) or only fetches live quotes.
-   - Recommendation: Planner should add a Wave 0 task to verify `fetchSectorETFReturn` with a 5-year-old date pair before building the outcome computation path.
+   - **RESOLVED:** Plan 27-02 Task 3 adds a `--probe-sector` mode that verifies `fetchSectorETFReturn` against a 5-year-old date pair before building the outcome path, with an SPY fallback if historical coverage is missing.
 
 2. **Does `SentimentSnapshot` need a unique constraint on `(ticker, scanned_at)` for `skipDuplicates: true` to work?**
    - What we know: Current schema has no such constraint (only an index on `[ticker, scanned_at(sort: Desc)]`).
    - What's unclear: Whether Prisma `createMany({ skipDuplicates: true })` requires a DB-level unique constraint or just silently skips on conflict.
-   - Recommendation: Add `@@unique([ticker, scanned_at])` as part of the schema migration, or use existence-check idempotency instead. The planner must choose one approach.
+   - **RESOLVED:** Plan 27-01 Task 1 adds `@@unique([ticker, scanned_at])` to the additive migration, making `createMany({ skipDuplicates: true })` idempotent for resumable runs.
 
 3. **Should `micro_cap` be added as a 4th CapClass, or should D-05 micro-cap tickers be binned into `small_cap`?**
    - What we know: Current CapClass type and learn cron enumerate only `large_cap`, `mid_cap`, `small_cap`.
    - What's unclear: Whether Phase 23's lift-gate needs a separate micro-cap cell or is happy with an enriched small_cap.
-   - Recommendation: Default to keeping `small_cap` as the bucket for micro-cap tickers. If Phase 23 later needs finer granularity, add `micro_cap` in a dedicated sub-phase.
+   - **RESOLVED:** CONTEXT.md D-05 correction (2026-05-26) bins micro into `small_cap` — the learning-engine `CapClass` stays 3-way (`large_cap | mid_cap | small_cap`). Extending the union is deferred (see CONTEXT Deferred). Plan 27-01 Task 3 asserts no `micro_cap` bucket exists.
 
 ---
 
