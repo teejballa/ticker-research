@@ -175,6 +175,19 @@ Plans:
 - [x] 21-4-07-PLAN.md — Wave 4: UI swap — EngineCalibrationPanel headline = "Calibration vs. sector (XLK)" + smaller "vs market (SPY)" secondary tile (ESS + conformal CI + WatchBadge preserved); InsightsDashboard + InsightsView + landing/sections copy = "beat its sector"; engine-thesis narrative prompt regenerated; Playwright e2e + operator visual-hierarchy approval
 - [x] 21-5-08-PLAN.md — Wave 5: Composite done gate `npm run phase-21-status` — 9 gates (schema, backfill coverage, forward path, classifyHit signature, relearn freshness, UI copy, test gates, relearn sanity from 21-3-06-SUMMARY, non-goals absent) + operator final sign-off → STATE.md + ROADMAP.md flip
 
+### Phase 27: Historical Backfill
+**Goal**: Bootstrap the prior count `N` needed for lift-gated cell promotion (Phase 23) by replaying historical data through the learning engine: ≥100 tickers × ≥5 years of the technical signal class, under strict point-in-time discipline, via a single feature-extraction code path shared with the live pipeline.
+**Depends on**: Phase 16 (technical signals — deterministic OHLCV features), Phase 18 (learning engine + ESS + decay). Feeds Phase 23 (lift-gated promotion needs the bootstrapped N). Independent of Phase 22's relearn soak — can be planned/executed ahead of P22.
+**Requirements**: COVERAGE-06, COVERAGE-07, COVERAGE-08, COVERAGE-09, COVERAGE-10
+**Success Criteria** (what must be TRUE):
+  1. Backfill universe spans ≥100 tickers × ≥5 years for the technical signal class; features are deterministic and computable from historical OHLCV alone (COVERAGE-06)
+  2. Point-in-time discipline enforced: vendor returns unadjusted prices, `cap_class` assigned as-of the historical date (not current), and the delisted-ticker set is included so there is no survivorship bias (COVERAGE-07)
+  3. A single feature-extraction code path serves both backfill and live ingestion — no parallel/forked extractor — defending against train/serve skew (COVERAGE-08)
+  4. Backfilled `SentimentSnapshot` rows are tagged `source = 'backfill'` so live-vs-backfill validation is possible (COVERAGE-09)
+  5. Live-only validation gate is live: every cell promoted to ACTIVE must also carry ≥10 live (non-backfill) outcomes confirming the prior — backfill alone can never graduate a cell (COVERAGE-10)
+  6. Vitest suite green; `tsc --noEmit` clean; backfill runs from a single reproducible command (no hand-curated intermediate files — per CLAUDE.md statistical-methods mandate)
+**Plans**: TBD (created by gsd-planner this run)
+
 ---
 
 ## Phase Numbering
