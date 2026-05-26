@@ -69,11 +69,11 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 
 #### Phase 27 — Historical backfill
 
-- [ ] **COVERAGE-06**: Backfill universe spans ≥100 tickers × ≥5 years for technical signal class (deterministic features computable from historical OHLCV)
-- [ ] **COVERAGE-07**: Point-in-time data discipline: vendor returns unadjusted prices, cap_class assigned as-of historical date (not current), no survivorship bias from delisted tickers
-- [ ] **COVERAGE-08**: Single feature-extraction code path for backfill and live (defends against train/serve skew)
-- [ ] **COVERAGE-09**: Backfilled SentimentSnapshot rows tagged with `source = 'backfill'` so live-vs-backfill validation is possible
-- [ ] **COVERAGE-10**: Live-only validation gate: every promoted ACTIVE cell must also have ≥10 live (non-backfill) outcomes confirming the prior
+- [x] **COVERAGE-06**: Backfill universe spans ≥100 tickers × ≥5 years for technical signal class (deterministic features computable from historical OHLCV)
+- [x] **COVERAGE-07**: Point-in-time data discipline: vendor returns unadjusted prices, cap_class assigned as-of historical date (not current), no survivorship bias from delisted tickers
+- [x] **COVERAGE-08**: Single feature-extraction code path for backfill and live (defends against train/serve skew)
+- [x] **COVERAGE-09**: Backfilled SentimentSnapshot rows tagged with `source = 'backfill'` so live-vs-backfill validation is possible
+- [x] **COVERAGE-10**: Live-only validation gate: every promoted ACTIVE cell must also have ≥10 live (non-backfill) outcomes confirming the prior
 
 ### DEMO — Group D: Demonstrability and transparency
 
