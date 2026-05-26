@@ -53,10 +53,14 @@ model SentimentSnapshot {
   citations_v2         Json?
   finsentllm_score     Float?
   model_agreement      Float?
+  // Phase 27 D-09/COVERAGE-09 — additive source tag ('live' | 'backfill').
+  // Defaulted so all existing rows become 'live' automatically (zero-downtime).
+  source               String @default("live")
 
   outcomes PriceOutcome[]
 
   @@index([ticker, scanned_at(sort: Desc)])
+  @@unique([ticker, scanned_at])
   @@map("sentiment_snapshots")
 }
 
