@@ -331,6 +331,24 @@ export function patternStatus(args: {
   return 'EXPLORATORY';
 }
 
+// ─── Phase 27 D-10 / COVERAGE-10: live-only promotion gate ──────────────────
+// A cell may be lift-gate-EVALUATED on backfill data but cannot graduate to
+// ACTIVE until >=LIVE_OUTCOME_THRESHOLD live (non-backfill) outcomes confirm
+// the prior. Backfill alone never promotes a cell. Configurable per D-10
+// (documented in HYPERPARAMETERS.md). This gate ONLY demotes a would-be
+// ACTIVE to EXPLORATORY when live evidence is insufficient — it never
+// promotes, and it never touches the Bayesian posterior (D-01).
+export const LIVE_OUTCOME_THRESHOLD = 10;
+
+export function enforceLiveOnlyGate(
+  status: 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED',
+  liveOutcomeCount: number,
+  threshold: number = LIVE_OUTCOME_THRESHOLD,
+): 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' {
+  if (status === 'ACTIVE' && liveOutcomeCount < threshold) return 'EXPLORATORY';
+  return status;
+}
+
 // ─── Phase 16-03: 12-feature vector + reinit detection ────────────────────
 //
 // FEATURE_NAMES is the LOCKED ordering of the 12-dimensional feature vector
