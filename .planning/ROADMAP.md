@@ -189,7 +189,7 @@ Plans:
 **Plans**: 4 plans across 4 waves
   - [x] 27-01-PLAN.md — Wave 0: [BLOCKING] additive `SentimentSnapshot.source` + `@@unique([ticker, scanned_at])` migration + db push checkpoint; versioned cap-balanced universe (`BACKFILL_UNIVERSE`); RED test stubs for COVERAGE-06..10 + `.gitignore` cache guard (COVERAGE-06..10)
   - [x] 27-02-PLAN.md — Wave 1: backfill CLI (`scripts/backfill-historical.ts`) — pure PIT windowing helpers, disk-cached fetch-once, resumable checkpoint, weekly snapshots via `computeTechnicalSnapshot`, 3-label outcomes, `source='backfill'`, batched idempotent writes (COVERAGE-06/07/08/09)
-  - [ ] 27-03-PLAN.md — Wave 2: live-only promotion gate — `enforceLiveOnlyGate` + `LIVE_OUTCOME_THRESHOLD=10`, source propagated into posterior_update delta + gate applied in learn cron, D-01 posterior-invariance regression test, threshold documented in HYPERPARAMETERS.md (COVERAGE-10)
+  - [x] 27-03-PLAN.md — Wave 2: live-only promotion gate — `enforceLiveOnlyGate` + `LIVE_OUTCOME_THRESHOLD=10`, source propagated into posterior_update delta + gate applied in learn cron, D-01 posterior-invariance regression test, threshold documented in HYPERPARAMETERS.md (COVERAGE-10)
   - [ ] 27-04-PLAN.md — Wave 3: docs + done gate — `docs/paper/methodology.md` (survivorship + unadjusted-`close` caveats) + model card; `npm run phase-27-status` composite done-gate; final verification (COVERAGE-06..10)
 
 ---

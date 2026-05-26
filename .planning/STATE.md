@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-26T21:43:53.137Z"
+last_updated: "2026-05-26T21:50:00.342Z"
 last_activity: 2026-05-26
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 42
-  completed_plans: 40
-  percent: 95
+  completed_plans: 41
+  percent: 98
 ---
 
 # Project State
@@ -27,10 +27,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
 Milestone: v2.0
 Phase: 27 (Historical Backfill) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-05-26
-Last completed: 27-01 → additive SentimentSnapshot.source column + @@unique([ticker, scanned_at]) pushed to Neon; 121-ticker cap-balanced backfill universe (BACKFILL_UNIVERSE + UNIVERSE_VERSION); COVERAGE-06 GREEN; RED stubs for COVERAGE-07/08/10; integration stub COVERAGE-09; .gitignore .cipher/ guard. 6 atomic commits (44447c5, e5bf432, 0b9c42e, 0896f92, def978b, e8f457a). DB push was operator-confirmed checkpoint:human-action (no --accept-data-loss; 0 duplicate rows).
+Last completed: 27-03 → D-01 posterior-invariance regression + LIVE_OUTCOME_THRESHOLD documented in HYPERPARAMETERS.md. Two tests added to backfill-live-gate.test.ts: (1) 5y-old decay weight < 1e-10 (exp(-1825/60) ≈ 1.5e-13); (2) posterior shift < 1e-6 vs fresh-only baseline — confirms no exclusion filter needed for backfill rows in the posterior path. live_outcome_gate section appended to HYPERPARAMETERS.md (LIVE_OUTCOME_THRESHOLD=10, D-10 rationale, D-01 interaction note, recalibration cadence). All 6 tests in backfill-live-gate.test.ts GREEN; 1815 total passing; tsc clean. Atomic commit: 5b84cf8. Key decisions: D-01 test directly exercises Phase 18 decay primitives; LIVE_OUTCOME_THRESHOLD=10 static until Phase 23 lift-gate evidence; legacy events without delta.source count as live (T-27-13 back-compat).
+Last completed (prior): 27-01 → additive SentimentSnapshot.source column + @@unique([ticker, scanned_at]) pushed to Neon; 121-ticker cap-balanced backfill universe (BACKFILL_UNIVERSE + UNIVERSE_VERSION); COVERAGE-06 GREEN; RED stubs for COVERAGE-07/08/10; integration stub COVERAGE-09; .gitignore .cipher/ guard. 6 atomic commits (44447c5, e5bf432, 0b9c42e, 0896f92, def978b, e8f457a). DB push was operator-confirmed checkpoint:human-action (no --accept-data-loss; 0 duplicate rows).
 
 Last completed (prior): 20-C-02 → Brier + Murphy 1973 decomposition + CORP-method (PNAS 2021) reliability diagram per classifier_version. `src/lib/stats/brier.ts` (brierScore + brierDecomposition with strict unique-prediction-value Murphy 1973 partition — algebraic identity BS = R − Res + U holds at 1e-9; equal-width binning is retained only for the per_bin dashboard histogram, not for R/Res/U) + `src/lib/stats/isotonic.ts` (Pool-Adjacent-Violators with same-x tie pre-aggregation + CORP-method reliability diagram). `scripts/eval-brier.ts` joins SentimentObservation PIT-INVARIANT on `fetched_at` (Gate 8: zero `published_at` literals) × forward 7d alpha-vs-SPY (PriceOutcome.pct_change at days_after=7 minus SPY 7d return via yahoo-finance2). Weekly `/api/cron/eval-brier` (Bearer CRON_SECRET; `0 8 * * 1` UTC) writes `reports/brier-{date}.json` (always; gitignored) and `reports/brier-{date}.md` (only on ship_gate_failed; committed as operator narrative with REMEDIATION_RECOMMENDATION). `/insights/calibration` server component renders one BrierTile (ship-gate badge + stacked R/−Res/U bar + remediation) + one ReliabilityDiagram (pure-SVG CORP curve + identity diagonal + 20-bin frequency histogram for T-20-C-02-04 multimodal defense) per classifier_version. Ship gate: Brier ≤ 0.24 AND |base_rate − 0.5| < 0.1 (T-20-C-02-01). Minimum n=100 per classifier_version (T-20-C-02-02 isotonic stability). HYPERPARAMETERS.md §Brier Calibration with citations to Brier 1950, Murphy 1973, Bröcker-Smith 2007, Barlow-Brunk 1972, Dimitriadis-Gneiting-Jordan 2021, Niculescu-Mizil-Caruana 2005. `setAlphaResolver()` test seam allows integration tests to inject deterministic outcomes without yahoo-finance2 fixtures. 22 unit tests + 5 live-Neon integration tests green; npm test 1136 passing (no regressions vs 1114 baseline); npx tsc --noEmit 0; check-model-cards/immutability/telemetry-coverage/prompts/lookahead all 0 violations. 1477 new LOC across 8 source files + 4 test files. 7 atomic commits (bfbe06b, ffb29bd, ae29804, 838663c, 7034101, 1f4519b, 8e894b1).
 
