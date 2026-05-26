@@ -62,6 +62,8 @@ import {
   filterSnapshotsForEmbargo,
   // Phase 19 Plan 19-A-07 — empirical-Bayes hierarchical pooling.
   hierarchicalPooledPosterior,
+  // Phase 27 Plan 27-03 — D-10 live-only promotion gate (COVERAGE-10).
+  enforceLiveOnlyGate,
   type LogisticState,
   type WeightedObservation,
   type LearnedStatus,
@@ -172,6 +174,8 @@ interface ResolvedOutcome {
   source: 'report' | 'snapshot';
   source_id: string;
   snapshot_id: string | null;
+  /** Phase 27 D-10: SentimentSnapshot.source column — 'live' | 'backfill'. Reports are always live. */
+  snapshot_source: string;
   days_after: number;
 }
 
@@ -211,6 +215,7 @@ async function loadUnprocessedOutcomes(opts: { isBackfill: boolean }): Promise<R
         source: 'snapshot',
         source_id: o.snapshot.id,
         snapshot_id: o.snapshot.id,
+        snapshot_source: o.snapshot.source ?? 'live',  // Phase 27 D-10: backfill vs live provenance
         days_after: o.days_after,
       });
     } else if (o.report) {
@@ -230,6 +235,7 @@ async function loadUnprocessedOutcomes(opts: { isBackfill: boolean }): Promise<R
         source: 'report',
         source_id: o.report.id,
         snapshot_id: null,
+        snapshot_source: 'live',  // Phase 27 D-10: reports are always live (no backfill path)
         days_after: o.days_after,
       });
     }
@@ -740,6 +746,16 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
     status = 'EXPLORATORY-WATCH';
   }
 
+  // Phase 27 D-10 / COVERAGE-10: live-only promotion gate.
+  // Count posterior_update events whose delta.source is not 'backfill'.
+  // Legacy events without a source key (pre-Phase-27) count as live — correct,
+  // since they ARE live data (T-27-13 accepted back-compat).
+  const liveOutcomeCount = events.filter((ev) => {
+    const d = ev.delta as { source?: string } | null;
+    return d?.source !== 'backfill';   // missing source (legacy rows) counts as live
+  }).length;
+  status = enforceLiveOnlyGate(status, liveOutcomeCount);   // Phase 27 D-10 / COVERAGE-10
+
   const prevStatus = cell.status;
   await prisma.learnedPattern.update({
     where: {
@@ -1124,6 +1140,7 @@ async function processOneOutcome(
           flow_pattern: trace?.flow_pattern ?? null,
           insider_bucket: insiderBucket,
           institutional_bucket: institutionalBucket,
+          source: outcome.snapshot_source ?? 'live',   // Phase 27 D-10 — live vs backfill provenance for the promotion gate
         },
         message: `${outcome.ticker} @${horizon}d: ${hit ? 'HIT' : 'MISS'} — ticker ${outcome.ticker_return_pct.toFixed(2)}% vs SPY ${spyReturn.toFixed(2)}% / vs ${outcome.sector_etf ?? 'sector–'} ${outcome.sector_relative_pct?.toFixed(2) ?? '–'}% [flow=${trace?.flow_pattern ?? '–'} / tech=${techPattern ?? '–'} / insider=${insiderBucket ?? '–'} / inst=${institutionalBucket ?? '–'}]`,
       },
