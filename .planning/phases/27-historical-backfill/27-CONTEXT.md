@@ -56,9 +56,15 @@ cheap historical data); true delisted-ticker coverage; Phase 23's lift-gate math
   (a checked-in file, e.g. `src/lib/backtest/universe.ts` or a `.planning` data file).
   Deterministic + reproducible per the CLAUDE.md "single reproducible command" mandate;
   trivially documentable in the paper.
-- **D-05:** **Roughly even across the 4 cap-classes** (~30 each large / mid / small / micro)
-  so historically-starved cells (esp. micro-cap) get bootstrapped — directly serving the
-  lift-gate's need for `N` in under-sampled cells.
+- **D-05:** **Roughly even across the 3 learning-engine cap-classes** (~40 each
+  `large_cap` / `mid_cap` / `small_cap`; ~120 total) so historically-starved cells (esp.
+  small-cap) get bootstrapped — directly serving the lift-gate's need for `N` in
+  under-sampled cells. **Correction (2026-05-26, from research):** the learning engine's
+  `CapClass` (`src/lib/diffusion-trace.ts`) is `large_cap | mid_cap | small_cap | unknown` —
+  there is **no `micro_cap` cell dimension** (the `'micro'` value lives only in
+  `src/lib/sentiment/fairness-types.ts`, used by the fairness audit, NOT the learned cells).
+  The original 4-way micro split is dropped; extending the `CapClass` union is a
+  cross-cutting change explicitly OUT OF SCOPE for this backfill phase (see Deferred).
 - **D-08:** `cap_class` is assigned **as-of the historical date** (not current) — reuse the
   `scripts/backfill-snapshot-cap.ts` as-of snapshotting pattern. (COVERAGE-07)
 
@@ -178,6 +184,10 @@ cheap historical data); true delisted-ticker coverage; Phase 23's lift-gate math
 <deferred>
 ## Deferred Ideas
 
+- **Extending the learning-engine `CapClass` union to add `micro_cap`** — touches the Prisma
+  enum/string, learn cron enumerations, `diffusion-trace.ts`, `engine-context.ts`, and all
+  cap-class tests. Out of scope for this backfill phase; `small_cap` is the smallest learned
+  bucket. Revisit only if micro-cap warrants its own cell space.
 - **True delisted-ticker / survivorship-free universe** via Polygon or a paid PIT dataset — only
   if the documented survivorship bias proves material to results. Future phase.
 - **Building a real Tiingo EOD adapter** (`src/lib/data/adapters/tiingo.ts`) to reconcile the
