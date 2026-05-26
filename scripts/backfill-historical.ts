@@ -235,9 +235,9 @@ async function main(): Promise<void> {
           continue;
         }
 
-        // Price at scan: use `close` (split-adjusted, NOT adjclose) from the
-        // last bar in the technical snapshot window. (D-02 — split-adj avoids
-        // forward dividend-adjustment lookahead bias.)
+        // Price at scan: use `close` (split-adjusted, per D-02) from the
+        // last bar in the technical snapshot window. Avoids the forward
+        // dividend-adjustment lookahead bias that the adjusted-close series carries.
         const latestBar = allBars
           .filter((b) => b.date.getTime() <= asOf.getTime())
           .at(-1);
