@@ -4,10 +4,13 @@
 // names bin into small_cap, see D-05 correction). Survivorship caveat: Yahoo returns
 // nothing for delisted tickers, so this is a currently-listed set (D-03, documented
 // in docs/paper/methodology.md). Bump UNIVERSE_VERSION on any membership change.
-// 2026-05-27.1: swapped 3 delisted/bankrupt small-caps (ATIP→SBH, APPH→WGO, NKLA→SCVL)
-// for live small-caps with full 5y Yahoo history, after backfill confirmed the originals
-// return "no data" (the exact survivorship gap D-03 documents).
-export const UNIVERSE_VERSION = '2026-05-27.1';
+// 2026-05-27.1: swapped 3 delisted/bankrupt small-caps (ATIP→SBH, APPH→WGO, NKLA→SCVL).
+// 2026-05-27.2: swapped 4 mid-caps delisted by 2025 M&A (HBI→CROX [Gildan acq.],
+//   PARA→COLM [→Paramount Skydance/PSKY], SMAR→BOX [taken private], TPX→HAS [→Somnigroup/SGI])
+//   for live mid-caps with full 5y Yahoo history. All replacements are M&A-safe, pre-2020.
+//   This is the survivorship gap D-03 documents — a Yahoo-sourced universe can't include
+//   names that delisted after curation.
+export const UNIVERSE_VERSION = '2026-05-27.2';
 
 export interface UniverseEntry {
   ticker: string;
@@ -71,20 +74,20 @@ export const BACKFILL_UNIVERSE: readonly UniverseEntry[] = [
   { ticker: 'DXC',   curation_cap: 'mid_cap' }, // ~$4B IT services
   { ticker: 'FBIN',  curation_cap: 'mid_cap' }, // ~$6B home hardware
   { ticker: 'GXO',   curation_cap: 'mid_cap' }, // ~$5B logistics
-  { ticker: 'HBI',   curation_cap: 'mid_cap' }, // ~$3B apparel
+  { ticker: 'CROX',  curation_cap: 'mid_cap' }, // ~$7B footwear (replaced HBI — acquired by Gildan)
   { ticker: 'HL',    curation_cap: 'mid_cap' }, // ~$2B silver mining
   { ticker: 'LEVI',  curation_cap: 'mid_cap' }, // ~$7B denim/apparel
   { ticker: 'MTCH',  curation_cap: 'mid_cap' }, // ~$9B dating apps
   { ticker: 'NWSA',  curation_cap: 'mid_cap' }, // ~$9B news media
   { ticker: 'OGN',   curation_cap: 'mid_cap' }, // ~$4B pharma
-  { ticker: 'PARA',  curation_cap: 'mid_cap' }, // ~$6B media/streaming
+  { ticker: 'COLM',  curation_cap: 'mid_cap' }, // ~$5B apparel (replaced PARA — merged into Paramount Skydance/PSKY)
   { ticker: 'PNW',   curation_cap: 'mid_cap' }, // ~$9B regulated utility
   { ticker: 'RKT',   curation_cap: 'mid_cap' }, // ~$5B mortgage tech
   { ticker: 'SEE',   curation_cap: 'mid_cap' }, // ~$5B packaging
   { ticker: 'SLVM',  curation_cap: 'mid_cap' }, // ~$4B specialty materials
-  { ticker: 'SMAR',  curation_cap: 'mid_cap' }, // ~$8B work management SaaS
+  { ticker: 'BOX',   curation_cap: 'mid_cap' }, // ~$5B content-cloud SaaS (replaced SMAR — taken private)
   { ticker: 'TDC',   curation_cap: 'mid_cap' }, // ~$3B analytics
-  { ticker: 'TPX',   curation_cap: 'mid_cap' }, // ~$6B mattress/consumer
+  { ticker: 'HAS',   curation_cap: 'mid_cap' }, // ~$10B toys/games (replaced TPX — renamed Somnigroup/SGI)
   { ticker: 'TTWO',  curation_cap: 'mid_cap' }, // ~$23B gaming (stable mid range here)
   { ticker: 'URBN',  curation_cap: 'mid_cap' }, // ~$5B specialty retail
   { ticker: 'VFC',   curation_cap: 'mid_cap' }, // ~$3B apparel/outdoor
