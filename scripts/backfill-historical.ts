@@ -186,6 +186,13 @@ async function main(): Promise<void> {
   // which works for arbitrary historical date ranges. No new fetch layer needed.
   // The existing 30-day TTL cache in sector-prices.ts covers backfill re-runs.
 
+  // Sustained-block detector: once Yahoo's block outlasts a ticker's whole backoff
+  // schedule, every subsequent ticker would independently burn its full backoff
+  // re-discovering the same block (hours of wasted waiting). After N consecutive
+  // throttle-skips we abort the pass entirely — the resumable outer loop waits one
+  // shared cooldown and the next pass picks up where this one left off.
+  let consecutiveSkips = 0;
+
   for (const entry of universe) {
     const ticker = entry.ticker;
 
@@ -222,9 +229,18 @@ async function main(): Promise<void> {
       // block or genuinely no data. Do NOT markDone — the next run re-fetches.
       // (Nothing was cached for it — see ohlcv-cache.ts.)
       if (allBars.length === 0) {
+        consecutiveSkips++;
         console.log(`  skip ${ticker} — 0 bars after retries (will retry next run)`);
+        if (consecutiveSkips >= 3) {
+          console.log(
+            `  ⏸ ${consecutiveSkips} consecutive throttle-skips — aborting pass (sustained Yahoo block). ` +
+              `Next pass resumes after the outer cooldown.`,
+          );
+          break;
+        }
         continue;
       }
+      consecutiveSkips = 0; // got data — reset the sustained-block counter
 
       // ── Step 3: Weekly windows ────────────────────────────────────────────────
       const asOfs = buildWeeklyAsOfDates(startDate, endDate);
