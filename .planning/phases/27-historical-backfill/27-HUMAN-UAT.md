@@ -21,13 +21,23 @@ All 21 Phase 27 tests pass in isolation (confirmed this run). The gate's full-su
 (`engine-context`, `api/analysis/route`) — see MEMORY.md; not a Phase 27 regression.
 
 ### 2. Operator live backfill run
-expected: `npx tsx scripts/backfill-historical.ts --dry-run --max-tickers 3` (with DATABASE_URL set)
-runs clean, then a full `npx tsx scripts/backfill-historical.ts` populates `source='backfill'`
-weekly snapshots + 3-label PriceOutcome rows for the 121-ticker universe (~15–45 min). After it
-finishes, trigger `/api/cron/learn` with $CRON_SECRET for the recompute pass.
-result: [pending]
-notes: This is the actual data-generation step (intentionally NOT run by the autonomous executor —
-the CLI exits cleanly without a live run). It bootstraps N for Phase 23's lift-gate CV pool.
+expected: full `npx tsx scripts/backfill-historical.ts` populates `source='backfill'` weekly
+snapshots + 3-label PriceOutcome rows for the 121-ticker universe.
+result: PARTIAL (2026-05-27) — **24/121 tickers in prod: 4,906 snapshots, 29,436 outcomes.**
+The backfill mechanism is fully verified (clean data, 3 labels, sector-relative). The remaining
+~97 tickers could NOT be fetched from the agent environment: Yahoo aggressively rate-limits the
+chart endpoint from this (datacenter/cloud) IP — each run netted only ~3–13 tickers before a hard
+burst-block, regardless of throttle (tried 1s/3s/10s). NOT a code bug: the CLI is fully resumable
+and self-healing (failed tickers retry cleanly — no checkpoint/cache poisoning).
+**TO FINISH (run from a residential IP / your own machine):**
+`npx tsx scripts/backfill-historical.ts` — skips the 24 already done, fetches the rest. Tune with
+`BACKFILL_THROTTLE_MS=8000` if you still hit throttling. Re-run until `distinct_tickers` stops
+growing; it converges (resumable). Then trigger the recompute: `curl -H "Authorization: Bearer
+$CRON_SECRET" https://ciphersearch.app/api/cron/learn` (or just let the daily `learn` cron at
+07:30 UTC pick it up automatically).
+notes: Bootstraps N for Phase 23's lift-gate CV pool. The daily `learn` cron will fold the
+existing 24-ticker backfill outcomes into LearnedPattern automatically — no manual trigger needed
+for what's already in prod.
 
 ## Summary
 
