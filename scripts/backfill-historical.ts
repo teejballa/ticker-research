@@ -52,9 +52,11 @@ const MAX_TICKERS =
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const YEARS = 5;
-// 3s between per-ticker fetches. 1s soft-blocked Yahoo after ~13 rapid chart()
-// calls; 3s keeps a 121-ticker run well under that burst threshold (~6 min).
-const FETCH_THROTTLE_MS = 3000;
+// Throttle between per-ticker fetches. Yahoo burst-throttles the chart endpoint:
+// 1s blocked after ~13 calls, 3s after ~8 more. Override via BACKFILL_THROTTLE_MS
+// for slower/safer runs (e.g. 10000 on a flagged IP). Failed tickers retry cleanly
+// on the next run regardless (no checkpoint/cache poisoning).
+const FETCH_THROTTLE_MS = Number(process.env.BACKFILL_THROTTLE_MS) || 3000;
 // 95d safety window: snapshots older than 95d have all 6 horizons (3/7/14/30/60/90)
 // resolved in history. Mirrors price-followup/route.ts's 95d windowMs.
 const SAFETY_DAYS = 95;
