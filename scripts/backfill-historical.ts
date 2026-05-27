@@ -391,7 +391,10 @@ async function main(): Promise<void> {
         console.log(`  wrote ${snapBatch.length} snapshots, ${outcomes} outcomes`);
       }
 
-      markDone(ticker, done);
+      // Only record progress on a REAL run. A --dry-run must never mark a ticker
+      // done, or it poisons the checkpoint and the subsequent real run skips it
+      // (writing nothing). The disk OHLCV cache is still populated either way.
+      if (!DRY_RUN) markDone(ticker, done);
     } catch (err) {
       console.error(`  ERROR ${ticker}: ${(err as Error).message}`);
       // Do NOT markDone — ticker resumes on next run.
