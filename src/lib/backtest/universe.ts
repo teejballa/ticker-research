@@ -4,7 +4,10 @@
 // names bin into small_cap, see D-05 correction). Survivorship caveat: Yahoo returns
 // nothing for delisted tickers, so this is a currently-listed set (D-03, documented
 // in docs/paper/methodology.md). Bump UNIVERSE_VERSION on any membership change.
-export const UNIVERSE_VERSION = '2026-05-26.1';
+// 2026-05-27.1: swapped 3 delisted/bankrupt small-caps (ATIP→SBH, APPH→WGO, NKLA→SCVL)
+// for live small-caps with full 5y Yahoo history, after backfill confirmed the originals
+// return "no data" (the exact survivorship gap D-03 documents).
+export const UNIVERSE_VERSION = '2026-05-27.1';
 
 export interface UniverseEntry {
   ticker: string;
@@ -105,7 +108,7 @@ export const BACKFILL_UNIVERSE: readonly UniverseEntry[] = [
   { ticker: 'AMWL',  curation_cap: 'small_cap' }, // ~$500M telehealth
   { ticker: 'ANGI',  curation_cap: 'small_cap' }, // ~$800M home services marketplace
   { ticker: 'ARQQ',  curation_cap: 'small_cap' }, // ~$400M quantum networking
-  { ticker: 'ATIP',  curation_cap: 'small_cap' }, // ~$200M outpatient rehab
+  { ticker: 'SBH',   curation_cap: 'small_cap' }, // ~$1.3B beauty retail (replaced ATIP — delisted on Yahoo)
   { ticker: 'BARK',  curation_cap: 'small_cap' }, // ~$400M pet product subscription
   { ticker: 'BYRN',  curation_cap: 'small_cap' }, // ~$200M non-lethal defense
   { ticker: 'DAVE',  curation_cap: 'small_cap' }, // ~$400M neobank
@@ -127,14 +130,14 @@ export const BACKFILL_UNIVERSE: readonly UniverseEntry[] = [
   { ticker: 'REAL',  curation_cap: 'small_cap' }, // ~$200M luxury resale
   { ticker: 'SKIN',  curation_cap: 'small_cap' }, // ~$1.5B med aesthetics
   { ticker: 'ALEC',  curation_cap: 'small_cap' }, // ~$500M clinical-stage biotech
-  { ticker: 'APPH',  curation_cap: 'small_cap' }, // ~$300M vertical agtech
+  { ticker: 'WGO',   curation_cap: 'small_cap' }, // ~$0.9B RV manufacturer (replaced APPH — bankrupt/delisted)
   { ticker: 'COOK',  curation_cap: 'small_cap' }, // ~$500M restaurant tech
   { ticker: 'PRGS',  curation_cap: 'small_cap' }, // ~$1.8B application development software
   { ticker: 'MLCO',  curation_cap: 'small_cap' }, // ~$4B Macau gaming (sector diversity)
   { ticker: 'RKLB',  curation_cap: 'small_cap' }, // ~$1.5B small-sat launch
   { ticker: 'JOBY',  curation_cap: 'small_cap' }, // ~$1.8B eVTOL (pre-rev)
   { ticker: 'LCII',  curation_cap: 'small_cap' }, // ~$1.8B RV/marine components
-  { ticker: 'NKLA',  curation_cap: 'small_cap' }, // ~$300M hydrogen trucking
+  { ticker: 'SCVL',  curation_cap: 'small_cap' }, // ~$0.5B footwear retail (replaced NKLA — bankrupt/delisted)
   { ticker: 'NXST',  curation_cap: 'small_cap' }, // ~$1.8B local TV broadcasting
   { ticker: 'UEIC',  curation_cap: 'small_cap' }, // ~$400M universal remote tech
   { ticker: 'VTRS',  curation_cap: 'small_cap' }, // ~$1.8B generic pharma
