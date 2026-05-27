@@ -52,7 +52,9 @@ const MAX_TICKERS =
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const YEARS = 5;
-const FETCH_THROTTLE_MS = 1000;
+// 3s between per-ticker fetches. 1s soft-blocked Yahoo after ~13 rapid chart()
+// calls; 3s keeps a 121-ticker run well under that burst threshold (~6 min).
+const FETCH_THROTTLE_MS = 3000;
 // 95d safety window: snapshots older than 95d have all 6 horizons (3/7/14/30/60/90)
 // resolved in history. Mirrors price-followup/route.ts's 95d windowMs.
 const SAFETY_DAYS = 95;
@@ -186,6 +188,14 @@ async function main(): Promise<void> {
       // ── Step 2: Pre-warm disk cache (one Yahoo chart() call for the full 5y) ──
       const allBars = await fetchOrLoadOhlcv(ticker, { cacheDir: CACHE_DIR });
       console.log(`  cached ${allBars.length} bars`);
+
+      // 0 bars = transient Yahoo soft-block (the live universe is real, liquid
+      // tickers). Treat as a retryable failure: do NOT markDone, so the next run
+      // re-fetches this ticker. (Nothing was cached for it — see ohlcv-cache.ts.)
+      if (allBars.length === 0) {
+        console.log(`  skip ${ticker} — 0 bars (transient; will retry next run)`);
+        continue;
+      }
 
       // ── Step 3: Weekly windows ────────────────────────────────────────────────
       const asOfs = buildWeeklyAsOfDates(startDate, endDate);

@@ -142,11 +142,15 @@ export async function fetchOrLoadOhlcv(
     });
   }
 
-  // Write to disk cache.
-  fs.mkdirSync(cacheDir, { recursive: true });
-  fs.writeFileSync(cacheFile, JSON.stringify(bars));
-
-  memo.set(ticker, bars);
+  // Write to disk cache ONLY when the fetch actually returned data. Persisting an
+  // empty array poisons resume: a transient Yahoo soft-block (0 bars) would be
+  // cached and every later run would read the empty file instead of re-fetching.
+  // On 0 bars we cache nothing and do not memo — the next run re-fetches.
+  if (bars.length > 0) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(cacheFile, JSON.stringify(bars));
+    memo.set(ticker, bars);
+  }
   return bars;
 }
 
