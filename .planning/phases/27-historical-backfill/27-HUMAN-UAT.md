@@ -23,21 +23,17 @@ All 21 Phase 27 tests pass in isolation (confirmed this run). The gate's full-su
 ### 2. Operator live backfill run
 expected: full `npx tsx scripts/backfill-historical.ts` populates `source='backfill'` weekly
 snapshots + 3-label PriceOutcome rows for the 121-ticker universe.
-result: PARTIAL (2026-05-27) — **24/121 tickers in prod: 4,906 snapshots, 29,436 outcomes.**
-The backfill mechanism is fully verified (clean data, 3 labels, sector-relative). The remaining
-~97 tickers could NOT be fetched from the agent environment: Yahoo aggressively rate-limits the
-chart endpoint from this (datacenter/cloud) IP — each run netted only ~3–13 tickers before a hard
-burst-block, regardless of throttle (tried 1s/3s/10s). NOT a code bug: the CLI is fully resumable
-and self-healing (failed tickers retry cleanly — no checkpoint/cache poisoning).
-**TO FINISH (run from a residential IP / your own machine):**
-`npx tsx scripts/backfill-historical.ts` — skips the 24 already done, fetches the rest. Tune with
-`BACKFILL_THROTTLE_MS=8000` if you still hit throttling. Re-run until `distinct_tickers` stops
-growing; it converges (resumable). Then trigger the recompute: `curl -H "Authorization: Bearer
-$CRON_SECRET" https://ciphersearch.app/api/cron/learn` (or just let the daily `learn` cron at
-07:30 UTC pick it up automatically).
-notes: Bootstraps N for Phase 23's lift-gate CV pool. The daily `learn` cron will fold the
-existing 24-ticker backfill outcomes into LearnedPattern automatically — no manual trigger needed
-for what's already in prod.
+result: ✅ DONE (2026-05-27) — **121/121 tickers in prod: 26,702 snapshots, 154,971 outcomes**
+(137,598 with sector-relative labels), cap-balanced **70 large / 27 small / 25 mid**.
+Convergence required riding Yahoo's burst-throttle (per-ticker exponential backoff + sustained-block
+pass-abort + shared cooldowns) and swapping **8 universe names that had delisted via 2024–25 M&A**
+for live equivalents (their data is gone from Yahoo — the exact survivorship gap D-03 documents):
+ATIP→SBH, APPH→WGO, NKLA→SCVL (bankrupt small-caps); HBI→CROX (Gildan acq.), PARA→COLM (→PSKY),
+SMAR→BOX (taken private), TPX→HAS (→Somnigroup/SGI), CIVI→MTDR, ZI→GTM (ZoomInfo rebrand). Universe
+is `2026-05-27.3`.
+notes: Bootstraps N for Phase 23's lift-gate CV pool. The recompute (`/api/cron/learn`) was
+triggered and correctly processed 0 of these into the LIVE posterior — per D-01, 5yr-old backfill
+rows decay to ~0 live weight; they live in the DB as the raw CV pool that Phase 23 reads directly.
 
 ## Summary
 
