@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-05-26T21:50:00.342Z"
-last_activity: 2026-05-26
+last_updated: "2026-05-27T00:26:28.451Z"
+last_activity: 2026-05-27
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 42
-  completed_plans: 41
-  percent: 98
+  completed_plans: 42
+  percent: 100
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 ## Current Position
 
 Milestone: v2.0
-Phase: 27 (Historical Backfill) — EXECUTING
-Plan: 4 of 4
+Phase: 27
+Plan: Not started
 Status: Ready to execute
-Last activity: 2026-05-26
+Last activity: 2026-05-27
 Last completed: 27-03 → D-01 posterior-invariance regression + LIVE_OUTCOME_THRESHOLD documented in HYPERPARAMETERS.md. Two tests added to backfill-live-gate.test.ts: (1) 5y-old decay weight < 1e-10 (exp(-1825/60) ≈ 1.5e-13); (2) posterior shift < 1e-6 vs fresh-only baseline — confirms no exclusion filter needed for backfill rows in the posterior path. live_outcome_gate section appended to HYPERPARAMETERS.md (LIVE_OUTCOME_THRESHOLD=10, D-10 rationale, D-01 interaction note, recalibration cadence). All 6 tests in backfill-live-gate.test.ts GREEN; 1815 total passing; tsc clean. Atomic commit: 5b84cf8. Key decisions: D-01 test directly exercises Phase 18 decay primitives; LIVE_OUTCOME_THRESHOLD=10 static until Phase 23 lift-gate evidence; legacy events without delta.source count as live (T-27-13 back-compat).
 Last completed (prior): 27-01 → additive SentimentSnapshot.source column + @@unique([ticker, scanned_at]) pushed to Neon; 121-ticker cap-balanced backfill universe (BACKFILL_UNIVERSE + UNIVERSE_VERSION); COVERAGE-06 GREEN; RED stubs for COVERAGE-07/08/10; integration stub COVERAGE-09; .gitignore .cipher/ guard. 6 atomic commits (44447c5, e5bf432, 0b9c42e, 0896f92, def978b, e8f457a). DB push was operator-confirmed checkpoint:human-action (no --accept-data-loss; 0 duplicate rows).
 
@@ -81,7 +81,7 @@ Last completed (prior 2): 20-Z-01 → SentimentObservation PIT feature store —
 
 **Velocity (v1.0 baseline):**
 
-- Total plans completed: 107
+- Total plans completed: 111
 - Average duration: ~0.9 days/plan
 - Total execution time: 49 days
 
