@@ -10,7 +10,9 @@
 //   for live mid-caps with full 5y Yahoo history. All replacements are M&A-safe, pre-2020.
 //   This is the survivorship gap D-03 documents — a Yahoo-sourced universe can't include
 //   names that delisted after curation.
-export const UNIVERSE_VERSION = '2026-05-27.2';
+// 2026-05-27.3: swapped final 2 mid-caps with no Yahoo data (CIVI→MTDR; ZI→GTM, ZoomInfo's
+//   2025 ticker rebrand). Universe is now 121 genuinely-fetchable names.
+export const UNIVERSE_VERSION = '2026-05-27.3';
 
 export interface UniverseEntry {
   ticker: string;
@@ -69,7 +71,7 @@ export const BACKFILL_UNIVERSE: readonly UniverseEntry[] = [
   { ticker: 'NCNO',  curation_cap: 'mid_cap' }, // ~$3B fintech SaaS
   { ticker: 'ALRM',  curation_cap: 'mid_cap' }, // ~$3B security SaaS
   { ticker: 'AVNT',  curation_cap: 'mid_cap' }, // ~$3.5B specialty materials
-  { ticker: 'CIVI',  curation_cap: 'mid_cap' }, // ~$3B oil & gas E&P
+  { ticker: 'MTDR',  curation_cap: 'mid_cap' }, // ~$6.5B oil & gas E&P (replaced CIVI — no Yahoo data)
   { ticker: 'COTY',  curation_cap: 'mid_cap' }, // ~$6B consumer beauty
   { ticker: 'DXC',   curation_cap: 'mid_cap' }, // ~$4B IT services
   { ticker: 'FBIN',  curation_cap: 'mid_cap' }, // ~$6B home hardware
@@ -94,7 +96,7 @@ export const BACKFILL_UNIVERSE: readonly UniverseEntry[] = [
   { ticker: 'VICR',  curation_cap: 'mid_cap' }, // ~$2.5B power semiconductors
   { ticker: 'WFRD',  curation_cap: 'mid_cap' }, // ~$3B oilfield services
   { ticker: 'WK',    curation_cap: 'mid_cap' }, // ~$3B regulatory/compliance SaaS
-  { ticker: 'ZI',    curation_cap: 'mid_cap' }, // ~$5B B2B data
+  { ticker: 'GTM',   curation_cap: 'mid_cap' }, // ~$5B B2B data (was ZI — ZoomInfo rebranded ticker to GTM in 2025)
   { ticker: 'AGIO',  curation_cap: 'mid_cap' }, // ~$2.5B oncology biotech
   { ticker: 'OPEN',  curation_cap: 'mid_cap' }, // ~$2B residential real estate tech
   { ticker: 'RPAY',  curation_cap: 'mid_cap' }, // ~$2B B2B payments
