@@ -82,6 +82,31 @@ function markDone(ticker: string, done: Set<string>): void {
   fs.writeFileSync(CHECKPOINT_FILE, JSON.stringify([...done]));
 }
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Yahoo burst-throttles the chart endpoint, returning 200 + EMPTY quotes (a soft
+// block) for a few minutes after ~10-20 rapid calls — worse from datacenter IPs.
+// A 0-bar result for a real, liquid universe ticker is almost always this block,
+// not missing data. Rather than skip the ticker for a later run, ride out the
+// cooldown IN-RUN with exponential backoff so a single invocation converges.
+// Backoff schedule is tunable; exhausting it falls through to the skip-retry path.
+const BACKOFF_MS = (process.env.BACKFILL_BACKOFF_MS ?? '30000,60000,120000,240000')
+  .split(',')
+  .map((s) => Number(s.trim()))
+  .filter((n) => n > 0);
+
+async function fetchWithBackoff(ticker: string): Promise<OhlcvBar[]> {
+  // Attempt 0 is immediate; each subsequent attempt waits out a longer cooldown.
+  let bars = await fetchOrLoadOhlcv(ticker, { cacheDir: CACHE_DIR });
+  for (let i = 0; bars.length === 0 && i < BACKOFF_MS.length; i++) {
+    const wait = BACKOFF_MS[i];
+    console.log(`  0 bars (likely throttle) — waiting ${wait / 1000}s, retry ${i + 1}/${BACKOFF_MS.length}`);
+    await sleep(wait);
+    bars = await fetchOrLoadOhlcv(ticker, { cacheDir: CACHE_DIR });
+  }
+  return bars;
+}
+
 // ─── Forward close lookup (from disk-cached bars) ────────────────────────────
 
 function nearestClose(bars: OhlcvBar[], when: Date): number | null {
@@ -188,14 +213,16 @@ async function main(): Promise<void> {
       const capClass = mc != null ? classifyCapClass(mc) : 'large_cap';
 
       // ── Step 2: Pre-warm disk cache (one Yahoo chart() call for the full 5y) ──
-      const allBars = await fetchOrLoadOhlcv(ticker, { cacheDir: CACHE_DIR });
+      // fetchWithBackoff rides out Yahoo's burst-throttle in-run (exponential
+      // backoff on 0-bar results) so a single invocation converges.
+      const allBars = await fetchWithBackoff(ticker);
       console.log(`  cached ${allBars.length} bars`);
 
-      // 0 bars = transient Yahoo soft-block (the live universe is real, liquid
-      // tickers). Treat as a retryable failure: do NOT markDone, so the next run
-      // re-fetches this ticker. (Nothing was cached for it — see ohlcv-cache.ts.)
+      // Still 0 bars after exhausting the backoff schedule: either a persistent
+      // block or genuinely no data. Do NOT markDone — the next run re-fetches.
+      // (Nothing was cached for it — see ohlcv-cache.ts.)
       if (allBars.length === 0) {
-        console.log(`  skip ${ticker} — 0 bars (transient; will retry next run)`);
+        console.log(`  skip ${ticker} — 0 bars after retries (will retry next run)`);
         continue;
       }
 
