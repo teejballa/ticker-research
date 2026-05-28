@@ -258,7 +258,9 @@ export default function ResearchPage() {
   return (
     <div className="flex flex-col min-h-screen bg-surface">
       <NavBar ticker={ticker} showSubBar />
-      <main className="flex-1 flex flex-col items-center justify-start px-4 py-8">
+      {/* pt-28 (112px) clears the two stacked fixed bars: .nav (56px) + sub-bar (~40px).
+          Without it the top of ChartConfirmation sits behind the bars and can't be scrolled into view. */}
+      <main className="flex-1 flex flex-col items-center justify-start px-4 pt-28 pb-8">
         <ChartConfirmation
           ticker={ticker}
           chartData={chartData.points}
