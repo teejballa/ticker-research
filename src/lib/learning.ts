@@ -219,6 +219,30 @@ export function initLogisticState(featureNames: string[]): LogisticState {
 }
 
 /**
+ * Phase 21.1 D-19 — PRIOR_PRECISION annealing variant.
+ *
+ * Use this when the cell's observation count n is known at init time.
+ * Calls priorPrecisionForN (Wave 2) to select the ridge-regularization
+ * strength based on the n bucket: 8 (n<100) → 4 (100≤n<500) → 1 (n≥500).
+ *
+ * The existing `initLogisticState(featureNames)` is preserved unchanged for
+ * back-compat with callers that don't have an n-bucket; those callers use
+ * the flat PRIOR_PRECISION=1 default. Wave 4's learn cron uses this variant.
+ *
+ * Documented in HYPERPARAMETERS.md § "PRIOR_PRECISION annealing (D-19)".
+ */
+export function initLogisticStateForN(featureNames: string[], n: number): LogisticState {
+  const prec = priorPrecisionForN(n);
+  return {
+    intercept: 0,
+    intercept_var: 1 / prec,
+    weights: featureNames.map(() => 0),
+    weight_vars: featureNames.map(() => 1 / prec),
+    feature_names: featureNames,
+  };
+}
+
+/**
  * Single online update step. Approximates the Bayesian update via a
  * diagonal Laplace approximation: we treat each coefficient's posterior
  * as independent Gaussian and update its mean + variance with one
@@ -308,6 +332,28 @@ export function adversarialNullBrier(
 
 // ─── Status assignment ────────────────────────────────────────────────────
 
+/**
+ * Phase 21.1 D-26 — five-gate promotion rule.
+ *
+ * A cell graduates to ACTIVE only when ALL of:
+ *   (a) effective_sample_size ≥ 30                    — existing Phase 18 rule
+ *   (b) live_outcome_count ≥ LIVE_OUTCOME_THRESHOLD   — existing Phase 27 rule (=10)
+ *   (c) brier_lift > BRIER_LIFT_THRESHOLD             — D-07 (default 0.005, sensitivity sweep in HYPERPARAMETERS.md)
+ *   (d) by_fdr_q_value < 0.10                         — CORE-ML-17 dependence-robust FDR
+ *   (e) dsr > 0                                       — CORE-ML-18 multiple-testing deflated Sharpe
+ *
+ * Any failing gate → EXPLORATORY (unless brier_out > brier_null → DEPRECATED preserved).
+ * Existing drift_z > 2 → DEPRECATED rule also preserved.
+ *
+ * Back-compat: callers that do not yet supply live_outcome_count, by_fdr_q_value, or dsr
+ * will fail gates (b), (d), (e) and land at EXPLORATORY — safe conservative default.
+ */
+
+/** OOS Brier-lift threshold for ACTIVE candidacy (gate c).
+ * Per RESEARCH.md §9 Q3 starting recommendation; Wave 6 sensitivity sweep on backfill
+ * corpus may revise. Document chosen value + sensitivity table in HYPERPARAMETERS.md. */
+export const BRIER_LIFT_THRESHOLD = 0.005;
+
 export function patternStatus(args: {
   sample_size: number;
   brier_in: number | null;
@@ -315,21 +361,43 @@ export function patternStatus(args: {
   brier_null: number | null;
   drift_z: number;
   effective_sample_size?: number;
-}): 'ACTIVE' | 'EXPLORATORY' | 'DEPRECATED' {
-  // CONTEXT D-04: ESS<30 supersedes raw sample_size<10 when ESS provided.
-  if (args.effective_sample_size != null) {
-    if (args.effective_sample_size < 30) return 'EXPLORATORY';
-  } else if (args.sample_size < 10) {
-    return 'EXPLORATORY';
-  }
+  // Phase 21.1 D-26 — new gate inputs
+  live_outcome_count?: number;
+  brier_lift_threshold?: number;   // default BRIER_LIFT_THRESHOLD (0.005)
+  by_fdr_q_value?: number | null;  // null = not yet evaluated → fail gate (d)
+  dsr?: number | null;             // null = not yet computed → fail gate (e)
+}): 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' {
+  // Preserve existing DEPRECATED rules (out-of-sample worse than null OR drift_z > 2)
   if (args.brier_out != null && args.brier_null != null && args.brier_out > args.brier_null) {
     return 'DEPRECATED';
   }
   if (Math.abs(args.drift_z) > 2) return 'DEPRECATED';
-  if (args.brier_in != null && args.brier_null != null && args.brier_in < args.brier_null) {
-    return 'ACTIVE';
-  }
-  return 'EXPLORATORY';
+
+  // Gate (a) — ESS ≥ 30 (preserves Phase 18 D-04 rule; ESS supersedes raw
+  // sample_size when provided). Back-compat: if neither ESS nor adequate raw N,
+  // fall through to EXPLORATORY — same behavior as pre-Phase-21.1.
+  const ess = args.effective_sample_size ?? args.sample_size;
+  if (ess < 30) return 'EXPLORATORY';
+
+  // Gate (b) — live ≥ 10 (Phase 27 D-10 / COVERAGE-10). Missing = fail (safe default).
+  const liveCount = args.live_outcome_count ?? 0;
+  if (liveCount < LIVE_OUTCOME_THRESHOLD) return 'EXPLORATORY';
+
+  // Gate (c) — OOS Brier-lift > θ (D-07). Lift = brier_null − brier_out.
+  const theta = args.brier_lift_threshold ?? BRIER_LIFT_THRESHOLD;
+  const lift =
+    args.brier_null != null && args.brier_out != null
+      ? args.brier_null - args.brier_out
+      : null;
+  if (lift == null || lift <= theta) return 'EXPLORATORY';
+
+  // Gate (d) — BY-FDR q < 0.10 (CORE-ML-17). null = not yet evaluated → fail.
+  if (args.by_fdr_q_value == null || args.by_fdr_q_value >= 0.10) return 'EXPLORATORY';
+
+  // Gate (e) — DSR > 0 (CORE-ML-18). null = not yet computed → fail.
+  if (args.dsr == null || args.dsr <= 0) return 'EXPLORATORY';
+
+  return 'ACTIVE';
 }
 
 // ─── Phase 27 D-10 / COVERAGE-10: live-only promotion gate ──────────────────
@@ -450,6 +518,33 @@ export function needsLogisticReinit(
 
 export const STATUS_VALUES = ['ACTIVE', 'EXPLORATORY', 'EXPLORATORY-WATCH', 'DEPRECATED'] as const;
 export type LearnedStatus = typeof STATUS_VALUES[number];
+
+/**
+ * Phase 21.1 D-27 + D-19 — LearningEvent.event_type values.
+ *
+ * Extends the pre-existing event types that callers write into the DB.
+ * Pre-existing types preserved: 'posterior_update', 'drift_alert', 'drift_clear',
+ * 'cycle_summary', 'baseline_eval' (from Phase 18/19/21.1-03 crons).
+ *
+ * New in Phase 21.1:
+ *   cell_promoted   — D-27: cell crossed all 5 gates and flipped to ACTIVE
+ *   cell_demoted    — D-27: cell was ACTIVE, now fails ≥1 gate → EXPLORATORY / DEPRECATED
+ *   logistic_anneal — D-19: engine logistic reinitialized with a new PRIOR_PRECISION bucket
+ */
+export const LEARNING_EVENT_TYPES = [
+  'posterior_update',
+  'drift_alert',
+  'drift_clear',
+  'cycle_summary',
+  'baseline_eval',
+  // Phase 21.1 D-27
+  'cell_promoted',
+  'cell_demoted',
+  // Phase 21.1 D-19
+  'logistic_anneal',
+] as const;
+
+export type LearningEventType = (typeof LEARNING_EVENT_TYPES)[number];
 
 // ─── Phase 18: Time-decay primitives (D-03 Kish ESS, D-18 pure functions) ─
 
