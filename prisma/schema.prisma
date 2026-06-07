@@ -55,23 +55,23 @@ model SentimentSnapshot {
   model_agreement      Float?
   // Phase 27 D-09/COVERAGE-09 — additive source tag ('live' | 'backfill').
   // Defaulted so all existing rows become 'live' automatically (zero-downtime).
-  source               String @default("live")
+  source               String   @default("live")
 
   outcomes PriceOutcome[]
 
-  @@index([ticker, scanned_at(sort: Desc)])
   @@unique([ticker, scanned_at])
+  @@index([ticker, scanned_at(sort: Desc)])
   @@map("sentiment_snapshots")
 }
 
 model PriceOutcome {
-  id          String   @id @default(uuid())
-  report_id   String?
-  snapshot_id String?
-  days_after  Int
-  price       Float
-  pct_change  Float
-  recorded_at DateTime @db.Timestamptz
+  id                        String   @id @default(uuid())
+  report_id                 String?
+  snapshot_id               String?
+  days_after                Int
+  price                     Float
+  pct_change                Float
+  recorded_at               DateTime @db.Timestamptz
   // Phase 21 — Sector-Relative Outcome Labels (additive, nullable).
   // sector_etf: SPDR ETF code (XLK/XLF/XLE/XLV/XLY/XLP/XLI/XLU/XLB/XLRE/XLC) or 'SPY' fallback.
   // SNAPSHOTTED AT PREDICTION TIME — never re-resolve at relabel time (avoids reconstitution drift).
@@ -81,6 +81,16 @@ model PriceOutcome {
   sector_etf                String?
   forward_return_raw        Float?
   forward_return_sector_rel Float?
+  // Phase 21.1 — Capacity to Detect Edge (D-14..D-17). All three labels written
+  // by ONE shared compute path in /api/cron/relabel + /api/cron/price-followup
+  // (single source of truth, train/serve skew defense per CLAUDE.md rule #6).
+  // is_sigma_hit_k1 is the PRIMARY engine label per D-14 (k=1, 60d sector ETF σ).
+  // is_directional_hit (D-15) and is_hit_flat1 (D-16) are secondary diagnostics.
+  // sector_sigma_60d is SNAPSHOTTED AT RELABEL TIME — same anti-drift discipline as sector_etf.
+  is_directional_hit        Boolean?
+  is_sigma_hit_k1           Boolean?
+  is_hit_flat1              Boolean?
+  sector_sigma_60d          Float?
 
   report   Report?            @relation(fields: [report_id], references: [id])
   snapshot SentimentSnapshot? @relation(fields: [snapshot_id], references: [id])
@@ -462,13 +472,13 @@ model ProviderCallLog {
 /// 90d retention via extended provider-call-log-retention sweep.
 model ProviderHealthAlert {
   id                   String    @id @default(uuid())
-  provider_id          String    // pinned ProviderId (see src/lib/telemetry/cost-estimators.ts)
+  provider_id          String // pinned ProviderId (see src/lib/telemetry/cost-estimators.ts)
   breached_at          DateTime  @db.Timestamptz
   error_rate           Float
   error_count          Int
   total_count          Int
-  dominant_error_class String?   // controlled TelemetryErrorClass; nullable when no error_class column populated
-  resolved_at          DateTime? @db.Timestamptz  // set on the next cron run when error_rate < 0.10 again
+  dominant_error_class String? // controlled TelemetryErrorClass; nullable when no error_class column populated
+  resolved_at          DateTime? @db.Timestamptz // set on the next cron run when error_rate < 0.10 again
 
   @@index([provider_id, breached_at(sort: Desc)], map: "idx_pha_provider_breached")
   @@index([resolved_at], map: "idx_pha_resolved_at")
@@ -607,4 +617,30 @@ model ManipulationWarning {
   @@index([ticker, computed_at(sort: Desc)], map: "idx_manipwarn_ticker_computed_at")
   @@index([is_warning_fired, computed_at(sort: Desc)], map: "idx_manipwarn_fired_computed_at")
   @@map("manipulation_warnings")
+}
+
+// Phase 21.1 — D-08, D-09, D-10. Daily LLM direct evaluation written by
+// /api/cron/llm-ic. Each row = one report's evaluation against forward
+// sector-relative return. CORE-ML-20.
+// ic_contribution = predictions vs forward return for IC roll-up
+// brier_buy_prob = Brier of LLM's Buy-probability vs the σ-aware hit label
+// ll_signed_score = the LLM's confidence-weighted directional score s ∈ [-1, +1]
+//   where Buy = +confidence, Hold = 0, Sell = -confidence (per D-08)
+// horizon_days = which horizon's forward return (7 | 14 | 30)
+model LLMEvaluation {
+  id              String   @id @default(uuid())
+  ticker          String
+  report_id       String?
+  recorded_at     DateTime @default(now()) @db.Timestamptz
+  horizon_days    Int
+  ic_contribution Float?
+  brier_buy_prob  Float?
+  ll_signed_score Float
+  forward_return  Float?
+  is_resolved     Boolean  @default(false)
+
+  @@index([recorded_at(sort: Desc)])
+  @@index([ticker, recorded_at(sort: Desc)])
+  @@index([horizon_days, recorded_at(sort: Desc)])
+  @@map("llm_evaluations")
 }
