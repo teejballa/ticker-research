@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
 status: executing
-last_updated: "2026-06-07T06:01:04.068Z"
-last_activity: 2026-05-27
+last_updated: "2026-06-07T11:40:00.000Z"
+last_activity: 2026-06-07 — Phase 21.1 Wave 4 complete, Wave 5 next
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 49
-  completed_plans: 46
-  percent: 94
+  completed_plans: 44
+  percent: 90
 ---
 
 # Project State
@@ -21,15 +21,15 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
 **Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — backed by an industry-standard, auditable, self-improving Bayesian learning engine.
 
-**Current focus:** Phase 27 — Historical Backfill
+**Current focus:** Phase 21.1 — Capacity to Detect Edge (Wave 4 complete, Wave 5 next)
 
 ## Current Position
 
 Milestone: v2.0
-Phase: 27
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-27
+Phase: 21.1 — Capacity to Detect Edge
+Plan: 21.1-05 (Wave 5) next; Waves 0–4 complete (5 plans of 7)
+Status: Wave 5 ready to execute
+Last activity: 2026-06-07 — Wave 4 (patternStatus 5-gate + BY-FDR + DSR) complete on worktree branch worktree-agent-a70d92c734e49e0ee
 Last completed: 27-03 → D-01 posterior-invariance regression + LIVE_OUTCOME_THRESHOLD documented in HYPERPARAMETERS.md. Two tests added to backfill-live-gate.test.ts: (1) 5y-old decay weight < 1e-10 (exp(-1825/60) ≈ 1.5e-13); (2) posterior shift < 1e-6 vs fresh-only baseline — confirms no exclusion filter needed for backfill rows in the posterior path. live_outcome_gate section appended to HYPERPARAMETERS.md (LIVE_OUTCOME_THRESHOLD=10, D-10 rationale, D-01 interaction note, recalibration cadence). All 6 tests in backfill-live-gate.test.ts GREEN; 1815 total passing; tsc clean. Atomic commit: 5b84cf8. Key decisions: D-01 test directly exercises Phase 18 decay primitives; LIVE_OUTCOME_THRESHOLD=10 static until Phase 23 lift-gate evidence; legacy events without delta.source count as live (T-27-13 back-compat).
 Last completed (prior): 27-01 → additive SentimentSnapshot.source column + @@unique([ticker, scanned_at]) pushed to Neon; 121-ticker cap-balanced backfill universe (BACKFILL_UNIVERSE + UNIVERSE_VERSION); COVERAGE-06 GREEN; RED stubs for COVERAGE-07/08/10; integration stub COVERAGE-09; .gitignore .cipher/ guard. 6 atomic commits (44447c5, e5bf432, 0b9c42e, 0896f92, def978b, e8f457a). DB push was operator-confirmed checkpoint:human-action (no --accept-data-loss; 0 duplicate rows).
 
