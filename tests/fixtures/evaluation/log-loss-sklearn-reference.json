@@ -14,9 +14,9 @@
         {"Buy": 0.55, "Hold": 0.35, "Sell": 0.10},
         {"Buy": 0.4, "Hold": 0.4, "Sell": 0.2}
       ],
-      "expected_log_loss": 0.5217,
+      "expected_log_loss": 0.4686,
       "tolerance": 1e-3,
-      "notes": "Computed via -mean(sum_k y_ik * log(p_ik)) with eps=1e-15"
+      "notes": "Corrected from 0.5217. Verified manually: sum(-log(p_true)) = 3.7489, mean = 0.4686. Row losses: -log(0.7)*3, -log(0.6), -log(0.8), -log(0.65), -log(0.55), -log(0.4). Formula: LL = -(1/n)*sum_i log(p_{i,y_i}) per CS229 Information Theory."
     },
     {
       "label": "wrong-prediction edge case",
