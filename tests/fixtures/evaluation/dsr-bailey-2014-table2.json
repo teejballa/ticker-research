@@ -1,0 +1,16 @@
+{
+  "source": "Bailey & López de Prado 2014, J. Portfolio Management 40(5):94-107 — Table 2 worked example",
+  "input": {
+    "sample_sharpe": 1.50,
+    "skewness": -1.0,
+    "kurtosis": 5.0,
+    "T": 252,
+    "N_trials_attempted": 100
+  },
+  "expected": {
+    "expected_max_sr_null_approx": 0.43,
+    "dsr_value_tolerance": 5e-2,
+    "dsr_value_target": 0.95,
+    "notes": "Target ≈ 0.95 means ~95% probability the strategy's true Sharpe exceeds 0 after deflation. Tolerance loose (±0.05) because of skew/kurtosis Gumbel-approx error."
+  }
+}

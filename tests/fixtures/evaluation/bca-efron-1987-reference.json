@@ -1,0 +1,19 @@
+{
+  "source": "Efron 1987, JASA 82(397):171-185 — Table 2 example",
+  "input": {
+    "samples": [10, 27, 31, 40, 46, 50, 52, 104, 146, 191],
+    "statistic": "mean",
+    "n_resamples": 10000,
+    "alpha": 0.05,
+    "rng_seed": 42
+  },
+  "expected": {
+    "point_estimate": 69.7,
+    "bca_ci_low_tolerance": 1.0,
+    "bca_ci_high_tolerance": 1.0,
+    "bca_ci_low_target": 41.0,
+    "bca_ci_high_target": 108.0,
+    "method_fallback_below_n": 50,
+    "notes": "Tolerances loose (±1.0) because seed-dependence; tighten in test if needed"
+  }
+}
