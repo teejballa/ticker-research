@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import type { TechPattern, TechnicalSnapshot } from './types';
 import type { DiffusionTraceResult } from './diffusion-trace';
+import { tickerRolling60dZ, crossSectionalZ } from './features/zscore';
 
 export interface BetaPosterior {
   alpha: number;
@@ -1678,4 +1679,103 @@ export function buildJointFeaturePatternKey(args: {
   }
   // mode === 'on'
   return { primaryKey: withJoint };
+}
+
+// ─── Phase 21.1 D-18/D-19: 36-feature space + prior-precision annealing ──────
+//
+// The original 12-feature space (FEATURE_NAMES, buildFeatureVector12) is
+// PRESERVED UNCHANGED so LogisticEpoch rows recorded prior to Phase 21.1
+// remain interpretable. The 36-d space is additive.
+//
+// FEATURE_NAMES_36 = 12 base + 12 ticker-rolling-60d z + 12 cross-sectional z
+// Naming convention: base name + '_z60d' (rolling) or '_zxs' (cross-sectional)
+
+/** Phase 21.1 back-compat alias — same object, clearer name for 36-d callers. */
+export const FEATURE_NAMES_12 = FEATURE_NAMES;
+
+/**
+ * Phase 21.1 D-18 — 36-dimensional feature name list.
+ *
+ * Layout:
+ *   [0..11]  = base features (FEATURE_NAMES verbatim — back-compat)
+ *   [12..23] = ticker-rolling-60d z-scores  (name + '_z60d')
+ *   [24..35] = cross-sectional z-scores     (name + '_zxs')
+ *
+ * This constant is consumed by Wave 3 logistic baselines and the Wave 4
+ * engine logistic. Any consumer that previously used FEATURE_NAMES (12-d)
+ * should check `feature_names.length` to detect which space is active.
+ */
+export const FEATURE_NAMES_36: readonly string[] = [
+  ...FEATURE_NAMES_12,
+  ...FEATURE_NAMES_12.map((n) => `${n}_z60d`),
+  ...FEATURE_NAMES_12.map((n) => `${n}_zxs`),
+] as const;
+
+// Invariant guard — fails at module load time if naming constants drift.
+if (FEATURE_NAMES_36.length !== 36) {
+  throw new Error(
+    `FEATURE_NAMES_36 must have 36 entries, got ${FEATURE_NAMES_36.length}`,
+  );
+}
+
+/**
+ * Phase 21.1 D-18 — assemble the 36-feature vector for a snapshot.
+ *
+ * Arguments mirror buildFeatureVector12 for the base-vector portion; two
+ * extra Records supply PIT-correct history and universe slices for z-scores.
+ *
+ * @param trace       DiffusionTraceResult at decision time (positions 0-5)
+ * @param techSnap    TechnicalSnapshot at decision time (positions 6-11)
+ * @param techPattern TechPattern classification at decision time (position 11)
+ * @param history60d  Record<feature_name, number[]> — last 60 trading days of
+ *                    base features for the SAME ticker. Caller ensures PIT-correct
+ *                    (no observations after decision time).
+ * @param universe    Record<feature_name, number[]> — today's universe values
+ *                    of each base feature. Caller ensures no forward leakage.
+ *
+ * Cold-start: empty history60d or universe entries fall back to 0 for the
+ * corresponding z-score dimensions (tickerRolling60dZ / crossSectionalZ
+ * cold-start contract).
+ *
+ * @knowable_at  decision time (caller ensures history/universe are PIT-correct)
+ */
+export function buildFeatureVector36(
+  trace: DiffusionTraceResult,
+  techSnap: TechnicalSnapshot | null,
+  techPattern: TechPattern | null,
+  history60d: Record<string, number[]>,
+  universe: Record<string, number[]>,
+): number[] {
+  const base = buildFeatureVector12(trace, techSnap, techPattern);
+  if (base.length !== 12) {
+    throw new Error(
+      `buildFeatureVector12 returned ${base.length} features, expected 12`,
+    );
+  }
+  const zRolling = FEATURE_NAMES_12.map((name, i) =>
+    tickerRolling60dZ(base[i], history60d[name] ?? []),
+  );
+  const zCrossSec = FEATURE_NAMES_12.map((name, i) =>
+    crossSectionalZ(base[i], universe[name] ?? []),
+  );
+  return [...base, ...zRolling, ...zCrossSec];
+}
+
+/**
+ * Phase 21.1 D-19 — PRIOR_PRECISION annealing schedule for the 36-d logistic.
+ *
+ * Shrinkage ramp per ISL Ch. 6 ridge/lasso intuition: stronger regularization
+ * when n is small (sparse cells), weaker as evidence accumulates.
+ *
+ * Values: 8 → 4 → 1 at n={100, 500, ∞}.
+ * Documented in HYPERPARAMETERS.md (D-19 row).
+ *
+ * Wave 4 wires this into the engine logistic update; Wave 3 baselines use it
+ * too. Returns a positive scalar suitable for use as PRIOR_PRECISION in
+ * initLogisticState / updateLogistic.
+ */
+export function priorPrecisionForN(n: number): number {
+  if (n < 100) return 8;
+  if (n < 500) return 4;
+  return 1;
 }
