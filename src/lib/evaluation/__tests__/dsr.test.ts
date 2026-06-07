@@ -12,7 +12,7 @@ describe('deflatedSharpeRatio (Bailey & López de Prado 2014)', () => {
       T,
       nTrialsAttempted: N_trials_attempted,
     });
-    expect(Math.abs(dsr - fixture.expected.dsr_value_target)).toBeLessThan(fixture.expected.dsr_value_tolerance);
+    expect(Math.abs(dsr! - fixture.expected.dsr_value_target)).toBeLessThan(fixture.expected.dsr_value_tolerance);
   });
 
   it('N=1 collapses to plain Sharpe-significance test', () => {
