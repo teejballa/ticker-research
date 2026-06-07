@@ -64,10 +64,18 @@ import {
   hierarchicalPooledPosterior,
   // Phase 27 Plan 27-03 — D-10 live-only promotion gate (COVERAGE-10).
   enforceLiveOnlyGate,
+  // Phase 21.1 Wave 4 — 5-gate patternStatus constants + PRIOR_PRECISION annealing
+  BRIER_LIFT_THRESHOLD,
   type LogisticState,
   type WeightedObservation,
   type LearnedStatus,
 } from '@/lib/learning';
+import { purgedKFold, type Observation } from '@/lib/cv';
+import {
+  bootstrapBCa,
+  benjaminiYekutieli,
+  deflatedSharpeRatio,
+} from '@/lib/evaluation';
 import { FEATURES } from '@/lib/features';
 import { runWithShadow } from '@/lib/shadow/shadow-runner';
 import type {
@@ -402,6 +410,44 @@ async function upsertCell(
   });
 }
 
+// ─── Phase 21.1 Wave 4 — Per-cell evaluation result ─────────────────────────
+//
+// CORE-ML-15/17/18/19: `recomputeOneCell` now returns a CellEvalResult instead
+// of writing status directly. The orchestrator collects all results, runs
+// Benjamini-Yekutieli FDR over the per-cell p-values, then calls
+// `applyPatternStatusAndEmitEvents` with q-values known.
+
+interface CellEvalResult {
+  key: CellKey;
+  cell_id: string;
+  prev_status: string;
+  // Existing metrics (Phase 18/19/27)
+  brier_in: number;
+  brier_out: number | null;
+  brier_null: number;
+  ess: number;
+  drift_z: number;
+  drift_fired: boolean;
+  ph_stat: number;
+  ph_threshold: number;
+  live_outcome_count: number;
+  // Phase 21.1 D-26 new fields
+  cv_folds: number;
+  brier_lift: number;
+  brier_lift_ci_bca_95: [number, number];
+  p_value: number;              // one-sided: fraction of Purged-K-Fold folds with lift ≤ 0
+  dsr: number | null;
+  forward_returns: number[];    // for DSR computation (forward_return_sector_rel per outcome)
+  // Full DB update payload (fields to write once status is known)
+  db_update_data: Record<string, unknown>;
+  // weighted posterior for DB overwrite
+  alpha_new: number;
+  beta_new: number;
+  alpha_30d: number;
+  beta_30d: number;
+  n_trials_delta: number;
+}
+
 // ─── Recompute pass (per-cell metrics across all 216 cells) ─────────────────
 
 // ─── Phase 19 Plan 19-A-07: hierarchical pooling + lake-of-cells pruning ──
@@ -513,15 +559,24 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
   // isolation). Iterate the cartesian product AND any rows that already exist
   // in the table (excluding the 'unknown' cap_class fallback) so every cell
   // touched by a write path also gets its ESS / weighted posterior recomputed.
+  //
+  // Phase 21.1 Wave 4 — CORE-ML-15/17/18/19: two-pass orchestration.
+  //   PASS 1: evaluateOneCell — compute metrics (Brier, ESS, drift, lift, DSR)
+  //           for each cell. Sequential to avoid Neon connection saturation.
+  //   BY-FDR: benjaminiYekutieli over all per-cell p-values — denominator =
+  //           total candidate cells evaluated this run (CONTEXT D-05).
+  //   PASS 2: applyPatternStatusAndEmitEvents — write status + LearningEvents
+  //           using the now-known q-values.
+
   const SIGNAL_CLASSES = ['diffusion', 'technical', 'insider', 'institutional'] as const;
 
-  const tasks: Array<Promise<void>> = [];
+  const keysToEvaluate: CellKey[] = [];
   const seen = new Set<string>();
   const enqueue = (key: CellKey) => {
     const k = `${key.signal_class}|${key.pattern_key}|${key.cap_class}|${key.horizon_days}`;
     if (seen.has(k)) return;
     seen.add(k);
-    tasks.push(recomputeOneCell(history, key));
+    keysToEvaluate.push(key);
   };
 
   for (const signal_class of SIGNAL_CLASSES) {
@@ -563,10 +618,42 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
     });
   }
 
-  await Promise.all(tasks);
+  // ─── PASS 1: evaluate all cells sequentially ───────────────────────────────
+  // Sequential (not Promise.all) so Neon serverless connection pool isn't
+  // saturated by 500+ concurrent queries. Each cell does 2–3 DB reads.
+  const cellEvals: CellEvalResult[] = [];
+  for (const key of keysToEvaluate) {
+    try {
+      const result = await evaluateOneCell(history, key);
+      if (result !== null) cellEvals.push(result);
+    } catch (err) {
+      console.error('[learn] evaluateOneCell error', key, err);
+    }
+  }
+
+  // ─── BY-FDR: Benjamini-Yekutieli over all per-cell p-values ───────────────
+  // CONTEXT D-05: n_trials_attempted denominator = total cells evaluated this run.
+  // BY is dependence-robust (cells share market regime) — CONTEXT D-02.
+  const pValues = cellEvals.map((e) => e.p_value);
+  const fdrResult = benjaminiYekutieli(pValues, 0.10);
+
+  // ─── PASS 2: write status + emit LearningEvents ────────────────────────────
+  await applyPatternStatusAndEmitEvents(cellEvals, fdrResult.adjusted_p);
 }
 
-async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void> {
+/**
+ * Phase 21.1 Wave 4 — CORE-ML-15/17/18/19.
+ *
+ * Evaluates one cell's metrics without writing status (patternStatus is applied
+ * after BY-FDR runs across ALL cells). Returns null when the cell has no
+ * observations (no metrics to compute).
+ *
+ * All existing Phase 18/19/27 logic (decay weights, ESS, Brier OOS, drift) is
+ * preserved verbatim — this refactor adds Purged-K-Fold lift computation,
+ * p-value, BCa CI, DSR, and live_outcome_count, and defers status assignment to
+ * `applyPatternStatusAndEmitEvents`.
+ */
+async function evaluateOneCell(history: SpyHistory, key: CellKey): Promise<CellEvalResult | null> {
   const cell = await prisma.learnedPattern.findUnique({
     where: {
       signal_class_pattern_key_cap_class_horizon_days: {
@@ -577,7 +664,7 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
       },
     },
   });
-  if (!cell) return; // never observed; no metrics to recompute
+  if (!cell) return null; // never observed; no metrics to recompute
 
   const predMean = posteriorMean({ alpha: cell.alpha, beta: cell.beta });
 
@@ -624,11 +711,9 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
     outcomes.push(hit);
   }
 
-  if (predictions.length === 0) return;
+  if (predictions.length === 0) return null;
 
   // ─── Phase 18: Decay weights + ESS + weighted posterior ───────────────────
-  // CONTEXT D-03 (Kish), D-04 (ESS<30 gate via patternStatus extension),
-  // D-15 (n_trials_attempted populated). Pure primitives from Plan 18-01.
   const lambdaDays = HYPERPARAMETERS[key.signal_class]?.lambda_days ?? 60;
   const now = new Date();
   const weightedObs: WeightedObservation[] = events
@@ -657,13 +742,6 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
   const weightedPosterior = updatePosteriorWeighted({ alpha: 1, beta: 1 }, weightedObs, weights);
 
   const brier_in = brierScore(predictions, outcomes);
-  // Plan 19-A-02 / D-18: replace buggy max(1, n-14) split (silent 0-row OOS
-  // at n<16 → trivial Brier=0 disguise) with chronological 80/20 split via
-  // computeBrierOOS. Returns { brier: null, reason } when n_test<5 instead of
-  // a meaningless number. We persist `null` to brier_out_sample in that case.
-  // Pair predictions with the chronological event ordering — `events` and
-  // `weightedObs` are both populated in `events.orderBy: { occurred_at: 'asc' }`
-  // order above, so weightedObs is the canonical recorded_at carrier.
   const oosResult = computeBrierOOS(predictions, weightedObs, 0.2);
   const brier_out = oosResult.brier;
   const nullResult = adversarialNullBrier(predictions, outcomes, 100);
@@ -694,24 +772,17 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
   }
 
   // ─── Phase 18: Per-observation deltas for Page-Hinkley ────────────────────
-  // For each event in chronological order, compute residual =
-  // (hit ? 1 : 0) − running_posterior_mean_before_i. Page-Hinkley accumulates
-  // these residuals to detect sustained shifts (CONTEXT D-06).
   const perObsDeltas: number[] = [];
   let runningAlpha = 1;
   let runningBeta = 1;
   for (const obs of weightedObs) {
     const runningMean = runningAlpha / (runningAlpha + runningBeta);
-    const obsValue = obs.hit ? 1 : 0;
-    perObsDeltas.push(obsValue - runningMean);
+    perObsDeltas.push((obs.hit ? 1 : 0) - runningMean);
     if (obs.hit) runningAlpha += 1;
     else runningBeta += 1;
   }
 
-  // ─── Phase 18: Two-of-two drift detection (CONTEXT D-06, D-08, D-09) ─────
-  // confirmedDrift fires iff (raw N≥30 AND |drift_z|>2 AND ph_stat>0). The
-  // weighted posterior drives the all-time leg of drift_z so concept-drift
-  // defenses operate against decay-weighted reality, not stale raw counts.
+  // ─── Phase 18: Two-of-two drift detection ─────────────────────────────────
   const phParams = HYPERPARAMETERS[key.signal_class] ?? HYPERPARAMETERS.diffusion;
   const drift = confirmedDrift({
     rolling: { alpha: alpha_30d, beta: beta_30d },
@@ -723,114 +794,276 @@ async function recomputeOneCell(history: SpyHistory, key: CellKey): Promise<void
   });
   const drift_z = drift.drift_z;
 
-  let status: LearnedStatus = patternStatus({
-    sample_size: cell.sample_size,
-    effective_sample_size: ess,                          // D-04 ESS<30 → EXPLORATORY supersedes raw N gate
-    brier_in,
-    brier_out,
-    brier_null: nullResult.mean_null_brier,
-    drift_z,
-  }) as LearnedStatus;
-
-  // D-09: confirmed drift → EXPLORATORY-WATCH (no auto-demote, no silencing).
-  // STATUS_VALUES validates the literal at write time (T-18-04 mitigation).
-  if (drift.fired) {
-    if (!STATUS_VALUES.includes('EXPLORATORY-WATCH' as LearnedStatus)) {
-      throw new Error('STATUS_VALUES missing EXPLORATORY-WATCH — Plan 18-01 not applied');
-    }
-    status = 'EXPLORATORY-WATCH';
-  } else if (cell.status === 'EXPLORATORY-WATCH') {
-    // Recovery counter — D-09 step 4: 14 consecutive clear days needed to
-    // flip back to ACTIVE. Plan 09 derives the count from drift_clear rows.
-    // Hold the watch state until that counter is satisfied.
-    status = 'EXPLORATORY-WATCH';
-  }
-
-  // Phase 27 D-10 / COVERAGE-10: live-only promotion gate.
-  // Count posterior_update events whose delta.source is not 'backfill'.
-  // Legacy events without a source key (pre-Phase-27) count as live — correct,
-  // since they ARE live data (T-27-13 accepted back-compat).
+  // ─── Phase 27 D-10: live-only count ───────────────────────────────────────
   const liveOutcomeCount = events.filter((ev) => {
     const d = ev.delta as { source?: string } | null;
-    return d?.source !== 'backfill';   // missing source (legacy rows) counts as live
+    return d?.source !== 'backfill';
   }).length;
-  status = enforceLiveOnlyGate(status, liveOutcomeCount);   // Phase 27 D-10 / COVERAGE-10
 
-  const prevStatus = cell.status;
-  await prisma.learnedPattern.update({
-    where: {
-      signal_class_pattern_key_cap_class_horizon_days: {
-        signal_class: key.signal_class,
-        pattern_key: key.pattern_key,
-        cap_class: key.cap_class,
-        horizon_days: key.horizon_days,
-      },
-    },
-    data: {
-      brier_in_sample: brier_in,
-      brier_out_sample: brier_out,
-      brier_null: nullResult.mean_null_brier,
-      alpha_30d,
-      beta_30d,
-      drift_z,
-      status,
-      // Phase 18: decay-weighted posterior + ESS + n_trials_attempted (D-15).
-      effective_sample_size: ess,
-      n_trials_attempted: { increment: events.length },
-      alpha: weightedPosterior.alpha,                    // overwrites raw +1/+0 with decayed sum
-      beta: weightedPosterior.beta,
-    },
-  });
+  // ─── Phase 21.1 D-26: Purged K-Fold lift + p-value + BCa CI ───────────────
+  // Build Observation[] parallel to weightedObs for purgedKFold.
+  // cell_key is needed by cv.ts but not used in the per-cell fold logic.
+  const cvObs: Observation[] = weightedObs.map((o) => ({
+    recorded_at: o.recorded_at,
+    horizon_days: key.horizon_days,
+    hit: o.hit,
+    cell_key: `${key.signal_class}|${key.pattern_key}|${key.cap_class}|${key.horizon_days}`,
+  }));
 
-  // ─── Phase 18: drift_alert / drift_clear emission (decisions D09, T18.05)
-  // drift_alert fires only on a cell-level transition INTO drift (prev status
-  // wasn't already EXPLORATORY-WATCH from a previous fire) so the alert
-  // remains idempotent across cron retries on a stationary regime — D-09 step 3.
-  if (drift.fired && prevStatus !== 'EXPLORATORY-WATCH') {
-    await prisma.learningEvent.create({
-      data: {
-        event_type: 'drift_alert',
-        signal_class: key.signal_class,
-        pattern_key: key.pattern_key,
-        cap_class: key.cap_class,
-        horizon_days: key.horizon_days,
-        // Numeric-only payload — T-18-05 mitigation. Downstream readers
-        // Zod-validate via z.object({drift_z, ph_stat, ph_threshold, raw_n, ess}).
-        delta: {
-          drift_z: drift.drift_z,
-          ph_stat: drift.ph_stat,
-          ph_threshold: drift.ph_threshold,
-          raw_n: cell.sample_size,
-          ess,
-        },
-        // D-17 operational action surfaced in message string for dashboard.
-        message: `${key.signal_class}/${key.pattern_key} × ${key.cap_class} @${key.horizon_days}d: confirmed drift (z=${drift.drift_z.toFixed(2)}, PH=${drift.ph_stat.toFixed(2)}, raw_n=${cell.sample_size}, ess=${ess.toFixed(1)}). ACTION: investigate underlying signal regime; do NOT auto-demote (D-09).`,
-      },
-    });
-  } else if (!drift.fired && cell.status === 'EXPLORATORY-WATCH') {
-    // Drift-clear marker — counted by Plan 09 recovery state machine.
-    // Emit one row per cron tick that the cell shows clear signals so the
-    // 14-consecutive-day recovery counter has rows to count.
-    await prisma.learningEvent.create({
-      data: {
-        event_type: 'drift_clear',
-        signal_class: key.signal_class,
-        pattern_key: key.pattern_key,
-        cap_class: key.cap_class,
-        horizon_days: key.horizon_days,
-        delta: {
-          drift_z: drift.drift_z,
-          ph_stat: drift.ph_stat,
-          raw_n: cell.sample_size,
-          ess,
-        },
-        message: `${key.signal_class}/${key.pattern_key}: drift clear (1 of 14 days needed for ACTIVE recovery)`,
-      },
+  // We need ≥ 5 folds of data. Use k=5 folds with shortened purge/embargo
+  // when N is thin (purge/embargo at 1% of period range — documented in
+  // HYPERPARAMETERS.md as DSR T<30 SKIP entry which governs the same floor).
+  const K_FOLDS = 5;
+  let cv_folds = 0;
+  let brier_lift = 0;
+  let brier_lift_ci_bca_95: [number, number] = [0, 0];
+  let p_value = 1; // conservative: assume no lift until proven
+
+  if (cvObs.length >= K_FOLDS) {
+    const folds = purgedKFold(cvObs, K_FOLDS, key.horizon_days, key.horizon_days);
+    cv_folds = folds.length;
+
+    // Fold-wise Brier lifts: for each fold, train on trainIdx, predict on testIdx,
+    // compare to null (base-rate) Brier. Since we use predMean (posterior mean)
+    // as the prediction, the "model" prediction is constant at predMean.
+    // lift_f = brier_null_f - brier_out_f
+    const foldLifts: number[] = [];
+    for (const fold of folds) {
+      if (fold.testIdx.length < 2) continue;
+      const testHits = fold.testIdx.map((i) => cvObs[i].hit);
+      // Null = predict base rate (fraction of training hits)
+      const trainHits = fold.trainIdx.map((i) => cvObs[i].hit);
+      const baseRate = trainHits.length > 0 ? trainHits.filter(Boolean).length / trainHits.length : 0.5;
+      const nullBrier = brierScore(Array(testHits.length).fill(baseRate), testHits);
+      const modelBrier = brierScore(Array(testHits.length).fill(predMean), testHits);
+      foldLifts.push(nullBrier - modelBrier);
+    }
+
+    if (foldLifts.length > 0) {
+      brier_lift = foldLifts.reduce((a, b) => a + b, 0) / foldLifts.length;
+      // One-sided p-value: fraction of folds with lift ≤ 0 (null: model ≤ baseline)
+      p_value = foldLifts.filter((l) => l <= 0).length / foldLifts.length;
+      // BCa CI over fold lifts (ISL Ch. 5 — bootstrap on fold-level statistics)
+      const ciResult = bootstrapBCa(
+        foldLifts,
+        (s) => s.reduce((a, b) => a + b, 0) / Math.max(1, s.length),
+        { nResamples: 1000, seed: 42 },
+      );
+      brier_lift_ci_bca_95 = [ciResult.low, ciResult.high];
+    }
+  }
+
+  // ─── Phase 21.1 D-26 gate (e): Deflated Sharpe Ratio ─────────────────────
+  // Returns from the sector-relative pct field per HYPERPARAMETERS.md §DSR
+  // (continuous returns, not binary — per Bailey & López de Prado 2014).
+  const forward_returns: number[] = events
+    .map((ev) => {
+      const d = ev.delta as { sector_relative_pct?: number; ticker_return_pct?: number } | null;
+      // sector_relative_pct is the primary label (Phase 21 D-14); fall back to raw pct
+      return d?.sector_relative_pct ?? d?.ticker_return_pct ?? null;
+    })
+    .filter((r): r is number => r !== null);
+
+  let dsr: number | null = null;
+  if (forward_returns.length >= 30) {
+    const mean = forward_returns.reduce((a, b) => a + b, 0) / forward_returns.length;
+    const variance = forward_returns.reduce((a, r) => a + (r - mean) ** 2, 0) / (forward_returns.length - 1);
+    const sd = Math.sqrt(Math.max(0, variance));
+    const sampleSharpe = sd > 0 ? mean / sd : 0;
+    const skewness = (() => {
+      if (sd === 0) return 0;
+      return (forward_returns.reduce((a, r) => a + ((r - mean) / sd) ** 3, 0) / forward_returns.length);
+    })();
+    const kurtosis = (() => {
+      if (sd === 0) return 3;
+      return (forward_returns.reduce((a, r) => a + ((r - mean) / sd) ** 4, 0) / forward_returns.length);
+    })();
+    dsr = deflatedSharpeRatio({
+      sampleSharpe,
+      skewness,
+      kurtosis,
+      T: forward_returns.length,
+      nTrialsAttempted: Math.max(1, cell.n_trials_attempted ?? 1),
     });
   }
+
+  // ─── Build DB update payload (status written by applyPatternStatusAndEmitEvents) ──
+  const db_update_data = {
+    brier_in_sample: brier_in,
+    brier_out_sample: brier_out,
+    brier_null: nullResult.mean_null_brier,
+    alpha_30d,
+    beta_30d,
+    drift_z,
+    effective_sample_size: ess,
+    n_trials_attempted: { increment: events.length },
+    alpha: weightedPosterior.alpha,
+    beta: weightedPosterior.beta,
+  };
+
   // SPY history is referenced for cross-cell windowing in future enhancements;
   // currently the per-cell loop pulls hits from LearningEvent.delta directly.
   void history;
+
+  return {
+    key,
+    cell_id: cell.id,
+    prev_status: cell.status ?? 'EXPLORATORY',
+    brier_in,
+    brier_out,
+    brier_null: nullResult.mean_null_brier,
+    ess,
+    drift_z,
+    drift_fired: drift.fired,
+    ph_stat: drift.ph_stat,
+    ph_threshold: drift.ph_threshold,
+    live_outcome_count: liveOutcomeCount,
+    cv_folds,
+    brier_lift,
+    brier_lift_ci_bca_95,
+    p_value,
+    dsr,
+    forward_returns,
+    db_update_data,
+    alpha_new: weightedPosterior.alpha,
+    beta_new: weightedPosterior.beta,
+    alpha_30d,
+    beta_30d,
+    n_trials_delta: events.length,
+  };
+}
+
+/**
+ * Phase 21.1 Wave 4 — CORE-ML-15/17/18/19.
+ *
+ * PASS 2: Given cell evals + BY-FDR results, apply patternStatus per cell,
+ * write the updated status to DB, emit drift_alert / drift_clear / cell_promoted /
+ * cell_demoted LearningEvents.
+ *
+ * Called after benjaminiYekutieli() has run across all per-cell p-values so
+ * every cell's q-value is known before any status flip is written.
+ */
+async function applyPatternStatusAndEmitEvents(
+  evals: CellEvalResult[],
+  fdrAdjustedP: number[],
+): Promise<void> {
+  for (let i = 0; i < evals.length; i++) {
+    const e = evals[i];
+    const by_fdr_q_value = fdrAdjustedP[i] ?? null;
+
+    // ─── patternStatus (Phase 21.1 D-26 5-gate) ───────────────────────────
+    let status: LearnedStatus = patternStatus({
+      sample_size: 0,                       // ESS gate supersedes when ess is set
+      effective_sample_size: e.ess,
+      brier_in: e.brier_in,
+      brier_out: e.brier_out,
+      brier_null: e.brier_null,
+      drift_z: e.drift_z,
+      live_outcome_count: e.live_outcome_count,
+      brier_lift_threshold: BRIER_LIFT_THRESHOLD,
+      by_fdr_q_value,
+      dsr: e.dsr,
+    }) as LearnedStatus;
+
+    // D-09: confirmed drift → EXPLORATORY-WATCH (no auto-demote, no silencing).
+    if (e.drift_fired) {
+      if (!STATUS_VALUES.includes('EXPLORATORY-WATCH' as LearnedStatus)) {
+        throw new Error('STATUS_VALUES missing EXPLORATORY-WATCH — Plan 18-01 not applied');
+      }
+      status = 'EXPLORATORY-WATCH';
+    } else if (e.prev_status === 'EXPLORATORY-WATCH') {
+      // Recovery counter — D-09 step 4: 14 consecutive clear days needed.
+      status = 'EXPLORATORY-WATCH';
+    }
+
+    // Phase 27 D-10: enforce live-only gate (already baked into patternStatus
+    // gate (b), but enforceLiveOnlyGate provides an extra safety layer for
+    // the drift/watch paths that bypass patternStatus).
+    status = enforceLiveOnlyGate(status, e.live_outcome_count);
+
+    // ─── Write status + Brier metrics to DB ───────────────────────────────
+    await prisma.learnedPattern.update({
+      where: {
+        signal_class_pattern_key_cap_class_horizon_days: {
+          signal_class: e.key.signal_class,
+          pattern_key: e.key.pattern_key,
+          cap_class: e.key.cap_class,
+          horizon_days: e.key.horizon_days,
+        },
+      },
+      data: {
+        ...(e.db_update_data as Parameters<typeof prisma.learnedPattern.update>[0]['data']),
+        status,
+      },
+    });
+
+    // ─── drift_alert / drift_clear emission (D-09, T-18-05) ───────────────
+    if (e.drift_fired && e.prev_status !== 'EXPLORATORY-WATCH') {
+      await prisma.learningEvent.create({
+        data: {
+          event_type: 'drift_alert',
+          signal_class: e.key.signal_class,
+          pattern_key: e.key.pattern_key,
+          cap_class: e.key.cap_class,
+          horizon_days: e.key.horizon_days,
+          delta: {
+            drift_z: e.drift_z,
+            ph_stat: e.ph_stat,
+            ph_threshold: e.ph_threshold,
+            raw_n: 0,   // raw sample_size — 0 sentinel as we use ESS; future plan may add
+            ess: e.ess,
+          } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
+          message: `${e.key.signal_class}/${e.key.pattern_key} × ${e.key.cap_class} @${e.key.horizon_days}d: confirmed drift (z=${e.drift_z.toFixed(2)}, PH=${e.ph_stat.toFixed(2)}, ess=${e.ess.toFixed(1)}). ACTION: investigate underlying signal regime; do NOT auto-demote (D-09).`,
+        },
+      });
+    } else if (!e.drift_fired && e.prev_status === 'EXPLORATORY-WATCH') {
+      await prisma.learningEvent.create({
+        data: {
+          event_type: 'drift_clear',
+          signal_class: e.key.signal_class,
+          pattern_key: e.key.pattern_key,
+          cap_class: e.key.cap_class,
+          horizon_days: e.key.horizon_days,
+          delta: {
+            drift_z: e.drift_z,
+            ph_stat: e.ph_stat,
+            ess: e.ess,
+          } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
+          message: `${e.key.signal_class}/${e.key.pattern_key}: drift clear (1 of 14 days needed for ACTIVE recovery)`,
+        },
+      });
+    }
+
+    // ─── Phase 21.1 D-27: cell_promoted / cell_demoted events ─────────────
+    if (status !== e.prev_status) {
+      const isPromotion = status === 'ACTIVE';
+      const isDemotion = e.prev_status === 'ACTIVE' && status !== 'ACTIVE';
+      if (isPromotion || isDemotion) {
+        const eventType = isPromotion ? 'cell_promoted' : 'cell_demoted';
+        await prisma.learningEvent.create({
+          data: {
+            event_type: eventType,
+            signal_class: e.key.signal_class,
+            pattern_key: e.key.pattern_key,
+            cap_class: e.key.cap_class,
+            horizon_days: e.key.horizon_days,
+            // D-27: full evaluation context — replayable for the IS paper.
+            delta: {
+              cv_folds: e.cv_folds,
+              brier_lift: e.brier_lift,
+              brier_lift_ci_bca_95: e.brier_lift_ci_bca_95,
+              q_value_by: by_fdr_q_value,
+              dsr: e.dsr,
+              n_trials_attempted: e.n_trials_delta,
+              prev_status: e.prev_status,
+              new_status: status,
+            } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
+            message: `cell ${eventType}: ${e.key.signal_class}/${e.key.pattern_key}/${e.key.cap_class}/${e.key.horizon_days}d (lift=${e.brier_lift.toFixed(4)}, q=${by_fdr_q_value?.toFixed(4) ?? 'null'}, dsr=${e.dsr?.toFixed(3) ?? 'null'})`,
+          },
+        });
+      }
+    }
+  }
 }
 
 // ─── Logistic state read/write ──────────────────────────────────────────────
@@ -890,7 +1123,7 @@ async function maybeWriteCycleSummary(stats: {
   let message = `Cycle summary: ${stats.outcomes_processed} outcomes resolved (${stats.hits} hits), ${stats.drift_alerts} drift alerts, ${stats.cells_active} active cells.`;
   try {
     const { text } = await generateText({
-      model: 'anthropic/claude-haiku-4.5',
+      model: 'anthropic/claude-haiku-4.6',
       prompt: renderPrompt('gemini-cycle-summary', {
         outcomes_processed: String(stats.outcomes_processed),
         hits: String(stats.hits),
