@@ -36,20 +36,20 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 
 > Absorbed into Phase 21.1 on 2026-06-02 per Phase 21.1 CONTEXT D-01. Phase 23 retired.
 
-- [ ] **CORE-ML-15**: ACTIVE promotion gate becomes "out-of-sample Brier-lift > threshold AND statistically significant after FDR correction" (was: "sample_size + brier_in_sample threshold")
-- [ ] **CORE-ML-16**: Out-of-sample evaluation uses **Purged K-Fold + Embargo** cross-validation per López de Prado — never random K-fold, never simple time-split (defends against horizon-overlap leakage)
-- [ ] **CORE-ML-17**: Multiple-comparisons correction applied via Benjamini-Yekutieli FDR control across all candidate cells — `n_trials_attempted` recorded per evaluation
-- [ ] **CORE-ML-18**: Deflated Sharpe Ratio (Bailey & López de Prado) computed per ACTIVE cell to expose selection bias from cell-space exploration
-- [ ] **CORE-ML-19**: Promotion decisions logged as `LearningEvent` of type `cell_promoted` / `cell_demoted` with full evaluation context (CV folds, lift, p-value, DSR)
+- [x] **CORE-ML-15**: ACTIVE promotion gate becomes "out-of-sample Brier-lift > threshold AND statistically significant after FDR correction" (was: "sample_size + brier_in_sample threshold")
+- [x] **CORE-ML-16**: Out-of-sample evaluation uses **Purged K-Fold + Embargo** cross-validation per López de Prado — never random K-fold, never simple time-split (defends against horizon-overlap leakage)
+- [x] **CORE-ML-17**: Multiple-comparisons correction applied via Benjamini-Yekutieli FDR control across all candidate cells — `n_trials_attempted` recorded per evaluation
+- [x] **CORE-ML-18**: Deflated Sharpe Ratio (Bailey & López de Prado) computed per ACTIVE cell to expose selection bias from cell-space exploration
+- [x] **CORE-ML-19**: Promotion decisions logged as `LearningEvent` of type `cell_promoted` / `cell_demoted` with full evaluation context (CV folds, lift, p-value, DSR)
 
 #### Phase 21.1 — Capacity to Detect Edge (measurement upgrade)
 
-- [ ] **CORE-ML-20**: Direct LLM evaluation — IC + Brier on every report; BCa 95% CI on rolling 30-day IC tile; data persisted in `LLMEvaluation` table
-- [ ] **CORE-ML-21**: Logistic baseline head-to-head — both 24-feature post-z-score AND canonical small-set (RSI / MACD / sentiment% / insider net flow / institutional net flow / put/call / sector return) trained and evaluated on identical purged-K-fold splits as the engine
-- [ ] **CORE-ML-22**: σ-aware hit threshold as PRIMARY engine label (k=1, 60-day rolling sector ETF σ). Directional (>0%) and 1%-flat labels retained as secondary diagnostics; all three labels written by ONE shared compute path
-- [ ] **CORE-ML-23**: Z-score feature companions — every base feature gets a ticker-rolling-60d z-score AND a cross-sectional z-score companion (12 base → 36 features total); PRIOR_PRECISION anneals 8 / 4 / 1 by n bucket
-- [ ] **CORE-ML-24**: Measurement primitives as named modules under `src/lib/evaluation/` — BCa bootstrap (Efron 1987), Benjamini-Yekutieli FDR (BY 2001), Deflated Sharpe Ratio (Bailey & López de Prado 2014), Spearman IC (Grinold-Kahn §3), categorical log-loss (CS229)
-- [ ] **CORE-ML-25**: `knowable_at` as-of-time annotation on every feature with `scripts/check-feature-asof.ts` CI gate blocking merges that introduce features without it
+- [x] **CORE-ML-20**: Direct LLM evaluation — IC + Brier on every report; BCa 95% CI on rolling 30-day IC tile; data persisted in `LLMEvaluation` table
+- [x] **CORE-ML-21**: Logistic baseline head-to-head — both 24-feature post-z-score AND canonical small-set (RSI / MACD / sentiment% / insider net flow / institutional net flow / put/call / sector return) trained and evaluated on identical purged-K-fold splits as the engine
+- [x] **CORE-ML-22**: σ-aware hit threshold as PRIMARY engine label (k=1, 60-day rolling sector ETF σ). Directional (>0%) and 1%-flat labels retained as secondary diagnostics; all three labels written by ONE shared compute path
+- [x] **CORE-ML-23**: Z-score feature companions — every base feature gets a ticker-rolling-60d z-score AND a cross-sectional z-score companion (12 base → 36 features total); PRIOR_PRECISION anneals 8 / 4 / 1 by n bucket
+- [x] **CORE-ML-24**: Measurement primitives as named modules under `src/lib/evaluation/` — BCa bootstrap (Efron 1987), Benjamini-Yekutieli FDR (BY 2001), Deflated Sharpe Ratio (Bailey & López de Prado 2014), Spearman IC (Grinold-Kahn §3), categorical log-loss (CS229)
+- [x] **CORE-ML-25**: `knowable_at` as-of-time annotation on every feature with `scripts/check-feature-asof.ts` CI gate blocking merges that introduce features without it
 
 ### REASON — Group B: Reasoning impact in reports
 

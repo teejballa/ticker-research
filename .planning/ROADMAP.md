@@ -52,7 +52,7 @@ Phase order reconciled across all 4 research dimensions. Build dependencies (pos
   **Plans:** 7 plans across 7 waves (0..6)
 
   Plans:
-  - [ ] 21.1-00-PLAN.md — Wave 0: [BLOCKING] additive PriceOutcome schema (3 BOOL + 1 FLOAT) + LLMEvaluation model + db push + REQUIREMENTS remap + ROADMAP annotation + 8 RED test stubs + 5 golden-vector fixtures
+  - [x] 21.1-00-PLAN.md — Wave 0: [BLOCKING] additive PriceOutcome schema (3 BOOL + 1 FLOAT) + LLMEvaluation model + db push + REQUIREMENTS remap + ROADMAP annotation + 8 RED test stubs + 5 golden-vector fixtures
   - [ ] 21.1-01-PLAN.md — Wave 1: src/lib/evaluation/ primitives — bootstrap.ts (BCa) + fdr.ts (BY) + ic.ts (Spearman + rolling + per-class) + dsr.ts + log-loss.ts + index.ts barrel, all unit tests GREEN against golden vectors (CORE-ML-17, CORE-ML-18, CORE-ML-24)
   - [ ] 21.1-02-PLAN.md — Wave 2: σ-aware labels (getSectorSigma60d helper + relabel/price-followup wire-up writing all 3 BOOL columns from ONE shared path) + 36-feature space (zscore.ts ticker-rolling-60d + cross-sectional + buildFeatureVector36 + FEATURE_NAMES_36) (CORE-ML-22, CORE-ML-23)
   - [ ] 21.1-03-PLAN.md — Wave 3: logistic baselines (baselines/logistic.ts engine36 + canonical7) + ridge precision sweep + /api/cron/baseline-eval daily at 09:00 UTC + smoke test on existing 444 live snapshots (CORE-ML-21)
