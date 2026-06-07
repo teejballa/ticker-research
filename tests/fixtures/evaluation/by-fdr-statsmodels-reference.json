@@ -5,10 +5,10 @@
     "q": 0.10
   },
   "expected": {
-    "reject_indices": [0, 1],
-    "n_rejected": 2,
+    "reject_indices": [0],
+    "n_rejected": 1,
     "harmonic_sum_m20_approx": 3.5977,
     "adjusted_p_value_tolerance": 1e-4,
-    "notes": "BY is more conservative than BH; with q=0.10 and m=20 and harmonic correction ≈ 3.598, only p=0.001 and p=0.008 reject. Verify against statsmodels."
+    "notes": "Corrected from [0,1] to [0] — BY threshold at rank 2 is 2*0.10/(20*3.5977)=0.00278, and p[1]=0.008>0.00278 so rank 2 does NOT reject. The original fixture erroneously used BH thresholds (rank 2 BH threshold=0.010, 0.008<=0.010 rejects under BH). BY is more conservative than BH: q_needed to reject p=0.008 with BY is ~0.288. Only p=0.001 (rank 1, threshold=0.00139) meets the BY criterion at q=0.10."
   }
 }
