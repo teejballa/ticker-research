@@ -623,3 +623,72 @@ Source: `src/lib/learning.ts` constant `LIVE_OUTCOME_THRESHOLD`, enforced in
 - **Recalibration cadence:** static; revisit only if Phase 23 lift-gate evidence argues for a different live-confirmation bar.
 
 Updated by: Plan 27-03 (2026-05-26).
+
+---
+
+## Phase 21.1 — Capacity to Detect Edge
+
+### BRIER_LIFT_THRESHOLD (D-07)
+
+- **Value**: `0.005` (= 0.5 percentage points of OOS Brier improvement over null)
+- **Source**: RESEARCH.md §9 Q3 starting recommendation; Wave 6 sensitivity sweep on backfill corpus may revise
+- **Used by**: `patternStatus` gate (c) — `src/lib/learning.ts` constant `BRIER_LIFT_THRESHOLD`; CORE-ML-15
+- **Sensitivity sweep**: TODO Wave 6 — sweep θ ∈ {0.001, 0.003, 0.005, 0.010, 0.015}; record (θ, n_active_cells, n_demoted_cells, mean_q_value) table here; pick θ where n_active stabilizes against θ
+- **Operational action when changed**: re-run `/api/cron/learn` for one cycle and inspect `/insights/baselines` page for ACTIVE-cell count delta
+
+### PRIOR_PRECISION annealing (D-19)
+
+For the engine's 36-feature logistic (Wave 2 / Wave 4):
+
+| n bucket      | PRIOR_PRECISION |
+|---------------|----------------|
+| n < 100       | 8              |
+| 100 ≤ n < 500 | 4              |
+| n ≥ 500       | 1              |
+
+- **Source**: CONTEXT D-19 (ISL Ch. 6 ridge/lasso shrinkage when sparse)
+- **Implementation**: `priorPrecisionForN(n: number): number` in `src/lib/learning.ts` (Wave 2); `initLogisticStateForN(featureNames, n)` (Wave 4)
+- **Used by**: engine logistic in `/api/cron/learn`; bucket crossings emit `LearningEvent.event_type='logistic_anneal'`
+- **Operational action when changed**: warmstart from previous state may produce stale variance estimates; recommend full retrain on bucket crossing
+
+### LOGISTIC RIDGE PRECISION sweep grids (D-13)
+
+Used by Wave 3 `/api/cron/baseline-eval` ridge sweep:
+
+| Baseline    | Sweep grid      | Chosen value                    | Source           |
+|-------------|-----------------|--------------------------------|-----------------|
+| engine36    | {1, 2, 4, 8, 16} | TODO — first cron run records  | CONTEXT D-13    |
+| canonical7  | {0.5, 1, 2, 4}  | TODO — first cron run records  | RESEARCH §9 Q5  |
+
+- **Chosen value updated by**: `/api/cron/baseline-eval` first run records into `LearningEvent.delta`; Wave 6 transcribes here
+
+### LIVE_OUTCOME_THRESHOLD (Phase 27 D-10, preserved)
+
+- **Value**: 10 (unchanged from Phase 27)
+- **Used by**: `enforceLiveOnlyGate` chained inside Phase 21.1 patternStatus gate (b)
+
+### BCa BOOTSTRAP n<50 FALLBACK (Phase 21.1 Wave 1)
+
+- **Threshold**: n < 10 → fall back to plain percentile method (BCa unstable on very small samples)
+- **Source**: Efron 1987 JASA 82(397):171-185; ISL Ch. 5 small-sample bootstrap discussion
+- **Behavior**: returns `{method: 'percentile', warning: 'n < 50'}` (warning string preserved from Wave 1 implementation); dashboard renders CI from percentile bounds
+- **Note**: HYPERPARAMETERS.md originally documented n < 50 threshold; actual code uses n < 10 (Efron's stability floor). HYPERPARAMETERS.md wins: Wave 6 may tighten to n < 50.
+
+### DSR T<30 SKIP (Phase 21.1 Wave 1)
+
+- **Threshold**: T < 30 → `deflatedSharpeRatio` returns `null` with logged warning
+- **Source**: Bailey & López de Prado 2014; sample-Sharpe asymptotics require T ≥ 30
+- **DSR returns input choice (RESEARCH §9 Q2)**: raw `forward_return_sector_rel` per outcome row (not binary hit-stream). Rationale: B&LdP work with continuous P&L returns; sector-relative pct is the natural analogue for Cipher's setup. Falls back to `ticker_return_pct` when `sector_relative_pct` is null (pre-Phase-21 rows).
+
+### Citation log (Wave 6 transcribes into docs/paper/methodology.md)
+
+- Bailey & López de Prado 2014: "The Deflated Sharpe Ratio." *Journal of Portfolio Management* 40(5):94-107. Full: Bailey, D.H. & López de Prado, M.
+- Benjamini & Yekutieli 2001: "The control of the false discovery rate in multiple testing under dependency." *Annals of Statistics* 29(4):1165-1188. Full: Benjamini, Y. & Yekutieli, D.
+- Efron 1987: "Better Bootstrap Confidence Intervals." *Journal of the American Statistical Association* 82(397):171-185. Full: Efron, B.
+- López de Prado, M. (2018). *Advances in Financial Machine Learning*. Wiley, Ch. 6 (Purged K-Fold + Embargo) + Ch. 7 (CV with leakage).
+- Grinold, R.C. & Kahn, R.N. (2000). *Active Portfolio Management* (2nd ed.). McGraw-Hill, §3.
+- Brier, G.W. (1950). "Verification of Forecasts Expressed in Terms of Probability." *Monthly Weather Review* 78(1):1-3.
+- CS229 (Stanford) Main Notes, "Information Theory" section.
+- ISL 2nd ed. Ch. 4 (Classification), Ch. 5 (Resampling), Ch. 6 (Regularization), Ch. 13 (Multiple Testing).
+
+Updated by: Plan 21.1-04 (2026-06-06 — Wave 4).
