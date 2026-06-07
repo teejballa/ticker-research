@@ -125,6 +125,7 @@ function resolveReconstitutionOverride(ticker: string, asOfDate: Date): SectorET
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 export async function getSectorETF(args: GetSectorETFArgs): Promise<SectorETF> {
+
   const ticker = args.ticker.toUpperCase();
 
   // 1. Reconstitution override (snapshot-at-prediction discipline for backfill).
@@ -149,5 +150,63 @@ export async function getSectorETF(args: GetSectorETFArgs): Promise<SectorETF> {
       }
     },
     { ttlSeconds: TTL_SECONDS.sector_etf },
+  );
+}
+
+/**
+ * Phase 21.1 D-14 — 60-day rolling sector ETF volatility.
+ *
+ * Returns the sample standard deviation of {etf}'s daily returns over the
+ * 60 trading days ending on (or just before) `asOf`. Expressed as a decimal
+ * (e.g., 0.012 = 1.2% per day).
+ *
+ * Used as `sector_sigma` argument to classifyHit for the σ-aware k=1 label
+ * that becomes the PRIMARY engine label per CONTEXT D-14.
+ *
+ * Snapshot discipline: the returned σ is persisted on PriceOutcome.sector_sigma_60d
+ * at compute time and never re-resolved (mirrors Phase 21 sector_etf snapshot pattern).
+ *
+ * Returns null when yahoo-finance2 lookup fails or insufficient history
+ * (<30 trading days). Cached 24h via Upstash to avoid repeat fetches during
+ * backfill (worst case ~12 ETFs × ~5y = ~22k unique keys, well within quota).
+ *
+ * @knowable_at  asOf  — uses only close-price history ending on `asOf`; no forward data
+ */
+export async function getSectorSigma60d(
+  etf: string,
+  asOf: Date,
+): Promise<number | null> {
+  const dateKey = asOf.toISOString().slice(0, 10);
+  return cached<number | null>(
+    `sector_sigma_60d:${etf}:${dateKey}`,
+    async () => {
+      try {
+        // Fetch ~100 calendar days back to guarantee ≥60 trading days of history.
+        const period2 = asOf;
+        const period1 = new Date(asOf.getTime() - 100 * 24 * 60 * 60 * 1000);
+        const result = await yf.historical(etf, { period1, period2, interval: '1d' });
+        if (!result || result.length < 30) return null;
+        // Sort ascending by date; take last 61 rows → 60 daily returns.
+        const closes = result
+          .filter((r) => r.close != null && r.close > 0)
+          .sort((a, b) => a.date.getTime() - b.date.getTime())
+          .slice(-61)
+          .map((r) => r.close as number);
+        if (closes.length < 31) return null;
+        const returns: number[] = [];
+        for (let i = 1; i < closes.length; i++) {
+          returns.push(closes[i] / closes[i - 1] - 1);
+        }
+        // Sample standard deviation (n-1 denominator).
+        const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+        const variance =
+          returns.reduce((acc, r) => acc + (r - mean) ** 2, 0) / (returns.length - 1);
+        return Math.sqrt(variance);
+      } catch (err) {
+        console.warn(`[getSectorSigma60d] ${etf}@${dateKey} failed:`, err);
+        return null;
+      }
+    },
+    { ttlSeconds: 24 * 60 * 60 }, // 24h — ETF historical closes don't change intra-day
   );
 }
