@@ -1,22 +1,26 @@
 /**
  * Phase 21 — Sector-Relative Outcome Labels backfill cron.
+ * Phase 21.1 — extended to write σ-aware labels via shared computeLabelsFor.
  *
  * One-shot idempotent walker. Visits every PriceOutcome row where
- * sector_etf IS NULL, resolves the ticker's sector at prediction time
- * (Report.analyzed_at or SentimentSnapshot.scanned_at), computes the
- * sector-ETF forward return over the same window, and writes the three
- * new columns (sector_etf, forward_return_raw, forward_return_sector_rel).
+ * sector_etf IS NULL OR is_sigma_hit_k1 IS NULL (so reruns pick up
+ * older rows that already have sector_etf but were written before Phase 21.1
+ * added the sigma label columns). Resolves the ticker's sector at prediction
+ * time, computes the sector-ETF forward return, then calls computeLabelsFor()
+ * to write all four new columns atomically.
  *
- * Idempotency: the WHERE clause filters on sector_etf IS NULL. Once a row
- * is labeled it is permanently skipped. The cron stays scheduled in
- * vercel.json as a self-healing safety net even after the initial
- * backfill clears — it does ~0 work per invocation thereafter.
+ * Phase 21.1 D-17: ALL THREE labels (is_directional_hit, is_sigma_hit_k1,
+ * is_hit_flat1) + sector_sigma_60d are written by ONE shared helper in
+ * src/lib/labels/compute.ts — no parallel/forked label logic in this file.
  *
- * Fallback: rows whose sector ETF prices cannot be retrieved over the
- * window still get labeled — with sector_etf='SPY' and the SPY return
- * computed against forward_return_raw — so the engine never has a
- * permanently un-graded outcome. The fallback_to_spy counter surfaces
- * how often this fires.
+ * Idempotency: rows with both sector_etf non-null AND is_sigma_hit_k1
+ * non-null are permanently skipped. The cron stays scheduled in vercel.json
+ * as a self-healing safety net — it does ~0 work per invocation once
+ * the backfill drains.
+ *
+ * Fallback: rows whose sector ETF prices cannot be retrieved still get
+ * labeled with sector_etf='SPY' so the engine never has a permanently
+ * un-graded outcome. The fallback_to_spy counter surfaces how often this fires.
  *
  * Auth: Bearer CRON_SECRET, same pattern as /api/cron/learn.
  */
@@ -25,6 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSectorETF } from '@/lib/data/sector-mapping';
 import { fetchSectorETFReturn } from '@/lib/data/sector-prices';
+import { computeLabelsFor } from '@/lib/labels/compute';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -37,14 +42,22 @@ export async function GET(request: NextRequest) {
   const counters = {
     scanned: 0,
     labeled: 0,
+    labels_populated: 0,
     skipped: 0,
     fallback_to_spy: 0,
     skipped_future_dated: 0,
   };
 
-  // Pull only rows that still need labeling (idempotency).
+  // Pull rows that still need labeling (idempotency).
+  // Phase 21.1: OR clause picks up rows that already have sector_etf (from the
+  // original Phase 21 backfill) but are missing the new sigma-label columns.
   const rows = await prisma.priceOutcome.findMany({
-    where: { sector_etf: null },
+    where: {
+      OR: [
+        { sector_etf: null },
+        { is_sigma_hit_k1: null },
+      ],
+    },
     include: { report: true, snapshot: true },
     orderBy: { recorded_at: 'asc' },
     take: 5_000, // Bounded per invocation; cron re-fires daily to drain backlog.
@@ -106,15 +119,31 @@ export async function GET(request: NextRequest) {
       forwardReturnSectorRel = forwardReturnRaw - sectorReturnPct;
     }
 
+    // Phase 21.1 D-17: compute all three labels via the ONE shared helper.
+    // spy_return_pct not stored on PriceOutcome rows; pass null — classifyHit
+    // uses sector_relative_pct as primary path when non-null (which it is here).
+    const labels = await computeLabelsFor({
+      sector_etf: finalSectorEtf,
+      asOf: row.recorded_at,
+      ticker_return_pct: forwardReturnRaw,
+      spy_return_pct: null,
+      sector_relative_pct: forwardReturnSectorRel,
+    });
+
     await prisma.priceOutcome.update({
       where: { id: row.id },
       data: {
         sector_etf: finalSectorEtf,
         forward_return_raw: forwardReturnRaw,
         forward_return_sector_rel: forwardReturnSectorRel,
+        is_directional_hit: labels.is_directional_hit,
+        is_sigma_hit_k1: labels.is_sigma_hit_k1,
+        is_hit_flat1: labels.is_hit_flat1,
+        sector_sigma_60d: labels.sector_sigma_60d,
       },
     });
     counters.labeled++;
+    if (labels.is_sigma_hit_k1 !== null) counters.labels_populated++;
   }
 
   return NextResponse.json({ ok: true, ...counters });

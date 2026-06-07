@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import YahooFinance from 'yahoo-finance2';
 import { getSectorETF } from '@/lib/data/sector-mapping';
 import { fetchSectorETFReturn } from '@/lib/data/sector-prices';
+import { computeLabelsFor } from '@/lib/labels/compute';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -118,16 +119,29 @@ export async function GET(request: NextRequest) {
         absoluteReturnPct,
       });
       if (sectorLabels.fallback) results.sector_fallback_to_spy++;
+      // Phase 21.1 D-17: compute all three labels via the ONE shared helper.
+      const recordedAt = new Date();
+      const labels = await computeLabelsFor({
+        sector_etf: sectorLabels.sector_etf,
+        asOf: recordedAt,
+        ticker_return_pct: absoluteReturnPct,
+        spy_return_pct: null,
+        sector_relative_pct: sectorLabels.forward_return_sector_rel,
+      });
       await prisma.priceOutcome.create({
         data: {
           report_id: report.id,
           days_after: day,
           price,
           pct_change: absoluteReturnPct,
-          recorded_at: new Date(),
+          recorded_at: recordedAt,
           sector_etf: sectorLabels.sector_etf,
           forward_return_raw: sectorLabels.forward_return_raw,
           forward_return_sector_rel: sectorLabels.forward_return_sector_rel,
+          is_directional_hit: labels.is_directional_hit,
+          is_sigma_hit_k1: labels.is_sigma_hit_k1,
+          is_hit_flat1: labels.is_hit_flat1,
+          sector_sigma_60d: labels.sector_sigma_60d,
         },
       });
       results.outcomes_recorded++;
@@ -160,16 +174,29 @@ export async function GET(request: NextRequest) {
         absoluteReturnPct,
       });
       if (sectorLabels.fallback) results.sector_fallback_to_spy++;
+      // Phase 21.1 D-17: compute all three labels via the ONE shared helper.
+      const recordedAtSnap = new Date();
+      const labelsSnap = await computeLabelsFor({
+        sector_etf: sectorLabels.sector_etf,
+        asOf: recordedAtSnap,
+        ticker_return_pct: absoluteReturnPct,
+        spy_return_pct: null,
+        sector_relative_pct: sectorLabels.forward_return_sector_rel,
+      });
       await prisma.priceOutcome.create({
         data: {
           snapshot_id: snap.id,
           days_after: day,
           price,
           pct_change: absoluteReturnPct,
-          recorded_at: new Date(),
+          recorded_at: recordedAtSnap,
           sector_etf: sectorLabels.sector_etf,
           forward_return_raw: sectorLabels.forward_return_raw,
           forward_return_sector_rel: sectorLabels.forward_return_sector_rel,
+          is_directional_hit: labelsSnap.is_directional_hit,
+          is_sigma_hit_k1: labelsSnap.is_sigma_hit_k1,
+          is_hit_flat1: labelsSnap.is_hit_flat1,
+          sector_sigma_60d: labelsSnap.sector_sigma_60d,
         },
       });
       results.outcomes_recorded++;
