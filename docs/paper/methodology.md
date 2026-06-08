@@ -256,3 +256,196 @@ sufficient evidence to tune it statistically.
   decisions D-01 through D-12.
 - **Phase 27 Research** — `.planning/phases/27-historical-backfill/27-RESEARCH.md`: patterns,
   pitfalls, assumption log (A1–A4).
+
+---
+
+## Phase 21.1 — Capacity to Detect Edge
+
+Phase 21.1 equips Cipher with five measurement primitives that together let us
+answer the IS paper's central question — *does the Gemini-based research engine
+produce edge above a non-LLM baseline trained on the same features?* — with
+publication-grade rigor. The phase absorbs Phase 23 (lift-gated cell promotion,
+CORE-ML-15..19) and extends it with direct LLM evaluation, two logistic baselines,
+σ-aware labels, a 36-feature z-score expansion, and a knowable_at CI audit.
+
+### Time-Series Cross-Validation
+
+All model evaluation in this phase uses **Purged K-Fold + Embargo** (López de
+Prado 2018, *Advances in Financial Machine Learning*, Ch. 6). The purging step
+removes training observations whose outcomes overlap the evaluation window in
+time; the embargo gap prevents information leakage at fold boundaries. Random
+K-fold is explicitly forbidden (CLAUDE.md load-bearing rule #1; ISL 2nd ed.
+Ch. 5 §5.3) because random splits leak future return information into training
+when the label horizon (7–30 days) overlaps adjacent observations.
+
+Implementation: `src/lib/cv.ts:purgedKFold` — the canonical CV path for both
+the engine's lift-gate (CORE-ML-16) and the logistic baselines (CORE-ML-21).
+
+### Measurement Primitives
+
+**1. BCa Bootstrap** (Efron, B. 1987. "Better Bootstrap Confidence Intervals."
+*Journal of the American Statistical Association* 82(397):171–185.)
+
+Bias-corrected, accelerated non-parametric confidence intervals. 10,000
+resamples by default; falls back to plain percentile when n < 10 (Efron's
+stability floor). Used on every reported number (CLAUDE.md rule #3): hit rates,
+Brier lift, IC, per-cell posterior, three-way model comparisons.
+
+Implementation: `src/lib/evaluation/bootstrap.ts`.
+
+**2. Benjamini–Yekutieli FDR** (Benjamini, Y. & Yekutieli, D. 2001. "The
+control of the false discovery rate in multiple testing under dependency."
+*Annals of Statistics* 29(4):1165–1188.)
+
+Multiple-testing correction under arbitrary dependence — appropriate because
+the 156 cells share market regime and their hit-rates are not independent. BH
+(Benjamini & Hochberg 1995) assumes positive regression dependence (PRDS);
+BY makes no such assumption (ISL 2nd ed. Ch. 13 §13.3). Applied across
+`n_trials_attempted` in each `learn` cron run before any cell can graduate to
+ACTIVE. Default q ≤ 0.10; documented in HYPERPARAMETERS.md.
+
+Implementation: `src/lib/evaluation/fdr.ts`.
+
+**3. Deflated Sharpe Ratio** (Bailey, D.H. & López de Prado, M. 2014. "The
+Deflated Sharpe Ratio: Correcting for Selection Bias, Backtest Overfitting and
+Non-Normality." *Journal of Portfolio Management* 40(5):94–107.)
+
+Adjusts in-sample Sharpe for selection bias arising from cell-space
+exploration. A cell may pass the FDR gate by chance when many cells are tested
+simultaneously; DSR > 0 is the second required filter for ACTIVE status.
+Inputs: in-sample Sharpe, `n_trials_attempted`, skew, and excess kurtosis of
+the cell's prediction-return series. T < 30 returns null (B&LdP sample-Sharpe
+asymptotics require T ≥ 30). Returns are raw `forward_return_sector_rel` —
+the continuous sector-relative return analogous to the P&L series in B&LdP.
+
+Implementation: `src/lib/evaluation/dsr.ts`.
+
+**4. Spearman Rank IC** (Spearman, C. 1904. "The proof and measurement of
+association between two things." *American Journal of Psychology* 15:72–101.
+Applied to financial prediction per Grinold, R.C. & Kahn, R.N. 2000. *Active
+Portfolio Management*, 2nd ed. McGraw-Hill, §3.)
+
+Rank correlation between the LLM's confidence-weighted directional score
+s ∈ [−1, +1] (where Buy = +confidence, Hold = 0, Sell = −confidence) and the
+forward sector-relative return at each horizon. The standard quant headline
+metric. Rolling 30-day window with BCa 95% CI is Cipher's IS-paper headline
+figure: `getLLMICRolling` in `src/lib/engine-context.ts`.
+
+Implementation: `src/lib/evaluation/ic.ts`.
+
+**5. Categorical Log Loss** (CS229 Main Notes, Stanford. "Information Theory"
+section. See also Murphy, K.P. 2012. *Machine Learning: A Probabilistic
+Perspective*, Ch. 8.)
+
+Proper scoring rule alongside Brier score (CLAUDE.md rule #7). Rewards
+calibrated probabilities and punishes overconfident wrong calls. Computed for
+the Buy/Hold/Sell distribution whenever a calibrated 3-way probability vector
+is available (ISL 2nd ed. Ch. 4 §4.4).
+
+Implementation: `src/lib/evaluation/log-loss.ts`.
+
+### Label Space
+
+The primary engine outcome label is **σ-aware**: a prediction is a hit when
+the stock beats its sector ETF by at least k = 1 standard deviations of the
+sector's 60-day rolling return distribution (CORE-ML-22). This replaces the
+fixed 1% threshold used prior to Phase 21.1, which produced a ~38–48% hit rate
+indistinguishable from random walk on most cells.
+
+Two secondary labels are retained as diagnostics: `is_directional_hit` (beat
+sector by any positive margin, >0%) and `is_hit_flat1` (beat sector by ≥1%
+absolute). All three labels are written by one shared compute path in
+`/api/cron/relabel` and `/api/cron/price-followup` (CLAUDE.md rule #6 — single
+feature path, no train/serve skew). The 60-day rolling sector σ is sourced from
+`getSectorSigma60d` in `src/lib/data/sector-mapping.ts`.
+
+### Feature Space
+
+The engine's logistic prior is fit on a 36-dimensional feature vector (CORE-ML-23):
+
+- **Base (12)**: 6 diffusion features (v_niche, v_middle, v_mainstream,
+  niche_lead_cycles, q_z, qual_z) + 6 technical features (RSI-14, MACD
+  histogram, SMA relative spread, ATR-14, volume ratio, uptrend flag).
+- **Ticker-rolling z-score (12)**: each base feature standardized against the
+  same ticker's own 60-day history.
+- **Cross-sectional z-score (12)**: each base feature standardized within
+  today's universe (position in the cross-section on scan date).
+
+PRIOR_PRECISION anneals with the cell's outcome count n: 8 when n < 100, 4
+when n < 500, 1 when n ≥ 500. This implements adaptive ridge regularization
+(ISL 2nd ed. Ch. 6 §6.2; CS229 §"Bias-Variance and Regularization") — stronger
+shrinkage toward the base rate when evidence is sparse.
+
+### Head-to-Head Logistic Baseline
+
+Per CLAUDE.md rule #8, the LLM is benchmarked against two logistic regression
+baselines trained on identical Purged K-Fold + Embargo splits (CORE-ML-21):
+
+- **24-feature** (`engine36` without the z-score expansion): the engine's
+  numeric feature space without the z-score companions. Strongest "LLM beats
+  numeric features" claim.
+- **Canonical small set** (7 features: RSI-14, MACD histogram, sentiment %,
+  insider net flow, institutional net flow, put/call ratio, sector return):
+  literature-cited features from Lo & Hasanhodzic 2010, Brock-Lakonishok-LeBaron
+  1992, De Bondt & Thaler 1985, Cohen-Malloy-Pomorski 2012, Wermers 1999, Pan &
+  Poteshman 2006, DGTW 1997. Strongest "LLM beats lit-cited features" claim.
+
+Both baselines use the same `predictLogistic` / `updateLogistic` Bayesian Laplace
+logistic from `src/lib/learning.ts` (CLAUDE.md rule #8 — same framework, no
+separate ML infrastructure). Ridge precision chosen via sweep {1, 2, 4, 8, 16}
+on OOS Brier (ISL 2nd ed. Ch. 6). Implemented in `src/lib/baselines/logistic.ts`.
+
+### Five-Gate ACTIVE Promotion
+
+A cell graduates from EXPLORATORY to ACTIVE only when all five gates pass
+sequentially (CORE-ML-15..18):
+
+1. **ESS ≥ 30**: effective sample size (Phase 18 exponential decay)
+2. **live ≥ 10**: at minimum 10 non-backfill outcomes (Phase 27 D-10)
+3. **OOS Brier-lift > θ**: θ = 0.005 (HYPERPARAMETERS.md D-07), minimizing mean
+   OOS Brier on Purged K-Fold vs the null model (constant base-rate predictor)
+4. **BY-FDR q < 0.10**: Benjamini–Yekutieli adjusted p-value across
+   `n_trials_attempted` cells in the same `learn` run
+5. **DSR > 0**: Deflated Sharpe Ratio adjusting for multiple-testing selection bias
+
+Any failing gate → EXPLORATORY; status flips emit `LearningEvent` of type
+`cell_promoted` / `cell_demoted` with full evaluation context (CORE-ML-19).
+
+### Honest Publishable Outcomes
+
+Per the IS paper's commitment to calibrated null results, three outcomes are all
+publishable under the IS research question:
+
+**A.** LLM beats logistic with BCa CI excluding zero — defensible LLM edge claim.
+
+**B.** Logistic ≈ LLM, both > null — publicly-available numeric features carry
+signal; the LLM's narrative synthesis adds nothing above the feature signal alone.
+
+**C.** Nothing beats null — publicly-available signal set lacks detectable
+daily-frequency alpha at these horizons, consistent with the efficient markets
+literature (Fama 1970, 1991; McLean & Pontiff 2016).
+
+Phase 21.1 provides the *capacity* to distinguish these outcomes. The 6-month
+live soak after Phase 21.1 ships is the *measurement window* that produces the
+empirical answer. The IS paper defends whichever outcome the data support.
+
+### References
+
+- Efron, B. (1987). "Better Bootstrap Confidence Intervals." *JASA* 82(397):171–185.
+- Benjamini, Y. & Yekutieli, D. (2001). "The control of the false discovery rate
+  in multiple testing under dependency." *Annals of Statistics* 29(4):1165–1188.
+- Bailey, D.H. & López de Prado, M. (2014). "The Deflated Sharpe Ratio."
+  *Journal of Portfolio Management* 40(5):94–107.
+- Spearman, C. (1904). "The proof and measurement of association between two things."
+  *American Journal of Psychology* 15:72–101.
+- Grinold, R.C. & Kahn, R.N. (2000). *Active Portfolio Management*, 2nd ed.
+  McGraw-Hill, §3 (Information Coefficient).
+- López de Prado, M. (2018). *Advances in Financial Machine Learning*. Wiley,
+  Ch. 6 (Purged K-Fold + Embargo) + Ch. 7 (CV with leakage).
+- James, G., Witten, D., Hastie, T. & Tibshirani, R. (2021). *An Introduction to
+  Statistical Learning*, 2nd ed. Ch. 5 (Resampling Methods), Ch. 6 (Regularization),
+  Ch. 13 (Multiple Testing).
+- CS229 Main Notes (Stanford). "Bias-Variance and Regularization"; "Information Theory".
+  https://cs229.stanford.edu/main_notes.pdf
+- Brier, G.W. (1950). "Verification of Forecasts Expressed in Terms of Probability."
+  *Monthly Weather Review* 78(1):1–3.
