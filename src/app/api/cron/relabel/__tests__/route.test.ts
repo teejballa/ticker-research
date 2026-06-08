@@ -35,6 +35,10 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/data/sector-mapping', () => ({
   getSectorETF: mockGetSectorETF,
+  // Wave 2 (Plan 21.1-02) added getSectorSigma60d, consumed by computeLabelsFor.
+  // Tests in this file exercise the relabel route only; a fixed σ keeps the
+  // sigma-label arithmetic deterministic without expanding suite scope.
+  getSectorSigma60d: vi.fn().mockResolvedValue(0.012),
 }));
 
 vi.mock('@/lib/data/sector-prices', () => ({

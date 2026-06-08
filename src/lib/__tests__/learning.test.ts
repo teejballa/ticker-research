@@ -153,9 +153,24 @@ describe('patternStatus', () => {
     expect(patternStatus({ sample_size: 5, brier_in: 0.1, brier_out: 0.1, brier_null: 0.25, drift_z: 0 }))
       .toBe('EXPLORATORY');
   });
-  it('ACTIVE when in-sample beats null and not drifting', () => {
-    expect(patternStatus({ sample_size: 30, brier_in: 0.15, brier_out: 0.18, brier_null: 0.25, drift_z: 0.5 }))
-      .toBe('ACTIVE');
+  it('ACTIVE when all five Wave-4 gates pass (ESS, live, Brier-lift, BY-FDR q, DSR)', () => {
+    expect(
+      patternStatus({
+        sample_size: 30,
+        brier_in: 0.15,
+        brier_out: 0.18,
+        brier_null: 0.25,
+        drift_z: 0.5,
+        live_outcome_count: 10,
+        by_fdr_q_value: 0.05,
+        dsr: 0.1,
+      }),
+    ).toBe('ACTIVE');
+  });
+  it('EXPLORATORY when Brier-lift / BY-FDR / DSR gates are absent (Wave-4 default)', () => {
+    expect(
+      patternStatus({ sample_size: 30, brier_in: 0.15, brier_out: 0.18, brier_null: 0.25, drift_z: 0.5 }),
+    ).toBe('EXPLORATORY');
   });
   it('DEPRECATED when out-of-sample worse than null', () => {
     expect(patternStatus({ sample_size: 30, brier_in: 0.15, brier_out: 0.30, brier_null: 0.25, drift_z: 0.5 }))
