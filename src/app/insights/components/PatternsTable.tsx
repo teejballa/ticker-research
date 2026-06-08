@@ -16,6 +16,7 @@
 import { credibleInterval95 } from '@/lib/learning';
 import { FEATURES } from '@/lib/features';
 import { WatchBadge } from '@/components/WatchBadge';
+import { MetricTooltip } from './MetricTooltip';
 
 export interface PatternRow {
   signal_class: string;
@@ -32,6 +33,8 @@ export interface PatternRow {
   parent_alpha?: number | null;
   parent_beta?: number | null;
   shrinkage_strength?: number | null;
+  // Phase 21.1 Wave 5 — DSR column (D-29). Written by Wave 4's learn cron.
+  dsr?: number | null;
 }
 
 // Plan 19-A-07: read-time pooled (α, β) when flag is on AND parent is set.
@@ -92,6 +95,10 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
             <th className="text-right font-medium px-3 py-3">ESS</th>
             <th className="text-left font-medium px-3 py-3">→ Graduation</th>
             <th className="text-right font-medium px-3 py-3">95% CI</th>
+            <th className="text-right font-medium px-3 py-3">
+              <span className="text-primary">DSR</span>
+              <MetricTooltip metric="dsr" />
+            </th>
             <th className="text-left font-medium px-3 py-3">Status</th>
           </tr>
         </thead>
@@ -178,6 +185,30 @@ export function PatternsTable({ rows }: { rows: PatternRow[] }) {
                   %–
                   <span data-testid="ess-ci-high">{ciHighPct}</span>
                   %]
+                </td>
+                {/* Phase 21.1 Wave 5 — DSR column (D-29, UI-SPEC Surface 3) */}
+                <td className="px-3 py-3 text-right tabular-nums font-mono text-xs">
+                  {cell.dsr == null ? (
+                    <span
+                      className="text-outline"
+                      title="DSR unavailable — cell hasn't crossed ACTIVE-candidate threshold (ESS ≥ 30, ≥ 10 live outcomes, OOS Brier-lift > θ)"
+                    >
+                      —
+                    </span>
+                  ) : (
+                    <span
+                      className={
+                        cell.dsr > 0.95
+                          ? 'text-secondary'
+                          : cell.dsr > 0
+                            ? 'text-on-surface'
+                            : 'text-error'
+                      }
+                      title={`DSR = ${cell.dsr.toFixed(3)} · ${cell.dsr > 0.95 ? 'significant after multiple-testing correction' : cell.dsr > 0 ? 'not yet significant' : 'below null — negative edge'}`}
+                    >
+                      {cell.dsr.toFixed(2)}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-3">
                   {cell.status === 'EXPLORATORY-WATCH' ? (

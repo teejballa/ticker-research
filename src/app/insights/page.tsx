@@ -84,6 +84,8 @@ const loadEssPatternRows = unstable_cache(
       parent_alpha: p.parent_alpha,
       parent_beta: p.parent_beta,
       shrinkage_strength: p.shrinkage_strength,
+      // Phase 21.1 Wave 5 — pass DSR through to PatternsTable DSR column (D-29)
+      dsr: p.dsr ?? null,
     };
   });
   },
