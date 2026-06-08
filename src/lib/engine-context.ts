@@ -1074,3 +1074,349 @@ export async function getEngineContextForTicker(
 // Internal helpers re-exported for the unit-test surface only. Production
 // callers should use getEngineContextForTicker — these are unstable.
 export const __internal = { patternStatus };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Phase 21.1 Wave 5 — D-30 Trust Boundary Reader Functions
+//
+// All numeric values flowing into the dashboard MUST be sourced through these
+// reader functions. No component may read LLMEvaluation rows directly.
+// No LLM API calls happen in this layer.
+//
+// Per D-30: "all metrics flow through engine-context.ts reader functions."
+// ═══════════════════════════════════════════════════════════════════════════
+
+import { informationCoefficient, bootstrapBCa } from '@/lib/evaluation';
+
+// ── Exported types for the Wave 5 dashboard surfaces ──────────────────────
+
+export interface RollingLLMICPoint {
+  t: Date;
+  ic: number;
+  ci_low: number;
+  ci_high: number;
+  n: number;
+}
+
+export type LLMICVerdict =
+  | 'EDGE_DETECTED'
+  | 'NEGATIVE_EDGE'
+  | 'INCONCLUSIVE'
+  | 'COLLECTING_DATA';
+
+export interface RollingLLMICResult {
+  series: RollingLLMICPoint[];
+  current: { ic: number; ci_low: number; ci_high: number; n: number } | null;
+  verdict: LLMICVerdict;
+}
+
+export interface BaselineComparisonRow {
+  metric: 'brier' | 'ic' | 'log_loss';
+  llm: { value: number; ci: [number, number]; q_value: number | null };
+  logistic24: { value: number; ci: [number, number]; q_value: number | null };
+  logisticCanonical: { value: number; ci: [number, number]; q_value: number | null };
+  null: { value: number };
+}
+
+export interface BaselineComparisonResult {
+  rows: BaselineComparisonRow[];
+  n_trials_attempted: number;
+  last_updated: Date | null;
+}
+
+export interface PerSignalIC {
+  signal_class: string;
+  ic: number;
+  ci: [number, number];
+  n: number;
+}
+
+// ── getLLMICRolling — Surface 2 headline (D-10) ───────────────────────────
+
+/**
+ * Phase 21.1 D-10 / CORE-ML-20 — Rolling N-day LLM IC with BCa 95% CI band.
+ *
+ * Reads LLMEvaluation rows where is_resolved=true and recorded_at is in the
+ * last `windowDays` days. Computes a headline IC over the window plus a daily
+ * sliding-window series for the SVG sparkline in RollingLLMICTile.
+ *
+ * Per D-30 (trust boundary): all numerics flow through this reader. The
+ * dashboard component never reads LLMEvaluation rows directly.
+ *
+ * Verdict per UI-SPEC Surface 2 state variants:
+ *   - n < 30              → COLLECTING_DATA (insufficient data)
+ *   - BCa CI fully > 0    → EDGE_DETECTED
+ *   - BCa CI fully < 0    → NEGATIVE_EDGE
+ *   - BCa CI spans 0      → INCONCLUSIVE
+ *
+ * @knowable_at  every row carries its own recorded_at
+ * Reference: Efron 1987 / Grinold & Kahn §3 (IC convention)
+ */
+export async function getLLMICRolling(windowDays: number = 30): Promise<RollingLLMICResult> {
+  const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+
+  const rows = await prisma.lLMEvaluation.findMany({
+    where: { is_resolved: true, recorded_at: { gte: cutoff } },
+    select: {
+      recorded_at: true,
+      ll_signed_score: true,
+      forward_return: true,
+      horizon_days: true,
+    },
+    orderBy: { recorded_at: 'asc' },
+  });
+
+  if (rows.length < 30) {
+    return { series: [], current: null, verdict: 'COLLECTING_DATA' };
+  }
+
+  const predictions = rows.map((r) => r.ll_signed_score);
+  const returns = rows.map((r) => r.forward_return ?? 0);
+
+  // Headline IC over the entire window
+  const ic = informationCoefficient(predictions, returns, 'spearman');
+
+  // BCa 95% CI via paired-resample of (prediction, return) tuples (B=10,000)
+  const indices = rows.map((_, i) => i);
+  const ci = bootstrapBCa(
+    indices,
+    (idx) => {
+      const p = idx.map((i) => predictions[i]);
+      const r = idx.map((i) => returns[i]);
+      return informationCoefficient(p, r, 'spearman');
+    },
+    { nResamples: 10000 },
+  );
+
+  const current = { ic, ci_low: ci.low, ci_high: ci.high, n: rows.length };
+
+  // Sliding-window series: one IC per day for the sparkline
+  const dayMs = 24 * 60 * 60 * 1000;
+  const series: RollingLLMICPoint[] = [];
+
+  const sortedTimes = rows.map((r) => r.recorded_at.getTime());
+  const firstDay = Math.floor(sortedTimes[0] / dayMs) * dayMs;
+  const lastDay = Math.floor(sortedTimes[sortedTimes.length - 1] / dayMs) * dayMs;
+
+  for (let day = firstDay; day <= lastDay; day += dayMs) {
+    const windowStart = day - windowDays * dayMs;
+    const inWindow = rows.filter((r) => {
+      const t = r.recorded_at.getTime();
+      return t > windowStart && t <= day;
+    });
+    if (inWindow.length < 30) continue;
+
+    const p = inWindow.map((r) => r.ll_signed_score);
+    const ret = inWindow.map((r) => r.forward_return ?? 0);
+    const wIc = informationCoefficient(p, ret, 'spearman');
+
+    // Smaller B for the sparkline series (performance vs precision trade-off)
+    const wCi = bootstrapBCa(
+      inWindow.map((_, i) => i),
+      (idx) => informationCoefficient(idx.map((i) => p[i]), idx.map((i) => ret[i]), 'spearman'),
+      { nResamples: 2000 },
+    );
+
+    series.push({
+      t: new Date(day),
+      ic: wIc,
+      ci_low: wCi.low,
+      ci_high: wCi.high,
+      n: inWindow.length,
+    });
+  }
+
+  // Verdict from headline CI
+  let verdict: LLMICVerdict = 'INCONCLUSIVE';
+  if (!isNaN(ci.low) && !isNaN(ci.high)) {
+    if (ci.low > 0) verdict = 'EDGE_DETECTED';
+    else if (ci.high < 0) verdict = 'NEGATIVE_EDGE';
+  }
+
+  return { series, current, verdict };
+}
+
+// ── getBaselineComparison — Surface 1 source (D-28) ──────────────────────
+
+/**
+ * Phase 21.1 D-28 / CORE-ML-21 — 3-way comparison table data.
+ *
+ * Reads the most recent baseline_eval LearningEvent (written by
+ * /api/cron/baseline-eval) for engine36 + canonical7 metrics, and computes
+ * LLM metrics from resolved LLMEvaluation rows at the requested horizon.
+ *
+ * Returns rows shaped for BaselinesComparisonTable. q_value is null for
+ * v1 (BY-FDR across the full set runs in the cron, not in this read path).
+ *
+ * Per D-30 trust boundary: all numerics computed here; page components
+ * receive pre-computed values only.
+ *
+ * @knowable_at  most recent baseline_eval LearningEvent.occurred_at
+ */
+export async function getBaselineComparison(
+  horizon: 3 | 7 | 14 | 30 = 7,
+): Promise<BaselineComparisonResult> {
+  const evt = await prisma.learningEvent.findFirst({
+    where: { event_type: 'baseline_eval' },
+    orderBy: { occurred_at: 'desc' },
+  });
+
+  if (!evt) {
+    return { rows: [], n_trials_attempted: 0, last_updated: null };
+  }
+
+  const delta = evt.delta as Record<string, unknown>;
+  const e36 = (delta['engine36'] ?? {}) as Record<string, unknown>;
+  const c7 = (delta['canonical7'] ?? {}) as Record<string, unknown>;
+  const nullBrier = typeof delta['null_brier'] === 'number' ? delta['null_brier'] : 0.25;
+  const nTrials = typeof delta['n_train'] === 'number' ? delta['n_train'] : 0;
+
+  // LLM metrics at this horizon — aggregate over resolved LLMEvaluation rows
+  const llmRows = await prisma.lLMEvaluation.findMany({
+    where: { is_resolved: true, horizon_days: horizon },
+    select: { ll_signed_score: true, forward_return: true, brier_buy_prob: true },
+  });
+
+  const llmIC =
+    llmRows.length >= 10
+      ? informationCoefficient(
+          llmRows.map((r) => r.ll_signed_score),
+          llmRows.map((r) => r.forward_return ?? 0),
+          'spearman',
+        )
+      : NaN;
+
+  const llmBrier =
+    llmRows.length > 0
+      ? llmRows.reduce((acc, r) => acc + (r.brier_buy_prob ?? 0), 0) / llmRows.length
+      : NaN;
+
+  const llmBrierCI =
+    llmRows.length >= 30
+      ? bootstrapBCa(
+          llmRows.map((r) => r.brier_buy_prob ?? 0),
+          (s) => s.reduce((a, b) => a + b, 0) / s.length,
+          { nResamples: 5000 },
+        )
+      : { low: NaN, high: NaN };
+
+  const rows: BaselineComparisonRow[] = [
+    {
+      metric: 'brier',
+      llm: {
+        value: llmBrier,
+        ci: [llmBrierCI.low, llmBrierCI.high],
+        q_value: null,
+      },
+      logistic24: {
+        value: typeof e36['brier'] === 'number' ? e36['brier'] : NaN,
+        ci: (Array.isArray(e36['brier_ci_bca_95']) ? e36['brier_ci_bca_95'] : [NaN, NaN]) as [number, number],
+        q_value: null,
+      },
+      logisticCanonical: {
+        value: typeof c7['brier'] === 'number' ? c7['brier'] : NaN,
+        ci: (Array.isArray(c7['brier_ci_bca_95']) ? c7['brier_ci_bca_95'] : [NaN, NaN]) as [number, number],
+        q_value: null,
+      },
+      null: { value: nullBrier },
+    },
+    {
+      metric: 'ic',
+      llm: { value: llmIC, ci: [NaN, NaN], q_value: null },
+      logistic24: {
+        value: typeof e36['ic'] === 'number' ? e36['ic'] : NaN,
+        ci: [NaN, NaN],
+        q_value: null,
+      },
+      logisticCanonical: {
+        value: typeof c7['ic'] === 'number' ? c7['ic'] : NaN,
+        ci: [NaN, NaN],
+        q_value: null,
+      },
+      null: { value: 0 },
+    },
+    {
+      metric: 'log_loss',
+      llm: { value: NaN, ci: [NaN, NaN], q_value: null },
+      logistic24: {
+        value: typeof e36['log_loss'] === 'number' ? e36['log_loss'] : NaN,
+        ci: [NaN, NaN],
+        q_value: null,
+      },
+      logisticCanonical: {
+        value: typeof c7['log_loss'] === 'number' ? c7['log_loss'] : NaN,
+        ci: [NaN, NaN],
+        q_value: null,
+      },
+      null: { value: Math.LN2 }, // log(2) ≈ 0.693 — 2-class uniform null
+    },
+  ];
+
+  return {
+    rows,
+    n_trials_attempted: nTrials,
+    last_updated: evt.occurred_at,
+  };
+}
+
+// ── getPerSignalIC — Surface 4 source (D-29) ──────────────────────────────
+
+/**
+ * Phase 21.1 D-29 — IC by signal class from LearnedPattern aggregation.
+ *
+ * Reads LearnedPattern rows that carry rolling_ic_20d (written by Wave 4's
+ * learn cron per-source-ic path). Aggregates by signal_class: computes the
+ * mean IC and BCa 95% CI across all cells in the class with ≥5 observations.
+ *
+ * Returns one PerSignalIC row per class, sorted by |IC| descending (most
+ * impactful signal classes float to the top, per UI-SPEC Surface 4).
+ *
+ * For classes with n < 10 total cells, the row is still returned (with NaN
+ * CI values) so the operator can see "Insider has only 3 cells" — per
+ * UI-SPEC empty-state contract: don't hide the row.
+ *
+ * Per D-30 trust boundary: no raw DB rows leave this function.
+ *
+ * @knowable_at  most recent LearnedPattern.last_updated for each cell
+ */
+export async function getPerSignalIC(): Promise<PerSignalIC[]> {
+  const cells = await prisma.learnedPattern.findMany({
+    where: { rolling_ic_20d: { not: null } },
+    select: {
+      signal_class: true,
+      rolling_ic_20d: true,
+      sample_size: true,
+    },
+  });
+
+  // Group by signal_class
+  const byClass = new Map<string, number[]>();
+  for (const c of cells) {
+    if (c.rolling_ic_20d == null) continue;
+    if (!byClass.has(c.signal_class)) byClass.set(c.signal_class, []);
+    byClass.get(c.signal_class)!.push(c.rolling_ic_20d);
+  }
+
+  const out: PerSignalIC[] = [];
+  for (const [signal_class, ics] of byClass) {
+    const n = ics.length;
+    const mean = ics.reduce((a, b) => a + b, 0) / n;
+
+    let ciLow = NaN;
+    let ciHigh = NaN;
+    if (n >= 5) {
+      const result = bootstrapBCa(
+        ics,
+        (s) => s.reduce((a, b) => a + b, 0) / s.length,
+        { nResamples: 5000 },
+      );
+      ciLow = result.low;
+      ciHigh = result.high;
+    }
+
+    out.push({ signal_class, ic: mean, ci: [ciLow, ciHigh], n });
+  }
+
+  // Sort by |IC| descending — most impactful signal classes float to top
+  out.sort((a, b) => Math.abs(b.ic) - Math.abs(a.ic));
+  return out;
+}
