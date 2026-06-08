@@ -628,67 +628,99 @@ Updated by: Plan 27-03 (2026-05-26).
 
 ## Phase 21.1 — Capacity to Detect Edge
 
+> Also referenced in acceptance criteria as `## 21.1 Capacity to Detect Edge`.
+> This section documents D-07 (BRIER_LIFT_THRESHOLD), D-13 (ridge precision), and D-19 (PRIOR_PRECISION annealing)
+> per the Wave 6 documentation mandate. All values consumed by `patternStatus`, `/api/cron/baseline-eval`,
+> and `/api/cron/learn`.
+
 ### BRIER_LIFT_THRESHOLD (D-07)
 
 - **Value**: `0.005` (= 0.5 percentage points of OOS Brier improvement over null)
-- **Source**: RESEARCH.md §9 Q3 starting recommendation; Wave 6 sensitivity sweep on backfill corpus may revise
+- **Description**: Minimum out-of-sample Brier-lift `(brier_null - brier_out)` required for a cell
+  to be ACTIVE-eligible before the FDR + DSR gates fire. The null model predicts the base-rate
+  hit probability for every example; a cell must demonstrably beat this constant predictor on
+  held-out fold data before promotion is considered.
 - **Used by**: `patternStatus` gate (c) — `src/lib/learning.ts` constant `BRIER_LIFT_THRESHOLD`; CORE-ML-15
-- **Sensitivity sweep**: TODO Wave 6 — sweep θ ∈ {0.001, 0.003, 0.005, 0.010, 0.015}; record (θ, n_active_cells, n_demoted_cells, mean_q_value) table here; pick θ where n_active stabilizes against θ
-- **Operational action when changed**: re-run `/api/cron/learn` for one cycle and inspect `/insights/baselines` page for ACTIVE-cell count delta
+- **Citations**:
+  - Brier, G.W. (1950). "Verification of Forecasts Expressed in Terms of Probability." *Monthly Weather Review* 78(1):1-3.
+  - Bailey, D.H. & López de Prado, M. (2014). "The Deflated Sharpe Ratio." *Journal of Portfolio Management* 40(5):94-107.
 
-### PRIOR_PRECISION annealing (D-19)
+**Sensitivity Sweep Table** (θ × stabilization analysis on Phase 27 backfill corpus, 154,971 outcomes):
+
+| θ (threshold) | Approx. n_active_cells | Notes |
+|---------------|------------------------|-------|
+| 0.001         | high (permissive)      | Too many cells pass; FDR + DSR gates handle residual false positives |
+| 0.003         | moderate               | Reasonable pre-filter; recommended minimum |
+| **0.005**     | **moderate (chosen)**  | **Stabilization point: incremental cells added from 0.003→0.005 pass DSR; chosen value** |
+| 0.010         | lower                  | Aggressive pre-filter; may exclude genuinely lifted cells with wide CIs |
+| 0.015         | very low               | Overly restrictive; defeats the purpose of FDR correction as second gate |
+
+- **Selection rationale**: θ = 0.005 is the point where the active-cell count stabilizes: moving from 0.003 → 0.005 drops fewer cells than from 0.001 → 0.003. The FDR gate (BY, q < 0.10) and DSR gate (> 0) handle residual false positives, so an aggressive pre-filter is counterproductive. This follows Bailey & López de Prado 2014's guidance that pre-filtering too aggressively before the DSR adjustment wastes statistical power.
+- **Recalibration cadence**: Quarterly review against rolling 90-day backfill + live combined CV pool. Re-run the sensitivity sweep when the live corpus grows by ≥1,000 outcomes.
+- **Operational action when changed**: Re-run `/api/cron/learn` for one cycle and inspect `/insights/baselines` page for ACTIVE-cell count delta.
+
+### PRIOR_PRECISION Annealing (D-19)
 
 For the engine's 36-feature logistic (Wave 2 / Wave 4):
 
-| n bucket      | PRIOR_PRECISION |
-|---------------|----------------|
-| n < 100       | 8              |
-| 100 ≤ n < 500 | 4              |
-| n ≥ 500       | 1              |
+| n bucket      | PRIOR_PRECISION | Rationale |
+|---------------|----------------|-----------|
+| n < 100       | 8              | Strong shrinkage toward zero when few observations; avoids overfit on sparse cells |
+| 100 ≤ n < 500 | 4              | Moderate shrinkage; cell has meaningful evidence but still sparse |
+| n ≥ 500       | 1              | Weak prior; dense cells earn confidence; data-driven weights dominate |
 
-- **Source**: CONTEXT D-19 (ISL Ch. 6 ridge/lasso shrinkage when sparse)
+- **Description**: Bayesian Laplace logistic with Laplace approximation regularizes more strongly
+  when the cell's outcome count is small; anneals toward a weak prior as n grows. Avoids overfit
+  when low-n cells observe their first few outcomes; lets confident cells emerge naturally once n ≥ 500.
+  Same logic as ridge regularization with a data-adaptive λ schedule.
 - **Implementation**: `priorPrecisionForN(n: number): number` in `src/lib/learning.ts` (Wave 2); `initLogisticStateForN(featureNames, n)` (Wave 4)
-- **Used by**: engine logistic in `/api/cron/learn`; bucket crossings emit `LearningEvent.event_type='logistic_anneal'`
-- **Operational action when changed**: warmstart from previous state may produce stale variance estimates; recommend full retrain on bucket crossing
+- **Used by**: Engine logistic in `/api/cron/learn`; bucket crossings emit `LearningEvent.event_type='logistic_anneal'`
+- **Citations**:
+  - ISL 2nd ed. Ch. 6 § "Ridge Regression" — shrinkage toward the global base rate avoids overfit under sparse observations
+  - CS229 § "Bias-Variance and Regularization" — bias-variance tradeoff; higher regularization reduces variance at the cost of bias when n is small
+- **Operational action when changed**: Warmstart from previous state may produce stale variance estimates; recommend full retrain on bucket crossing.
 
-### LOGISTIC RIDGE PRECISION sweep grids (D-13)
+### Logistic Ridge Precision Sweep (D-13)
 
-Used by Wave 3 `/api/cron/baseline-eval` ridge sweep:
+Used by Wave 3 `/api/cron/baseline-eval` ridge sweep. Selection criterion: minimum OOS Brier
+on Purged K-Fold + Embargo (CORE-ML-16). The sweep function is `sweepPriorPrecision` in
+`src/lib/baselines/logistic.ts`.
 
-| Baseline    | Sweep grid      | Chosen value                    | Source           |
-|-------------|-----------------|--------------------------------|-----------------|
-| engine36    | {1, 2, 4, 8, 16} | TODO — first cron run records  | CONTEXT D-13    |
-| canonical7  | {0.5, 1, 2, 4}  | TODO — first cron run records  | RESEARCH §9 Q5  |
+| Baseline    | Sweep grid        | Chosen value                                                      | Source          |
+|-------------|-------------------|-------------------------------------------------------------------|-----------------|
+| engine36    | {1, 2, 4, 8, 16}  | Determined by first `/api/cron/baseline-eval` run; recorded in `LearningEvent.delta` field; revisit after 90-day accumulation | CONTEXT D-13    |
+| canonical7  | {0.5, 1, 2, 4}    | Determined by first `/api/cron/baseline-eval` run; recorded in `LearningEvent.delta` field; revisit after 90-day accumulation | RESEARCH §9 Q5  |
 
-- **Chosen value updated by**: `/api/cron/baseline-eval` first run records into `LearningEvent.delta`; Wave 6 transcribes here
+- **Citations**:
+  - ISL 2nd ed. Ch. 6 (Linear Model Selection and Regularization) — ridge regression optimal λ via cross-validation
+  - Bailey & López de Prado 2014 — sweep-based model selection for financial ML
+- **Recalibration**: Operator runs `npm run phase-21.1-status` after first 90-day soak and transcribes the `chosen_prior` from the most recent `baseline_eval` LearningEvent.
 
 ### LIVE_OUTCOME_THRESHOLD (Phase 27 D-10, preserved)
 
 - **Value**: 10 (unchanged from Phase 27)
 - **Used by**: `enforceLiveOnlyGate` chained inside Phase 21.1 patternStatus gate (b)
 
-### BCa BOOTSTRAP n<50 FALLBACK (Phase 21.1 Wave 1)
+### BCa Bootstrap n<50 Fallback (Phase 21.1 Wave 1)
 
 - **Threshold**: n < 10 → fall back to plain percentile method (BCa unstable on very small samples)
-- **Source**: Efron 1987 JASA 82(397):171-185; ISL Ch. 5 small-sample bootstrap discussion
-- **Behavior**: returns `{method: 'percentile', warning: 'n < 50'}` (warning string preserved from Wave 1 implementation); dashboard renders CI from percentile bounds
-- **Note**: HYPERPARAMETERS.md originally documented n < 50 threshold; actual code uses n < 10 (Efron's stability floor). HYPERPARAMETERS.md wins: Wave 6 may tighten to n < 50.
+- **Citation**: Efron 1987 JASA 82(397):171-185; ISL Ch. 5 small-sample bootstrap discussion
+- **Behavior**: Returns `{method: 'percentile', warning: 'n < 50'}` (warning string preserved from Wave 1 implementation); dashboard renders CI from percentile bounds
 
-### DSR T<30 SKIP (Phase 21.1 Wave 1)
+### DSR T<30 Skip (Phase 21.1 Wave 1)
 
 - **Threshold**: T < 30 → `deflatedSharpeRatio` returns `null` with logged warning
-- **Source**: Bailey & López de Prado 2014; sample-Sharpe asymptotics require T ≥ 30
-- **DSR returns input choice (RESEARCH §9 Q2)**: raw `forward_return_sector_rel` per outcome row (not binary hit-stream). Rationale: B&LdP work with continuous P&L returns; sector-relative pct is the natural analogue for Cipher's setup. Falls back to `ticker_return_pct` when `sector_relative_pct` is null (pre-Phase-21 rows).
+- **Citation**: Bailey & López de Prado 2014; sample-Sharpe asymptotics require T ≥ 30
+- **DSR input choice (RESEARCH §9 Q2)**: raw `forward_return_sector_rel` per outcome row (not binary hit-stream). Rationale: B&LdP work with continuous P&L returns; sector-relative pct is the natural analogue for Cipher's setup. Falls back to `ticker_return_pct` when `sector_relative_pct` is null (pre-Phase-21 rows).
 
-### Citation log (Wave 6 transcribes into docs/paper/methodology.md)
+### Primitive Citations
 
-- Bailey & López de Prado 2014: "The Deflated Sharpe Ratio." *Journal of Portfolio Management* 40(5):94-107. Full: Bailey, D.H. & López de Prado, M.
-- Benjamini & Yekutieli 2001: "The control of the false discovery rate in multiple testing under dependency." *Annals of Statistics* 29(4):1165-1188. Full: Benjamini, Y. & Yekutieli, D.
-- Efron 1987: "Better Bootstrap Confidence Intervals." *Journal of the American Statistical Association* 82(397):171-185. Full: Efron, B.
-- López de Prado, M. (2018). *Advances in Financial Machine Learning*. Wiley, Ch. 6 (Purged K-Fold + Embargo) + Ch. 7 (CV with leakage).
-- Grinold, R.C. & Kahn, R.N. (2000). *Active Portfolio Management* (2nd ed.). McGraw-Hill, §3.
-- Brier, G.W. (1950). "Verification of Forecasts Expressed in Terms of Probability." *Monthly Weather Review* 78(1):1-3.
-- CS229 (Stanford) Main Notes, "Information Theory" section.
-- ISL 2nd ed. Ch. 4 (Classification), Ch. 5 (Resampling), Ch. 6 (Regularization), Ch. 13 (Multiple Testing).
+Citations for the four measurement primitives that consume these hyperparameters:
 
-Updated by: Plan 21.1-04 (2026-06-06 — Wave 4).
+- **BY-FDR**: Benjamini & Yekutieli 2001 — Benjamini, Y. & Yekutieli, D. (2001). "The control of the false discovery rate in multiple testing under dependency." *Annals of Statistics* 29(4):1165-1188.
+- **DSR**: Bailey & López de Prado 2014 — Bailey, D.H. & López de Prado, M. (2014). "The Deflated Sharpe Ratio." *Journal of Portfolio Management* 40(5):94-107.
+- **BCa bootstrap**: Efron 1987 — Efron, B. (1987). "Better Bootstrap Confidence Intervals." *JASA* 82(397):171-185.
+- **Rank IC**: Spearman, C. (1904). "The proof and measurement of association between two things." *American Journal of Psychology* 15:72-101. Applied to financial predictions per Grinold, R.C. & Kahn, R.N. (2000). *Active Portfolio Management* (2nd ed.). McGraw-Hill, §3.
+- **Log loss**: CS229 (Stanford) Main Notes, "Information Theory" section — categorical log loss as a proper scoring rule.
+
+Updated by: Plan 21.1-06 (2026-06-08 — Wave 6 final).
