@@ -49,6 +49,7 @@ export default function middleware(req: NextRequest) {
     path.startsWith('/api/cron') ||
     path.startsWith('/api/insights') ||
     path === '/insights' ||
+    path.startsWith('/insights/') ||
     path === '/api/market-snapshot' ||
     path === '/api/sectors' ||
     path.startsWith('/api/ticker/') ||
