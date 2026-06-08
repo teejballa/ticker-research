@@ -44,7 +44,7 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 
 #### Phase 21.1 — Capacity to Detect Edge (measurement upgrade)
 
-- [ ] **CORE-ML-20**: Direct LLM evaluation — IC + Brier on every report; BCa 95% CI on rolling 30-day IC tile; data persisted in `LLMEvaluation` table
+- [x] **CORE-ML-20**: Direct LLM evaluation — IC + Brier on every report; BCa 95% CI on rolling 30-day IC tile; data persisted in `LLMEvaluation` table
 - [ ] **CORE-ML-21**: Logistic baseline head-to-head — both 24-feature post-z-score AND canonical small-set (RSI / MACD / sentiment% / insider net flow / institutional net flow / put/call / sector return) trained and evaluated on identical purged-K-fold splits as the engine _(partial 2026-06-07: framework + 4 of 7 canonical features wired in Wave 3; insider_net_flow / institutional_net_flow / sector_return remain null stubs awaiting later wiring)_
 - [x] **CORE-ML-22**: σ-aware hit threshold as PRIMARY engine label (k=1, 60-day rolling sector ETF σ). Directional (>0%) and 1%-flat labels retained as secondary diagnostics; all three labels written by ONE shared compute path
 - [x] **CORE-ML-23**: Z-score feature companions — every base feature gets a ticker-rolling-60d z-score AND a cross-sectional z-score companion (12 base → 36 features total); PRIOR_PRECISION anneals 8 / 4 / 1 by n bucket
