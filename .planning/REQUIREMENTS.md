@@ -32,9 +32,10 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 - [ ] **CORE-ML-13**: Sparse cells (low ESS) shrink toward parent prior; rich cells (high ESS) retain individual posterior — observable in `/insights` as differential confidence intervals
 - [ ] **CORE-ML-14**: Cell-space pruning: cells that have not been observed in N days AND have ESS < threshold are not allocated parameter rows (defends against the "lake of cells" combinatorial blowup)
 
-#### Phase 21.1 — Lift-gated cell promotion (ABSORBED from Phase 23)
+#### Phase 21.1 — Lift-gated cell promotion (absorbed from Phase 23)
 
 > Absorbed into Phase 21.1 on 2026-06-02 per Phase 21.1 CONTEXT D-01. Phase 23 retired.
+> All CORE-ML-15..19 requirements are now owned by Phase 21.1 (absorbed from Phase 23 on 2026-06-02).
 
 - [x] **CORE-ML-15**: ACTIVE promotion gate becomes "out-of-sample Brier-lift > threshold AND statistically significant after FDR correction" (was: "sample_size + brier_in_sample threshold")
 - [x] **CORE-ML-16**: Out-of-sample evaluation uses **Purged K-Fold + Embargo** cross-validation per López de Prado — never random K-fold, never simple time-split (defends against horizon-overlap leakage)
@@ -49,7 +50,7 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 - [x] **CORE-ML-22**: σ-aware hit threshold as PRIMARY engine label (k=1, 60-day rolling sector ETF σ). Directional (>0%) and 1%-flat labels retained as secondary diagnostics; all three labels written by ONE shared compute path
 - [x] **CORE-ML-23**: Z-score feature companions — every base feature gets a ticker-rolling-60d z-score AND a cross-sectional z-score companion (12 base → 36 features total); PRIOR_PRECISION anneals 8 / 4 / 1 by n bucket
 - [x] **CORE-ML-24**: Measurement primitives as named modules under `src/lib/evaluation/` — BCa bootstrap (Efron 1987), Benjamini-Yekutieli FDR (BY 2001), Deflated Sharpe Ratio (Bailey & López de Prado 2014), Spearman IC (Grinold-Kahn §3), categorical log-loss (CS229)
-- [ ] **CORE-ML-25**: `knowable_at` as-of-time annotation on every feature with `scripts/check-feature-asof.ts` CI gate blocking merges that introduce features without it _(partial 2026-06-07: knowable_at annotations added in Waves 2–3; scripts/check-feature-asof.ts CI gate is Wave 6)_
+- [x] **CORE-ML-25**: `knowable_at` as-of-time annotation on every feature with `scripts/check-feature-asof.ts` CI gate blocking merges that introduce features without it _(shipped 2026-06-08: Wave 6 — FEATURE_ASOF_REGISTRY covers all 36 engine features + 7 canonical features; `npm run check-feature-asof` exits 0)_
 
 ### REASON — Group B: Reasoning impact in reports
 
