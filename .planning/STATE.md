@@ -21,7 +21,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 
 **Core value:** Given a ticker, return a clear, evidence-backed research report with transparent reasoning and traceable sources — backed by an industry-standard, auditable, self-improving Bayesian learning engine.
 
-**Current focus:** Phase 21.1 — Capacity to Detect Edge (Wave 4 complete, Wave 5 next)
+**Current focus:** Phase 22 — Market-Regime Feature + Learned Sentiment-Source Weights (context gathered 2026-06-08; 17 decisions locked; ready for `/gsd-plan-phase 22`). Phase 21.1 shipped 2026-06-08 (46 commits on origin/main `afe9a2a..148b7ad`; done-gate 9/9 green).
 
 ## Current Position
 
