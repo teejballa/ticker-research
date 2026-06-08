@@ -11,6 +11,9 @@ import { InsightsDashboard } from '@/components/InsightsDashboard';
 import NavBar from '@/components/NavBar';
 import FooterTicker from '@/components/FooterTicker';
 import { PatternsTable, type PatternRow } from './components/PatternsTable';
+// Phase 21.1 Wave 5 — Surface 2 + Surface 4 tiles
+import { RollingLLMICTile } from './components/RollingLLMICTile';
+import { PerSignalICTable } from './components/PerSignalICTable';
 
 export const metadata = {
   title: 'Research dashboard',
@@ -157,6 +160,22 @@ export default async function InsightsPage() {
             )
           }
         />
+
+        {/* Phase 21.1 Wave 5 — LLM IC headline tile + per-signal IC table (Surfaces 2 & 4) */}
+        <section className="page-grid" style={{ paddingTop: '24px', paddingBottom: '8px' }}>
+          <div className="flex flex-col gap-6">
+            <RollingLLMICTile />
+            <PerSignalICTable />
+          </div>
+          <div className="mt-4">
+            <a
+              href="/insights/baselines"
+              className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary hover:text-primary/80"
+            >
+              View 3-way baselines comparison →
+            </a>
+          </div>
+        </section>
 
         {/* Full engine dashboard — every original Insights section preserved */}
         <section className="page-grid" style={{ paddingTop: '8px' }}>
