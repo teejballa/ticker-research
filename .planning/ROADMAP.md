@@ -212,6 +212,18 @@ Plans:
 
 ---
 
+### Phase 22: Market-Regime Feature + Learned Sentiment-Source Weights
+
+**Goal**: Two additions to what the engine learns, shipped together because they share the per-cell posterior update path in `/api/cron/learn`. **(a) Regime dimension** — extend `LearnedPattern` composite key with a 4-bucket regime (bull/bear × low-vol/high-vol via VIX bucketing + SPY MA cross); per-regime Beta posteriors mean the engine learns "this sentiment_type × cap_class × horizon works in bear/high-vol but not bull/low-vol." **(b) Learned sentiment-source weights** — extend `SourceTier` with regime conditioning so the aggregator weighs each sentiment input differently per regime, reusing `PerSourceIC` infrastructure + clamped-softmax pattern + Beta-Binomial empirical-Bayes shrinkage.
+**Depends on**: Phase 21 (complete 2026-05-24), Phase 21.1 (complete 2026-06-08 — 5-gate ACTIVE + BCa + BY-FDR primitives consumed). P21 relearn soak observed 2026-05-24 → 2026-06-08.
+**Requirements**: CORE-ML-06, CORE-ML-07, CORE-ML-08, CORE-ML-09, CORE-ML-10 (regime dimension) + CORE-ML-20, CORE-ML-21, CORE-ML-22 (source-weight learning, regime-conditional weights, source-mix UI surface). **Resolution 2026-06-08**: REQUIREMENTS.md CORE-ML-07 (4-bucket) takes precedence over the earlier summary's 2-bucket (industry-standard 2×2 trend × vol per Hamilton 1989, Ang & Bekaert 2002).
+**Context doc**: `.planning/phases/22-market-regime-and-source-weights/22-CONTEXT.md` (17 locked decisions D-01..D-17 across 4 areas: regime definition, source-weight wiring, backfill+cutover, done-gate+P21.1 interaction)
+**Discussion log**: `.planning/phases/22-market-regime-and-source-weights/22-DISCUSSION-LOG.md` (alternatives considered)
+**Done-gate**: Brier-lift ≥ 0.005 on regime-flipped cells with BCa 95% CI excluding 0 vs `regime='ALL'` baseline. Reuses P21.1's `BRIER_LIFT_THRESHOLD` for internal consistency.
+**Plans**: TBD (gsd-planner will decompose)
+
+---
+
 ### Phase 27: Historical Backfill
 **Goal**: Bootstrap the prior count `N` needed for lift-gated cell promotion (Phase 23) by replaying historical data through the learning engine: ≥100 tickers × ≥5 years of the technical signal class, under strict point-in-time discipline, via a single feature-extraction code path shared with the live pipeline.
 **Depends on**: Phase 16 (technical signals — deterministic OHLCV features), Phase 18 (learning engine + ESS + decay). Feeds Phase 23 (lift-gated promotion needs the bootstrapped N). Independent of Phase 22's relearn soak — can be planned/executed ahead of P22.
