@@ -53,19 +53,23 @@ created: 2026-06-08
 
 ## Wave 0 Requirements
 
-Per 22-RESEARCH.md §Wave 0 Gaps + §Validation Architecture:
+Per 22-RESEARCH.md §Wave 0 Gaps + §Validation Architecture + 22-00-PLAN.md frontmatter. **11 RED test stubs** (reconciled 2026-06-09 during plan-check W-4 resolution):
 
-- [ ] `src/lib/regime/__tests__/classify.test.ts` — RED stub for regime classifier (D-02..D-05 — VIX percentile + SPY MA cross + transition exclusion)
-- [ ] `src/lib/evaluation/__tests__/hierarchical-fdr.test.ts` — RED stub for hierarchical BY → meta-BH (D-15)
-- [ ] `src/lib/sentiment/__tests__/source-tier-regime.test.ts` — RED stub for `getWeightForSource(source_id, regime, asOf)` extension + fallback chain (D-06, D-09)
+- [ ] `src/lib/regime/__tests__/classify.test.ts` — RED stub for regime classifier composite (D-02 + D-03 + D-04)
+- [ ] `src/lib/regime/__tests__/vix-percentile.test.ts` — RED stub for rolling 60d VIX 50th-percentile helper (D-04)
+- [ ] `src/lib/evaluation/__tests__/fdr-hierarchical.test.ts` — RED stub for hierarchical BY → meta-BH (D-15, Wave 4)
+- [ ] `src/lib/sentiment/__tests__/source-tier-regime.test.ts` — RED stub for `getWeightForSource(source_id, regime, asOf)` extension + 3-step fallback chain (D-06, D-09)
+- [ ] `src/lib/sentiment/__tests__/source-tier-eb.test.ts` — RED stub for empirical-Bayes shrinkage toward unconditional `(source, 'ALL')` IC (D-07)
 - [ ] `src/lib/sentiment/__tests__/aggregator-regime.test.ts` — RED stub for per-row regime read at aggregation (D-08)
-- [ ] `src/app/api/cron/backfill-regime/__tests__/route.test.ts` — RED stub for one-shot checkpoint pattern + Yahoo+Polygon fallback (D-10, D-12)
-- [ ] `src/app/api/cron/learn/__tests__/learn-regime.test.ts` — RED stub for two-pass extension with per-regime evaluation + hierarchical FDR (D-15)
-- [ ] `tests/e2e/source-mix-row.spec.ts` — RED stub for EngineCalibrationPanel "Source mix" row render (D-17)
-- [ ] `scripts/phase-22-status.ts` — composite done-gate (D-14 Brier-lift BCa CI + soak duration + gate-clearance counts)
-- [ ] `tests/fixtures/regime/` — synthetic VIX + SPY history fixtures for deterministic classifier tests
+- [ ] `src/app/api/cron/__tests__/backfill-regime.test.ts` — RED stub for one-shot checkpoint pattern + Yahoo+Polygon fallback (D-10, D-12)
+- [ ] `src/app/api/cron/__tests__/sentiment-scan-regime.test.ts` — RED stub for sentiment-scan cron writing regime label at scan time (CORE-ML-08)
+- [ ] `src/app/api/cron/__tests__/learn-transition-exclusion.test.ts` — RED stub for sample-relative transition-zone exclusion in posterior update path (D-05)
+- [ ] `src/lib/evaluation/__tests__/regime-done-gate.test.ts` — RED stub for `regimeDoneGate` Brier-lift + BCa CI (D-14)
+- [ ] `src/lib/__tests__/learned-pattern-regime.test.ts` — RED stub for LearnedPattern composite key + regime read/write (CORE-ML-06)
 
-*Wave 0 plan (22-00) must include creating these RED stubs before any GREEN implementation work begins.*
+Plus 2 golden fixtures (`tests/fixtures/regime/vix-history.json` + `spy-history.json`) and the composite done-gate script `scripts/phase-22-status.ts` (created in Wave 5, not Wave 0).
+
+*Wave 0 plan (22-00) must include creating all 11 RED stubs + 2 fixtures before any GREEN implementation work begins.*
 
 ---
 
