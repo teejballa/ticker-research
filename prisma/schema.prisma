@@ -56,11 +56,27 @@ model SentimentSnapshot {
   // Phase 27 D-09/COVERAGE-09 — additive source tag ('live' | 'backfill').
   // Defaulted so all existing rows become 'live' automatically (zero-downtime).
   source               String   @default("live")
+  // PHASE 22 (D-06, D-11 step 1, CORE-ML-08): 4-bucket market regime label
+  // ('ALL' | 'bull-low-vol' | 'bull-high-vol' | 'bear-low-vol' | 'bear-high-vol').
+  // Written at scan time by /api/cron/sentiment-scan (Wave 1) via classifyRegimeAt({asOf: scanned_at}).
+  // Default 'ALL' so all existing rows are transparently consumed via the D-09 cold-start chain;
+  // backfill cron (Wave 2) writes historical labels from PIT VIX + SPY history.
+  // Free-form String (not Postgres enum) per D-02 precedent (P20-B-04 tier values).
+  regime               String   @default("ALL")
+  // PHASE 22 (D-03, D-04): audit-only regime inputs snapshotted at scan time.
+  // regime_vix_level: raw ^VIX close at asOf; regime_vix_pctile: rolling-60d 50th-percentile rank;
+  // regime_ma_diff: SPY MA50 − MA200. Nullable for backfill-failed and cold-start rows (D-09).
+  regime_vix_level     Float?
+  regime_vix_pctile    Float?
+  regime_ma_diff       Float?
 
   outcomes PriceOutcome[]
 
   @@unique([ticker, scanned_at])
   @@index([ticker, scanned_at(sort: Desc)])
+  // PHASE 22 (D-06, D-11 step 1): per-regime time-series lookup index.
+  // Coexists with the legacy [ticker, scanned_at] index until Wave 5 D-11 step 4 cutover.
+  @@index([ticker, regime, scanned_at(sort: Desc)])
   @@map("sentiment_snapshots")
 }
 
@@ -149,6 +165,15 @@ model LearnedPattern {
   parent_alpha          Float?
   parent_beta           Float?
   shrinkage_strength    Float?
+  // PHASE 22 (D-06, D-11 step 1, CORE-ML-06): 4-bucket regime dimension on the cell key.
+  // 'ALL' is the unconditional aggregate row (consumed via D-09 cold-start chain);
+  // 'bull-low-vol' | 'bull-high-vol' | 'bear-low-vol' | 'bear-high-vol' are the per-regime cells.
+  // Wave 5 (D-11 step 4) flips the unique constraint to include `regime`; until then both
+  // per-regime rows AND the legacy unconditional rows coexist (the unique constraint below
+  // continues to dedupe on (signal_class, pattern_key, cap_class, horizon_days), so per-regime
+  // rows MUST be written by the Wave 4 relearn ONLY when the constraint is widened — until
+  // then this column carries 'ALL' on every row).
+  regime                String   @default("ALL")
 
   @@unique([signal_class, pattern_key, cap_class, horizon_days], map: "learned_patterns_lookup_key")
   @@map("learned_patterns")
@@ -223,6 +248,12 @@ model LearningEvent {
   cap_class    String?
   delta        Json
   message      String   @db.Text
+  // PHASE 22 (RESEARCH §Q3, D-15): top-level regime key for direct WHERE filtering by
+  // the /insights learning-feed dashboard. Mirrors the existing top-level signal_class /
+  // pattern_key / cap_class / horizon_days pattern (NOT nested inside delta JSON).
+  // Nullable for pre-Phase-22 events and for events that do not carry a regime
+  // (e.g. backfill telemetry per Q5: backfill cron does NOT write LearningEvent).
+  regime       String?
 
   @@index([occurred_at(sort: Desc)])
   @@index([outcome_id])
@@ -361,6 +392,12 @@ model PerSourceIC {
   n_observations       Int // distinct fetched_at days contributing to the 20d window
   nw_lag               Int // Bartlett-kernel truncation lag used (5 for h=7, 10 for h=30)
   model_version        String // 'per-source-ic-v1' — bumped on algorithm change, never overwritten
+  // PHASE 22 (D-06, D-11 step 1, D-07): 4-bucket regime slice for per-source IC.
+  // Default 'ALL' is the unconditional row consumed via D-09 cold-start chain;
+  // the Wave 2 backfill cron writes historical regime labels per PIT computed_at,
+  // and the Wave 3 source-tier-recompute cron emits per-regime rows as the EB prior input.
+  // Unique constraint flip to include `regime` is deferred to Wave 5 (D-11 step 4).
+  regime               String   @default("ALL")
 
   @@unique([source_id, computed_at, forward_horizon_days, model_version], map: "psic_src_date_hor_ver_uq")
   @@index([source_id, forward_horizon_days, computed_at(sort: Desc)], map: "idx_psic_src_hor_computed_at")
@@ -588,8 +625,20 @@ model SourceTier {
   n_observations         Int // count of (ticker, day) IC rows used in the softmax bucket
   validation_window_days Int // typically 90; logged for audit when cap is recalibrated
   model_version          String // partition key — same convention as 20-Z-01 / 20-A-03
+  // PHASE 22 (D-06, D-11 step 1, D-07): 4-bucket regime + EB shrinkage strength.
+  // regime: 'ALL' for the unconditional fallback row consumed via D-09 cold-start chain;
+  //         'bull-low-vol' | 'bull-high-vol' | 'bear-low-vol' | 'bear-high-vol' for per-regime weights.
+  // shrinkage_strength: λ in [eb_shrinkage_lambda_min, eb_shrinkage_lambda_max] from
+  //   source-tier-hyperparameters; cell_weight = cell_n / (cell_n + λ); higher λ means more
+  //   regression toward the unconditional (source, 'ALL') IC. Nullable on the unconditional
+  //   row and on cold-start rows where no shrinkage was applied.
+  regime                 String   @default("ALL")
+  shrinkage_strength     Float?
 
   @@index([source_id, computed_at(sort: Desc)], map: "idx_sourcetier_source_at")
+  // PHASE 22 (D-06, D-11 step 1): per-regime weight-history lookup index.
+  // Coexists with the legacy index above until Wave 5 D-11 step 4 cutover.
+  @@index([source_id, regime, computed_at(sort: Desc)], map: "idx_sourcetier_source_regime_at")
   @@map("source_tiers")
 }
 
