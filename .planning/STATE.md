@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Learning Engine Excellence
-status: verifying
-last_updated: "2026-06-08T02:38:23.086Z"
-last_activity: 2026-06-08
+status: executing
+last_updated: "2026-06-09T01:16:02.738Z"
+last_activity: 2026-06-09 -- Phase 22 planning complete
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 49
+  total_plans: 55
   completed_plans: 49
-  percent: 100
+  percent: 89
 ---
 
 # Project State
@@ -28,8 +28,8 @@ See: `.planning/PROJECT.md` (updated 2026-05-03 with v2.0 vision)
 Milestone: v2.0
 Phase: 21.1 — Capacity to Detect Edge
 Plan: 21.1-05 (Wave 5) next; Waves 0–4 complete (5 plans of 7)
-Status: Phase complete — ready for verification
-Last activity: 2026-06-08
+Status: Ready to execute
+Last activity: 2026-06-09 -- Phase 22 planning complete
 Last completed: 27-03 → D-01 posterior-invariance regression + LIVE_OUTCOME_THRESHOLD documented in HYPERPARAMETERS.md. Two tests added to backfill-live-gate.test.ts: (1) 5y-old decay weight < 1e-10 (exp(-1825/60) ≈ 1.5e-13); (2) posterior shift < 1e-6 vs fresh-only baseline — confirms no exclusion filter needed for backfill rows in the posterior path. live_outcome_gate section appended to HYPERPARAMETERS.md (LIVE_OUTCOME_THRESHOLD=10, D-10 rationale, D-01 interaction note, recalibration cadence). All 6 tests in backfill-live-gate.test.ts GREEN; 1815 total passing; tsc clean. Atomic commit: 5b84cf8. Key decisions: D-01 test directly exercises Phase 18 decay primitives; LIVE_OUTCOME_THRESHOLD=10 static until Phase 23 lift-gate evidence; legacy events without delta.source count as live (T-27-13 back-compat).
 Last completed (prior): 27-01 → additive SentimentSnapshot.source column + @@unique([ticker, scanned_at]) pushed to Neon; 121-ticker cap-balanced backfill universe (BACKFILL_UNIVERSE + UNIVERSE_VERSION); COVERAGE-06 GREEN; RED stubs for COVERAGE-07/08/10; integration stub COVERAGE-09; .gitignore .cipher/ guard. 6 atomic commits (44447c5, e5bf432, 0b9c42e, 0896f92, def978b, e8f457a). DB push was operator-confirmed checkpoint:human-action (no --accept-data-loss; 0 duplicate rows).
 
