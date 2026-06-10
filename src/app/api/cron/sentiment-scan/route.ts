@@ -26,11 +26,63 @@ import {
 } from '@/lib/sentiment/community-observation-writers';
 import type { EnrichedSnapshot } from '@/lib/data/lightweight-community-scan';
 import { createHash } from 'crypto';
+// Phase 22 Wave 1 (D-02..D-04, CORE-ML-08) — write regime label at scan time.
+// classifyRegimeAt is the SINGLE source of truth for the 4-bucket label; the
+// /api/cron/backfill-regime path (Wave 2) reuses it verbatim for historical PIT
+// classification (no parallel/forked regime logic per CLAUDE.md rule #6).
+import { classifyRegimeAt, type RegimeResult } from '@/lib/regime/classify';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
+
+/**
+ * Phase 22 Wave 1 — per-ticker SentimentSnapshot writer with regime labeling.
+ *
+ * Extracted from the GET handler so the regime-write contract is unit-testable
+ * in isolation (sentiment-scan-regime.test.ts). The caller hoists
+ * `classifyRegimeAt({asOf: cycleStart})` ONCE outside the per-ticker loop —
+ * the regime is global at the moment of scan, so a single classification per
+ * cron invocation is correct AND avoids 121x redundant Yahoo `^VIX` calls.
+ *
+ * Idempotency: the existing `@@unique([ticker, scanned_at])` constraint enforces
+ * one row per (ticker, scanned_at). When `regimeResult.regime === 'ALL'` (D-09
+ * cold-start) we still write the row — the column DEFAULT is 'ALL' so this is
+ * a semantic no-op but documents that the classifier RAN (not skipped).
+ *
+ * @knowable_at args.scanned_at — `regimeResult` MUST have been classified at
+ *   or before scanned_at. Caller responsibility (the GET handler enforces this).
+ */
+export async function classifyRegimeAndPersistForScan(args: {
+  ticker: string;
+  scanned_at: Date;
+  price_at_scan: number;
+  community_data: Prisma.InputJsonValue;
+  technical_data: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  insider_data: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  institutional_data: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  regimeResult: RegimeResult;
+}): Promise<void> {
+  await prisma.sentimentSnapshot.create({
+    data: {
+      ticker: args.ticker,
+      scanned_at: args.scanned_at,
+      price_at_scan: args.price_at_scan,
+      community_data: args.community_data,
+      technical_data: args.technical_data,
+      insider_data: args.insider_data,
+      institutional_data: args.institutional_data,
+      // Phase 22 — regime + 3 audit columns (D-03 + D-04 + CORE-ML-08).
+      // regime column defaults to 'ALL' in the schema; we still pass it explicitly
+      // so the train/serve contract is visible at the write site.
+      regime: args.regimeResult.regime,
+      regime_vix_level: args.regimeResult.vix_level,
+      regime_vix_pctile: args.regimeResult.vix_60d_percentile,
+      regime_ma_diff: args.regimeResult.spy_ma_50_minus_200,
+    },
+  });
+}
 
 export async function GET(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -51,6 +103,22 @@ export async function GET(request: NextRequest) {
   };
 
   const tickers = getCurrentWatchlist();
+
+  // Phase 22 Wave 1 (D-02..D-04 + CORE-ML-08) — classify the regime ONCE per
+  // cron invocation. The regime is global at the moment of scan; per-ticker
+  // re-classification would issue 121x redundant Yahoo ^VIX + ^GSPC fetches.
+  // D-09 cold-start: when classifier returns 'ALL', the per-ticker writer still
+  // writes the row (column DEFAULT is 'ALL' — semantic no-op but documents that
+  // the classifier ran).
+  const scanCycleStart = new Date();
+  const regimeResult = await classifyRegimeAt({ asOf: scanCycleStart });
+  console.log('[cron:sentiment-scan] regime', {
+    regime: regimeResult.regime,
+    vix_level: regimeResult.vix_level,
+    vix_60d_percentile: regimeResult.vix_60d_percentile,
+    spy_ma_50_minus_200: regimeResult.spy_ma_50_minus_200,
+  });
+
   for (const ticker of tickers) {
     try {
       const recent = await prisma.sentimentSnapshot.findFirst({
@@ -107,22 +175,25 @@ export async function GET(request: NextRequest) {
             }
           : communityDataBase;
 
-      await prisma.sentimentSnapshot.create({
-        data: {
-          ticker,
-          scanned_at: new Date(),
-          price_at_scan: price,
-          community_data: communityDataWithShadow as Prisma.InputJsonValue,
-          technical_data: technicalData
-            ? (technicalData as unknown as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
-          insider_data: insiderData
-            ? (insiderData as unknown as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
-          institutional_data: institutionalData
-            ? (institutionalData as unknown as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
-        },
+      // Phase 22 Wave 1 (CORE-ML-08) — route the SentimentSnapshot insert through
+      // classifyRegimeAndPersistForScan so the 4 regime columns are populated
+      // atomically with the rest of the snapshot payload. scanned_at is set per
+      // ticker to preserve the existing intra-cycle ordering signal.
+      await classifyRegimeAndPersistForScan({
+        ticker,
+        scanned_at: new Date(),
+        price_at_scan: price,
+        community_data: communityDataWithShadow as Prisma.InputJsonValue,
+        technical_data: technicalData
+          ? (technicalData as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        insider_data: insiderData
+          ? (insiderData as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        institutional_data: institutionalData
+          ? (institutionalData as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        regimeResult,
       });
 
       // Plan 20-Z-01 — write per-message SentimentObservation rows in PARALLEL with the
