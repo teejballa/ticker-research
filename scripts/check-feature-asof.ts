@@ -100,6 +100,22 @@ const FEATURE_ASOF_REGISTRY: Record<string, string> = {
   'institutional_net_flow':     'snapshot_scanned_at',  // Quiver 13F net institutional flow prior quarter
   'put_call_ratio':             'snapshot_scanned_at',  // options put/call ratio at snapshot time
   'sector_return':              'snapshot_scanned_at',  // sector ETF prior 5d return
+
+  // -------------------------------------------------------------------------
+  // Phase 22 — regime dimension (SentimentSnapshot-level, NOT engine feature vector)
+  //
+  // These 4 columns are written at scan time by /api/cron/sentiment-scan via
+  // classifyRegimeAt({asOf: scanned_at}). They are not members of FEATURE_NAMES_36
+  // or CANONICAL_FEATURE_NAMES (the audit loops above don't read them), but they
+  // are listed here per CLAUDE.md rule #6 so the registry stays the living
+  // feature-leakage documentation for every new data-source addition.
+  // Source: src/lib/regime/{classify,vix-percentile,ma-cross}.ts — every helper
+  // carries `@knowable_at asOf` and uses only data <= asOf.
+  // -------------------------------------------------------------------------
+  regime:                       'snapshot.scanned_at — classified at scan time',
+  regime_vix_level:             'snapshot.scanned_at — VIX close on scan day',
+  regime_vix_pctile:            'snapshot.scanned_at — rolling 60d VIX percentile',
+  regime_ma_diff:               'snapshot.scanned_at — SPY MA50 minus MA200',
 };
 
 // ---------------------------------------------------------------------------
