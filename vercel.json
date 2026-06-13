@@ -8,9 +8,6 @@
     "src/app/api/research/**/*": {
       "maxDuration": 300
     },
-    "src/app/api/cron/backfill-regime/**/*": {
-      "maxDuration": 800
-    },
     "src/app/api/cron/**/*": {
       "maxDuration": 300
     }
