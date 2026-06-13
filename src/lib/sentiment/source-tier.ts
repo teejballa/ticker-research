@@ -1,7 +1,23 @@
 /**
  * Plan 20-B-04 — Source-tier weighting (data-driven, capped softmax of per-source IC).
  *
- * Three exports:
+ * PHASE 22 Wave 3 extension (D-06, D-07, D-09):
+ *   - getWeightForSource extended to (source_id, regime, asOf) with D-09 3-step
+ *     cold-start chain.  Read-time path does NOT apply EB shrinkage; the
+ *     write-time path (scripts/recompute-source-tiers.ts) is the only producer
+ *     of regime-conditional weights, so shrinkage runs there ONCE per cell and
+ *     gets persisted on the SourceTier row.  Double-applying shrinkage would
+ *     bias every read toward the unconditional row by an extra λ-pass.
+ *   - shrinkSourceIcEmpiricalBayes is a Beta-Binomial conjugate shrinkage of a
+ *     regime-sliced IC toward the unconditional `(source, 'ALL')` IC.  Mirrors
+ *     `hierarchicalPooledPosterior` (learning.ts:158) clamp pattern verbatim.
+ *
+ * Per RESEARCH §F Pitfall 2: the recompute order is `IC → shrink → softmax`,
+ * NEVER `IC → softmax → shrink`.  shrinkSourceIcEmpiricalBayes operates on
+ * per-source IC scalars; the resulting `IC_shrunk` vector is what gets fed
+ * into softmaxWithCaps per regime.
+ *
+ * Three exports (pre-Wave 3):
  *   - softmaxWithCaps(values, cap_min, cap_max) — pure; numerically stable softmax + clamp.
  *     IMPORTANT: clamped softmax is NOT a probability distribution; it is a bounded
  *     weighting. Callers must NOT assume Σ weights = 1.
@@ -9,6 +25,10 @@
  *     over eligible, defaults cold-start to weight=1.0.
  *   - getWeightForSource(source_id, asOf) — async DB read of latest SourceTier row;
  *     cold-start fallback returns 1.0 verbatim (NEVER throws).
+ *
+ * Wave 3 additions:
+ *   - getWeightForSource(source_id, regime, asOf) — extended D-09 chain.
+ *   - shrinkSourceIcEmpiricalBayes({regime_ic, regime_n, unconditional_ic, lambda_min, lambda_max})
  *
  * Threat T-20-B-04-04 enforcement: NO env-var override path. Weights come from SourceTier
  * rows ONLY. CI grep guard at .github/workflows/no-hand-curated-tier-weights.yml fails the
@@ -18,6 +38,7 @@ import {
   SOURCE_TIER_HYPERPARAMETERS,
   type SourceTierConfig,
 } from './source-tier-hyperparameters';
+import type { RegimeLabel } from '@/lib/regime/types';
 
 // NOTE: prisma is lazy-imported inside getWeightForSource() to keep this
 // module unit-testable without DATABASE_URL set (mirrors the
@@ -133,31 +154,163 @@ export function computeSourceWeights(
   return result;
 }
 
+// ─── PHASE 22 Wave 3 — D-07 Empirical-Bayes shrinkage ─────────────────────────
 /**
- * Reads latest SourceTier row with computed_at <= asOf for the given source_id.
+ * Shrink a regime-sliced source IC toward the unconditional `(source, 'ALL')` IC
+ * via a Beta-Binomial conjugate update. Mirrors the λ-clamp pattern from
+ * `hierarchicalPooledPosterior` at `src/lib/learning.ts:181`.
  *
- * Cold-start fallback: returns 1.0 when no row exists (NEVER throws). Also returns
- * 1.0 when the DB is unreachable or the table is missing — operator-side telemetry
- * (20-Z-03) catches that error rate.
+ *   shrunk_ic = (regime_n * regime_ic + λ * unconditional_ic) / (regime_n + λ)
+ *
+ * where λ is clamped to [eb_shrinkage_lambda_min, eb_shrinkage_lambda_max].
+ *
+ * In practice:
+ *   - regime_n == 0  →  shrunk_ic === unconditional_ic (full pooling)
+ *   - regime_n >> λ  →  shrunk_ic ≈ regime_ic (signal-rich; regime-specific dominates)
+ *   - regime_n ≈ λ   →  midpoint between regime_ic and unconditional_ic
+ *
+ * The lambda formula `clamp(unconditional_n / max(1, var(IC_{s,r}) / n_{s,r}), λ_min, λ_max)`
+ * specified in 22-PLAN §F line 147 collapses to a constant when the cron has not
+ * yet measured `var(IC_{s,r})` — the cron passes a pre-computed λ from `lambda`
+ * when it has variance data; otherwise λ is the clamp midpoint by default. The
+ * helper signature accepts an explicit `lambda` so the caller (the recompute cron)
+ * controls the precise statistic.
+ *
+ * `shrinkage_strength` is returned as λ / (regime_n + λ) ∈ [0, 1] — 1 = full
+ * pooling toward unconditional, 0 = no shrinkage applied. This is the canonical
+ * "fraction of weight assigned to the prior" reported in the EB literature
+ * (Efron-Morris 1973) and persisted on the SourceTier row for audit.
+ *
+ * Pure function — no DB access, no module-level state. The recompute cron is the
+ * sole caller in production; tests exercise it directly.
  */
-export async function getWeightForSource(
+export interface ShrinkIcInputs {
+  /** Mean IC over the (source, regime) slice — null treated as 0 by convention (no signal). */
+  regime_ic: number;
+  /** Observation count in the (source, regime) slice. 0 → full pooling. */
+  regime_n: number;
+  /** Mean IC over (source, 'ALL') — the EB prior target. */
+  unconditional_ic: number;
+  /** Optional explicit λ override.  Defaults to clamp midpoint when omitted. */
+  lambda?: number;
+  /** Floor for λ.  Defaults to SOURCE_TIER_HYPERPARAMETERS.eb_shrinkage_lambda_min. */
+  lambda_min?: number;
+  /** Ceiling for λ.  Defaults to SOURCE_TIER_HYPERPARAMETERS.eb_shrinkage_lambda_max. */
+  lambda_max?: number;
+}
+
+export interface ShrinkIcResult {
+  /** Shrunk IC ∈ between regime_ic and unconditional_ic. */
+  shrunk_ic: number;
+  /** λ / (regime_n + λ) ∈ [0, 1] — fraction of weight on the unconditional prior. */
+  shrinkage_strength: number;
+  /** λ actually used after clamp (audit). */
+  lambda: number;
+}
+
+export function shrinkSourceIcEmpiricalBayes(
+  args: ShrinkIcInputs,
+): ShrinkIcResult {
+  const lambda_min = args.lambda_min ?? SOURCE_TIER_HYPERPARAMETERS.eb_shrinkage_lambda_min;
+  const lambda_max = args.lambda_max ?? SOURCE_TIER_HYPERPARAMETERS.eb_shrinkage_lambda_max;
+  if (
+    !Number.isFinite(lambda_min) ||
+    !Number.isFinite(lambda_max) ||
+    lambda_min <= 0 ||
+    lambda_max <= lambda_min
+  ) {
+    throw new Error(
+      `shrinkSourceIcEmpiricalBayes: invalid clamps (min=${lambda_min}, max=${lambda_max})`,
+    );
+  }
+  // Default λ = midpoint when no explicit value provided (the cron computes
+  // its own λ from `n_ALL / max(1, var(IC_{s,r}) / n_{s,r})` per RESEARCH §F).
+  const rawLambda = args.lambda ?? (lambda_min + lambda_max) / 2;
+  if (!Number.isFinite(rawLambda)) {
+    throw new Error(
+      `shrinkSourceIcEmpiricalBayes: non-finite lambda override (${rawLambda})`,
+    );
+  }
+  const lambda = Math.min(lambda_max, Math.max(lambda_min, rawLambda));
+
+  const regime_n = Math.max(0, args.regime_n);
+  const regime_ic = Number.isFinite(args.regime_ic) ? args.regime_ic : 0;
+  const unconditional_ic = Number.isFinite(args.unconditional_ic)
+    ? args.unconditional_ic
+    : 0;
+
+  const denom = regime_n + lambda;
+  // denom > 0 always (lambda >= lambda_min > 0).
+  const shrunk_ic = (regime_n * regime_ic + lambda * unconditional_ic) / denom;
+  const shrinkage_strength = lambda / denom;
+  return { shrunk_ic, shrinkage_strength, lambda };
+}
+
+// ─── PHASE 22 Wave 3 — D-06 + D-09 getWeightForSource extension ───────────────
+/**
+ * Read-only fetch of the most-recent SourceTier row matching
+ * `(source_id, regime, computed_at <= asOf)`. Used by both the regime-specific
+ * and the unconditional ('ALL') fall-through steps of the D-09 chain.
+ *
+ * Returns `null` when no row exists OR when the DB is unreachable / table missing.
+ * Callers convert `null` to the next fall-through (regime → 'ALL' → 1.0).
+ *
+ * Extracted from the chain body for testability — the D-09 chain becomes
+ * three explicit calls with explicit fall-through semantics.
+ */
+async function getMostRecentSourceTierRow(
   source_id: string,
+  regime: RegimeLabel,
   asOf: Date,
-): Promise<number> {
+): Promise<{ weight: number } | null> {
   try {
-    // Lazy import — keep this module unit-testable without DATABASE_URL
-    // (db.ts throws at module load when DATABASE_URL is missing).
+    // Lazy import — keep this module unit-testable without DATABASE_URL.
     const { prisma } = await import('@/lib/db');
     const row = await prisma.sourceTier.findFirst({
-      where: { source_id, computed_at: { lte: asOf } },
+      where: { source_id, regime, computed_at: { lte: asOf } },
       orderBy: { computed_at: 'desc' },
       select: { weight: true },
     });
-    if (!row) return 1.0;
-    return row.weight;
+    return row ?? null;
   } catch {
-    // Defensive: if DB is unreachable or table missing, fall back to 1.0 rather than
-    // crash the aggregator. Operator-side telemetry (20-Z-03) catches the error rate.
-    return 1.0;
+    // Defensive: if DB is unreachable or table missing, fall through. Operator-
+    // side telemetry (20-Z-03) catches DB error rate.
+    return null;
   }
+}
+
+/**
+ * Reads latest SourceTier row with `computed_at <= asOf` for the given
+ * `(source_id, regime)` pair.  D-09 cold-start chain (Wave 3):
+ *
+ *   1. SourceTier row matching `(source_id, regime, asOf)` — regime-specific.
+ *   2. Fall through to `(source_id, 'ALL', asOf)` — unconditional baseline
+ *      (the row that already exists for every source as of Wave 0 + the
+ *      `'ALL'` row Wave 3 cron writes per recompute cycle).
+ *   3. Fall through to `1.0` — full cold-start (NEVER throws).
+ *
+ * IMPORTANT (Pitfall 2 in 22-RESEARCH §F): the read path does NOT apply EB
+ * shrinkage.  Shrinkage is applied ONCE at write-time by the recompute cron
+ * and persisted on the SourceTier row.  Re-applying shrinkage at read-time
+ * would double-bias every read toward the unconditional row.
+ *
+ * The chain exits on first hit — no extra round-trips fired for nothing.
+ * Pre-fetching both `(source, regime)` AND `(source, 'ALL')` in parallel would
+ * waste a DB call in the common case (regime-specific row exists).
+ */
+export async function getWeightForSource(
+  source_id: string,
+  regime: RegimeLabel,
+  asOf: Date,
+): Promise<number> {
+  // D-09 step 1 — regime-specific row.
+  if (regime !== 'ALL') {
+    const regimeRow = await getMostRecentSourceTierRow(source_id, regime, asOf);
+    if (regimeRow) return regimeRow.weight;
+  }
+  // D-09 step 2 — unconditional 'ALL' row (the row Wave 3 cron writes per cycle).
+  const allRow = await getMostRecentSourceTierRow(source_id, 'ALL', asOf);
+  if (allRow) return allRow.weight;
+  // D-09 step 3 — full cold-start.
+  return 1.0;
 }

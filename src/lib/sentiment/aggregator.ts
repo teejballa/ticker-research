@@ -44,6 +44,7 @@ import {
   giniCoefficient,
   messageCountsByAuthor,
 } from './gini';
+import type { RegimeLabel } from '@/lib/regime/types';
 
 export type SentimentSource = 'stocktwits' | 'swaggystocks' | 'apewisdom';
 
@@ -178,6 +179,14 @@ export interface AggregatorInputs {
   stocktwits: SourceInput | null;
   swaggystocks: SourceInput | null;
   apewisdom: SourceInput | null;
+  // PHASE 22 D-08 (Wave 3): PIT-correct regime label read from the source
+  // SentimentSnapshot row at the call site.  Threaded into the per-component
+  // getWeightForSource() call inside aggregateCommunitySentimentTierAware.
+  // Omitted → falls back to 'ALL' → D-09 chain step 2 (unconditional baseline).
+  //
+  // Pitfall 1 defense: aggregator NEVER calls classifyRegimeAt({asOf: new Date()})
+  // — the regime MUST come from the snapshot row that produced the components.
+  regime?: RegimeLabel;
 }
 
 function inputToComponent(
@@ -464,7 +473,11 @@ export async function aggregateCommunitySentimentTierAware(
   let weightedSum = 0;
   let totalWeight = 0;
   for (const c of baseline.components) {
-    const tier = await getWeightForSource(c.source, asOf);
+    // PHASE 22 D-08 (Wave 3): per-row regime read from SentimentSnapshot.regime
+    // threaded via inputs.regime.  When omitted (legacy caller / single-snapshot
+    // window with unknown regime), falls back to 'ALL' so D-09 chain step 2 fires.
+    // The aggregator NEVER calls classifyRegimeAt({asOf: new Date()}) — Pitfall 1.
+    const tier = await getWeightForSource(c.source, inputs.regime ?? 'ALL', asOf);
     tier_weights_applied[c.source] = tier;
     const adjW = c.weight * tier;
     weightedSum += c.bullish_pct * adjW;

@@ -19,6 +19,11 @@ export interface SourceTierConfig {
   validation_window_days: number;
   cron_schedule: string;
   weight_diff_display_threshold: number;
+  // PHASE 22 D-07 — Empirical-Bayes shrinkage clamps for per-(source, regime) IC
+  // toward the unconditional (source, 'ALL') IC. Mirrors `hierarchicalPooledPosterior`
+  // λ clamp at `src/lib/learning.ts:181` (CLAUDE.md rule #4 — priors regress to base rate).
+  eb_shrinkage_lambda_min: number;
+  eb_shrinkage_lambda_max: number;
 }
 
 export const SOURCE_TIER_HYPERPARAMETERS: SourceTierConfig = {
@@ -33,6 +38,11 @@ export const SOURCE_TIER_HYPERPARAMETERS: SourceTierConfig = {
   cron_schedule: '0 7 1 * *',
   // UI shows 'wt: X.XX' only when |w-1.0| >= this; default 0.01 hides cold-start visual noise
   weight_diff_display_threshold: 0.01,
+  // PHASE 22 D-07 — Mirrors `hierarchicalPooledPosterior` clamps at learning.ts:181.
+  // λ floor = 0.5 prevents pathological all-or-nothing on tiny groups; ceiling = 50
+  // bounds influence of the unconditional prior on dense regime cells.
+  eb_shrinkage_lambda_min: 0.5,
+  eb_shrinkage_lambda_max: 50,
 };
 
 const SourceTierConfigSchema = z
@@ -43,11 +53,20 @@ const SourceTierConfigSchema = z
     validation_window_days: z.number().int().positive(),
     cron_schedule: z.string().min(1),
     weight_diff_display_threshold: z.number().nonnegative().finite(),
+    eb_shrinkage_lambda_min: z.number().positive().finite(),
+    eb_shrinkage_lambda_max: z.number().positive().finite(),
   })
   .strict()
   .refine((cfg) => cfg.cap_max > cfg.cap_min, {
     message: 'cap_max must be strictly greater than cap_min',
-  });
+  })
+  .refine(
+    (cfg) => cfg.eb_shrinkage_lambda_max > cfg.eb_shrinkage_lambda_min,
+    {
+      message:
+        'eb_shrinkage_lambda_max must be strictly greater than eb_shrinkage_lambda_min',
+    },
+  );
 
 export function validateSourceTierHyperparameters(
   input: unknown,

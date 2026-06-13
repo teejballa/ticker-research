@@ -161,25 +161,28 @@ describe('getWeightForSource', () => {
   });
 
   it('returns 1.0 when no SourceTier row exists (cold-start fallback)', async () => {
+    // D-09 chain: step 1 (regime) miss + step 2 ('ALL') miss → 1.0.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (dbMock as any).__findFirstMock.mockResolvedValueOnce(null);
-    const w = await getWeightForSource('stocktwits', new Date());
+    (dbMock as any).__findFirstMock.mockResolvedValue(null);
+    const w = await getWeightForSource('stocktwits', 'ALL', new Date());
     expect(w).toBe(1.0);
   });
 
   it('returns the latest row weight when one exists', async () => {
+    // PHASE 22 Wave 3: signature now (source_id, regime, asOf). Pass 'ALL' to
+    // exercise the unconditional baseline path (D-09 step 2).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (dbMock as any).__findFirstMock.mockResolvedValueOnce({ weight: 2.5 });
-    const w = await getWeightForSource('stocktwits', new Date());
+    const w = await getWeightForSource('stocktwits', 'ALL', new Date());
     expect(w).toBe(2.5);
   });
 
   it('returns 1.0 when DB throws (defensive fallback, never crashes aggregator)', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (dbMock as any).__findFirstMock.mockRejectedValueOnce(
+    (dbMock as any).__findFirstMock.mockRejectedValue(
       new Error('connection refused'),
     );
-    const w = await getWeightForSource('stocktwits', new Date());
+    const w = await getWeightForSource('stocktwits', 'ALL', new Date());
     expect(w).toBe(1.0);
   });
 });
