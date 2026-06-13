@@ -2,8 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { informationCoefficient } from '../ic';
 import fixture from '../../../../tests/fixtures/evaluation/spearman-scipy-reference.json';
 
+interface IcCase {
+  label: string;
+  x: number[];
+  y: number[];
+  expected_rho: number | 'NaN';
+  tolerance: number;
+}
+
 describe('informationCoefficient (Spearman with tie correction)', () => {
-  fixture.cases.forEach((c: any) => {
+  (fixture.cases as IcCase[]).forEach((c) => {
     it(`matches scipy.stats.spearmanr — ${c.label}`, () => {
       const ic = informationCoefficient(c.x, c.y, 'spearman');
       if (c.expected_rho === 'NaN') {

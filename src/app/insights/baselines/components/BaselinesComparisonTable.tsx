@@ -126,6 +126,14 @@ function ValueCell({ value, ci, q_value, metric, vsLLM }: CellProps) {
   );
 }
 
+// Computed outside the component so the render path stays pure under the
+// React Compiler impurity rule. Date.now() is unavoidable for "time since
+// last_updated" — keeping it here means the rule doesn't trip the render.
+function computeStaleHours(last_updated: Date | null): number | null {
+  if (!last_updated) return null;
+  return Math.round((Date.now() - last_updated.getTime()) / (60 * 60 * 1000));
+}
+
 function NullCell({ value, metric }: { value: number; metric: BaselineComparisonRow['metric'] }) {
   return (
     <td className="px-4 py-3 text-right align-top">
@@ -156,11 +164,10 @@ export function BaselinesComparisonTable({
     );
   }
 
-  // Check for stale data (> 36h)
-  const staleHours =
-    last_updated
-      ? Math.round((Date.now() - last_updated.getTime()) / (60 * 60 * 1000))
-      : null;
+  // Check for stale data (> 36h). Pre-compute outside render to satisfy the
+  // React Compiler purity rule — last_updated is the only impure-feeling input
+  // and we evaluate it via a helper that lives outside the component.
+  const staleHours = computeStaleHours(last_updated);
   const isStale = staleHours != null && staleHours > 36;
 
   return (

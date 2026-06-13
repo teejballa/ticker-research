@@ -60,7 +60,7 @@ async function fetchVixCloses(asOf: Date): Promise<VixClose[]> {
   const period1 = new Date(asOf.getTime() - 100 * 24 * 60 * 60 * 1000);
 
   // ── Primary: Yahoo `^VIX` via .chart() (mirrors sector-prices.ts pattern) ──
-  let yahooCloses: VixClose[] = [];
+  const yahooCloses: VixClose[] = [];
   try {
     const result = await yf.chart('^VIX', { period1, period2, interval: '1d' });
     const quotes = result?.quotes ?? [];

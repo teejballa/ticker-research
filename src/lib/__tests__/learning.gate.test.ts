@@ -14,7 +14,7 @@ describe('patternStatus 5-gate (Phase 21.1 D-26)', () => {
       brier_lift_threshold: 0.005,
       by_fdr_q_value: 0.05,
       dsr: 0.3,
-    } as any);
+    });
     expect(status).toBe('ACTIVE');
   });
 
@@ -28,7 +28,7 @@ describe('patternStatus 5-gate (Phase 21.1 D-26)', () => {
       brier_lift_threshold: 0.005,
       by_fdr_q_value: 0.15,
       dsr: 0.3,
-    } as any);
+    });
     expect(status).not.toBe('ACTIVE');
   });
 
@@ -42,7 +42,7 @@ describe('patternStatus 5-gate (Phase 21.1 D-26)', () => {
       brier_lift_threshold: 0.005,
       by_fdr_q_value: 0.05,
       dsr: -0.1,
-    } as any);
+    });
     expect(status).not.toBe('ACTIVE');
   });
 
@@ -56,7 +56,7 @@ describe('patternStatus 5-gate (Phase 21.1 D-26)', () => {
       brier_lift_threshold: 0.005,
       by_fdr_q_value: 0.05,
       dsr: 0.3,
-    } as any);
+    });
     expect(status).not.toBe('ACTIVE');
   });
 });

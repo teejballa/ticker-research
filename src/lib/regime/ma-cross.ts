@@ -55,7 +55,7 @@ async function fetchSpyCloses(asOf: Date): Promise<SpyClose[]> {
   const period1 = new Date(asOf.getTime() - 300 * 24 * 60 * 60 * 1000);
 
   // ── Primary: Yahoo `^GSPC` via .chart() ────────────────────────────────────
-  let yahooCloses: SpyClose[] = [];
+  const yahooCloses: SpyClose[] = [];
   try {
     const result = await yf.chart('^GSPC', { period1, period2, interval: '1d' });
     const quotes = result?.quotes ?? [];
