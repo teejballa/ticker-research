@@ -469,6 +469,13 @@ export async function aggregateCommunitySentimentTierAware(
 
   const asOf = options?.asOf ?? new Date();
   const tier_weights_applied: Record<string, number> = {};
+  // PHASE 22 D-08 — operational visibility during the 14-day soak.
+  // Logs the per-call regime so logs make per-row PIT discipline auditable.
+  // eslint-disable-next-line no-console
+  console.log('[aggregator] regime', {
+    component_count: baseline.components.length,
+    regime: inputs.regime ?? 'ALL',
+  });
   // Compute tier-adjusted numerator/denominator for the Beta-smoothed mean.
   let weightedSum = 0;
   let totalWeight = 0;
