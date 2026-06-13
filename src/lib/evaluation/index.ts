@@ -9,7 +9,7 @@
  */
 
 export { bootstrapBCa, normalCdf, type BCaResult } from './bootstrap';
-export { benjaminiYekutieli, type BYResult } from './fdr';
+export { benjaminiYekutieli, hierarchicalBYBH, type BYResult, type HierarchicalBYResult } from './fdr';
 export {
   informationCoefficient,
   rollingIC,
