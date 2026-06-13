@@ -724,3 +724,104 @@ Citations for the four measurement primitives that consume these hyperparameters
 - **Log loss**: CS229 (Stanford) Main Notes, "Information Theory" section — categorical log loss as a proper scoring rule.
 
 Updated by: Plan 21.1-06 (2026-06-08 — Wave 6 final).
+
+---
+
+## Phase 22 — Market-Regime Feature + Learned Sentiment-Source Weights
+
+> This section documents D-07 (BRIER_LIFT_THRESHOLD reuse), D-15 (hierarchical
+> BY → meta-BH FDR), and D-05 (sample-relative transition-zone exclusion) per
+> the Wave 4 documentation mandate. All values consumed by `patternStatus`
+> (gate reuse), `hierarchicalBYBH`, and `/api/cron/learn`.
+
+### BRIER_LIFT_THRESHOLD (D-07, REUSED from Phase 21.1 — no change)
+
+- **Value**: `0.005` (unchanged from Phase 21.1)
+- **Used by**: `patternStatus` gate (c) — `src/lib/learning.ts` constant
+  `BRIER_LIFT_THRESHOLD`. P22 runs the same 5-gate per (cell × regime) — the
+  threshold is REUSED verbatim, NOT widened or split per regime. CORE-ML-21
+  preserved.
+- **Rationale**: Internal consistency across phases. Regime is a key dimension,
+  not a gate parameter (per RESEARCH §"Wrong patterns to avoid"). Splitting the
+  threshold per regime would conflate gate semantics with cell-key semantics.
+- **Citations**: Brier 1950; Bailey & López de Prado 2014 (see Phase 21.1
+  section above).
+
+### Hierarchical BY-FDR — q_inner / q_outer (D-15)
+
+For the Wave 4 `hierarchicalBYBH(perRegimePValues, q_inner, q_outer)` primitive
+at `src/lib/evaluation/fdr.ts`:
+
+| Parameter | Default | Used by                                                                  |
+|-----------|---------|--------------------------------------------------------------------------|
+| q_inner   | 0.10    | Per-regime BY family (inner stage 1). Matches Phase 21.1 BY-FDR (`patternStatus` gate (d) keeps q<0.10). |
+| q_outer   | 0.10    | Outer meta-BH across the 4 regime-family-summary statistics (stage 2).   |
+
+- **Description**: Per Benjamini & Bogomolov 2014 (multi-tissue eQTL precedent),
+  the inner BY controls FDR within each regime family at level `q_inner`. The
+  outer BH at level `q_outer` controls the family-level FDR over the per-regime
+  minimum adjusted q-values. Regimes failing the outer gate have ALL inner
+  rejections demoted to ACCEPT.
+- **Why BH (not BY) at the outer level**: regime families are conditionally
+  independent given the regime-classifier assignment (D-03), satisfying BH's
+  PRDS assumption (BB-2014 §3). Inner cells share market context within a
+  regime → BY's dependence-robustness applies there.
+- **Why this preserves power (Pitfall 3)**: naive single-pass BY over the
+  4×-expanded cell space would inflate c(m) from ln(157)≈5.6 to ln(628)≈7.0
+  (~25% denominator inflation, ~25% per-regime power loss). The hierarchical
+  structure keeps per-regime c(m_r) at the original level, paid for by a small
+  outer BH correction over 4 family-summary statistics.
+- **Implementation**: `hierarchicalBYBH` in `src/lib/evaluation/fdr.ts`.
+  Inner stage delegates VERBATIM to the existing `benjaminiYekutieli` primitive
+  — no re-implementation of the BY algorithm.
+- **Recalibration cadence**: Quarterly review against the rolling 90d backfill
+  + live combined CV pool. Re-run the sensitivity sweep if either (a) the
+  meta-BH-promoted regime set drops below 1 across the corpus, or (b) per-regime
+  inner-BY false discovery rates diverge by more than 2× from the q_inner target.
+- **Operational action when changed**: Re-run `/api/cron/learn` for one cycle
+  and inspect the `[cron:learn] regime-fdr` log line for the
+  `meta_bh_promoted_regimes` count delta.
+- **Citations**:
+  - Benjamini & Bogomolov 2014 — Benjamini, Y. & Bogomolov, M. (2014).
+    "Selective inference on multiple families of hypotheses." *Journal of
+    the Royal Statistical Society B*, 76(1):297-318. doi:10.1111/rssb.12028.
+  - Benjamini & Yekutieli 2001 — Benjamini, Y. & Yekutieli, D. (2001). "The
+    control of the false discovery rate in multiple testing under dependency."
+    *Annals of Statistics* 29(4):1165-1188 (reused for the inner family).
+  - ISL 2nd ed. Ch. 13 (Multiple Testing).
+
+### Transition-Zone Exclusion Semantics (D-05)
+
+Sample-relative exclusion in `/api/cron/learn` `evaluateOneCell` posterior path:
+
+- **Rule**: drop events from `weightedObs` where `snapshot.regime !==
+  outcome_regime` (the predicting snapshot's regime label differs from the
+  regime at outcome resolution time).
+- **Implementation**: `excludeTransitionZoneEvents` helper at
+  `src/app/api/cron/learn/route.ts`. Per-event filter on the 2-tuple
+  `(snapshot_regime, outcome_regime)` read from `LearningEvent.delta`.
+- **Boundary semantics** (R4 — right-open interval `(prediction_t,
+  prediction_t + horizon_days]`):
+  - Flip mid-window or ON the right boundary day `outcome.recorded_at` →
+    EXCLUDE (strict — the predicting model did not have the new regime context).
+  - NULL on either end → KEEP (no flip detectable — fail-open).
+  - `'ALL'` on either end → KEEP (cold-start, regime conditioning not yet
+    defined for this observation).
+- **Why sample-relative (not window-relative)**: only drops genuinely ambiguous
+  samples. A window-relative rule (exclude any observation whose horizon window
+  contains a regime flip anywhere) would drop legitimate same-regime predictions
+  on either side of a brief whipsaw. CORE-ML-10 satisfied.
+- **Over-exclusion guard (Pitfall 5)**: regression test asserts that on a
+  synthetic 4-regime corpus with 95% same-regime / 5% flip rate, the kept
+  fraction stays > 94%. If a future bug fix or schema change pushes this below
+  70% the test catches it.
+- **What this does NOT apply to**: the `'ALL'` aggregate cell evaluation
+  inside `recomputePerSignalClassPatternMetrics`. The unconditional row sees
+  every event regardless of regime — that's its definition.
+- **Operational action when changed**: Re-run `/api/cron/learn` for one cycle
+  and inspect the `[cron:learn] regime-exclusion` log line for the
+  `excluded_for_flip / total_obs` ratio per cell.
+
+Updated by: Plan 22-04 (2026-06-12 — Wave 4 — hierarchical BY-FDR + D-05
+transition exclusion).
+
