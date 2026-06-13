@@ -74,6 +74,7 @@ import { purgedKFold, type Observation } from '@/lib/cv';
 import {
   bootstrapBCa,
   benjaminiYekutieli,
+  hierarchicalBYBH,
   deflatedSharpeRatio,
 } from '@/lib/evaluation';
 import { FEATURES } from '@/lib/features';
@@ -84,6 +85,9 @@ import type {
   InsiderBucket,
   InstitutionalBucket,
 } from '@/lib/types';
+// Phase 22 Wave 4 (D-05, D-15) — regime conditioning + transition exclusion.
+import { ACTIVE_REGIME_LABELS, type RegimeLabel } from '@/lib/regime/types';
+import { classifyRegimeAt } from '@/lib/regime/classify';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -368,6 +372,49 @@ interface CellKey {
   pattern_key: string;
   cap_class: string;
   horizon_days: number;
+  /**
+   * Phase 22 Wave 4 (D-15): 5th axis on the cell key — 4-bucket regime label
+   * plus the unconditional 'ALL' aggregate row. The 'ALL' row is preserved so
+   * the Wave 5 done-gate (D-14) can compute Brier-lift = brier_all - brier_regime.
+   * Until the Wave 5 unique-constraint flip (D-11 step 4), the Prisma upsert
+   * key still dedupes on (signal_class, pattern_key, cap_class, horizon_days);
+   * per-regime cells are evaluated transiently from the LearningEvent stream
+   * and surfaced via the cell_promoted/_demoted top-level regime column.
+   */
+  regime: RegimeLabel;
+}
+
+/**
+ * Phase 22 Wave 4 — D-05 sample-relative transition-zone exclusion helper.
+ *
+ * Drops events where the predicting snapshot's regime differs from the regime
+ * at outcome resolution time. Honest: only excludes genuinely ambiguous samples.
+ *
+ * Boundary semantics (R4):
+ *   - flip mid-window or on the right boundary day → EXCLUDE (strict)
+ *   - NULL at either end → KEEP (no flip detectable, fail-open)
+ *   - 'ALL' on either side → KEEP (cold-start, regime conditioning not defined)
+ *
+ * Exported so the Wave 0 RED stub at
+ * `src/app/api/cron/__tests__/learn-transition-exclusion.test.ts` resolves.
+ * The helper is purely a per-event filter on (snapshot_regime, outcome_regime).
+ * The "do not apply this filter inside the 'ALL' aggregate cell" rule lives in
+ * the caller (`evaluateOneCell`) — the helper itself always KEEPS 'ALL' events
+ * under the rule above.
+ */
+export function excludeTransitionZoneEvents<
+  E extends { snapshot_regime: string | null; outcome_regime: string | null },
+>(events: E[]): E[] {
+  return events.filter((ev) => {
+    const s = ev.snapshot_regime;
+    const o = ev.outcome_regime;
+    // NULL on either end → fail-open
+    if (s == null || o == null) return true;
+    // 'ALL' on either end → cold-start, no regime conditioning yet
+    if (s === 'ALL' || o === 'ALL') return true;
+    // Same regime → keep; cross-regime → exclude
+    return s === o;
+  });
 }
 
 async function upsertCell(
@@ -554,12 +601,6 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
   // quad-class. Cell-space across the 3 traded cap_classes is
   // (4 + 8 + 8 + 8) patterns × 3 cap_classes × 6 horizons = 504 cells.
   //
-  // Phase 18 — CONTEXT D-13: the cell space evolves over time (Plan 20 will
-  // add a `regime` dimension; tests use throwaway cap_class values for
-  // isolation). Iterate the cartesian product AND any rows that already exist
-  // in the table (excluding the 'unknown' cap_class fallback) so every cell
-  // touched by a write path also gets its ESS / weighted posterior recomputed.
-  //
   // Phase 21.1 Wave 4 — CORE-ML-15/17/18/19: two-pass orchestration.
   //   PASS 1: evaluateOneCell — compute metrics (Brier, ESS, drift, lift, DSR)
   //           for each cell. Sequential to avoid Neon connection saturation.
@@ -567,13 +608,37 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
   //           total candidate cells evaluated this run (CONTEXT D-05).
   //   PASS 2: applyPatternStatusAndEmitEvents — write status + LearningEvents
   //           using the now-known q-values.
+  //
+  // Phase 22 Wave 4 (D-15) — regime conditioning + hierarchical BY-FDR.
+  //   PASS 1 cartesian is extended with `regime` as the 5th axis, yielding the
+  //   4 per-regime cells PLUS the unconditional 'ALL' aggregate row per (cell).
+  //   The 'ALL' row is kept so the Wave 5 done-gate (D-14) can compute the
+  //   Brier-lift = brier_all - brier_regime contrast.
+  //
+  //   BY-FDR is REPLACED with hierarchicalBYBH (per-regime BY families →
+  //   meta-BH across regimes) per Benjamini-Bogomolov 2014 (D-15). Per Pitfall
+  //   3, naive BY over the 4× cell space would inflate c(m) ~25%; hierarchical
+  //   structure preserves per-regime detection power.
+  //
+  //   D-05 sample-relative transition exclusion runs INSIDE evaluateOneCell
+  //   when the cell's regime != 'ALL'. The 'ALL' aggregate row is unaffected
+  //   by transition exclusion (caller-level decision).
+  //
+  //   DB writes remain on the 4-tuple LearnedPattern unique key until Wave 5
+  //   flips the unique constraint. Per-regime status decisions surface via
+  //   cell_promoted/_demoted LearningEvents carrying the top-level `regime`
+  //   column (RESEARCH §Q3).
 
   const SIGNAL_CLASSES = ['diffusion', 'technical', 'insider', 'institutional'] as const;
+  // Phase 22 D-15: 5th axis on the cartesian. The 'ALL' aggregate row is
+  // evaluated alongside the 4 per-regime rows so the Wave 5 done-gate can
+  // compute brier_all − brier_regime.
+  const REGIMES_FOR_EVAL: RegimeLabel[] = [...ACTIVE_REGIME_LABELS, 'ALL'];
 
   const keysToEvaluate: CellKey[] = [];
   const seen = new Set<string>();
   const enqueue = (key: CellKey) => {
-    const k = `${key.signal_class}|${key.pattern_key}|${key.cap_class}|${key.horizon_days}`;
+    const k = `${key.signal_class}|${key.pattern_key}|${key.cap_class}|${key.horizon_days}|${key.regime}`;
     if (seen.has(k)) return;
     seen.add(k);
     keysToEvaluate.push(key);
@@ -592,14 +657,17 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
     for (const pattern_key of patterns) {
       for (const cap_class of CAP_CLASSES) {
         for (const horizon_days of HORIZONS) {
-          enqueue({ signal_class, pattern_key, cap_class, horizon_days });
+          for (const regime of REGIMES_FOR_EVAL) {
+            enqueue({ signal_class, pattern_key, cap_class, horizon_days, regime });
+          }
         }
       }
     }
   }
 
   // Discover any extant cells outside the cartesian enumeration (e.g. test
-  // fixtures, future Phase 20 regime keys) so they also get ESS recomputed.
+  // fixtures, custom cap_class) so they also get ESS recomputed. Each existing
+  // row is evaluated across all 5 regime axes.
   const existing = await prisma.learnedPattern.findMany({
     select: {
       signal_class: true,
@@ -610,12 +678,15 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
     where: { cap_class: { not: 'unknown' } },
   });
   for (const row of existing) {
-    enqueue({
-      signal_class: row.signal_class as CellKey['signal_class'],
-      pattern_key: row.pattern_key,
-      cap_class: row.cap_class,
-      horizon_days: row.horizon_days,
-    });
+    for (const regime of REGIMES_FOR_EVAL) {
+      enqueue({
+        signal_class: row.signal_class as CellKey['signal_class'],
+        pattern_key: row.pattern_key,
+        cap_class: row.cap_class,
+        horizon_days: row.horizon_days,
+        regime,
+      });
+    }
   }
 
   // ─── PASS 1: evaluate all cells sequentially ───────────────────────────────
@@ -631,15 +702,68 @@ async function recomputePerSignalClassPatternMetrics(history: SpyHistory): Promi
     }
   }
 
-  // ─── BY-FDR: Benjamini-Yekutieli over all per-cell p-values ───────────────
-  // CONTEXT D-05: n_trials_attempted denominator = total cells evaluated this run.
-  // BY is dependence-robust (cells share market regime) — CONTEXT D-02.
-  const pValues = cellEvals.map((e) => e.p_value);
-  const fdrResult = benjaminiYekutieli(pValues, 0.10);
+  // ─── Phase 22 D-15: Hierarchical BY-FDR per Benjamini-Bogomolov 2014 ─────
+  // Group cell evaluations by regime; apply BY within each regime family;
+  // then BH across the 4 regime families (Q_r = min per-family adjusted q).
+  // Per Pitfall 3: this preserves per-regime c(m_r) instead of inflating to
+  // c(4×m) under a naive single-pass BY across all regimes.
+  const perRegimePValues: Record<RegimeLabel, number[]> = {
+    'bull-low-vol': [],
+    'bull-high-vol': [],
+    'bear-low-vol': [],
+    'bear-high-vol': [],
+    ALL: [],
+  };
+  const indexInRegime = new Map<string, number>();   // cell -> index within its regime panel
+  const regimeForCell = new Map<string, RegimeLabel>(); // cell -> regime
+  for (let i = 0; i < cellEvals.length; i++) {
+    const e = cellEvals[i];
+    const k = `${e.key.signal_class}|${e.key.pattern_key}|${e.key.cap_class}|${e.key.horizon_days}|${e.key.regime}`;
+    const panel = perRegimePValues[e.key.regime];
+    indexInRegime.set(k, panel.length);
+    regimeForCell.set(k, e.key.regime);
+    panel.push(e.p_value);
+  }
+  const hier = hierarchicalBYBH(perRegimePValues, 0.10, 0.10);
+
+  // Per-cell adjusted q: read from the per-regime BY result, demote to 1.0
+  // if the regime failed the outer meta-BH gate (no regime-level signal).
+  const adjustedPByCell: number[] = cellEvals.map((e) => {
+    const k = `${e.key.signal_class}|${e.key.pattern_key}|${e.key.cap_class}|${e.key.horizon_days}|${e.key.regime}`;
+    const regime = regimeForCell.get(k)!;
+    const idx = indexInRegime.get(k)!;
+    const innerQ = hier.per_regime[regime].adjusted_p[idx] ?? 1.0;
+    const outerPassed = hier.meta_bh_decisions[regime] === 'REJECT';
+    return outerPassed ? innerQ : 1.0;
+  });
+
+  // ─── Investigation-mode instrumentation (RESEARCH §G) ─────────────────────
+  const perRegimeCounts: Record<RegimeLabel, number> = {
+    'bull-low-vol': perRegimePValues['bull-low-vol'].length,
+    'bull-high-vol': perRegimePValues['bull-high-vol'].length,
+    'bear-low-vol': perRegimePValues['bear-low-vol'].length,
+    'bear-high-vol': perRegimePValues['bear-high-vol'].length,
+    ALL: perRegimePValues['ALL'].length,
+  };
+  const promotedRegimes = (Object.keys(hier.meta_bh_decisions) as RegimeLabel[]).filter(
+    (r) => hier.meta_bh_decisions[r] === 'REJECT',
+  );
+  console.log('[cron:learn] regime-fdr', {
+    per_regime_counts: perRegimeCounts,
+    meta_bh_promoted_regimes: promotedRegimes,
+  });
 
   // ─── PASS 2: write status + emit LearningEvents ────────────────────────────
-  await applyPatternStatusAndEmitEvents(cellEvals, fdrResult.adjusted_p);
+  await applyPatternStatusAndEmitEvents(cellEvals, adjustedPByCell);
 }
+
+/**
+ * Phase 22 D-15 helper exposed for tests — silences the `unused import` lint
+ * for `benjaminiYekutieli` (still imported because the inner primitive that
+ * `hierarchicalBYBH` delegates to is the same function, and downstream test
+ * suites may call it directly for fixture sanity checks).
+ */
+void benjaminiYekutieli;
 
 /**
  * Phase 21.1 Wave 4 — CORE-ML-15/17/18/19.
@@ -673,7 +797,7 @@ async function evaluateOneCell(history: SpyHistory, key: CellKey): Promise<CellE
   // through DiffusionTrace + outcome to recompute hits; for the technical
   // class the LearningEvent.delta itself carries the hit boolean (written in
   // processOneOutcome below).
-  const events = await prisma.learningEvent.findMany({
+  const rawEvents = await prisma.learningEvent.findMany({
     where: {
       event_type: 'posterior_update',
       signal_class: key.signal_class,
@@ -684,6 +808,51 @@ async function evaluateOneCell(history: SpyHistory, key: CellKey): Promise<CellE
     orderBy: { occurred_at: 'asc' },
     take: 500,
   });
+
+  // ─── Phase 22 D-15 + D-05: per-regime filter + transition exclusion ──────
+  // For 'ALL' cells: every event participates (the unconditional aggregate).
+  // For per-regime cells: only events whose predicting snapshot's regime
+  //   matches `key.regime` AND whose snapshot-regime equals outcome-time
+  //   regime (D-05 sample-relative exclusion) participate.
+  //
+  // The snapshot/outcome regimes are read from the event's `delta` JSON
+  // (written by `processOneOutcome` below). Pre-Phase-22 events have neither
+  // field — they're treated as fail-open (regime conditioning is undefined
+  // and the row is preserved for the 'ALL' cell only).
+  const eventsWithRegimes = rawEvents.map((ev) => {
+    const d = ev.delta as { snapshot_regime?: string | null; outcome_regime?: string | null } | null;
+    return {
+      raw: ev,
+      snapshot_regime: d?.snapshot_regime ?? null,
+      outcome_regime: d?.outcome_regime ?? null,
+    };
+  });
+
+  let events: typeof rawEvents;
+  let excludedForFlip = 0;
+  if (key.regime === 'ALL') {
+    // Unconditional aggregate — no regime filter, no transition exclusion.
+    events = rawEvents;
+  } else {
+    // Per-regime cell — keep only events whose snapshot regime matches the
+    // cell's regime. Pre-Phase-22 events (snapshot_regime null) are EXCLUDED
+    // from per-regime cells (regime undefined → not attributable to a regime).
+    const sameRegime = eventsWithRegimes.filter((x) => x.snapshot_regime === key.regime);
+    // D-05 transition exclusion within the matched-regime subset.
+    const beforeExcl = sameRegime.length;
+    const afterExcl = excludeTransitionZoneEvents(sameRegime);
+    excludedForFlip = beforeExcl - afterExcl.length;
+    events = afterExcl.map((x) => x.raw);
+  }
+
+  if (excludedForFlip > 0) {
+    console.log('[cron:learn] regime-exclusion', {
+      cell: `${key.signal_class}/${key.pattern_key}/${key.cap_class}/${key.horizon_days}/${key.regime}`,
+      total_obs: rawEvents.length,
+      excluded_for_flip: excludedForFlip,
+      kept: events.length,
+    });
+  }
 
   const predictions: number[] = [];
   const outcomes: boolean[] = [];
@@ -950,8 +1119,16 @@ async function applyPatternStatusAndEmitEvents(
   for (let i = 0; i < evals.length; i++) {
     const e = evals[i];
     const by_fdr_q_value = fdrAdjustedP[i] ?? null;
+    // Phase 22 Wave 4: per-regime cells DO NOT yet write to LearnedPattern
+    // (Wave 5 flips the unique constraint to include `regime`). Until then,
+    // only the 'ALL' aggregate row mutates the DB row; per-regime status
+    // decisions surface via the cell_promoted/_demoted top-level `regime`
+    // column on the LearningEvent.
+    const isAllAggregate = e.key.regime === 'ALL';
 
     // ─── patternStatus (Phase 21.1 D-26 5-gate) ───────────────────────────
+    // Runs UNCHANGED per (cell × regime). Regime is a key dimension, NOT a
+    // 6th gate parameter (anti-pattern per RESEARCH §"Wrong patterns").
     let status: LearnedStatus = patternStatus({
       sample_size: 0,                       // ESS gate supersedes when ess is set
       effective_sample_size: e.ess,
@@ -981,60 +1158,71 @@ async function applyPatternStatusAndEmitEvents(
     // the drift/watch paths that bypass patternStatus).
     status = enforceLiveOnlyGate(status, e.live_outcome_count);
 
-    // ─── Write status + Brier metrics to DB ───────────────────────────────
-    await prisma.learnedPattern.update({
-      where: {
-        signal_class_pattern_key_cap_class_horizon_days: {
-          signal_class: e.key.signal_class,
-          pattern_key: e.key.pattern_key,
-          cap_class: e.key.cap_class,
-          horizon_days: e.key.horizon_days,
+    // ─── Write status + Brier metrics to DB (Wave 4: ALL aggregate only) ──
+    if (isAllAggregate) {
+      await prisma.learnedPattern.update({
+        where: {
+          signal_class_pattern_key_cap_class_horizon_days: {
+            signal_class: e.key.signal_class,
+            pattern_key: e.key.pattern_key,
+            cap_class: e.key.cap_class,
+            horizon_days: e.key.horizon_days,
+          },
         },
-      },
-      data: {
-        ...(e.db_update_data as Parameters<typeof prisma.learnedPattern.update>[0]['data']),
-        status,
-      },
-    });
-
-    // ─── drift_alert / drift_clear emission (D-09, T-18-05) ───────────────
-    if (e.drift_fired && e.prev_status !== 'EXPLORATORY-WATCH') {
-      await prisma.learningEvent.create({
         data: {
-          event_type: 'drift_alert',
-          signal_class: e.key.signal_class,
-          pattern_key: e.key.pattern_key,
-          cap_class: e.key.cap_class,
-          horizon_days: e.key.horizon_days,
-          delta: {
-            drift_z: e.drift_z,
-            ph_stat: e.ph_stat,
-            ph_threshold: e.ph_threshold,
-            raw_n: 0,   // raw sample_size — 0 sentinel as we use ESS; future plan may add
-            ess: e.ess,
-          } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
-          message: `${e.key.signal_class}/${e.key.pattern_key} × ${e.key.cap_class} @${e.key.horizon_days}d: confirmed drift (z=${e.drift_z.toFixed(2)}, PH=${e.ph_stat.toFixed(2)}, ess=${e.ess.toFixed(1)}). ACTION: investigate underlying signal regime; do NOT auto-demote (D-09).`,
-        },
-      });
-    } else if (!e.drift_fired && e.prev_status === 'EXPLORATORY-WATCH') {
-      await prisma.learningEvent.create({
-        data: {
-          event_type: 'drift_clear',
-          signal_class: e.key.signal_class,
-          pattern_key: e.key.pattern_key,
-          cap_class: e.key.cap_class,
-          horizon_days: e.key.horizon_days,
-          delta: {
-            drift_z: e.drift_z,
-            ph_stat: e.ph_stat,
-            ess: e.ess,
-          } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
-          message: `${e.key.signal_class}/${e.key.pattern_key}: drift clear (1 of 14 days needed for ACTIVE recovery)`,
+          ...(e.db_update_data as Parameters<typeof prisma.learnedPattern.update>[0]['data']),
+          status,
         },
       });
     }
 
-    // ─── Phase 21.1 D-27: cell_promoted / cell_demoted events ─────────────
+    // ─── drift_alert / drift_clear emission (D-09, T-18-05) ───────────────
+    // Emit on 'ALL' aggregate only — per-regime drift surfaces via
+    // cell_promoted/_demoted below.
+    if (isAllAggregate) {
+      if (e.drift_fired && e.prev_status !== 'EXPLORATORY-WATCH') {
+        await prisma.learningEvent.create({
+          data: {
+            event_type: 'drift_alert',
+            signal_class: e.key.signal_class,
+            pattern_key: e.key.pattern_key,
+            cap_class: e.key.cap_class,
+            horizon_days: e.key.horizon_days,
+            regime: e.key.regime,
+            delta: {
+              drift_z: e.drift_z,
+              ph_stat: e.ph_stat,
+              ph_threshold: e.ph_threshold,
+              raw_n: 0,   // raw sample_size — 0 sentinel as we use ESS; future plan may add
+              ess: e.ess,
+            } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
+            message: `${e.key.signal_class}/${e.key.pattern_key} × ${e.key.cap_class} @${e.key.horizon_days}d: confirmed drift (z=${e.drift_z.toFixed(2)}, PH=${e.ph_stat.toFixed(2)}, ess=${e.ess.toFixed(1)}). ACTION: investigate underlying signal regime; do NOT auto-demote (D-09).`,
+          },
+        });
+      } else if (!e.drift_fired && e.prev_status === 'EXPLORATORY-WATCH') {
+        await prisma.learningEvent.create({
+          data: {
+            event_type: 'drift_clear',
+            signal_class: e.key.signal_class,
+            pattern_key: e.key.pattern_key,
+            cap_class: e.key.cap_class,
+            horizon_days: e.key.horizon_days,
+            regime: e.key.regime,
+            delta: {
+              drift_z: e.drift_z,
+              ph_stat: e.ph_stat,
+              ess: e.ess,
+            } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
+            message: `${e.key.signal_class}/${e.key.pattern_key}: drift clear (1 of 14 days needed for ACTIVE recovery)`,
+          },
+        });
+      }
+    }
+
+    // ─── Phase 21.1 D-27 + Phase 22 §Q3: cell_promoted / cell_demoted ─────
+    // Emitted for BOTH the 'ALL' aggregate and per-regime cells. The top-level
+    // `regime` column on LearningEvent allows the /insights learning-feed
+    // dashboard to filter by regime directly (no JSON-path query needed).
     if (status !== e.prev_status) {
       const isPromotion = status === 'ACTIVE';
       const isDemotion = e.prev_status === 'ACTIVE' && status !== 'ACTIVE';
@@ -1047,6 +1235,8 @@ async function applyPatternStatusAndEmitEvents(
             pattern_key: e.key.pattern_key,
             cap_class: e.key.cap_class,
             horizon_days: e.key.horizon_days,
+            // Phase 22 §Q3: regime is a top-level column for direct filtering.
+            regime: e.key.regime,
             // D-27: full evaluation context — replayable for the IS paper.
             delta: {
               cv_folds: e.cv_folds,
@@ -1057,8 +1247,9 @@ async function applyPatternStatusAndEmitEvents(
               n_trials_attempted: e.n_trials_delta,
               prev_status: e.prev_status,
               new_status: status,
+              regime: e.key.regime,
             } as Parameters<typeof prisma.learningEvent.create>[0]['data']['delta'],
-            message: `cell ${eventType}: ${e.key.signal_class}/${e.key.pattern_key}/${e.key.cap_class}/${e.key.horizon_days}d (lift=${e.brier_lift.toFixed(4)}, q=${by_fdr_q_value?.toFixed(4) ?? 'null'}, dsr=${e.dsr?.toFixed(3) ?? 'null'})`,
+            message: `cell ${eventType}: ${e.key.signal_class}/${e.key.pattern_key}/${e.key.cap_class}/${e.key.horizon_days}d × regime=${e.key.regime} (lift=${e.brier_lift.toFixed(4)}, q=${by_fdr_q_value?.toFixed(4) ?? 'null'}, dsr=${e.dsr?.toFixed(3) ?? 'null'})`,
           },
         });
       }
@@ -1206,6 +1397,29 @@ async function processOneOutcome(
   });
   result.hit = hit;
 
+  // Phase 22 Wave 4 (D-05, §Q3): resolve snapshot.regime + outcome-time regime
+  // OUTSIDE the transaction so the inner tx body stays small. snapshot_regime
+  // is read from the existing SentimentSnapshot.regime column (populated by
+  // Wave 1 sentiment-scan + Wave 2 backfill). outcome_regime is computed via
+  // the canonical classifier at outcome.recorded_at (PIT-correct).
+  let snapshotRegime: string | null = null;
+  if (outcome.snapshot_id) {
+    const snap = await prisma.sentimentSnapshot.findUnique({
+      where: { id: outcome.snapshot_id },
+      select: { regime: true },
+    });
+    snapshotRegime = snap?.regime ?? null;
+  }
+  let outcomeRegime: string | null = null;
+  try {
+    const r = await classifyRegimeAt({ asOf: outcome.recorded_at });
+    outcomeRegime = r.regime;
+  } catch {
+    // Classifier failed (provider outage during backfill) — leave null →
+    // exclusion is fail-open (the helper keeps NULL-side events).
+    outcomeRegime = null;
+  }
+
   await prisma.$transaction(async (tx) => {
     const techSnap = await readTechSnapshotForOutcome(outcome, tx);
     const techPattern: TechPattern | null = techSnap?.tech_pattern ?? null;
@@ -1255,6 +1469,13 @@ async function processOneOutcome(
       });
     }
 
+    // Phase 22 Wave 4: upsertCell writes to the LearnedPattern row whose
+    // unique key is the 4-tuple (Wave 5 flips this to include `regime`).
+    // We pass regime:'ALL' here because the cell row IS the unconditional
+    // aggregate until the constraint flip; per-regime cells are evaluated
+    // virtually in `recomputePerSignalClassPatternMetrics` and surface as
+    // cell_promoted/_demoted LearningEvents carrying the regime column.
+
     // 1. Diffusion cell update — fires when trace exists and pattern is informative.
     if (trace && trace.flow_pattern !== 'flat') {
       await upsertCell(
@@ -1264,6 +1485,7 @@ async function processOneOutcome(
           pattern_key: trace.flow_pattern,
           cap_class: trace.cap_class,
           horizon_days: horizon,
+          regime: 'ALL',
         },
         hit,
       );
@@ -1279,6 +1501,7 @@ async function processOneOutcome(
           pattern_key: techPattern,
           cap_class: resolvedCap,
           horizon_days: horizon,
+          regime: 'ALL',
         },
         hit,
       );
@@ -1294,6 +1517,7 @@ async function processOneOutcome(
           pattern_key: insiderBucket,
           cap_class: resolvedCap,
           horizon_days: horizon,
+          regime: 'ALL',
         },
         hit,
       );
@@ -1309,6 +1533,7 @@ async function processOneOutcome(
           pattern_key: institutionalBucket,
           cap_class: resolvedCap,
           horizon_days: horizon,
+          regime: 'ALL',
         },
         hit,
       );
@@ -1374,6 +1599,12 @@ async function processOneOutcome(
           insider_bucket: insiderBucket,
           institutional_bucket: institutionalBucket,
           source: outcome.snapshot_source ?? 'live',   // Phase 27 D-10 — live vs backfill provenance for the promotion gate
+          // Phase 22 Wave 4 (D-05, §Q3) — per-event regime provenance for
+          // sample-relative transition-zone exclusion in `evaluateOneCell`.
+          // snapshot_regime: regime at prediction time (from snapshot row).
+          // outcome_regime: regime at outcome resolution time (PIT classifier).
+          snapshot_regime: snapshotRegime,
+          outcome_regime: outcomeRegime,
         },
         message: `${outcome.ticker} @${horizon}d: ${hit ? 'HIT' : 'MISS'} — ticker ${outcome.ticker_return_pct.toFixed(2)}% vs SPY ${spyReturn.toFixed(2)}% / vs ${outcome.sector_etf ?? 'sector–'} ${outcome.sector_relative_pct?.toFixed(2) ?? '–'}% [flow=${trace?.flow_pattern ?? '–'} / tech=${techPattern ?? '–'} / insider=${insiderBucket ?? '–'} / inst=${institutionalBucket ?? '–'}]`,
       },

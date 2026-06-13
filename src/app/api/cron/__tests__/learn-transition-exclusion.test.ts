@@ -18,7 +18,23 @@
  * indicates a bug in boundary handling.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock @/lib/db BEFORE importing the route — the route's `import { prisma }
+// from '@/lib/db'` triggers PrismaNeon adapter init at module load, which
+// fails when DATABASE_URL is unset. We only exercise the pure helper here.
+vi.mock('@/lib/db', () => ({
+  prisma: {
+    learnedPattern: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    learningEvent: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+    sentimentSnapshot: { findUnique: vi.fn(), findMany: vi.fn() },
+    priceOutcome: { findMany: vi.fn() },
+    logisticEpoch: { findFirst: vi.fn(), create: vi.fn() },
+    diffusionTrace: { create: vi.fn() },
+    $transaction: vi.fn(),
+  },
+}));
+
 import { excludeTransitionZoneEvents } from '@/app/api/cron/learn/route';
 
 // Local minimal type matching the helper's input shape — keeping the test free
