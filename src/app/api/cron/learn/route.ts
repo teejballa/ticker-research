@@ -384,10 +384,11 @@ interface CellKey {
   regime: RegimeLabel;
 }
 
-// D-05 transition-exclusion helper moved to ./transition-exclusion.ts because
-// Next.js App Router route files may only export a fixed set of names.
+// D-05 transition-exclusion helper lives in ./transition-exclusion.ts because
+// Next.js App Router route files may only export a fixed set of names. Even a
+// re-export here fails the build — tests must import the helper directly from
+// the sibling module.
 import { excludeTransitionZoneEvents } from './transition-exclusion';
-export { excludeTransitionZoneEvents } from './transition-exclusion';
 
 async function upsertCell(
   tx: Prisma.TransactionClient,

@@ -35,7 +35,7 @@ vi.mock('@/lib/db', () => ({
   },
 }));
 
-import { excludeTransitionZoneEvents } from '@/app/api/cron/learn/route';
+import { excludeTransitionZoneEvents } from '@/app/api/cron/learn/transition-exclusion';
 
 // Local minimal type matching the helper's input shape — keeping the test free
 // of Prisma-row coupling so it runs without a DB.
