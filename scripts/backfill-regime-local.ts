@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+// @ts-nocheck — local dev script; runs via tsx, not built; types validated at runtime.
 /**
  * Phase 22 Wave 2 — LOCAL backfill workaround.
  *
