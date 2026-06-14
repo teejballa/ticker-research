@@ -24,6 +24,7 @@
 import YahooFinance from 'yahoo-finance2';
 import { cached } from '@/lib/data/cache';
 import { REGIME_HYPERPARAMETERS } from './hyperparameters';
+import { fetchFredSeriesCloses } from './fred';
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
@@ -82,29 +83,36 @@ async function fetchVixCloses(asOf: Date): Promise<VixClose[]> {
     return yahooCloses.sort((a, b) => a.date.getTime() - b.date.getTime());
   }
 
-  // ── Fallback: Polygon I:VIX aggregates ─────────────────────────────────────
+  // ── Fallback Tier 2: Polygon I:VIX aggregates ──────────────────────────────
   const polygonKey = process.env.POLYGON_API_KEY;
-  if (!polygonKey) return [];
-
-  try {
-    const fromIso = period1.toISOString().slice(0, 10);
-    const toIso = period2.toISOString().slice(0, 10);
-    const url =
-      `${POLYGON_BASE}/v2/aggs/ticker/I:VIX/range/1/day/${fromIso}/${toIso}` +
-      `?adjusted=true&sort=asc&limit=200&apiKey=${polygonKey}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return [];
-    const json = (await res.json()) as { results?: Array<{ t: number; c: number }> };
-    const out: VixClose[] = [];
-    for (const r of json.results ?? []) {
-      if (typeof r?.t === 'number' && typeof r?.c === 'number' && Number.isFinite(r.c) && r.c > 0) {
-        out.push({ date: new Date(r.t), close: r.c });
+  if (polygonKey) {
+    try {
+      const fromIso = period1.toISOString().slice(0, 10);
+      const toIso = period2.toISOString().slice(0, 10);
+      const url =
+        `${POLYGON_BASE}/v2/aggs/ticker/I:VIX/range/1/day/${fromIso}/${toIso}` +
+        `?adjusted=true&sort=asc&limit=200&apiKey=${polygonKey}`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const json = (await res.json()) as { results?: Array<{ t: number; c: number }> };
+        const out: VixClose[] = [];
+        for (const r of json.results ?? []) {
+          if (typeof r?.t === 'number' && typeof r?.c === 'number' && Number.isFinite(r.c) && r.c > 0) {
+            out.push({ date: new Date(r.t), close: r.c });
+          }
+        }
+        if (out.length > 0) return out.sort((a, b) => a.date.getTime() - b.date.getTime());
       }
+    } catch {
+      // graceful degrade — fall through to FRED
     }
-    return out.sort((a, b) => a.date.getTime() - b.date.getTime());
-  } catch {
-    return [];
   }
+
+  // ── Fallback Tier 3: FRED VIXCLS (free w/ API key; production-safe) ────────
+  // Added 2026-06-14 to unblock the live scan after Yahoo IP-blocked Vercel
+  // egress + Polygon free tier rejected I:VIX. See src/lib/regime/fred.ts.
+  const fredCloses = await fetchFredSeriesCloses('VIXCLS', period1, period2);
+  return fredCloses;
 }
 
 /**
