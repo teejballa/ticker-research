@@ -49,9 +49,10 @@ import {
 
 export const dynamic = 'force-dynamic';
 // Pro tier (RESEARCH §D + 22-02-PLAN T-22-02-03 DoS mitigation). The per-tick
-// batch budget bounds work to ~1000 classifier calls per invocation; 800s gives
-// plenty of headroom even with Yahoo/Polygon round-trip latency.
-export const maxDuration = 800;
+// batch budget bounds work to ~1000 classifier calls per invocation. Hobby
+// plan caps at 300s; with 250ms throttle a 500-row batch finishes in ~125s,
+// well under cap. Operator runs the loop more times if more work remains.
+export const maxDuration = 300;
 
 /** D-10 per-tick budget. 500 SentimentSnapshot + 500 PerSourceIC rows per invocation. */
 const BACKFILL_REGIME_BATCH_SIZE = (() => {
