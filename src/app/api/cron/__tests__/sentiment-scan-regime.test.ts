@@ -43,7 +43,7 @@ vi.mock('@/lib/regime/classify', () => ({
   classifyRegimeAt: mockClassify,
 }));
 
-import { classifyRegimeAndPersistForScan } from '@/app/api/cron/sentiment-scan/route';
+import { classifyRegimeAndPersistForScan } from '@/app/api/cron/sentiment-scan/persist';
 import { Prisma } from '@prisma/client';
 import type { RegimeResult } from '@/lib/regime/classify';
 

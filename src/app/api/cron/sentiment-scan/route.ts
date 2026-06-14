@@ -37,52 +37,9 @@ export const maxDuration = 300;
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
-/**
- * Phase 22 Wave 1 — per-ticker SentimentSnapshot writer with regime labeling.
- *
- * Extracted from the GET handler so the regime-write contract is unit-testable
- * in isolation (sentiment-scan-regime.test.ts). The caller hoists
- * `classifyRegimeAt({asOf: cycleStart})` ONCE outside the per-ticker loop —
- * the regime is global at the moment of scan, so a single classification per
- * cron invocation is correct AND avoids 121x redundant Yahoo `^VIX` calls.
- *
- * Idempotency: the existing `@@unique([ticker, scanned_at])` constraint enforces
- * one row per (ticker, scanned_at). When `regimeResult.regime === 'ALL'` (D-09
- * cold-start) we still write the row — the column DEFAULT is 'ALL' so this is
- * a semantic no-op but documents that the classifier RAN (not skipped).
- *
- * @knowable_at args.scanned_at — `regimeResult` MUST have been classified at
- *   or before scanned_at. Caller responsibility (the GET handler enforces this).
- */
-export async function classifyRegimeAndPersistForScan(args: {
-  ticker: string;
-  scanned_at: Date;
-  price_at_scan: number;
-  community_data: Prisma.InputJsonValue;
-  technical_data: Prisma.InputJsonValue | typeof Prisma.JsonNull;
-  insider_data: Prisma.InputJsonValue | typeof Prisma.JsonNull;
-  institutional_data: Prisma.InputJsonValue | typeof Prisma.JsonNull;
-  regimeResult: RegimeResult;
-}): Promise<void> {
-  await prisma.sentimentSnapshot.create({
-    data: {
-      ticker: args.ticker,
-      scanned_at: args.scanned_at,
-      price_at_scan: args.price_at_scan,
-      community_data: args.community_data,
-      technical_data: args.technical_data,
-      insider_data: args.insider_data,
-      institutional_data: args.institutional_data,
-      // Phase 22 — regime + 3 audit columns (D-03 + D-04 + CORE-ML-08).
-      // regime column defaults to 'ALL' in the schema; we still pass it explicitly
-      // so the train/serve contract is visible at the write site.
-      regime: args.regimeResult.regime,
-      regime_vix_level: args.regimeResult.vix_level,
-      regime_vix_pctile: args.regimeResult.vix_60d_percentile,
-      regime_ma_diff: args.regimeResult.spy_ma_50_minus_200,
-    },
-  });
-}
+// Phase 22 Wave 1 — classifyRegimeAndPersistForScan moved to ./persist.ts
+// because Next.js App Router route files may only export a fixed set of names.
+import { classifyRegimeAndPersistForScan } from './persist';
 
 export async function GET(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
