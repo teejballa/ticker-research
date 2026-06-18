@@ -78,12 +78,21 @@ import { FEATURES } from './features';
 type PooledBetaCell = {
   alpha: number;
   beta: number;
+  sample_size?: number;
   parent_alpha?: number | null;
   parent_beta?: number | null;
   shrinkage_strength?: number | null;
 };
 
 function pooledBeta(cell: PooledBetaCell): { alpha: number; beta: number } {
+  // Honesty guard (engine-review 2026-06-17 fix #2): if the cell has zero
+  // local observations, pooling silently substitutes the parent regime's
+  // posterior — UI then renders parent-base-rate confidence as if it were
+  // specific to this (pattern × cap × horizon). Surface the un-shrunk
+  // local Beta(1,1) prior instead so downstream NO_DATA handling fires.
+  if (cell.sample_size != null && cell.sample_size <= 0) {
+    return { alpha: cell.alpha, beta: cell.beta };
+  }
   if (
     !FEATURES.hierarchical_pooling_enabled ||
     cell.parent_alpha == null ||
@@ -544,10 +553,13 @@ async function readHorizonCalibrations(
     const insdCell = cells[i * 4 + 3];
 
     // Plan 19-A-07: read-time α_pooled / β_pooled when flag enabled.
-    const dPooled    = dCell    ? pooledBeta(dCell)    : null;
-    const tPooled    = tCell    ? pooledBeta(tCell)    : null;
-    const instPooled = instCell ? pooledBeta(instCell) : null;
-    const insdPooled = insdCell ? pooledBeta(insdCell) : null;
+    // Honesty guard (engine-review 2026-06-17 fix #2): skip pooling for
+    // cells with zero local observations so the row shows `—` instead of
+    // a parent-regime base rate masquerading as cell-specific confidence.
+    const dPooled    = (dCell    && dCell.sample_size    > 0) ? pooledBeta(dCell)    : null;
+    const tPooled    = (tCell    && tCell.sample_size    > 0) ? pooledBeta(tCell)    : null;
+    const instPooled = (instCell && instCell.sample_size > 0) ? pooledBeta(instCell) : null;
+    const insdPooled = (insdCell && insdCell.sample_size > 0) ? pooledBeta(insdCell) : null;
     const dPosterior    = dPooled    ? posteriorMean(dPooled)        : null;
     const dCi           = dPooled    ? credibleInterval95(dPooled)   : null;
     const tPosterior    = tPooled    ? posteriorMean(tPooled)        : null;

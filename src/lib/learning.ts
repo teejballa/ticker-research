@@ -309,23 +309,29 @@ function shuffle<T>(arr: T[], seed = 1): T[] {
 export function adversarialNullBrier(
   predictions: number[],
   outcomes: boolean[],
-  trials = 100,
+  trials?: number,
 ): { mean_null_brier: number; p_value: number; real_brier: number } {
   const real = brierScore(predictions, outcomes);
   if (predictions.length < 5) {
     return { mean_null_brier: 0.25, p_value: 1, real_brier: real };
   }
+  // engine-review 2026-06-17 fix #5: scale permutation count with n so the
+  // empirical p-value isn't quantized to 1/100 for sparse cells. For n<50
+  // we need 1000 permutations to resolve p-values around the 0.05 / 0.10
+  // gates the FDR pipeline depends on; n≥50 is fine at 100 permutations
+  // because the Brier-lift signal-to-noise carries the discrimination.
+  const effectiveTrials = trials ?? (predictions.length < 50 ? 1000 : 100);
   let nullSum = 0;
   let countWorseOrEqual = 0;
-  for (let t = 0; t < trials; t++) {
+  for (let t = 0; t < effectiveTrials; t++) {
     const shuffled = shuffle(outcomes, 12345 + t);
     const b = brierScore(predictions, shuffled);
     nullSum += b;
     if (b <= real) countWorseOrEqual++;
   }
   return {
-    mean_null_brier: nullSum / trials,
-    p_value: countWorseOrEqual / trials,    // fraction of nulls at least as good as real
+    mean_null_brier: nullSum / effectiveTrials,
+    p_value: countWorseOrEqual / effectiveTrials,    // fraction of nulls at least as good as real
     real_brier: real,
   };
 }
@@ -1163,6 +1169,16 @@ export function deflatedSharpeRatio(args: {
   // explicitly so the function still returns the PSR value.
   let SR0: number;
   if (N <= 1) {
+    // engine-review 2026-06-17 fix #7: DSR-with-N=1 silently degrades to
+    // PSR, which is the right math but is almost always a caller bug for
+    // Cipher (the cell universe is ~156 cells; N=1 means the caller
+    // forgot to pass the selection-bias correction count). Surface it.
+    if (process.env.NODE_ENV !== 'test') {
+      console.warn(
+        '[deflatedSharpeRatio] numTrials=1 → no selection-bias correction; result is PSR not DSR. ' +
+        'If this is from the learn cron, verify cellUniverseSize is being threaded through.',
+      );
+    }
     SR0 = 0;
   } else {
     SR0 =

@@ -692,11 +692,15 @@ function QuadClassPanel({
             tooltip: 'Effective sample size — number of resolved 30d outcomes the engine has seen for this institutional bucket × cap class.',
           }}
           card3={{
-            label: 'Diffusion Null',
-            value: formatBrier(brier_in_sample),
-            subValue: brier_null != null ? `null ${formatBrier(brier_null)}` : 'n/a',
-            plainLine: "Borrowed from the news/social column: did that signal beat random chance? Lower is better.",
-            tooltip: 'Diffusion class Brier score, shown here as a quality baseline (institutional class Brier is not yet surfaced in this view).',
+            label: 'Class Status',
+            value: STATUS_LABEL[instStatus] ?? instStatus,
+            subValue: instIsNoData
+              ? 'No fund filings yet for this bucket'
+              : `${essOrN(institutional_ess, institutional_sample_size ?? 0)} learned · ${STATUS_LABEL[instStatus] ?? instStatus}`,
+            plainLine: instIsNoData
+              ? "The engine hasn't seen any past filings like this for this cap class yet."
+              : "Where this cell stands in the engine's promotion pipeline — ACTIVE = beats null + passes FDR, EXPLORATORY = still warming up.",
+            tooltip: 'Status of this institutional bucket × cap class in the engine\'s 5-gate promotion pipeline (ESS ≥ 30, ≥10 live outcomes, Brier-lift > 0.005, BY-FDR q < 0.10, DSR > 0). engine-review 2026-06-17 fix #3: replaces the previously-shown "Diffusion Null" card, which was leaking the diffusion class Brier into the institutional column.',
           }}
         />
 
@@ -727,11 +731,15 @@ function QuadClassPanel({
             tooltip: 'Effective sample size — number of resolved 30d outcomes the engine has seen for this insider bucket × cap class.',
           }}
           card3={{
-            label: 'Diffusion Null',
-            value: formatBrier(brier_in_sample),
-            subValue: brier_null != null ? `null ${formatBrier(brier_null)}` : 'n/a',
-            plainLine: "Borrowed from the news/social column: did that signal beat random chance? Lower is better.",
-            tooltip: 'Diffusion class Brier score, shown here as a quality baseline (insider class Brier is not yet surfaced in this view).',
+            label: 'Class Status',
+            value: STATUS_LABEL[insdStatus] ?? insdStatus,
+            subValue: insdIsNoData
+              ? 'No insider filings yet for this bucket'
+              : `${essOrN(insider_ess, insider_sample_size ?? 0)} learned · ${STATUS_LABEL[insdStatus] ?? insdStatus}`,
+            plainLine: insdIsNoData
+              ? "The engine hasn't seen any past Form 4 filings like this for this cap class yet."
+              : "Where this cell stands in the engine's promotion pipeline — ACTIVE = beats null + passes FDR, EXPLORATORY = still warming up.",
+            tooltip: 'Status of this insider bucket × cap class in the engine\'s 5-gate promotion pipeline (ESS ≥ 30, ≥10 live outcomes, Brier-lift > 0.005, BY-FDR q < 0.10, DSR > 0). engine-review 2026-06-17 fix #3: replaces the previously-shown "Diffusion Null" card, which was leaking the diffusion class Brier into the insider column.',
           }}
         />
       </div>
@@ -984,6 +992,15 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
     ? (primarySectorEtfIsCurrent ? 'sector (current)' : `sector (${primarySectorEtf})`)
     : 'market (SPY)';
   const showSpyAlphaTile = hasSectorBenchmark && spyAlphaHitRate != null;
+  // engine-review 2026-06-17 fix #1: when the sector ETF was resolved from
+  // TODAY's mapping (cold start, no labeled outcomes yet), the headline
+  // "Calibration vs. sector (XYZ)" is honest about the benchmark but
+  // misleading about whether the engine has learned against it. Surface
+  // it explicitly so the user doesn't read "the engine likes this stock
+  // vs XLK" when the engine has literally zero outcomes vs XLK.
+  const isColdStartSector = hasSectorBenchmark
+    && primarySectorEtfIsCurrent
+    && (calibration.sample_size ?? 0) === 0;
 
   return (
     <section
@@ -1039,6 +1056,20 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
           <span>{timeAgo(predicted_at)}</span>
         </div>
       </div>
+
+      {/* engine-review 2026-06-17 fix #1: cold-start honesty banner */}
+      {isColdStartSector && (
+        <div
+          data-testid="cold-start-sector-banner"
+          className="mb-5 bg-tertiary/10 border-l-2 border-tertiary p-3 rounded-r"
+          title="The sector benchmark shown in the headline was resolved from this ticker's current sector mapping, not from any historical outcome. The engine has not yet learned against this benchmark — what you're seeing below are live signals only, not a calibrated prior."
+        >
+          <p className="text-[11px] text-on-surface-variant leading-relaxed">
+            <strong className="text-tertiary uppercase tracking-widest text-[10px]">Cold start</strong>
+            {' '}— this ticker has no resolved outcomes against {primarySectorEtf} yet. The percentages below come from live signals on this report; the historical prior is still warming up. Treat confidence as exploratory until at least 10 outcomes resolve.
+          </p>
+        </div>
+      )}
 
       {/* Phase 17: quad-class panel + horizon table OR legacy single-column */}
       {showQuadClass ? (
