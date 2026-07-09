@@ -139,6 +139,58 @@ type Horizon = typeof HORIZONS[number];
 // EngineCalibration types in src/lib/types.ts mirror this union.
 type CellStatus = 'ACTIVE' | 'EXPLORATORY' | 'EXPLORATORY-WATCH' | 'DEPRECATED' | 'NO_DATA';
 
+// ─── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix data contract ───────
+// The 8 known source_ids surfaced in the EngineCalibrationPanel "Source mix"
+// row per 22-UI-SPEC. Frozen union so downstream typescript checks that new
+// sources are explicitly added to both the UI label map and the pipeline.
+export type SourceMixSourceId =
+  | 'stocktwits'
+  | 'options_term_structure'
+  | 'finsentllm_ensemble'
+  | 'reddit'
+  | 'hackernews'
+  | 'news_analyst'
+  | 'quiver_insider'
+  | 'quiver_congressional';
+
+/** Ordered list of the 8 sources — used to zero-fill missing regime rows. */
+const SOURCE_MIX_SOURCE_IDS: readonly SourceMixSourceId[] = [
+  'stocktwits',
+  'options_term_structure',
+  'finsentllm_ensemble',
+  'reddit',
+  'hackernews',
+  'news_analyst',
+  'quiver_insider',
+  'quiver_congressional',
+] as const;
+
+export interface SourceMixEntry {
+  source_id: SourceMixSourceId;
+  /** Regime-conditional weight, post EB-shrink. Fraction in [0, 1]. */
+  weight: number;
+  /** (source, 'ALL') unconditional reference weight — dashed baseline in sparkline. */
+  weight_unconditional: number;
+  /** 30-trading-day weight history for this source in the active regime. Length 30. */
+  weight_drift_30d: number[];
+  /**
+   * Pre-computed slope sign (UI TRUSTS this — no re-derivation).
+   * 'rising' if net 30d delta > +1pp; 'falling' if < -1pp; 'flat' otherwise.
+   */
+  drift_direction: 'rising' | 'falling' | 'flat';
+  /** Net 30d delta in percentage points (signed). */
+  delta_pp_30d: number;
+  /** True iff this row fell back to (source, 'ALL') per D-09 cold-start chain. */
+  is_cold_start_fallback: boolean;
+}
+
+export interface SourceMix {
+  /** Regime label at the report's PIT (matches snapshot.regime per D-08). */
+  regime: import('@/lib/regime/types').RegimeLabel;
+  /** Up to 8 entries. Sorted DESCENDING by weight. UI trusts pre-sort. */
+  top_sources: SourceMixEntry[];
+}
+
 export interface EngineContext {
   // ── Trace classification at this moment ───────────────────────────────
   flow_pattern: FlowPattern | null;
@@ -272,6 +324,12 @@ export interface EngineContext {
   primary_sector_etf: string | null;
   primary_sector_etf_is_current: boolean;
   spy_alpha_hit_rate: number | null;
+
+  // ── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix authoritative payload ─
+  // Consumed by the EngineCalibrationPanel "Source mix" row per 22-UI-SPEC.
+  // Optional so old persisted reports (pre-Wave 5) render the panel unchanged.
+  // Numerics are pre-computed here — the UI component does zero math.
+  source_mix?: SourceMix;
 }
 
 function sigmoid(z: number): number {
@@ -990,6 +1048,34 @@ export async function getEngineContextForTicker(
     spy_alpha_hit_rate = null;
   }
 
+  // ── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix payload ──────────────
+  // Regime resolution per D-08: the report's regime is the regime stored on
+  // the most-recent SentimentSnapshot at asOf (matches learning_engine PIT
+  // classifier). If the snapshot lacks a regime (pre-Wave-1 backfill row) or
+  // classifier fell back cold-start, we pass 'ALL' to buildSourceMix which
+  // renders the REGIME-UNCONDITIONAL variant per UI-SPEC.
+  const regimeForSourceMix: import('@/lib/regime/types').RegimeLabel = (() => {
+    const mostRecent = snapsAsc[snapsAsc.length - 1];
+    const raw = (mostRecent as unknown as { regime?: string } | undefined)?.regime;
+    if (
+      raw === 'bull-low-vol' ||
+      raw === 'bull-high-vol' ||
+      raw === 'bear-low-vol' ||
+      raw === 'bear-high-vol' ||
+      raw === 'ALL'
+    ) {
+      return raw;
+    }
+    return 'ALL';
+  })();
+  let source_mix: SourceMix | undefined;
+  try {
+    source_mix = await buildSourceMix(regimeForSourceMix, asOf);
+  } catch {
+    // Never fail the report render because source-mix resolution failed.
+    source_mix = undefined;
+  }
+
   return {
     flow_pattern,
     cap_class,
@@ -1080,7 +1166,118 @@ export async function getEngineContextForTicker(
     primary_sector_etf,
     primary_sector_etf_is_current,
     spy_alpha_hit_rate,
+
+    // ── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix payload ────────────
+    source_mix,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Phase 22 Wave 5 — D-17 buildSourceMix reader (CORE-ML-27)
+//
+// Assembles the SourceMix payload consumed by EngineCalibrationPanel per
+// 22-UI-SPEC. CLAUDE.md rule — authoritative numerics from engine-context.ts
+// only; UI does zero math.
+//
+// Reads:
+//   - SourceTier: latest row per (source_id, regime) for current weight
+//   - SourceTier: latest row per (source_id, 'ALL') for unconditional baseline
+//   - SourceTier history: last 30 rows per (source_id, regime) for drift line
+//     (falls back to (source_id, 'ALL') history when regime rows are sparse
+//      per D-09 cold-start chain)
+//
+// Sort order: DESC by weight. UI trusts the sort.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function buildSourceMix(
+  regime: import('@/lib/regime/types').RegimeLabel,
+  _asOf: Date,
+): Promise<SourceMix> {
+  // Fetch, per source, the most-recent row for (source, regime) AND the
+  // most-recent row for (source, 'ALL'). If (source, regime) has no rows,
+  // the row falls back per D-09 cold-start chain — we mark is_cold_start_fallback.
+  const entries: SourceMixEntry[] = [];
+
+  for (const source_id of SOURCE_MIX_SOURCE_IDS) {
+    // Latest (source, regime) row — most-recent computed_at.
+    const regimeLatest = regime === 'ALL'
+      ? null
+      : await prisma.sourceTier.findFirst({
+          where: { source_id, regime },
+          orderBy: { computed_at: 'desc' },
+          select: { weight: true, computed_at: true },
+        });
+
+    // Unconditional (source, 'ALL') row — used for baseline AND as the fallback
+    // per D-09 when the (source, regime) row is missing.
+    const allLatest = await prisma.sourceTier.findFirst({
+      where: { source_id, regime: 'ALL' },
+      orderBy: { computed_at: 'desc' },
+      select: { weight: true },
+    });
+
+    const weight_unconditional = allLatest?.weight ?? 0;
+    const is_cold_start_fallback = regime !== 'ALL' && regimeLatest == null;
+    // Per D-09: fall back to (source, 'ALL') weight when regime-specific row
+    // has not accumulated yet. When regime='ALL' the "current" IS the ALL row.
+    const weight = regimeLatest?.weight ?? weight_unconditional;
+
+    // 30 most-recent (source, regime) rows for drift sparkline. If regime is
+    // 'ALL' or the regime row is a cold-start fallback, we pull from the ALL
+    // series so the sparkline is still meaningful (flat at ALL weight).
+    const history = regime === 'ALL' || is_cold_start_fallback
+      ? await prisma.sourceTier.findMany({
+          where: { source_id, regime: 'ALL' },
+          orderBy: { computed_at: 'desc' },
+          take: 30,
+          select: { weight: true },
+        })
+      : await prisma.sourceTier.findMany({
+          where: { source_id, regime },
+          orderBy: { computed_at: 'desc' },
+          take: 30,
+          select: { weight: true },
+        });
+    // history returned DESC; reverse to chronological ASC so the last entry
+    // corresponds to the report's PIT (matches UI-SPEC data-contract note).
+    const seriesAsc = history.map((r) => r.weight).reverse();
+    // Pad from the front with the earliest observation (or the unconditional
+    // weight) so the sparkline always has length 30 — UI-SPEC hard length.
+    const padTo30: number[] = [];
+    if (seriesAsc.length === 0) {
+      for (let i = 0; i < 30; i++) padTo30.push(weight_unconditional);
+    } else {
+      const pad = seriesAsc[0];
+      while (padTo30.length + seriesAsc.length < 30) padTo30.push(pad);
+      padTo30.push(...seriesAsc);
+    }
+    const weight_drift_30d = padTo30.slice(-30);
+
+    const delta_pp_30d =
+      (weight_drift_30d[weight_drift_30d.length - 1] - weight_drift_30d[0]) * 100;
+    const drift_direction: SourceMixEntry['drift_direction'] =
+      delta_pp_30d > 1 ? 'rising' : delta_pp_30d < -1 ? 'falling' : 'flat';
+
+    entries.push({
+      source_id,
+      weight,
+      weight_unconditional,
+      weight_drift_30d,
+      drift_direction,
+      delta_pp_30d,
+      is_cold_start_fallback,
+    });
+  }
+
+  // Sort DESC by weight per UI-SPEC (UI trusts the order).
+  entries.sort((a, b) => b.weight - a.weight);
+
+  // Filter zero-weight sources (no observations at all) so the row's
+  // top_sources.length === 0 empty-state fires when the (source, regime)
+  // and (source, 'ALL') both have no rows.
+  const top_sources = entries.filter((e) => e.weight > 0 || e.weight_unconditional > 0);
+
+  return { regime, top_sources };
 }
 
 // Internal helpers re-exported for the unit-test surface only. Production
