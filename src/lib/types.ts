@@ -572,6 +572,31 @@ export interface EngineCalibration {
   primary_sector_etf?: string | null;
   primary_sector_etf_is_current?: boolean;
   spy_alpha_hit_rate?: number | null;
+
+  // ── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix payload ───────────────
+  // Consumed by EngineCalibrationPanel "Source mix" row per 22-UI-SPEC. All
+  // numerics are authoritative from engine-context.buildSourceMix (UI does
+  // zero math). Optional so old persisted reports render unchanged.
+  source_mix?: {
+    regime: 'bull-low-vol' | 'bull-high-vol' | 'bear-low-vol' | 'bear-high-vol' | 'ALL';
+    top_sources: Array<{
+      source_id:
+        | 'stocktwits'
+        | 'options_term_structure'
+        | 'finsentllm_ensemble'
+        | 'reddit'
+        | 'hackernews'
+        | 'news_analyst'
+        | 'quiver_insider'
+        | 'quiver_congressional';
+      weight: number;
+      weight_unconditional: number;
+      weight_drift_30d: number[];
+      drift_direction: 'rising' | 'falling' | 'flat';
+      delta_pp_30d: number;
+      is_cold_start_fallback: boolean;
+    }>;
+  };
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
