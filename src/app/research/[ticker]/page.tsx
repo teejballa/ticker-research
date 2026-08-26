@@ -114,9 +114,13 @@ export default function ResearchPage() {
   const handleTryAgain = useCallback(() => {
     setErrorMessage(null);
     setAnalysisResult(null);
-    setPageState('loading');
-    window.location.href = `/research/${encodeURIComponent(ticker)}`;
-  }, [ticker]);
+    if (filePath) {
+      // Source package already collected — re-run analysis without discarding it
+      setPageState('analyzing');
+    } else {
+      window.location.href = `/research/${encodeURIComponent(ticker)}`;
+    }
+  }, [ticker, filePath]);
 
   // ── Analyzing ───────────────────────────────────────────
   if (filePath && pageState === 'analyzing') {
@@ -129,6 +133,7 @@ export default function ResearchPage() {
             filePath={filePath}
             onComplete={handleComplete}
             onError={handleError}
+            onRetry={handleTryAgain}
           />
         </main>
         <FooterTicker />
