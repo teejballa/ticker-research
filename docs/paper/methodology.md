@@ -449,3 +449,64 @@ empirical answer. The IS paper defends whichever outcome the data support.
   https://cs229.stanford.edu/main_notes.pdf
 - Brier, G.W. (1950). "Verification of Forecasts Expressed in Terms of Probability."
   *Monthly Weather Review* 78(1):1–3.
+
+---
+
+## Phase 22 — Regime-Conditional Bayesian Learning
+
+**Version:** 2026-08-26
+**Status:** Shipped (Phase 22, all 5 waves)
+**Related artifacts:** `src/lib/regime/classify.ts`, `src/app/api/cron/learn/route.ts`, `src/lib/evaluation/fdr.ts`, `src/components/EngineCalibrationPanel.tsx`, `src/components/SourceMixExpanded.tsx`
+
+### Motivation
+
+Phase 21.1 established that the engine can detect edge in aggregate. Phase 22 tests whether that edge is regime-conditional — i.e., whether `(sentiment_type × cap_class × direction)` cells that work in bear/high-vol regimes also work in bull/low-vol regimes, or whether their alpha is regime-specific.
+
+This is the standard insight from Hamilton (1989) Markov-switching models and Ang & Bekaert (2002): equity return distributions are statistically distinct across volatility and trend regimes, and models that ignore regime structure suffer from averaging across heterogeneous data-generating processes.
+
+### Regime definition
+
+Four buckets: `bull-low-vol`, `bull-high-vol`, `bear-low-vol`, `bear-high-vol`. The two axes are:
+
+- **Trend**: SPY MA50 − MA200. Positive → bull; negative → bear.
+- **Volatility**: VIX relative to its rolling 60-day 50th percentile. Above → high-vol; at or below → low-vol.
+
+The classifier is implemented in `src/lib/regime/classify.ts` and is the single source of truth for all regime labels in the system. Labels are written at scan time into `SentimentSnapshot.regime` and backfilled for historical rows via `/api/cron/backfill-regime`.
+
+The choice of 4 buckets (not 2 or 8) follows the cell-count constraint: 26 pattern keys × 3 horizons × 4 regimes = 312 cells, each requiring ≥ 10 live outcomes for promotion (COVERAGE-10). 8 buckets would starve most cells; 2 would sacrifice the trend dimension entirely. 4 is the industry-standard 2×2 (Hamilton 1989; Ang & Bekaert 2002).
+
+### Hierarchical multiple-testing correction
+
+With 312 cells × 2 hypotheses (lift > 0, calibration), naive FDR control inflates the denominator. Phase 22 applies a two-level Benjamini-Bogomolov (2014) hierarchical procedure:
+
+1. **Inner stage**: within each regime family (78 cells), apply Benjamini-Yekutieli (BY) correction at `q_inner = 0.10`. BY (not BH) is used here because cells within a regime are positively dependent (shared market state). The BY correction constant `c(m) = Σ 1/i` accounts for arbitrary dependence.
+2. **Outer stage**: take one summary statistic per regime family (minimum adjusted p-value) and apply Benjamini-Hochberg (BH) at `q_outer = 0.10`. Regime families are conditionally independent given the classifier assignment, so BH is valid at the outer level.
+
+This two-level structure is the "multi-tissue eQTL" precedent from Benjamini & Bogomolov (2014): discovery is only claimed in a family when the family clears the outer gate AND the individual hypothesis clears the inner gate. It preserves per-regime detection power compared to a naive single-pass BY over the full 312-cell denominator (ISL Ch. 13).
+
+### Transition-zone exclusion
+
+Regime transitions introduce mislabeled training samples: a prediction made in `bull-low-vol` that matures during a shift to `bear-high-vol` has a label mismatch. Phase 22 drops `posterior_update` events where `snapshot_regime ≠ outcome_regime` (D-05).
+
+The exclusion is **sample-relative** (not window-relative): only events whose snapshot and outcome are in different regimes are dropped. A window-relative rule would drop all predictions whose horizon window contains a flip anywhere, discarding legitimate same-regime observations on either side of brief whipsaws.
+
+The `'ALL'` aggregate cell sees every event regardless of regime — that is its definition.
+
+### Empirical-Bayes source-weight shrinkage
+
+For each source `s` and regime `r`, the regime-conditional weight is:
+
+```
+cell_weight(s, r) = cell_n(s, r) / (cell_n(s, r) + λ)
+```
+
+where `λ` is a shrinkage strength hyperparameter (logged in `SourceTier.shrinkage_strength`). As `cell_n → 0`, `cell_weight → 0`, and the aggregator falls back through: `(source, regime)` → `(source, 'ALL')` → `1/N` equal-weight. This is the Beta-Binomial MAP estimator under a Beta prior (CS229 "Bayesian Methods"), equivalent to ridge regularization toward the grand mean (ISL Ch. 6).
+
+Weights are normalized via clamped softmax so no single source dominates and the total sums to 1 within a regime.
+
+### References
+
+- Hamilton, J.D. (1989). "A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle." *Econometrica* 57(2):357–384.
+- Ang, A. & Bekaert, G. (2002). "Regime Switches in Interest Rates." *Journal of Business & Economic Statistics* 20(2):163–182.
+- Benjamini, Y. & Bogomolov, M. (2014). "Selective inference on multiple families of hypotheses." *Journal of the Royal Statistical Society: Series B* 76(1):297–318.
+- Benjamini, Y. & Yekutieli, D. (2001). "The control of the false discovery rate in multiple testing under dependency." *Annals of Statistics* 29(4):1165–1188.

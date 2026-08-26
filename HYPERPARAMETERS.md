@@ -825,3 +825,52 @@ Sample-relative exclusion in `/api/cron/learn` `evaluateOneCell` posterior path:
 Updated by: Plan 22-04 (2026-06-12 — Wave 4 — hierarchical BY-FDR + D-05
 transition exclusion).
 
+
+---
+
+## Phase 22 — Market-Regime Feature + Learned Sentiment-Source Weights
+
+Updated by: Plans 22-00 through 22-05 (2026-06-09 → 2026-08-26)
+
+### Regime classifier
+
+| Parameter | Value | Source |
+|---|---|---|
+| Regime buckets | 4: `bull-low-vol`, `bull-high-vol`, `bear-low-vol`, `bear-high-vol` | Hamilton 1989; Ang & Bekaert 2002 |
+| VIX volatility threshold | 50th percentile of rolling 60d VIX window | D-02 |
+| SPY trend signal | MA50 − MA200 cross (positive = bull, negative = bear) | D-02 |
+| Cold-start fallback | `'ALL'` unconditional row (3-step: regime → ALL → 1.0) | D-09 |
+
+### Hierarchical BY-FDR (Wave 4)
+
+| Parameter | Value | Source |
+|---|---|---|
+| Inner FDR threshold `q_inner` | 0.10 (per-regime BY family) | D-15; Benjamini-Bogomolov 2014 |
+| Outer FDR threshold `q_outer` | 0.10 (BH across regime summaries) | D-15 |
+| Inner correction | Benjamini-Yekutieli (BY) — dependence-robust | D-15 |
+| Outer correction | Benjamini-Hochberg (BH) — regime families conditionally independent | D-15 |
+
+### Transition-zone exclusion (D-05)
+
+| Parameter | Value | Note |
+|---|---|---|
+| Exclusion rule | Drop `posterior_update` events where `snapshot_regime ≠ outcome_regime` | Sample-relative, not window-relative |
+| NULL handling | Fail-open (keep) | Applies to cold-start `'ALL'` rows |
+| Over-exclusion guard | Kept fraction > 94% on synthetic 95%-same-regime corpus | Regression test asserts this |
+
+### Done-gate (Wave 5, D-14 reuse from P21.1)
+
+| Parameter | Value | Source |
+|---|---|---|
+| Brier-lift threshold | ≥ 0.005 | `BRIER_LIFT_THRESHOLD` — reused verbatim from Phase 21.1 |
+| CI method | BCa bootstrap (n = 10,000) | D-14; ISL Ch. 5 |
+| Gate criterion | 95% CI excludes 0 | Must exclude zero, not just positive point estimate |
+
+### EB shrinkage (source weights, Wave 3)
+
+| Parameter | Value | Source |
+|---|---|---|
+| Shrinkage target | Equal-weight (unconditional `source, 'ALL'` row) | D-07 |
+| Cell weight formula | `cell_n / (cell_n + λ)` | D-06 |
+| λ range | `[eb_shrinkage_lambda_min, eb_shrinkage_lambda_max]` — set in source-tier-hyperparameters | D-06 |
+| Weight clamp | Clamped softmax — no source weight < floor or > ceiling | D-06 |

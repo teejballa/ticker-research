@@ -19,11 +19,11 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 
 #### Phase 22 — Market-regime feature
 
-- [ ] **CORE-ML-06**: `LearnedPattern` composite key extended to include `regime` dimension (additive migration: column with `DEFAULT 'ALL'` then add to unique constraint after soak)
-- [ ] **CORE-ML-07**: Regime detector classifies each scan moment into one of 4 buckets (bull/bear/chop × low-vol/high-vol via VIX bucketing + SPY trend) with deterministic, reproducible labeling
-- [ ] **CORE-ML-08**: `SentimentSnapshot` records the regime label at scan time; backfilled snapshots get historical regime labels via point-in-time VIX/SPY data
-- [ ] **CORE-ML-09**: Regime label appears in the EngineCalibration block ("Current regime: bull / low-vol")
-- [ ] **CORE-ML-10**: At regime transitions, posterior updates respect a transition-zone exclusion period to avoid mis-labeled training samples
+- [x] **CORE-ML-06**: `LearnedPattern` composite key extended to include `regime` dimension (additive migration: column with `DEFAULT 'ALL'` then add to unique constraint after soak)
+- [x] **CORE-ML-07**: Regime detector classifies each scan moment into one of 4 buckets (bull/bear/chop × low-vol/high-vol via VIX bucketing + SPY trend) with deterministic, reproducible labeling
+- [x] **CORE-ML-08**: `SentimentSnapshot` records the regime label at scan time; backfilled snapshots get historical regime labels via point-in-time VIX/SPY data
+- [x] **CORE-ML-09**: Regime label appears in the EngineCalibration block ("Current regime: bull / low-vol")
+- [x] **CORE-ML-10**: At regime transitions, posterior updates respect a transition-zone exclusion period to avoid mis-labeled training samples
 
 #### Phase 19 — Hierarchical priors / partial pooling
 
@@ -54,9 +54,9 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 
 #### Phase 22 — Regime-conditional learning
 
-- [ ] **CORE-ML-26**: Regime-conditional sentiment-source weights — `SourceTier` extended additively with `regime` column; weights computed per `(source × regime)` via regime-sliced `PerSourceIC` → empirical-Bayes shrinkage toward unconditional `(source, 'ALL')` row → clamped softmax (D-06, D-07, D-09); aggregator reads regime label per-row from `SentimentSnapshot` (D-08); three-step cold-start fallback `(source, regime)` → `(source, 'ALL')` → `1.0`. _(added 2026-06-09 during plan-check B-3 resolution — was conflated with CORE-ML-20..22 in 22-CONTEXT.md)_
-- [ ] **CORE-ML-27**: Source-mix UI surface — always-visible "Source mix" row in `EngineCalibrationPanel` showing current regime label + top-3 sources by weight + click-to-expand for full 8-source ranking + 30-day weight-drift sparkline (D-17). Cold-start `regime='ALL'` shows `REGIME-UNCONDITIONAL` variant per 22-UI-SPEC.md. _(added 2026-06-09 during plan-check B-3 resolution)_
-- [ ] **CORE-ML-28**: Hierarchical Benjamini-Yekutieli + meta-BH FDR — per-regime BY families inside one `/api/cron/learn` pass, then meta-BH across regimes (Benjamini-Bogomolov 2014; multi-tissue eQTL precedent). Preserves per-regime detection power vs naive single-pass BY over the 4×-expanded denominator (D-15). _(added 2026-06-09 during plan-check B-3 resolution)_
+- [x] **CORE-ML-26**: Regime-conditional sentiment-source weights — `SourceTier` extended additively with `regime` column; weights computed per `(source × regime)` via regime-sliced `PerSourceIC` → empirical-Bayes shrinkage toward unconditional `(source, 'ALL')` row → clamped softmax (D-06, D-07, D-09); aggregator reads regime label per-row from `SentimentSnapshot` (D-08); three-step cold-start fallback `(source, regime)` → `(source, 'ALL')` → `1.0`. _(added 2026-06-09 during plan-check B-3 resolution — was conflated with CORE-ML-20..22 in 22-CONTEXT.md)_
+- [x] **CORE-ML-27**: Source-mix UI surface — always-visible "Source mix" row in `EngineCalibrationPanel` showing current regime label + top-3 sources by weight + click-to-expand for full 8-source ranking + 30-day weight-drift sparkline (D-17). Cold-start `regime='ALL'` shows `REGIME-UNCONDITIONAL` variant per 22-UI-SPEC.md. _(added 2026-06-09 during plan-check B-3 resolution)_
+- [x] **CORE-ML-28**: Hierarchical Benjamini-Yekutieli + meta-BH FDR — per-regime BY families inside one `/api/cron/learn` pass, then meta-BH across regimes (Benjamini-Bogomolov 2014; multi-tissue eQTL precedent). Preserves per-regime detection power vs naive single-pass BY over the 4×-expanded denominator (D-15). _(added 2026-06-09 during plan-check B-3 resolution)_
 
 ### REASON — Group B: Reasoning impact in reports
 
@@ -140,11 +140,11 @@ Updated by roadmapper agent during ROADMAP.md generation.
 | Requirement | Phase | Status |
 |---|---|---|
 | CORE-ML-01..05 | Phase 18 | Planned |
-| CORE-ML-06..10 | Phase 22 | Planned |
+| CORE-ML-06..10 | Phase 22 | Complete (2026-08-26) |
 | CORE-ML-11..14 | Phase 19 | Planned |
 | CORE-ML-15..19 | Phase 21.1 | Planned |
 | CORE-ML-20, CORE-ML-21, CORE-ML-22, CORE-ML-23, CORE-ML-24, CORE-ML-25 | Phase 21.1 | Planned |
-| CORE-ML-26, CORE-ML-27, CORE-ML-28 | Phase 22 | Planned |
+| CORE-ML-26, CORE-ML-27, CORE-ML-28 | Phase 22 | Complete (2026-08-26) |
 | REASON-01..05 | Phase 24 | Planned |
 | REASON-06..09 | Phase 25 | Planned |
 | COVERAGE-01..05 | Phase 26 | Planned |
