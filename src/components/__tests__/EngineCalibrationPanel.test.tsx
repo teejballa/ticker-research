@@ -5,7 +5,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import EngineCalibrationPanel from '../EngineCalibrationPanel';
 import type { EngineCalibration } from '@/lib/types';
 
@@ -180,5 +180,143 @@ describe('EngineCalibrationPanel', () => {
     expect(screen.getByText('NO DATA')).toBeTruthy();
     expect(screen.getByText(/NO PATTERN/)).toBeTruthy();
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3); // three metric cards display dashes
+  });
+
+  // ── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix row ─────────────────
+  // Contract per 22-UI-SPEC §Test Hooks. Numerics arrive pre-computed from
+  // engine-context.buildSourceMix — this component does zero math.
+
+  const POPULATED_SOURCE_MIX = {
+    regime: 'bear-high-vol' as const,
+    top_sources: [
+      {
+        source_id: 'stocktwits' as const,
+        weight: 0.34,
+        weight_unconditional: 0.28,
+        weight_drift_30d: Array.from({ length: 30 }, (_, i) => 0.28 + (i / 29) * 0.06),
+        drift_direction: 'rising' as const,
+        delta_pp_30d: 6,
+        is_cold_start_fallback: false,
+      },
+      {
+        source_id: 'options_term_structure' as const,
+        weight: 0.28,
+        weight_unconditional: 0.30,
+        weight_drift_30d: Array.from({ length: 30 }, () => 0.28),
+        drift_direction: 'flat' as const,
+        delta_pp_30d: 0,
+        is_cold_start_fallback: false,
+      },
+      {
+        source_id: 'reddit' as const,
+        weight: 0.19,
+        weight_unconditional: 0.22,
+        weight_drift_30d: Array.from({ length: 30 }, (_, i) => 0.22 - (i / 29) * 0.03),
+        drift_direction: 'falling' as const,
+        delta_pp_30d: -3,
+        is_cold_start_fallback: false,
+      },
+      {
+        source_id: 'hackernews' as const,
+        weight: 0.10,
+        weight_unconditional: 0.10,
+        weight_drift_30d: Array.from({ length: 30 }, () => 0.10),
+        drift_direction: 'flat' as const,
+        delta_pp_30d: 0,
+        is_cold_start_fallback: false,
+      },
+      {
+        source_id: 'news_analyst' as const,
+        weight: 0.09,
+        weight_unconditional: 0.10,
+        weight_drift_30d: Array.from({ length: 30 }, () => 0.10),
+        drift_direction: 'flat' as const,
+        delta_pp_30d: 0,
+        is_cold_start_fallback: true,
+      },
+    ],
+  };
+
+  it('renders source-mix row with regime pill and top-3 source pills (populated)', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      source_mix: POPULATED_SOURCE_MIX,
+    }} />);
+
+    // Row shell present + eyebrow.
+    expect(screen.getByTestId('source-mix-row')).toBeTruthy();
+    expect(screen.getByText('SOURCE MIX')).toBeTruthy();
+
+    // Regime pill with the verbatim UI-SPEC label.
+    const pill = screen.getByTestId('source-mix-regime-pill');
+    expect(pill).toBeTruthy();
+    expect(pill.textContent).toContain('BEAR · HIGH-VOL');
+
+    // Top-3 source pills — DOM order = sorted DESC by weight (engine-context guarantee).
+    expect(screen.getByTestId('source-mix-pill-1').textContent).toContain('STOCKTWITS');
+    expect(screen.getByTestId('source-mix-pill-1').textContent).toContain('34%');
+    expect(screen.getByTestId('source-mix-pill-2').textContent).toContain('OPTIONS-TS');
+    expect(screen.getByTestId('source-mix-pill-3').textContent).toContain('REDDIT');
+
+    // #1 leading source carries the ★ marker + indigo primary treatment.
+    // Rendered in both the collapsed top-3 pill AND the expanded panel's
+    // rank-1 row — assert at least one exists.
+    expect(screen.getAllByTestId('source-mix-leading-star').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('toggles the SourceMixExpanded panel on disclosure click', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      source_mix: POPULATED_SOURCE_MIX,
+    }} />);
+
+    const disclosure = screen.getByTestId('source-mix-disclosure');
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
+    expect(disclosure.textContent).toContain('Show full ranking');
+
+    fireEvent.click(disclosure);
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(disclosure.textContent).toContain('Hide full ranking');
+
+    // Expand panel is present (rendered eagerly, animated via max-height).
+    expect(screen.getByTestId('source-mix-expanded')).toBeTruthy();
+  });
+
+  it('renders REGIME-UNCONDITIONAL cold-start banner when regime is ALL', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      source_mix: {
+        regime: 'ALL' as const,
+        top_sources: POPULATED_SOURCE_MIX.top_sources.map((s) => ({
+          ...s,
+          is_cold_start_fallback: true,
+        })),
+      },
+    }} />);
+
+    // Both the regime pill and the sibling cold-start marker exist per UI-SPEC.
+    const pill = screen.getByTestId('source-mix-regime-pill');
+    expect(pill.textContent).toContain('REGIME-UNCONDITIONAL');
+    expect(screen.getByTestId('source-mix-cold-start-banner')).toBeTruthy();
+  });
+
+  it('renders source-mix-empty state when top_sources is empty', () => {
+    render(<EngineCalibrationPanel calibration={{
+      ...ACTIVE_CALIBRATION,
+      source_mix: {
+        regime: 'bull-low-vol' as const,
+        top_sources: [],
+      },
+    }} />);
+
+    expect(screen.getByTestId('source-mix-empty')).toBeTruthy();
+    // Disclosure is suppressed when there is nothing to reveal.
+    expect(screen.queryByTestId('source-mix-disclosure')).toBeNull();
+  });
+
+  it('renders NOTHING for source-mix row on legacy reports (source_mix undefined)', () => {
+    render(<EngineCalibrationPanel calibration={ACTIVE_CALIBRATION} />);
+    // No source_mix means the row hides itself entirely — graceful back-compat.
+    expect(screen.queryByTestId('source-mix-row')).toBeNull();
   });
 });

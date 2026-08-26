@@ -24,6 +24,7 @@
 import type { ReactNode } from 'react';
 import type { EngineCalibration, HorizonCalibration, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import { WatchBadge } from './WatchBadge';
+import { SourceMixExpanded } from './SourceMixExpanded';
 
 // ── Phase 18 (Plan 18-08) — local type widening ────────────────────────────
 //
@@ -307,6 +308,210 @@ function ConformalCIRow({
           : `[${formatPct(conformalLow)}–${formatPct(conformalHigh)}]`}
       </span>
     </div>
+  );
+}
+
+// ── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix row ────────────────────
+//
+// Always-visible row per 22-UI-SPEC.md §Layout & Interaction Contract.
+// Reads pre-computed calibration.source_mix from engine-context.ts
+// (authoritative numerics boundary — this component does ZERO math).
+//
+// Placement: between "Concept drift" row and AlignmentDisagreementBlocks.
+// Structure: SOURCE MIX eyebrow + regime pill + top-3 source pills (left cluster)
+//            + SourceMixExpanded client island (right cluster).
+// Empty / cold-start states per UI-SPEC §Empty / null states.
+
+// Per UI-SPEC §Source pill format (verbatim).
+const SOURCE_MIX_LABEL: Record<string, string> = {
+  stocktwits: 'STOCKTWITS',
+  options_term_structure: 'OPTIONS-TS',
+  finsentllm_ensemble: 'FINSENT-LLM',
+  reddit: 'REDDIT',
+  hackernews: 'HACKERNEWS',
+  news_analyst: 'NEWS/ANALYST',
+  quiver_insider: 'INSIDER (FORM 4)',
+  quiver_congressional: 'CONGRESS',
+};
+
+// Per UI-SPEC §Color §Accent (regime pill) — 4-bucket color/saturation.
+const REGIME_BADGE: Record<string, string> = {
+  'bull-low-vol':
+    'bg-secondary/10 text-secondary border-secondary/40',
+  'bull-high-vol':
+    'bg-secondary/25 text-secondary border-secondary/60',
+  'bear-low-vol':
+    'bg-error/10 text-error border-error/40',
+  'bear-high-vol':
+    'bg-error/25 text-error border-error/60',
+  ALL:
+    'bg-surface-container-highest text-on-surface-variant border-outline-variant',
+};
+
+// Per UI-SPEC §Copywriting Contract §Regime pill (verbatim copy).
+const REGIME_LABEL: Record<string, string> = {
+  'bull-low-vol': 'BULL · LOW-VOL',
+  'bull-high-vol': 'BULL · HIGH-VOL',
+  'bear-low-vol': 'BEAR · LOW-VOL',
+  'bear-high-vol': 'BEAR · HIGH-VOL',
+  ALL: 'REGIME-UNCONDITIONAL',
+};
+
+// Per UI-SPEC §Copywriting Contract §Regime pill tooltip.
+const REGIME_TOOLTIP: Record<string, string> = {
+  'bull-low-vol':
+    'Bull trend (SPY 50d > 200d MA) + low realized vol (VIX < 60d 50th-%ile). Calm uptrend.',
+  'bull-high-vol':
+    'Bull trend (SPY 50d > 200d MA) + elevated vol (VIX ≥ 60d 50th-%ile). Uptrend with whipsaw risk.',
+  'bear-low-vol':
+    'Bear trend (SPY 50d < 200d MA) + low realized vol. Slow grind down; not a panic regime.',
+  'bear-high-vol':
+    'Bear trend (SPY 50d < 200d MA) + elevated vol. The regime where calibration matters most.',
+  ALL:
+    "Regime classifier returned cold-start fallback (insufficient VIX or SPY history at the snapshot time). The engine is using unconditional (source, 'ALL') weights for this report.",
+};
+
+// Per UI-SPEC §Color §Accent — micro-icon by regime.
+const REGIME_ICON: Record<string, string> = {
+  'bull-low-vol': '',
+  'bull-high-vol': 'trending_up',
+  'bear-low-vol': '',
+  'bear-high-vol': 'warning',
+  ALL: 'all_inclusive',
+};
+
+// SourceMix type — mirrored locally to avoid pulling the engine-context module
+// (which imports Prisma) into a component render path.
+interface SourceMixEntry {
+  source_id: string;
+  weight: number;
+  weight_unconditional: number;
+  weight_drift_30d: number[];
+  drift_direction: 'rising' | 'falling' | 'flat';
+  delta_pp_30d: number;
+  is_cold_start_fallback: boolean;
+}
+
+interface SourceMixData {
+  regime: 'bull-low-vol' | 'bull-high-vol' | 'bear-low-vol' | 'bear-high-vol' | 'ALL';
+  top_sources: SourceMixEntry[];
+}
+
+function formatSourceMixPct(weight: number): string {
+  const pct = weight * 100;
+  if (pct < 1 && pct > 0) return '<1%';
+  return `${Math.round(pct)}%`;
+}
+
+function SourceMixRow({ source_mix }: { source_mix: SourceMixData | undefined | null }) {
+  // Graceful back-compat per UI-SPEC §Empty / null states: undefined → render nothing.
+  if (!source_mix) return null;
+
+  const { regime, top_sources } = source_mix;
+  const isColdStartRegime = regime === 'ALL';
+  const isEmpty = top_sources.length === 0;
+
+  const regimePillClass = REGIME_BADGE[regime] ?? REGIME_BADGE.ALL;
+  const regimeLabel = REGIME_LABEL[regime] ?? REGIME_LABEL.ALL;
+  const regimeTooltip = REGIME_TOOLTIP[regime] ?? REGIME_TOOLTIP.ALL;
+  const regimeIcon = REGIME_ICON[regime] ?? '';
+
+  // Both regime-pill AND cold-start-banner test IDs carried on the same
+  // element when regime === 'ALL' (per UI-SPEC §Test Hooks).
+  const regimePillTestIds = isColdStartRegime
+    ? { 'data-testid': 'source-mix-regime-pill', 'data-testid-cold': 'source-mix-cold-start-banner' }
+    : { 'data-testid': 'source-mix-regime-pill' };
+
+  return (
+    <div
+      data-testid="source-mix-row"
+      className="mt-3 bg-surface-container-high p-3 rounded-lg flex items-center justify-between gap-3 flex-wrap"
+    >
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant shrink-0 font-mono">
+          SOURCE MIX
+        </span>
+        <span
+          {...regimePillTestIds}
+          data-testid={regimePillTestIds['data-testid']}
+          title={regimeTooltip}
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-bold tracking-wide font-mono ${regimePillClass}`}
+        >
+          {regimeIcon && (
+            <span className="material-symbols-outlined text-[12px]" aria-hidden="true">
+              {regimeIcon}
+            </span>
+          )}
+          {regimeLabel}
+        </span>
+        {isColdStartRegime && (
+          // Sibling hidden marker so the RTL test can query it distinctly
+          // from the regime pill without depending on double-testid trick.
+          <span data-testid="source-mix-cold-start-banner" className="sr-only">
+            regime-unconditional cold-start
+          </span>
+        )}
+
+        {isEmpty ? (
+          <span data-testid="source-mix-empty" className="text-[11px] text-on-surface-variant">
+            No source-weight observations yet — awaiting first regime-aware /api/cron/learn cycle.
+          </span>
+        ) : (
+          <>
+            <span className="text-on-surface-variant opacity-50" aria-hidden="true">
+              ·
+            </span>
+            {top_sources.slice(0, 3).map((s, i) => (
+              <SourceMixPill
+                key={s.source_id}
+                entry={s}
+                rank={i + 1}
+                testId={`source-mix-pill-${i + 1}` as const}
+              />
+            ))}
+          </>
+        )}
+      </div>
+
+      {!isEmpty && (
+        <SourceMixExpanded sources={top_sources} regime={regime} />
+      )}
+    </div>
+  );
+}
+
+function SourceMixPill({
+  entry,
+  rank,
+  testId,
+}: {
+  entry: SourceMixEntry;
+  rank: number;
+  testId: string;
+}) {
+  const isLeading = rank === 1;
+  const label = SOURCE_MIX_LABEL[entry.source_id] ?? entry.source_id.toUpperCase();
+  const weightPct = formatSourceMixPct(entry.weight);
+  const leadingClass = isLeading ? 'text-primary font-bold border-l-2 border-primary pl-1' : 'text-on-surface';
+  return (
+    <span
+      data-testid={testId}
+      className={`inline-flex items-center gap-1 font-mono text-[11px] tabular-nums ${leadingClass}`}
+      aria-label={
+        isLeading
+          ? `${label} · ${weightPct}. Leading source in this regime — the engine is weighting this input hardest.`
+          : `${label} · ${weightPct}`
+      }
+    >
+      {isLeading && (
+        <span data-testid="source-mix-leading-star" aria-hidden="true">
+          ★
+        </span>
+      )}
+      <span>{label}</span>
+      <span className="text-on-surface-variant">·</span>
+      <span>{weightPct}</span>
+    </span>
   );
 }
 
@@ -1099,6 +1304,13 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
           )}
         </div>
       </div>
+
+      {/* Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix row.
+          Renders only when calibration.source_mix is populated (old reports
+          omit the field and this row hides itself gracefully per UI-SPEC
+          §Empty / null states). Numerics arrive pre-computed from
+          engine-context.buildSourceMix — this component does zero math. */}
+      <SourceMixRow source_mix={calibration.source_mix} />
 
       {/* Engine + Technical + Institutional + Insider alignment / disagreement prose */}
       <AlignmentDisagreementBlocks
