@@ -168,14 +168,11 @@ model LearnedPattern {
   // PHASE 22 (D-06, D-11 step 1, CORE-ML-06): 4-bucket regime dimension on the cell key.
   // 'ALL' is the unconditional aggregate row (consumed via D-09 cold-start chain);
   // 'bull-low-vol' | 'bull-high-vol' | 'bear-low-vol' | 'bear-high-vol' are the per-regime cells.
-  // Wave 5 (D-11 step 4) flips the unique constraint to include `regime`; until then both
-  // per-regime rows AND the legacy unconditional rows coexist (the unique constraint below
-  // continues to dedupe on (signal_class, pattern_key, cap_class, horizon_days), so per-regime
-  // rows MUST be written by the Wave 4 relearn ONLY when the constraint is widened — until
-  // then this column carries 'ALL' on every row).
+  // Wave 5 (D-11 step 4): unique constraint widened to include `regime` so per-regime cells
+  // are stored as distinct rows (not clobbering the unconditional 'ALL' row).
   regime                String   @default("ALL")
 
-  @@unique([signal_class, pattern_key, cap_class, horizon_days], map: "learned_patterns_lookup_key")
+  @@unique([signal_class, pattern_key, cap_class, horizon_days, regime], map: "learned_patterns_lookup_key")
   @@map("learned_patterns")
 }
 
@@ -396,10 +393,10 @@ model PerSourceIC {
   // Default 'ALL' is the unconditional row consumed via D-09 cold-start chain;
   // the Wave 2 backfill cron writes historical regime labels per PIT computed_at,
   // and the Wave 3 source-tier-recompute cron emits per-regime rows as the EB prior input.
-  // Unique constraint flip to include `regime` is deferred to Wave 5 (D-11 step 4).
+  // Wave 5 (D-11 step 4): unique constraint widened to include `regime`.
   regime               String   @default("ALL")
 
-  @@unique([source_id, computed_at, forward_horizon_days, model_version], map: "psic_src_date_hor_ver_uq")
+  @@unique([source_id, computed_at, forward_horizon_days, model_version, regime], map: "psic_src_date_hor_ver_uq")
   @@index([source_id, forward_horizon_days, computed_at(sort: Desc)], map: "idx_psic_src_hor_computed_at")
   @@map("per_source_ic")
 }
@@ -635,6 +632,7 @@ model SourceTier {
   regime                 String   @default("ALL")
   shrinkage_strength     Float?
 
+  @@unique([source_id, computed_at, model_version, regime], map: "idx_sourcetier_source_ver_regime_uq")
   @@index([source_id, computed_at(sort: Desc)], map: "idx_sourcetier_source_at")
   // PHASE 22 (D-06, D-11 step 1): per-regime weight-history lookup index.
   // Coexists with the legacy index above until Wave 5 D-11 step 4 cutover.
