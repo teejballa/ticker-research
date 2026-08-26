@@ -539,7 +539,7 @@ The system prompt is assembled by `buildSystemPrompt()` in `gemini-analysis.ts` 
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `expected_pct` ever be written to snapshot-originated `PriceOutcome` rows?**
    - What we know: D-02 explicitly says "Snapshot-originated PriceOutcome rows do NOT get `expected_pct`" — these rows have no per-ticker Gemini forecast.
