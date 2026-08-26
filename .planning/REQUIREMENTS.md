@@ -104,13 +104,13 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 - [ ] **DEMO-05**: Drift alerts surfaced with severity, recommended action, and link to the cell history page
 - [ ] **DEMO-06**: ESS minimum threshold enforced for any displayed metric (don't show metrics computed on N<30)
 
-#### Phase 29 — Public per-report calibration trail
+#### Phase 29 — Magnitude Calibration & Extended Horizons
 
-- [ ] **DEMO-07**: Each generated report has a public-readable trail page: priors fired → engine prediction → resolved outcomes → ongoing accuracy stats
-- [ ] **DEMO-08**: Aggregate-only public statistics (no per-ticker forward-looking predictions exposed publicly to limit gaming and SEC compliance risk)
-- [ ] **DEMO-09**: Public model card published per Mitchell et al. 2019 — describes model intent, data, intended use, limits, fairness considerations, performance metrics
-- [ ] **DEMO-10**: Disclaimers adjacent to all public predictions: "not investment advice," cite model uncertainty, link to limitations
-- [ ] **DEMO-11**: **Entry gate: legal counsel engaged** before this phase begins implementation — SEC/FINRA review of public ML predictions about specific securities required pre-launch
+- [ ] **DEMO-07**: Gemini output gains `price_target_pct` (float, nullable, in percentage-points) + `price_target_horizon_days` (int, nullable) — a structured numeric price forecast replacing the free-text `price_target` narrative; the string field is retained for display only
+- [ ] **DEMO-08**: `PriceOutcome` gains `expected_pct` (float, nullable) + `expected_horizon_days` (int, nullable) — written at report creation time from the report's `price_target_pct`/`price_target_horizon_days`; snapshot-originated outcomes inherit null (no per-snapshot forecast)
+- [ ] **DEMO-09**: `price-followup` cron computes `magnitude_error = actual_pct - expected_pct` on every `PriceOutcome` where `expected_pct IS NOT NULL` and `days_after = expected_horizon_days`; stored as `magnitude_error` float column
+- [ ] **DEMO-10**: New weekly cron `/api/cron/magnitude-calibration` buckets predictions by expected% range (<-5%, -5→0%, 0→5%, 5→10%, >10%), computes mean actual return per bucket from closed outcomes (N≥20 gate), writes to `MagnitudeCalibrationBucket` table for reliability diagram rendering
+- [ ] **DEMO-11**: `EngineCalibrationPanel` surfaces a magnitude calibration chart: x-axis = expected% bucket midpoint, y-axis = mean actual%, dashed diagonal = perfect calibration; labelled "Price Forecast Calibration"; hidden when fewer than 3 buckets meet the N≥20 gate
 
 ## Out of Scope (explicit anti-features)
 
