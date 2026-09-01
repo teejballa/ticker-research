@@ -107,6 +107,18 @@ model PriceOutcome {
   is_sigma_hit_k1           Boolean?
   is_hit_flat1              Boolean?
   sector_sigma_60d          Float?
+  // Phase 29 — Magnitude Calibration (D-02, D-03, D-06). ADDITIVE.
+  // expected_pct: LLM forecast at prediction time in %-points (e.g. 8.5 = +8.5%).
+  //   Read from report.analysis.price_target_pct inside price-followup cron at
+  //   outcome-creation time (NOT pre-created — see 29-RESEARCH Pitfall 1).
+  // expected_horizon_days: must be one of [3,7,14,30,60,90]; nulled by
+  //   Wave 1 post-process guard when Gemini emits an invalid value.
+  // magnitude_error: forward_return_raw - expected_pct, written only when
+  //   expected_pct IS NOT NULL AND days_after === expected_horizon_days.
+  //   Positive = beat forecast, negative = missed forecast (%-points).
+  expected_pct              Float?
+  expected_horizon_days     Int?
+  magnitude_error           Float?
 
   report   Report?            @relation(fields: [report_id], references: [id])
   snapshot SentimentSnapshot? @relation(fields: [snapshot_id], references: [id])
@@ -690,4 +702,22 @@ model LLMEvaluation {
   @@index([ticker, recorded_at(sort: Desc)])
   @@index([horizon_days, recorded_at(sort: Desc)])
   @@map("llm_evaluations")
+}
+
+// ─── Phase 29 — Magnitude Calibration (D-04, D-06) ───────────────────────
+// Append-only weekly aggregate written by /api/cron/magnitude-calibration
+// (Monday 0 8 * * 1). Each cron run INSERTS one row per bucket that clears
+// the N>=20 ESS gate; the /api/insights/magnitude-calibration endpoint
+// reads the latest computed_at group. NEVER upsert — the append-only
+// pattern matches BrierTile / MentionBaseline precedent.
+model MagnitudeCalibrationBucket {
+  id                String   @id @default(uuid())
+  bucket_label      String   // "< -5%" | "-5→0%" | "0→5%" | "5→10%" | "> 10%"
+  expected_midpoint Float    // -7.5 | -2.5 | 2.5 | 7.5 | 12.5
+  mean_actual_pct   Float    // mean(forward_return_raw) across closed outcomes in bucket
+  n                 Int      // count of outcomes; must be >= 20 to be written
+  computed_at       DateTime @default(now()) @db.Timestamptz
+
+  @@index([computed_at(sort: Desc)])
+  @@map("magnitude_calibration_buckets")
 }
