@@ -408,9 +408,9 @@ describe('/api/cron/backfill-regime — Wave 2 contract (D-10 + D-12)', () => {
   // maxDuration export — proves the route file declares the Pro-tier budget
   // per RESEARCH §D. Imported as a module-level constant.
   // -------------------------------------------------------------------------
-  it('exports maxDuration: 800s per Pro tier (T-22-02-03 DoS mitigation)', async () => {
+  it('exports maxDuration: 300s (Vercel Hobby plan cap)', async () => {
     const mod = await import('@/app/api/cron/backfill-regime/route');
-    expect((mod as { maxDuration?: number }).maxDuration).toBe(800);
+    expect((mod as { maxDuration?: number }).maxDuration).toBe(300);
   });
 
   // -------------------------------------------------------------------------

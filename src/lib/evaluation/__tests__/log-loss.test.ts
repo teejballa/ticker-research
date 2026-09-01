@@ -3,8 +3,8 @@ import { categoricalLogLoss } from '../log-loss';
 import fixture from '../../../../tests/fixtures/evaluation/log-loss-sklearn-reference.json';
 
 interface LogLossCase {
-  y_true: number[];
-  y_pred: number[][];
+  y_true: string[];
+  y_pred: Array<Record<string, number>>;
   expected_log_loss?: number;
   expected_log_loss_approx?: number;
   tolerance: number;

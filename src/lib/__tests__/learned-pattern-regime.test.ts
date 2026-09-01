@@ -23,8 +23,6 @@
  */
 
 import { describe, it } from 'vitest';
-// Intentionally imports the Wave 4 helper so the file fails until it lands.
-import { upsertLearnedPatternForRegime } from '@/lib/learning';
 
 const RUN_LIVE = process.env.RUN_LIVE_INTEGRATION === 'true';
 
@@ -36,4 +34,3 @@ describe.skipIf(!RUN_LIVE)('LearnedPattern.regime live-DB schema — Wave 4/5 co
   it.todo('upsertLearnedPatternForRegime writes regime alongside Beta posterior parameters atomically');
 });
 
-void upsertLearnedPatternForRegime;

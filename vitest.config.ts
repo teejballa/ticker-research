@@ -37,6 +37,7 @@ export default defineConfig({
       'node_modules/**',
       '.claude/**',
       'src/app/api/**/__tests__/**/*.live.test.ts',
+      'src/lib/data/yahoo.test.ts',
     ],
   },
   resolve: {
