@@ -1039,6 +1039,7 @@ async function evaluateOneCell(history: SpyHistory, key: CellKey): Promise<CellE
     alpha_30d,
     beta_30d,
     drift_z,
+    dsr,
     effective_sample_size: ess,
     n_trials_attempted: { increment: events.length },
     alpha: weightedPosterior.alpha,
