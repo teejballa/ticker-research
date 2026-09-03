@@ -25,6 +25,7 @@ import type { ReactNode } from 'react';
 import type { EngineCalibration, HorizonCalibration, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import { WatchBadge } from './WatchBadge';
 import { SourceMixExpanded } from './SourceMixExpanded';
+import { MagnitudeCalibrationTile } from './MagnitudeCalibrationTile';
 
 // ── Phase 18 (Plan 18-08) — local type widening ────────────────────────────
 //
@@ -1311,6 +1312,10 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
           §Empty / null states). Numerics arrive pre-computed from
           engine-context.buildSourceMix — this component does zero math. */}
       <SourceMixRow source_mix={calibration.source_mix} />
+      {/* Phase 29 (D-05, DEMO-11) — Price Forecast Calibration tile.
+          Client island — fetches /api/insights/magnitude-calibration.
+          Hides gracefully when fewer than 3 buckets meet N>=20. */}
+      <MagnitudeCalibrationTile />
 
       {/* Engine + Technical + Institutional + Insider alignment / disagreement prose */}
       <AlignmentDisagreementBlocks

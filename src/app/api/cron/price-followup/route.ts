@@ -4,6 +4,7 @@ import YahooFinance from 'yahoo-finance2';
 import { getSectorETF } from '@/lib/data/sector-mapping';
 import { fetchSectorETFReturn } from '@/lib/data/sector-prices';
 import { computeLabelsFor } from '@/lib/labels/compute';
+import { computeMagnitudeError } from '@/lib/magnitude-calibration';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -128,6 +129,21 @@ export async function GET(request: NextRequest) {
         spy_return_pct: null,
         sector_relative_pct: sectorLabels.forward_return_sector_rel,
       });
+      // Phase 29 (D-02, D-03, DEMO-08, DEMO-09). Read report's numeric price
+      // forecast from the persisted AnalysisResult JSON. Source at outcome-
+      // resolution time, NOT at report time (avoids dedup-skip pitfall).
+      const analysisJson = report.analysis as {
+        price_target_pct?: number | null;
+        price_target_horizon_days?: number | null;
+      } | null;
+      const expectedPct = analysisJson?.price_target_pct ?? null;
+      const expectedHorizonDays = analysisJson?.price_target_horizon_days ?? null;
+      const magnitudeError = computeMagnitudeError({
+        forward_return_raw: sectorLabels.forward_return_raw,
+        expected_pct: expectedPct,
+        expected_horizon_days: expectedHorizonDays,
+        days_after: day,
+      });
       await prisma.priceOutcome.create({
         data: {
           report_id: report.id,
@@ -142,6 +158,10 @@ export async function GET(request: NextRequest) {
           is_sigma_hit_k1: labels.is_sigma_hit_k1,
           is_hit_flat1: labels.is_hit_flat1,
           sector_sigma_60d: labels.sector_sigma_60d,
+          // Phase 29 (D-02, D-03) — magnitude calibration additions.
+          expected_pct: expectedPct,
+          expected_horizon_days: expectedHorizonDays,
+          magnitude_error: magnitudeError,
         },
       });
       results.outcomes_recorded++;
@@ -197,6 +217,11 @@ export async function GET(request: NextRequest) {
           is_sigma_hit_k1: labelsSnap.is_sigma_hit_k1,
           is_hit_flat1: labelsSnap.is_hit_flat1,
           sector_sigma_60d: labelsSnap.sector_sigma_60d,
+          // Phase 29 (D-02) — snapshot-originated outcomes have no report,
+          // so no Gemini price forecast. Explicit nulls document intent.
+          expected_pct: null,
+          expected_horizon_days: null,
+          magnitude_error: null,
         },
       });
       results.outcomes_recorded++;

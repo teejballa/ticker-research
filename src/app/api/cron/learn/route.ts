@@ -402,11 +402,12 @@ async function upsertCell(
 
   await tx.learnedPattern.upsert({
     where: {
-      signal_class_pattern_key_cap_class_horizon_days: {
+      signal_class_pattern_key_cap_class_horizon_days_regime: {
         signal_class: key.signal_class,
         pattern_key: key.pattern_key,
         cap_class: key.cap_class,
         horizon_days: key.horizon_days,
+        regime: key.regime,
       },
     },
     update: {
@@ -753,11 +754,12 @@ void benjaminiYekutieli;
 async function evaluateOneCell(history: SpyHistory, key: CellKey): Promise<CellEvalResult | null> {
   const cell = await prisma.learnedPattern.findUnique({
     where: {
-      signal_class_pattern_key_cap_class_horizon_days: {
+      signal_class_pattern_key_cap_class_horizon_days_regime: {
         signal_class: key.signal_class,
         pattern_key: key.pattern_key,
         cap_class: key.cap_class,
         horizon_days: key.horizon_days,
+        regime: key.regime,
       },
     },
   });
@@ -1135,11 +1137,12 @@ async function applyPatternStatusAndEmitEvents(
     if (isAllAggregate) {
       await prisma.learnedPattern.update({
         where: {
-          signal_class_pattern_key_cap_class_horizon_days: {
+          signal_class_pattern_key_cap_class_horizon_days_regime: {
             signal_class: e.key.signal_class,
             pattern_key: e.key.pattern_key,
             cap_class: e.key.cap_class,
             horizon_days: e.key.horizon_days,
+            regime: e.key.regime,
           },
         },
         data: {

@@ -86,11 +86,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     for (const p of body.learnedPatterns ?? []) {
       await prisma.learnedPattern.upsert({
         where: {
-          signal_class_pattern_key_cap_class_horizon_days: {
+          signal_class_pattern_key_cap_class_horizon_days_regime: {
             signal_class: p.signal_class,
             pattern_key: p.pattern_key,
             cap_class: p.cap_class,
             horizon_days: p.horizon_days,
+            regime: 'ALL',
           },
         },
         create: {

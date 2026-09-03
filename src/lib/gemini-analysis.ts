@@ -320,7 +320,7 @@ export function buildUserPrompt(
     community_sentiment_section,
     sentiment_intelligence_section,
     community_intelligence_section,
-  }) + '\n\nProvide a numeric price target as a percentage change from current price (e.g., 8.5 for +8.5%, -3.0 for -3.0%). Choose the horizon (3, 7, 14, 30, 60, or 90 days) that best fits your thesis timeframe. If you have insufficient conviction for a numeric estimate, set both price_target_pct and price_target_horizon_days to null. Do not repeat this in price_target — the narrative price_target string is separate from this numeric estimate.';
+  });
 }
 
 // ---- Community sentiment gatherer (post-Phase-30.1) ----
@@ -1014,10 +1014,14 @@ async function generateAnalysis(
       ? renderPrompt('gemini-cove-pass1-instruction', {}, 'v1')
       : '';
 
+  // Phase 29 (D-01): numeric price target instruction appended at call site
+  // so buildUserPrompt() output is unchanged (byte-equality tests depend on it).
+  const PRICE_TARGET_INSTRUCTION = '\n\nProvide a numeric price target as a percentage change from current price (e.g., 8.5 for +8.5%, -3.0 for -3.0%). Choose the horizon (3, 7, 14, 30, 60, or 90 days) that best fits your thesis timeframe. If you have insufficient conviction for a numeric estimate, set both price_target_pct and price_target_horizon_days to null. Do not repeat this in price_target — the narrative price_target string is separate from this numeric estimate.';
   const userPrompt =
     (useCitationsV2 ? renderCitationsSection(assembledCitations) + '\n' : '') +
     coveSection +
-    baseUserPrompt;
+    baseUserPrompt +
+    PRICE_TARGET_INSTRUCTION;
 
   // Fetch engine calibration context. Failures are non-fatal — the report
   // generates without an engine_calibration block (UI hides the panel).

@@ -203,8 +203,8 @@ describe('getEngineContextForTicker — populated diffusion cell', () => {
       buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
     ]);
     // Diffusion cell at horizon=7, plus all 12 horizon-table queries default to null.
-    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
-      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days_regime: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days_regime;
       if (k.signal_class === 'diffusion' && k.horizon_days === 7) {
         return Promise.resolve(buildLearnedCell({ alpha: 18, beta: 8, sample_size: 24, alpha_30d: 6, beta_30d: 2 }));
       }
@@ -407,8 +407,8 @@ describe('Phase 16-04 — getEngineContextForTicker dual-class extension', () =>
     ]);
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([]);
     mocks.computeTechnicalSnapshot.mockResolvedValueOnce(buildTechSnap());
-    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
-      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days_regime: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days_regime;
       if (k.signal_class === 'technical' && k.horizon_days === 30) {
         return Promise.resolve(buildLearnedCell({ alpha: 16, beta: 8, sample_size: 24 }));
       }
@@ -597,8 +597,8 @@ describe('Phase 17-04 — getEngineContextForTicker institutional + insider reso
     const snap = buildSnapWithSmartMoney({ insiderBucket: null, institutionalBucket: 'accumulation' });
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snap]);
-    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string } } }) => {
-      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days_regime: { signal_class: string } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days_regime;
       if (k.signal_class === 'institutional') {
         return Promise.resolve(buildLearnedCell({ alpha: 14, beta: 6, sample_size: 20 }));
       }
@@ -645,8 +645,8 @@ describe('Phase 18-07 — getEngineContextForTicker ESS + EXPLORATORY-WATCH surf
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
       buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
     ]);
-    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
-      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days_regime: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days_regime;
       if (k.signal_class === 'diffusion' && k.horizon_days === 7) {
         return Promise.resolve(buildLearnedCell({
           alpha: 18, beta: 8, sample_size: 24, effective_sample_size: 42,
@@ -675,8 +675,8 @@ describe('Phase 18-07 — getEngineContextForTicker ESS + EXPLORATORY-WATCH surf
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([
       buildSnapshot({ daysAgo: 0, niche: 12, middle: 6, mainstream: 4 }),
     ]);
-    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
-      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days_regime: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days_regime;
       if (k.signal_class === 'diffusion' && k.horizon_days === 7) {
         return Promise.resolve(buildLearnedCell({
           alpha: 18, beta: 8, sample_size: 30, effective_sample_size: 30,
@@ -739,8 +739,8 @@ describe('Phase 18-07 — getEngineContextForTicker ESS + EXPLORATORY-WATCH surf
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snapWithSmartMoney]);
     mocks.sentimentSnapshot.findMany.mockResolvedValueOnce([snapWithSmartMoney]);
     mocks.computeTechnicalSnapshot.mockResolvedValueOnce(buildTechSnap());
-    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days: { signal_class: string; horizon_days: number } } }) => {
-      const k = args.where.signal_class_pattern_key_cap_class_horizon_days;
+    mocks.learnedPattern.findUnique.mockImplementation((args: { where: { signal_class_pattern_key_cap_class_horizon_days_regime: { signal_class: string; horizon_days: number } } }) => {
+      const k = args.where.signal_class_pattern_key_cap_class_horizon_days_regime;
       if (k.signal_class === 'technical' && k.horizon_days === 30) {
         return Promise.resolve(buildLearnedCell({
           alpha: 16, beta: 8, sample_size: 24, effective_sample_size: 19,

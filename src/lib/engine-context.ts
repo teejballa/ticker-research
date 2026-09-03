@@ -485,11 +485,12 @@ async function resolveBucketCellAt30(
   // 1. Exact match: bucket × capClass × horizon=30
   let cell = (await prisma.learnedPattern.findUnique({
     where: {
-      signal_class_pattern_key_cap_class_horizon_days: {
+      signal_class_pattern_key_cap_class_horizon_days_regime: {
         signal_class: bucketKind,
         pattern_key: bucket,
         cap_class: capClass,
         horizon_days: 30,
+        regime: 'ALL',
       },
     },
   })) as LearnedCellLike | null;
@@ -553,11 +554,12 @@ async function readHorizonCalibrations(
     const diffusionPromise: Promise<LearnedCellLike | null> = queryDiffusion
       ? prisma.learnedPattern.findUnique({
           where: {
-            signal_class_pattern_key_cap_class_horizon_days: {
+            signal_class_pattern_key_cap_class_horizon_days_regime: {
               signal_class: 'diffusion',
               pattern_key: flow_pattern!,
               cap_class,
               horizon_days: horizon,
+            regime: 'ALL',
             },
           },
         }) as Promise<LearnedCellLike | null>
@@ -565,11 +567,12 @@ async function readHorizonCalibrations(
     const technicalPromise: Promise<LearnedCellLike | null> = queryTechnical
       ? prisma.learnedPattern.findUnique({
           where: {
-            signal_class_pattern_key_cap_class_horizon_days: {
+            signal_class_pattern_key_cap_class_horizon_days_regime: {
               signal_class: 'technical',
               pattern_key: techPattern!,
               cap_class,
               horizon_days: horizon,
+            regime: 'ALL',
             },
           },
         }) as Promise<LearnedCellLike | null>
@@ -577,11 +580,12 @@ async function readHorizonCalibrations(
     const institutionalPromise: Promise<LearnedCellLike | null> = queryInstitutional
       ? prisma.learnedPattern.findUnique({
           where: {
-            signal_class_pattern_key_cap_class_horizon_days: {
+            signal_class_pattern_key_cap_class_horizon_days_regime: {
               signal_class: 'institutional',
               pattern_key: institutionalBucket!,
               cap_class,
               horizon_days: horizon,
+            regime: 'ALL',
             },
           },
         }) as Promise<LearnedCellLike | null>
@@ -589,11 +593,12 @@ async function readHorizonCalibrations(
     const insiderPromise: Promise<LearnedCellLike | null> = queryInsider
       ? prisma.learnedPattern.findUnique({
           where: {
-            signal_class_pattern_key_cap_class_horizon_days: {
+            signal_class_pattern_key_cap_class_horizon_days_regime: {
               signal_class: 'insider',
               pattern_key: insiderBucket!,
               cap_class,
               horizon_days: horizon,
+            regime: 'ALL',
             },
           },
         }) as Promise<LearnedCellLike | null>
@@ -796,11 +801,12 @@ export async function getEngineContextForTicker(
   if (flow_pattern && flow_pattern !== 'flat') {
     diffusionCell = (await prisma.learnedPattern.findUnique({
       where: {
-        signal_class_pattern_key_cap_class_horizon_days: {
+        signal_class_pattern_key_cap_class_horizon_days_regime: {
           signal_class: 'diffusion',
           pattern_key: flow_pattern,
           cap_class,
           horizon_days: 7,
+          regime: 'ALL',
         },
       },
     })) as LearnedCellLike | null;
@@ -840,11 +846,12 @@ export async function getEngineContextForTicker(
   if (techPattern) {
     technicalCell = (await prisma.learnedPattern.findUnique({
       where: {
-        signal_class_pattern_key_cap_class_horizon_days: {
+        signal_class_pattern_key_cap_class_horizon_days_regime: {
           signal_class: 'technical',
           pattern_key: techPattern,
           cap_class,
           horizon_days: 30,
+          regime: 'ALL',
         },
       },
     })) as LearnedCellLike | null;

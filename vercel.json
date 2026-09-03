@@ -41,6 +41,7 @@
     { "path": "/api/cron/rotate-micro-cap", "schedule": "0 9 1 * *" },
     { "path": "/api/cron/baseline-eval", "schedule": "0 9 * * *" },
     { "path": "/api/cron/llm-ic", "schedule": "30 9 * * *" },
-    { "path": "/api/cron/backfill-regime", "schedule": "0 10 * * *" }
+    { "path": "/api/cron/backfill-regime", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/magnitude-calibration", "schedule": "0 8 * * 1" }
   ]
 }
