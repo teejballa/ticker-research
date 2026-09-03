@@ -635,6 +635,13 @@ export interface AnalysisResult {
   confidence_level: 'Low' | 'Medium' | 'High';
   confidence_explanation: string;
   price_target?: string | null;  // analyst-consensus price target or range — optional for backward compat (D-10)
+  // Phase 29 (D-01, DEMO-07) — structured numeric forecast alongside the
+  // retained narrative price_target string.
+  // price_target_pct: percentage-change from current price (%-points; 8.5 = +8.5%)
+  // price_target_horizon_days: must be one of [3, 7, 14, 30, 60, 90]
+  // Both null when Gemini lacks conviction OR applyPriceTargetGuard() nulls them.
+  price_target_pct?: number | null;
+  price_target_horizon_days?: number | null;
   // Plan 20-B-01 — per-document sentiment + aspect classification.
   // Optional+default[] so the field is additive; populated by the per-doc
   // classifier upstream and overwritten post-generation in runGeminiAnalysis.

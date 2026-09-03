@@ -39,6 +39,7 @@ import { prisma } from '@/lib/db';
 // shape and multiplies by GEMINI_TOKEN_RATES (pinned 2026-Q1).
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
 import { GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
+import { applyPriceTargetGuard, VALID_PRICE_TARGET_HORIZONS } from '@/lib/magnitude-calibration';
 // Plan 20-Z-04 — every Gemini prompt is a (id, version) artifact in the
 // registry. renderPrompt() substitutes {{var}} placeholders + throws on
 // missing required vars or leftover placeholders (T-20-Z-04-03).
@@ -113,6 +114,12 @@ export const AnalysisResultSchema = z.object({
   confidence_level: z.enum(['Low', 'Medium', 'High']),
   confidence_explanation: z.string(),
   price_target: z.string().optional().nullable(),
+  // Phase 29 (D-01, D-07, DEMO-07) — structured numeric forecast alongside
+  // the retained narrative price_target string. Both fields are nullable +
+  // optional; applyPriceTargetGuard() post-process nulls both when the
+  // horizon is not in [3,7,14,30,60,90] to prevent LLM drift.
+  price_target_pct: z.number().nullable().optional(),
+  price_target_horizon_days: z.number().int().nullable().optional(),
   sources_used: z.array(z.object({
     name: z.string(),
     key_fact: z.string(),
@@ -313,7 +320,7 @@ export function buildUserPrompt(
     community_sentiment_section,
     sentiment_intelligence_section,
     community_intelligence_section,
-  });
+  }) + '\n\nProvide a numeric price target as a percentage change from current price (e.g., 8.5 for +8.5%, -3.0 for -3.0%). Choose the horizon (3, 7, 14, 30, 60, or 90 days) that best fits your thesis timeframe. If you have insufficient conviction for a numeric estimate, set both price_target_pct and price_target_horizon_days to null. Do not repeat this in price_target — the narrative price_target string is separate from this numeric estimate.';
 }
 
 // ---- Community sentiment gatherer (post-Phase-30.1) ----
@@ -605,6 +612,10 @@ function getCitationsV2Mode(): FeatureMode {
  * @param pkg - The assembled SourcePackage from the research pipeline
  * @param communityData - Structured community data from the scrape + extraction pass, or null if unavailable
  */
+
+// Phase 29: re-exported from @/lib/magnitude-calibration (pure module).
+export { applyPriceTargetGuard, VALID_PRICE_TARGET_HORIZONS } from '@/lib/magnitude-calibration';
+
 export async function runGeminiAnalysis(
   ticker: string,
   pkg: SourcePackage,
@@ -1187,6 +1198,10 @@ async function generateAnalysis(
       citations_v2 = filtered.length > 0 ? filtered : assembledCitations;
     }
 
+    // Phase 29 (D-01) — null invalid price target horizons before persistence.
+    applyPriceTargetGuard(output);
+
+
     return {
       ticker,
       company_name: pkg.company_name,
@@ -1203,6 +1218,9 @@ async function generateAnalysis(
       confidence_level: output.confidence_level,
       confidence_explanation: output.confidence_explanation,
       price_target: output.price_target ?? null,
+      // Phase 29 (D-01, DEMO-07) — post-process guard already ran above.
+      price_target_pct: output.price_target_pct ?? null,
+      price_target_horizon_days: output.price_target_horizon_days ?? null,
       executive_summary: output.executive_summary,
       business_description: output.business_description || undefined,
       financial_analysis: output.financial_analysis || undefined,
