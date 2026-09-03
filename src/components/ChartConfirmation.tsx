@@ -77,6 +77,13 @@ export default function ChartConfirmation({ ticker, chartData, meta }: ChartConf
       if (!res.ok) {
         setPipelineError(data.error ?? 'Pipeline failed');
       } else {
+        // Store source package in sessionStorage so the analysis route can
+        // receive it inline — avoids /tmp cross-instance failure on Vercel.
+        if (data.sourcePackage && data.filePath) {
+          try {
+            sessionStorage.setItem(`sp:${data.filePath}`, JSON.stringify(data.sourcePackage));
+          } catch { /* quota exceeded — analysis falls back to file path */ }
+        }
         router.push(`/research/${encodeURIComponent(ticker)}?file=${encodeURIComponent(data.filePath)}`);
       }
     } catch (err) {

@@ -125,10 +125,18 @@ export default function ResearchProgress({
 
     async function run() {
       try {
+        // Pass inline source package if available (avoids /tmp cross-instance
+        // failure on Vercel where research + analysis may run on different instances).
+        let inlinePackage: unknown = undefined;
+        try {
+          const spJson = sessionStorage.getItem(`sp:${filePath}`);
+          if (spJson) inlinePackage = JSON.parse(spJson);
+        } catch { /* sessionStorage unavailable or parse error — fall back to file */ }
+
         const response = await fetch(`/api/analysis/${encodeURIComponent(ticker)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filePath }),
+          body: JSON.stringify({ filePath, ...(inlinePackage ? { sourcePackage: inlinePackage } : {}) }),
           signal: controller.signal,
         });
 

@@ -1053,7 +1053,7 @@ async function generateAnalysis(
   // and tracks token usage. We just ignore its `modelOverride` output for the
   // model SELECTION at this call site. The usage write below
   // (`routerCtx.usageOut.tokens`) is preserved.
-  const modelString = 'google/gemini-3-pro';
+  const modelString = 'google/gemini-2.5-pro';
 
   try {
     // Plan 20-Z-03: wrap the Gemini call with telemetry. cost_usd_estimator

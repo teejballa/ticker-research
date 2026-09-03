@@ -33,7 +33,7 @@ export async function POST(
   { params }: { params: Promise<{ ticker: string }> }
 ) {
   const { ticker } = await params;
-  const { filePath } = await request.json() as { filePath: string };
+  const { filePath, sourcePackage: inlinePackage } = await request.json() as { filePath: string; sourcePackage?: SourcePackage };
 
   // T-12-02-01: Validate filePath is within os.tmpdir() to prevent path traversal.
   // Canonicalize both paths via realpathSync to handle platform symlinks (e.g. macOS /tmp → /private/tmp).
@@ -98,7 +98,9 @@ export async function POST(
     try {
       // Step 0: Load source package — emit 'creating' to trigger stepper step 0
       enqueue(JSON.stringify({ type: 'progress', message: 'Creating research context from source package...' }));
-      const pkg: SourcePackage = JSON.parse(await readFile(canonicalPath, 'utf-8'));
+      // Prefer inline source package (passed from client sessionStorage) to avoid
+      // /tmp cross-instance failure when research + analysis hit different Vercel instances.
+      const pkg: SourcePackage = inlinePackage ?? JSON.parse(await readFile(canonicalPath, 'utf-8'));
 
       // Step 1: emit 'adding market' to trigger stepper step 1
       enqueue(JSON.stringify({ type: 'progress', message: 'Adding market data and fundamentals to context...' }));

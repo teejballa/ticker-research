@@ -96,6 +96,7 @@ export async function POST(
       ticker: upperTicker,
       assembled_at: sourcePackage.assembled_at,
       filePath,
+      sourcePackage,
       collection_errors: sourcePackage.collection_errors,
     });
   } catch (err) {

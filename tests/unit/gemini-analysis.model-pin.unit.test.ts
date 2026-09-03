@@ -30,10 +30,10 @@ const COST_ESTIMATORS_SRC = fs.readFileSync(
 );
 
 describe('Phase 30 / D-14: explicit per-call-site Gemini model pins', () => {
-  it('D-14: runGeminiAnalysis call passes model: "google/gemini-3-pro" — no fallback to flash for analysis', () => {
+  it('D-14: runGeminiAnalysis call passes model: "google/gemini-2.5-pro" — no fallback to flash for analysis', () => {
     // Pin the model line as a string literal — NOT a dynamic ternary.
     expect(ANALYSIS_SRC).toMatch(
-      /const\s+modelString\s*=\s*['"]google\/gemini-3-pro['"];/,
+      /const\s+modelString\s*=\s*['"]google\/gemini-2\.5-pro['"];/,
     );
     // The wrapped generateText call uses modelString.
     expect(ANALYSIS_SRC).toMatch(/generateText\(\s*\{[\s\S]*?model:\s*modelString/);
