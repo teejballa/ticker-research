@@ -22,9 +22,9 @@ const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 // TICK-01: Ticker/company search for autocomplete
 export async function searchTickers(query: string): Promise<TickerSearchResult[]> {
   const results = await yahooFinance.search(query);
-  // yahoo-finance2 v3 returns typeDisp as lowercase (e.g. 'equity', not 'Equity')
+  // Filter by quoteType (stable uppercase constant) — typeDisp casing changed in Yahoo's API
   const equities = results.quotes
-    ?.filter((q) => q.isYahooFinance && q.typeDisp?.toLowerCase() === 'equity')
+    ?.filter((q) => q.isYahooFinance && q.quoteType === 'EQUITY')
     .slice(0, 8) ?? [];
 
   return equities.map((q) => ({

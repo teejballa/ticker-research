@@ -15,10 +15,10 @@ export async function GET(request: NextRequest) {
   try {
     const searchResult = await yahooFinance.search(q.trim());
 
-    // yahoo-finance2 v3: typeDisp is lowercase ('equity', not 'Equity')
+    // Filter by quoteType (stable uppercase constant) — typeDisp casing changed in Yahoo's API
     const equities = searchResult.quotes
       .filter(
-        (r) => r.isYahooFinance === true && 'typeDisp' in r && r.typeDisp === 'equity'
+        (r) => r.isYahooFinance === true && 'quoteType' in r && r.quoteType === 'EQUITY'
       )
       .slice(0, 8);
 
