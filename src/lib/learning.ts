@@ -698,10 +698,13 @@ export function computeBrierOOS(
   if (observations.length === 0) {
     return { brier: null, reason: 'n_test=0 < 5' };
   }
-  // Index-pair the predictions with observations so when we sort by recorded_at,
-  // each prediction follows its observation into the test slice.
+  // Use index-based dates so the split is count-proportional (20% of N entries
+  // in the test set), not time-proportional. Using actual recorded_at timestamps
+  // causes < 5 test entries when Phase 27 backfill data clusters in the distant
+  // past — the "most recent 20% by time" slice may cover only a handful of rows.
+  // The logistic OOS branch (route.ts) already uses this same index pattern.
   const paired = observations.map((o, i) => ({
-    recorded_at: o.recorded_at,
+    recorded_at: new Date(i),
     hit: o.hit,
     pred: predictions[i],
   }));
@@ -863,17 +866,17 @@ export interface ClassHyperparameters {
 // allows that path. Re-tune in Plan 21 once Plan 25 backfill grows N past the embargo window.
 export const HYPERPARAMETERS: Record<SignalClass, ClassHyperparameters> = {
   diffusion: {
-    lambda_days: 60,
+    lambda_days: 180, // increased from 60 — backfill data is years old; 60d decay gave ESS≈5 on 400 raw samples
     ph_delta: 0.005,
     ph_lambda: 50,
-    tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)
+    tuned_at: 'bootstrap',
     cv_brier_oos: null,
   },
   technical: {
-    lambda_days: 60,
+    lambda_days: 180, // increased from 60 — same reason as diffusion; slower-moving signal class
     ph_delta: 0.005,
     ph_lambda: 50,
-    tuned_at: 'bootstrap', // TODO: re-tune in Plan 21 once N grows past backfill bootstrap (P25)
+    tuned_at: 'bootstrap',
     cv_brier_oos: null,
   },
   insider: {

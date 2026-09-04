@@ -1081,6 +1081,21 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
           {/* Right Column: Assessment & Confidence (col-span-4) */}
           <div className="lg:col-span-4 space-y-6">
 
+            {/* Engine signal strength badge — only for ACTIVE strong signals */}
+            {(engine_calibration?.engine_signal_strength === 'strong_buy' ||
+              engine_calibration?.engine_signal_strength === 'strong_sell') && (
+              <div className={`px-4 py-3 rounded-lg border flex items-center gap-3 ${
+                engine_calibration.engine_signal_strength === 'strong_buy'
+                  ? 'bg-secondary/10 border-secondary text-secondary'
+                  : 'bg-error/10 border-error text-error'
+              }`}>
+                <span className="text-[10px] font-bold tracking-widest uppercase">Engine Confirmed</span>
+                <span className="font-mono font-bold text-sm">
+                  {engine_calibration.engine_signal_strength === 'strong_buy' ? '⬆ STRONG BUY' : '⬇ STRONG SELL'}
+                </span>
+              </div>
+            )}
+
             {/* Strategic Assessment: Fill Bars */}
             <div className="bg-surface-container p-6 rounded-lg space-y-6">
               <h3 className="text-[11px] font-bold tracking-widest uppercase text-on-surface-variant">Recommendation</h3>

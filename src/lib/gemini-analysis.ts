@@ -1181,6 +1181,29 @@ async function generateAnalysis(
         primary_sector_etf_is_current: engineCtx.primary_sector_etf_is_current,
         spy_alpha_hit_rate:            engineCtx.spy_alpha_hit_rate,
       };
+
+      // Compute signal strength deterministically from engineCtx — never from LLM.
+      // Requires ACTIVE status + sample_size ≥ 10 to avoid EXPLORATORY noise.
+      if (engine_calibration) {
+        const p = engineCtx.posterior_mean;
+        const s = engineCtx.status;
+        const n = engineCtx.sample_size;
+        let strength: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell' | 'insufficient_data';
+        if (s !== 'ACTIVE' || p == null || n < 10) {
+          strength = 'insufficient_data';
+        } else if (p > 0.65) {
+          strength = 'strong_buy';
+        } else if (p > 0.55) {
+          strength = 'buy';
+        } else if (p < 0.35) {
+          strength = 'strong_sell';
+        } else if (p < 0.45) {
+          strength = 'sell';
+        } else {
+          strength = 'neutral';
+        }
+        engine_calibration.engine_signal_strength = strength;
+      }
     }
 
     // Phase 19-C-07 (D-39) — citations_v2 post-process.

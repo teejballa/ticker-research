@@ -597,6 +597,9 @@ export interface EngineCalibration {
       is_cold_start_fallback: boolean;
     }>;
   };
+
+  // Deterministically computed from engineCtx post-generation — never from LLM output.
+  engine_signal_strength?: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell' | 'insufficient_data';
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----
