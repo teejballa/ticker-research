@@ -1314,7 +1314,11 @@ async function maybeWriteCycleSummary(stats: {
 
 async function pruneOldEvents(): Promise<void> {
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-  await prisma.learningEvent.deleteMany({ where: { occurred_at: { lt: cutoff } } });
+  // Exempt posterior_update events — evaluateOneCell uses them for ESS/Brier.
+  // Pruning them destroys the training history the learning engine depends on.
+  await prisma.learningEvent.deleteMany({
+    where: { occurred_at: { lt: cutoff }, event_type: { not: 'posterior_update' } },
+  });
 }
 
 // ─── Per-outcome processing — atomic, dual-class, idempotent ─────────────────
