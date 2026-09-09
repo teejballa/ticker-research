@@ -1291,7 +1291,7 @@ async function maybeWriteCycleSummary(stats: {
   let message = `Cycle summary: ${stats.outcomes_processed} outcomes resolved (${stats.hits} hits), ${stats.drift_alerts} drift alerts, ${stats.cells_active} active cells.`;
   try {
     const { text } = await generateText({
-      model: 'anthropic/claude-haiku-4.6',
+      model: 'anthropic/claude-haiku-4.5',
       prompt: renderPrompt('gemini-cycle-summary', {
         outcomes_processed: String(stats.outcomes_processed),
         hits: String(stats.hits),
@@ -1719,4 +1719,152 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+// ─── LearningEvent backfill (POST /api/cron/learn) ───────────────────────────
+//
+// Phase 27's historical backfill wrote alpha/beta/sample_size directly into
+// learned_patterns WITHOUT calling processOneOutcome. No LearningEvents were
+// created. evaluateOneCell fetches rawEvents → gets 1 row → ESS = 1.0 → all
+// 5 ACTIVE gates fail permanently for all diffusion/technical cells.
+//
+// This handler creates the missing LearningEvents for every resolved
+// PriceOutcome that has no linked event. It does NOT call upsertCell — alpha
+// and beta are already correct from Phase 27. Only the events are missing.
+//
+// Guard: ENABLE_BACKFILL_LEARNING_EVENTS=1
+// Idempotency: LearningEvent { event_type: 'learning_event_backfill_complete' }
+// Regime fields: set null (fail-open for ALL-regime cells; avoids 154k
+//   external API calls to classifyRegimeAt for historical dates).
+
+const LEARNING_EVENT_BACKFILL_MARKER = 'learning_event_backfill_complete';
+
+export async function POST(request: NextRequest) {
+  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (process.env.ENABLE_BACKFILL_LEARNING_EVENTS !== '1') {
+    return NextResponse.json({ error: 'Unauthorized', reason: 'backfill disabled' }, { status: 401 });
+  }
+
+  const existing = await prisma.learningEvent.findFirst({
+    where: { event_type: LEARNING_EVENT_BACKFILL_MARKER },
+  });
+  if (existing) {
+    return NextResponse.json({ status: 'already_done', completed_at: existing.occurred_at });
+  }
+
+  // 1500-day window covers Phase 27's full historical range (~4 years).
+  const history = await fetchSpyHistory(1500);
+  const outcomes = await loadUnprocessedOutcomes({ isBackfill: true });
+
+  let written = 0;
+  let errors = 0;
+
+  for (const outcome of outcomes) {
+    try {
+      await backfillOneLearningEvent(outcome, history);
+      written++;
+    } catch (err) {
+      errors++;
+      console.error('[backfill-le] error', outcome.outcome_id, err);
+    }
+  }
+
+  await prisma.learningEvent.create({
+    data: {
+      event_type: LEARNING_EVENT_BACKFILL_MARKER,
+      ticker: 'SYSTEM',
+      delta: { written, errors, total: outcomes.length },
+      message: `LearningEvent backfill complete: ${written}/${outcomes.length} written, ${errors} errors`,
+    },
+  });
+
+  return NextResponse.json({ status: 'done', written, errors, total: outcomes.length });
+}
+
+async function backfillOneLearningEvent(
+  outcome: ResolvedOutcome,
+  history: SpyHistory,
+): Promise<void> {
+  const built = await buildTraceForOutcome(outcome);
+  const trace = built?.trace ?? null;
+
+  const spyAtScan = nearestSpyClose(history, outcome.scanned_at);
+  const spyAtOutcome = nearestSpyClose(history, outcome.recorded_at);
+  const spyReturn =
+    spyAtScan != null && spyAtOutcome != null
+      ? ((spyAtOutcome - spyAtScan) / spyAtScan) * 100
+      : null;
+
+  const hit = classifyHit({
+    ticker_return_pct: outcome.ticker_return_pct,
+    spy_return_pct: spyReturn,
+    sector_relative_pct: outcome.sector_relative_pct,
+  });
+
+  // Read-only lookups — no transaction needed (no writes to these models).
+  const txLike = prisma as unknown as Prisma.TransactionClient;
+  const techSnap = await readTechSnapshotForOutcome(outcome, txLike);
+  const techPattern: TechPattern | null = techSnap?.tech_pattern ?? null;
+  const insiderBucket = await readInsiderBucketForOutcome(outcome, txLike);
+  const institutionalBucket = await readInstitutionalBucketForOutcome(outcome, txLike);
+
+  // cap_class fallback chain — mirrors processOneOutcome exactly.
+  let resolvedCap: string | null = trace?.cap_class ?? null;
+  if (!resolvedCap && outcome.snapshot_id) {
+    const snap = await prisma.sentimentSnapshot.findUnique({
+      where: { id: outcome.snapshot_id },
+      select: { community_data: true },
+    });
+    const cd = snap?.community_data as { cap_class?: string; market_cap?: number } | null;
+    if (cd?.cap_class && cd.cap_class !== 'unknown') {
+      resolvedCap = cd.cap_class;
+    } else if (cd?.market_cap != null) {
+      const derived = classifyCapClass(cd.market_cap);
+      if (derived !== 'unknown') resolvedCap = derived;
+    }
+  }
+
+  await prisma.learningEvent.create({
+    data: {
+      event_type: 'posterior_update',
+      ticker: outcome.ticker,
+      outcome_id: outcome.outcome_id,
+      occurred_at: outcome.recorded_at,
+      signal_class: insiderBucket
+        ? 'insider'
+        : institutionalBucket
+          ? 'institutional'
+          : techPattern
+            ? 'technical'
+            : trace
+              ? 'diffusion'
+              : null,
+      pattern_key:
+        insiderBucket ?? institutionalBucket ?? techPattern ?? trace?.flow_pattern ?? null,
+      cap_class: resolvedCap,
+      horizon_days: outcome.days_after,
+      delta: {
+        diffusion_hit: trace && trace.flow_pattern !== 'flat' ? hit : null,
+        tech_hit: techPattern ? hit : null,
+        insider_hit: insiderBucket ? hit : null,
+        institutional_hit: institutionalBucket ? hit : null,
+        hit,
+        ticker_return_pct: outcome.ticker_return_pct,
+        spy_return_pct: spyReturn,
+        horizon: outcome.days_after,
+        tech_pattern: techPattern,
+        flow_pattern: trace?.flow_pattern ?? null,
+        insider_bucket: insiderBucket,
+        institutional_bucket: institutionalBucket,
+        source: 'backfill',
+        // Regime fields null: treated as pre-Phase-22 (fail-open for ALL cells).
+        // Avoids classifyRegimeAt's external API calls per-outcome at historical dates.
+        snapshot_regime: null,
+        outcome_regime: null,
+      },
+      message: `[backfill] ${outcome.ticker} @${outcome.days_after}d: ${hit ? 'HIT' : 'MISS'} — ticker ${outcome.ticker_return_pct.toFixed(2)}%`,
+    },
+  });
 }
