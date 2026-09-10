@@ -506,28 +506,36 @@ ticker right now:
   Concept drift:       z = {{drift_z}} (>2σ = drifting)
 
 INSTRUCTIONS for engine_calibration:
-1. Treat these numbers as CALIBRATED PRIORS. Do not invent numbers; the
-   numeric fields will be overwritten post-generation regardless of what
-   you output.
+
+SIGNAL STRENGTH TIERS — use these to set confidence_level and engine_alignment:
+  - posterior > 65% AND status = ACTIVE AND sample_size ≥ 50:
+      → confidence_level MUST be 'High'. Use language like "the engine strongly signals outperformance".
+      → If your qualitative read agrees: write "STRONG BUY SIGNAL" in engine_alignment.
+  - posterior < 35% AND status = ACTIVE AND sample_size ≥ 50:
+      → confidence_level MUST be 'High' (bearish conviction). Use "the engine strongly signals caution".
+      → If your qualitative read agrees: write "STRONG SELL SIGNAL" in engine_alignment.
+  - posterior 55–65% OR 35–45%, status = ACTIVE:
+      → confidence_level SHOULD be 'Medium' unless other evidence overrides.
+  - status = EXPLORATORY: treat as weak prior; your qualitative read dominates.
+    Do NOT produce strong buy/sell language from EXPLORATORY priors alone.
+
+1. Numeric fields will be overwritten post-generation — do not invent numbers.
 2. In engine_alignment (string, ≤300 chars):
-   - If the engine prior is HIGH (>60%) and your qualitative read is bullish,
-     OR the engine prior is LOW (<40%) and your read is bearish: write a
-     single sentence affirming alignment, naming the pattern, and noting
-     the sample size.
+   - For ACTIVE HIGH-CONVICTION cells (posterior > 65% or < 35%, n ≥ 50): use
+     "STRONG BUY SIGNAL" or "STRONG SELL SIGNAL" explicitly if your read agrees.
+   - For ACTIVE moderate cells: write a single sentence affirming alignment,
+     naming the pattern and sample size.
    - Otherwise, leave engine_alignment as null.
 3. In engine_disagreement (string, ≤500 chars):
-   - If your qualitative read CONTRADICTS a high-confidence prior
-     (sample_size ≥ 10 AND status = ACTIVE), write a single paragraph
-     explaining specifically WHY you disagree. Cite specific community
-     evidence that overrides the prior.
-   - If status is DEPRECATED (drift detected), explicitly note that the
-     pattern has drifted and you are NOT deferring to the historical prior.
+   - If your qualitative read CONTRADICTS an ACTIVE prior (sample_size ≥ 10),
+     write a paragraph explaining specifically why, citing source evidence.
+   - If status = DEPRECATED (drift detected), note that the pattern has drifted
+     and you are NOT deferring to the historical prior.
    - Otherwise, leave engine_disagreement as null.
-4. Your investment_thesis, key_risks, and confidence_level MUST be
-   consistent with the engine prior unless you have explicitly populated
-   engine_disagreement above.
-5. If status is EXPLORATORY (n < 10), treat the prior as weak and weight
-   your qualitative read more heavily.
+4. Your investment_thesis, key_risks, and confidence_level MUST match the tier
+   above unless you have explicitly populated engine_disagreement.
+5. If status = EXPLORATORY, treat the prior as weak — your qualitative judgment
+   dominates. Do not use strong buy/sell language from EXPLORATORY cells.
 `,
     variables: Object.freeze(["cycle_count", "flow_pattern", "cap_class", "posterior_mean_pct", "ci_low_pct", "ci_high_pct", "sample_size", "status", "logistic_score_pct", "logistic_ci_low_pct", "logistic_ci_high_pct", "logistic_sample_size", "brier_in_sample", "brier_null", "drift_z"]),
     description: "Engine calibration context block — ACTIVE branch. Rendered when the diffusion engine has accumulated cycles of evidence for the ticker's current regime. The numeric fields (posterior, CI, logistic, Brier, drift_z) are pre-formatted by the caller. Concatenated AFTER the system prompt body. v2 (Phase 21) — sector-relative framing: the engine now predicts whether a ticker beats its sector (sector-relative excess > +1%), not vs SPY.",
