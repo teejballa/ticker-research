@@ -21,6 +21,7 @@
 //
 // All locked copy + classNames are verbatim per 17-UI-SPEC.md §A, §B, §C, §D.
 
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { EngineCalibration, HorizonCalibration, InstitutionalBucket, InsiderBucket } from '@/lib/types';
 import { WatchBadge } from './WatchBadge';
@@ -77,7 +78,8 @@ interface EngineCalibrationPanelProps {
 // Helper: prefer ESS as the user-facing currency (D-10), fall back to raw N
 // for old persisted reports that lack the field (graceful back-compat).
 function essOrN(ess: number | undefined, n: number): string {
-  return ess != null ? `ESS=${ess.toFixed(1)}` : `n=${n}`;
+  const count = ess != null ? Math.round(ess) : n;
+  return `${count} example${count === 1 ? '' : 's'}`;
 }
 
 const STATUS_BADGE: Record<WatchStatus, string> = {
@@ -89,11 +91,11 @@ const STATUS_BADGE: Record<WatchStatus, string> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: 'ACTIVE',
-  EXPLORATORY: 'EXPLORATORY',
+  ACTIVE: 'TRUSTED',
+  EXPLORATORY: 'LEARNING',
   'EXPLORATORY-WATCH': 'WATCHING',
-  DEPRECATED: 'DEPRECATED',
-  NO_DATA: 'NO DATA',
+  DEPRECATED: 'OUTDATED',
+  NO_DATA: 'NO HISTORY',
 };
 
 const FLOW_LABEL: Record<NonNullable<EngineCalibration['flow_pattern']>, string> = {
@@ -155,28 +157,28 @@ const AGREEMENT_BADGE: Record<AgreementState, {
   tooltip: string;
 }> = {
   aligned: {
-    text: 'ALIGNED',
+    text: 'ALL AGREE',
     classes: 'text-secondary border-secondary/40 bg-secondary/10',
     icon: 'check_circle',
-    tooltip: 'All ACTIVE classes point the same direction at 30d. Highest conviction state.',
+    tooltip: 'All active signals point the same direction. This is the strongest confidence state.',
   },
   mixed: {
-    text: 'MIXED',
+    text: 'MIXED SIGNALS',
     classes: 'text-tertiary border-tertiary/40 bg-tertiary/10',
     icon: 'compare_arrows',
-    tooltip: 'ACTIVE classes lean the same general direction but differ in magnitude. Read all 4 columns.',
+    tooltip: 'The signals lean the same way but differ in strength. Read all four columns.',
   },
   opposed: {
-    text: 'OPPOSED',
+    text: 'CONFLICTING',
     classes: 'text-error border-error/40 bg-error/10',
     icon: 'error',
-    tooltip: 'At least one strong-bullish class AND one strong-bearish class are ACTIVE at 30d. Read every alignment/disagreement block.',
+    tooltip: 'Some signals are strongly bullish and others are strongly bearish. Read all four columns carefully before drawing a conclusion.',
   },
   unknown: {
-    text: 'UNKNOWN',
+    text: 'NOT ENOUGH DATA',
     classes: 'text-outline border-outline-variant bg-surface-container-highest',
     icon: 'help',
-    tooltip: 'Fewer than 2 classes are ACTIVE. Treat the calibration as exploratory.',
+    tooltip: 'Fewer than 2 signal types are active yet. Treat the engine\'s read as early-stage.',
   },
 };
 
@@ -297,15 +299,15 @@ function ConformalCIRow({
     >
       <div className="flex flex-col gap-0.5">
         <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-          Conformal CI (95%)
+          Second Confidence Range
         </span>
         <span className="text-[11px] text-on-surface-variant/90 leading-snug">
-          A second 95% confidence range using a different math method — same idea, different statistical guarantee.
+          A second way of estimating the same range, using a different method — a useful cross-check.
         </span>
       </div>
       <span className="font-mono text-[11px] text-on-surface tabular-nums">
         {pending
-          ? <span className="text-on-surface-variant">pending (n_calibration &lt; 10)</span>
+          ? <span className="text-on-surface-variant">pending (needs 10+ examples)</span>
           : `[${formatPct(conformalLow)}–${formatPct(conformalHigh)}]`}
       </span>
     </div>
@@ -351,25 +353,25 @@ const REGIME_BADGE: Record<string, string> = {
 
 // Per UI-SPEC §Copywriting Contract §Regime pill (verbatim copy).
 const REGIME_LABEL: Record<string, string> = {
-  'bull-low-vol': 'BULL · LOW-VOL',
-  'bull-high-vol': 'BULL · HIGH-VOL',
-  'bear-low-vol': 'BEAR · LOW-VOL',
-  'bear-high-vol': 'BEAR · HIGH-VOL',
-  ALL: 'REGIME-UNCONDITIONAL',
+  'bull-low-vol': 'CALM UPTREND',
+  'bull-high-vol': 'BUMPY UPTREND',
+  'bear-low-vol': 'SLOW DOWNTREND',
+  'bear-high-vol': 'ROUGH DOWNTREND',
+  ALL: 'ALL CONDITIONS',
 };
 
 // Per UI-SPEC §Copywriting Contract §Regime pill tooltip.
 const REGIME_TOOLTIP: Record<string, string> = {
   'bull-low-vol':
-    'Bull trend (SPY 50d > 200d MA) + low realized vol (VIX < 60d 50th-%ile). Calm uptrend.',
+    'Market is trending up and relatively calm. The engine learned these weights in similar calm uptrend periods.',
   'bull-high-vol':
-    'Bull trend (SPY 50d > 200d MA) + elevated vol (VIX ≥ 60d 50th-%ile). Uptrend with whipsaw risk.',
+    'Market is trending up but swinging a lot. The engine adjusts its source weights for choppier conditions.',
   'bear-low-vol':
-    'Bear trend (SPY 50d < 200d MA) + low realized vol. Slow grind down; not a panic regime.',
+    'Market is drifting down slowly — not a panic, just a grind. The engine weights sources accordingly.',
   'bear-high-vol':
-    'Bear trend (SPY 50d < 200d MA) + elevated vol. The regime where calibration matters most.',
+    'Market is falling with high volatility. The engine is most cautious here and adjusts weights for this.',
   ALL:
-    "Regime classifier returned cold-start fallback (insufficient VIX or SPY history at the snapshot time). The engine is using unconditional (source, 'ALL') weights for this report.",
+    "Not enough market history to pick a specific regime, so the engine is using weights learned across all market conditions combined.",
 };
 
 // Per UI-SPEC §Color §Accent — micro-icon by regime.
@@ -430,7 +432,7 @@ function SourceMixRow({ source_mix }: { source_mix: SourceMixData | undefined | 
     >
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant shrink-0 font-mono">
-          SOURCE MIX
+          WHAT THE ENGINE IS READING
         </span>
         <span
           {...regimePillTestIds}
@@ -455,7 +457,7 @@ function SourceMixRow({ source_mix }: { source_mix: SourceMixData | undefined | 
 
         {isEmpty ? (
           <span data-testid="source-mix-empty" className="text-[11px] text-on-surface-variant">
-            No source-weight observations yet — awaiting first regime-aware /api/cron/learn cycle.
+            No source rankings yet — more will appear after the next nightly engine update.
           </span>
         ) : (
           <>
@@ -535,8 +537,6 @@ function AgreementBadge({ state }: { state: AgreementState }) {
 // ── Pattern + cap pill (per column) ─────────────────────────────────────
 
 function PatternCapRow({
-  patternLabel,
-  capLabel,
   status,
 }: {
   patternLabel: string;
@@ -544,18 +544,13 @@ function PatternCapRow({
   status: WatchStatus;
 }) {
   return (
-    <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-      <span className="font-mono text-xs font-bold text-on-surface tracking-wide">
-        {patternLabel} <span className="text-on-surface-variant mx-1">×</span> {capLabel}
+    <div className="flex items-center justify-end mb-3 gap-2">
+      <span
+        className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
+      >
+        {STATUS_LABEL[status] ?? status}
       </span>
-      <span className="inline-flex items-center gap-2 flex-wrap justify-end">
-        <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
-        >
-          {STATUS_LABEL[status] ?? status}
-        </span>
-        {status === 'EXPLORATORY-WATCH' && <WatchBadge />}
-      </span>
+      {status === 'EXPLORATORY-WATCH' && <WatchBadge />}
     </div>
   );
 }
@@ -629,8 +624,8 @@ function HorizonTable({ rows }: { rows: HorizonCalibrationWithESS[] }) {
   return (
     <div className="pt-4 mt-4 border-t border-surface-container-high overflow-x-auto">
       <p className="text-[11px] text-on-surface-variant/90 mb-2 leading-snug max-w-2xl">
-        <strong className="text-on-surface uppercase tracking-widest text-[10px]">Same four signals at different time horizons</strong>
-        {' '}— each row is how confident the engine is that the stock beats its sector ETF over that many days. <strong className="text-on-surface">30 days is the headline</strong> (the starred row); the others are sanity checks.
+        <strong className="text-on-surface uppercase tracking-widest text-[10px]">Same four signals across different time windows</strong>
+        {' '}— each row shows how confident the engine is that the stock beats its sector over that many days. <strong className="text-on-surface">30 days is the main read</strong> (the starred row); the others are extra context.
       </p>
       <table className="w-full text-xs font-mono" data-testid="horizon-table">
         <thead>
@@ -639,15 +634,15 @@ function HorizonTable({ rows }: { rows: HorizonCalibrationWithESS[] }) {
             title="POST. = the engine's posterior confidence percentage. CI = the 95% range that confidence could fall in. ESS = how many past examples the engine learned from."
           >
             <th scope="col" className="text-left p-2">HORIZON</th>
-            <th scope="col" className="text-right p-2" title="News & social diffusion — confidence the stock beats its sector ETF.">NEWS/SOCIAL</th>
-            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="95% range for the news/social estimate.">RANGE</th>
-            <th scope="col" className="text-right p-2" title="Chart pattern — confidence the stock beats its sector ETF.">CHART</th>
-            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="95% range for the chart estimate.">RANGE</th>
-            <th scope="col" className="text-right p-2" title="Big-fund (13F) moves — confidence the stock beats its sector ETF.">BIG FUNDS</th>
-            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="95% range for the big-fund estimate.">RANGE</th>
-            <th scope="col" className="text-right p-2" title="Exec/insider (Form 4) trades — confidence the stock beats its sector ETF.">EXECS</th>
-            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="95% range for the exec/insider estimate.">RANGE</th>
-            <th scope="col" className="text-right p-2" title="Sample size the engine learned this row from, and how trustworthy that makes it.">SAMPLE · STATUS</th>
+            <th scope="col" className="text-right p-2" title="News & social signal — how confident the engine is that this setup beats the sector.">NEWS & SOCIAL</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="The margin of error on the news/social estimate.">MARGIN</th>
+            <th scope="col" className="text-right p-2" title="Chart pattern signal — how confident the engine is that this setup beats the sector.">CHART</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="The margin of error on the chart estimate.">MARGIN</th>
+            <th scope="col" className="text-right p-2" title="Big-fund activity signal — how confident the engine is that this setup beats the sector.">BIG FUNDS</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="The margin of error on the big-fund estimate.">MARGIN</th>
+            <th scope="col" className="text-right p-2" title="Exec/insider trades signal — how confident the engine is that this setup beats the sector.">EXECS</th>
+            <th scope="col" className="text-right p-2 hidden xl:table-cell" title="The margin of error on the exec/insider estimate.">MARGIN</th>
+            <th scope="col" className="text-right p-2" title="How many past examples the engine learned this row from, and how trustworthy that makes it.">EXAMPLES · STATUS</th>
           </tr>
         </thead>
         <tbody>
@@ -666,7 +661,7 @@ function HorizonTable({ rows }: { rows: HorizonCalibrationWithESS[] }) {
               <tr
                 key={r.horizon_days}
                 className={rowClasses}
-                title={isPrimary ? 'Primary horizon — drives the 12-feature Bayesian logistic and the engine\'s headline conviction.' : undefined}
+                title={isPrimary ? 'Primary time frame — this is the main read the engine uses for its headline recommendation.' : undefined}
               >
                 <th scope="row" className="text-left p-2 font-mono">
                   {isPrimary
@@ -805,31 +800,33 @@ function QuadClassPanel({
           capLabel={capLabel}
           status={status}
           card1={{
-            label: 'Engine Prior',
+            label: 'Track Record',
             value: formatPct(posterior_mean),
             subValue: posterior_mean != null
-              ? `[${formatPct(ci_low)}–${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}`
+              ? `range: [${formatPct(ci_low)}–${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}`
               : essOrN(effective_sample_size, sample_size),
-            plainLine: "How confident the engine is that this kind of news-spreading pattern beats the sector ETF over the next 7 days. Higher = more confident.",
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this diffusion pattern × cap class produces a 7-day return >1% above its sector ETF. The 95% range and effective sample size shown below tell you how solid that confidence is.',
+            plainLine: "How often this type of news-spreading pattern led to the stock beating its sector. Higher = more confident.",
+            tooltip: 'Historical win rate: the percentage of past cases where this diffusion pattern × company size led to the stock beating its sector ETF over 7 days. The range below shows the uncertainty given the number of examples.',
           }}
           card2={{
-            label: 'Logistic Score',
+            label: 'All-Signal Score',
             value: formatPct(logistic_score),
             subValue: logistic_score != null
-              ? `[${formatPct(logistic_ci_low)}–${formatPct(logistic_ci_high)}] · ${essOrN(logistic_ess, logistic_sample_size)}`
+              ? `range: [${formatPct(logistic_ci_low)}–${formatPct(logistic_ci_high)}] · ${essOrN(logistic_ess, logistic_sample_size)}`
               : essOrN(logistic_ess, logistic_sample_size),
-            plainLine: "A second, stricter check that uses all of this report's diffusion features together. If it agrees with Engine Prior, that's a good sign.",
-            tooltip: 'Bayesian-logistic forward pass over this report\'s diffusion features (v_niche, v_middle, v_mainstream, niche_lead_cycles, q_z, qual_z). A second opinion on the same prediction using a different statistical model.',
+            plainLine: "A second check that combines all the news/social features at once. If this agrees with the Track Record above, that's a good sign.",
+            tooltip: 'A second model that runs all the news/social features together at once rather than averaging them. Gives a cross-check on the Track Record estimate.',
           }}
           card3={{
-            label: 'Adversarial Null',
-            value: formatBrier(brier_in_sample),
+            label: 'Beats Random?',
+            value: brier_in_sample != null && brier_null != null
+              ? (brier_in_sample < brier_null ? '✓ YES' : '✗ NO')
+              : '—',
             subValue: brier_null != null
-              ? `null ${formatBrier(brier_null)} · ${brier_in_sample != null && brier_in_sample < brier_null ? 'beats' : 'loses to'} chance`
+              ? `scores: ${formatBrier(brier_in_sample)} vs ${formatBrier(brier_null)} random`
               : 'n/a',
-            plainLine: "Did the engine actually beat a random shuffled version of itself? Lower number is better — if 'beats chance', the pattern carries real signal.",
-            tooltip: 'Brier score (mean squared error vs outcome) of the real predictor compared with the same predictor on shuffled outcomes. Lower is better. If the real Brier beats the shuffled null, the pattern carries real signal beyond chance.',
+            plainLine: "Does the engine do better than pure random? ✓ YES means the pattern carries real signal. ✗ NO means it doesn't outperform chance.",
+            tooltip: 'Checks whether the engine\'s predictions are better than randomly shuffled outcomes. If YES, the pattern has genuine predictive signal beyond luck.',
           }}
           // Phase 19-A-03 (D-19) — Conformal CI row sits below the diffusion
           // column's metric stack, adjacent to the Bayesian Engine Prior CI
@@ -847,27 +844,27 @@ function QuadClassPanel({
           capLabel={capLabel}
           status={techStatus}
           card1={{
-            label: 'Tech Prior',
+            label: 'Chart Track Record',
             value: formatPct(technical_posterior_mean ?? null),
             subValue: technical_posterior_mean != null
-              ? `${formatCi(technical_ci ?? null)} · ${essOrN(technical_ess, technical_sample_size ?? 0)}`
+              ? `range: ${formatCi(technical_ci ?? null)} · ${essOrN(technical_ess, technical_sample_size ?? 0)}`
               : essOrN(technical_ess, technical_sample_size ?? 0),
-            plainLine: "How confident the engine is that this chart pattern beats the sector ETF over the next 30 days. Higher = more confident.",
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this technical pattern × cap class produces a 30d return >1% above its sector ETF. The 95% range and effective sample size tell you how solid that confidence is.',
+            plainLine: "How often this chart pattern led to the stock beating its sector over 30 days. Higher = more confident.",
+            tooltip: 'Historical win rate: the percentage of past cases where this chart pattern × company size led to the stock beating its sector ETF over 30 days.',
           }}
           card2={{
-            label: 'Combined Logistic',
+            label: 'All-In Score',
             value: combined_logistic_score != null ? formatPct(combined_logistic_score) : '—',
-            subValue: `30d-trained, ${essOrN(logistic_ess, logistic_sample_size)}`,
-            plainLine: "News-spreading and chart features blended into one 30-day estimate. The 'all-in' read.",
-            tooltip: 'Bayesian-logistic forward pass over the full 12-feature vector (6 diffusion + 6 technical), trained on 30d outcomes only. The all-in blended estimate.',
+            subValue: `30-day window · ${essOrN(logistic_ess, logistic_sample_size)}`,
+            plainLine: "News/social and chart signals blended into one 30-day estimate — the engine's most complete single read.",
+            tooltip: 'A model that combines all news/social and chart features together, trained on 30-day outcomes. The most complete blended estimate.',
           }}
           card3={{
-            label: 'Tech Sample',
+            label: 'Examples Used',
             value: essOrN(technical_ess, technical_sample_size ?? 0),
-            subValue: techStatus,
-            plainLine: "How many past examples of this chart pattern the engine has learned from. Bigger = more reliable.",
-            tooltip: 'Effective sample size for the technical signal class — how many past examples of this pattern × cap class the engine has learned from. Larger numbers mean the prior is on firmer ground.',
+            subValue: STATUS_LABEL[techStatus] ?? techStatus,
+            plainLine: "How many past cases of this chart pattern the engine has learned from. More examples = more reliable.",
+            tooltip: 'How many past examples of this pattern × company size the engine has seen and learned from. More examples means the track record is on firmer ground.',
           }}
         />
 
@@ -882,31 +879,31 @@ function QuadClassPanel({
           status={instStatus}
           isNoData={instIsNoData}
           card1={{
-            label: 'Inst. Prior',
+            label: 'Fund Track Record',
             value: formatPct(institutional_posterior_mean ?? null),
             subValue: institutional_posterior_mean != null
-              ? `${formatCi(institutional_ci ?? null)} · ${essOrN(institutional_ess, institutional_sample_size ?? 0)}`
+              ? `range: ${formatCi(institutional_ci ?? null)} · ${essOrN(institutional_ess, institutional_sample_size ?? 0)}`
               : instIsNoData ? 'No recent filings' : essOrN(institutional_ess, institutional_sample_size ?? 0),
-            plainLine: "How confident the engine is that this kind of big-fund move beats the sector ETF over the next 30 days. Higher = more confident.",
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this institutional pattern × cap class produces a 30d return >1% above its sector ETF.',
+            plainLine: "How often this type of big-fund activity led to the stock beating its sector over 30 days. Higher = more confident.",
+            tooltip: 'Historical win rate: the percentage of past cases where this type of institutional fund move × company size led to the stock beating its sector ETF over 30 days.',
           }}
           card2={{
-            label: 'Inst. Sample',
+            label: 'Examples Used',
             value: essOrN(institutional_ess, institutional_sample_size ?? 0),
-            subValue: instStatus,
-            plainLine: "How many past 13F filings like this the engine has learned from. Bigger = more reliable.",
-            tooltip: 'Effective sample size — number of resolved 30d outcomes the engine has seen for this institutional bucket × cap class.',
+            subValue: STATUS_LABEL[instStatus] ?? instStatus,
+            plainLine: "How many past fund filings like this the engine has learned from. More examples = more reliable.",
+            tooltip: 'How many past examples of this fund activity pattern × company size the engine has seen and learned from.',
           }}
           card3={{
-            label: 'Class Status',
+            label: 'Status',
             value: STATUS_LABEL[instStatus] ?? instStatus,
             subValue: instIsNoData
-              ? 'No fund filings yet for this bucket'
-              : `${essOrN(institutional_ess, institutional_sample_size ?? 0)} learned · ${STATUS_LABEL[instStatus] ?? instStatus}`,
+              ? 'No fund filings yet for this type'
+              : `${essOrN(institutional_ess, institutional_sample_size ?? 0)} learned`,
             plainLine: instIsNoData
-              ? "The engine hasn't seen any past filings like this for this cap class yet."
-              : "Where this cell stands in the engine's promotion pipeline — ACTIVE = beats null + passes FDR, EXPLORATORY = still warming up.",
-            tooltip: 'Status of this institutional bucket × cap class in the engine\'s 5-gate promotion pipeline (ESS ≥ 30, ≥10 live outcomes, Brier-lift > 0.005, BY-FDR q < 0.10, DSR > 0). engine-review 2026-06-17 fix #3: replaces the previously-shown "Diffusion Null" card, which was leaking the diffusion class Brier into the institutional column.',
+              ? "The engine hasn't seen any past filings like this for this company size yet."
+              : "TRUSTED = the engine has enough examples and the pattern beats random. LEARNING = still collecting examples.",
+            tooltip: 'How far along this signal type is in the engine\'s trust pipeline. It must pass 5 checks (enough examples, enough real outcomes, beats random, passes significance, positive drift) before being marked TRUSTED.',
           }}
         />
 
@@ -921,31 +918,31 @@ function QuadClassPanel({
           status={insdStatus}
           isNoData={insdIsNoData}
           card1={{
-            label: 'Insider Prior',
+            label: 'Exec Track Record',
             value: formatPct(insider_posterior_mean ?? null),
             subValue: insider_posterior_mean != null
-              ? `${formatCi(insider_ci ?? null)} · ${essOrN(insider_ess, insider_sample_size ?? 0)}`
+              ? `range: ${formatCi(insider_ci ?? null)} · ${essOrN(insider_ess, insider_sample_size ?? 0)}`
               : insdIsNoData ? 'No recent filings' : essOrN(insider_ess, insider_sample_size ?? 0),
-            plainLine: "How confident the engine is that this kind of exec buying or selling beats the sector ETF over the next 30 days.",
-            tooltip: 'Bayesian Beta-Bernoulli posterior probability that this insider pattern × cap class produces a 30d return >1% above its sector ETF.',
+            plainLine: "How often this type of exec buying or selling led to the stock beating its sector over 30 days.",
+            tooltip: 'Historical win rate: the percentage of past cases where this type of exec/insider trade × company size led to the stock beating its sector ETF over 30 days.',
           }}
           card2={{
-            label: 'Insider Sample',
+            label: 'Examples Used',
             value: essOrN(insider_ess, insider_sample_size ?? 0),
-            subValue: insdStatus,
-            plainLine: "How many past Form 4 filings like this the engine has learned from. Bigger = more reliable.",
-            tooltip: 'Effective sample size — number of resolved 30d outcomes the engine has seen for this insider bucket × cap class.',
+            subValue: STATUS_LABEL[insdStatus] ?? insdStatus,
+            plainLine: "How many past exec filings like this the engine has learned from. More examples = more reliable.",
+            tooltip: 'How many past examples of this exec trading pattern × company size the engine has seen and learned from.',
           }}
           card3={{
-            label: 'Class Status',
+            label: 'Status',
             value: STATUS_LABEL[insdStatus] ?? insdStatus,
             subValue: insdIsNoData
-              ? 'No insider filings yet for this bucket'
-              : `${essOrN(insider_ess, insider_sample_size ?? 0)} learned · ${STATUS_LABEL[insdStatus] ?? insdStatus}`,
+              ? 'No exec filings yet for this type'
+              : `${essOrN(insider_ess, insider_sample_size ?? 0)} learned`,
             plainLine: insdIsNoData
-              ? "The engine hasn't seen any past Form 4 filings like this for this cap class yet."
-              : "Where this cell stands in the engine's promotion pipeline — ACTIVE = beats null + passes FDR, EXPLORATORY = still warming up.",
-            tooltip: 'Status of this insider bucket × cap class in the engine\'s 5-gate promotion pipeline (ESS ≥ 30, ≥10 live outcomes, Brier-lift > 0.005, BY-FDR q < 0.10, DSR > 0). engine-review 2026-06-17 fix #3: replaces the previously-shown "Diffusion Null" card, which was leaking the diffusion class Brier into the insider column.',
+              ? "The engine hasn't seen any past exec filings like this for this company size yet."
+              : "TRUSTED = the engine has enough examples and the pattern beats random. LEARNING = still collecting examples.",
+            tooltip: 'How far along this signal type is in the engine\'s trust pipeline. It must pass 5 checks (enough examples, enough real outcomes, beats random, passes significance, positive drift) before being marked TRUSTED.',
           }}
         />
       </div>
@@ -1024,7 +1021,7 @@ function AlignmentDisagreementBlocks({
         <div className="bg-secondary/5 border-secondary border-l-2 p-4 rounded-r">
           <h4 className="text-[10px] font-bold tracking-widest uppercase text-secondary mb-2 flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">check_circle</span>
-            Quad-Class Engine Alignment
+            All Four Signals Agree
           </h4>
           <div className="space-y-2">
             <div data-class="diffusion" className="text-xs text-on-surface-variant leading-relaxed">{engineAlignment}</div>
@@ -1102,11 +1099,11 @@ function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibrationWit
           <span
             className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border ${STATUS_BADGE[status]}`}
             title={
-              status === 'ACTIVE'              ? 'Pattern beats the adversarial null with n ≥ 10. Engine defers to this prior.' :
-              status === 'EXPLORATORY'         ? 'Pattern has fewer than 10 confirmed cases. Treat the prior as weak.' :
-              status === 'EXPLORATORY-WATCH'   ? 'Drift detector has confirmed unstable behavior on this cell. Calibration injection still active — read with care.' :
-              status === 'DEPRECATED'          ? 'Pattern has drifted (|z| > 2σ) or is now worse than chance. Prior is not trusted.' :
-                                                 'No historical posterior available for this pattern × cap class.'
+              status === 'ACTIVE'              ? 'This pattern has been seen enough times and beats random chance. The engine trusts this track record.' :
+              status === 'EXPLORATORY'         ? 'Fewer than 10 confirmed cases. The engine is still learning — treat this as early-stage.' :
+              status === 'EXPLORATORY-WATCH'   ? 'The engine noticed this pattern is behaving differently than usual. Still active, but read with extra care.' :
+              status === 'DEPRECATED'          ? 'This pattern has drifted or stopped beating random chance. The engine no longer trusts it.' :
+                                                 'No history yet for this pattern and company size.'
             }
           >
             {STATUS_LABEL[status]}
@@ -1117,25 +1114,27 @@ function DiffusionOnlyPanel({ calibration }: { calibration: EngineCalibrationWit
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
         <MetricCard
-          label="Engine Prior"
+          label="Track Record"
           value={formatPct(posterior_mean)}
-          subValue={posterior_mean != null ? `[${formatPct(ci_low)} – ${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}` : essOrN(effective_sample_size, sample_size)}
-          plainLine="How confident the engine is that this news-spreading pattern beats the sector ETF over the next 7 days. Higher = more confident."
-          tooltip="Bayesian Beta-Bernoulli posterior probability that this pattern × cap class produces a 7-day return >1% above its sector ETF. The 95% credible interval shows the engine's uncertainty given effective sample size."
+          subValue={posterior_mean != null ? `range: [${formatPct(ci_low)} – ${formatPct(ci_high)}] · ${essOrN(effective_sample_size, sample_size)}` : essOrN(effective_sample_size, sample_size)}
+          plainLine="How often this type of news-spreading pattern led to the stock beating its sector. Higher = more confident."
+          tooltip="Historical win rate: the percentage of past cases where this diffusion pattern × company size led to the stock beating its sector ETF over 7 days. The range shows uncertainty given the number of examples."
         />
         <MetricCard
-          label="Logistic Score"
+          label="All-Signal Score"
           value={formatPct(logistic_score)}
-          subValue={logistic_score != null ? `[${formatPct(logistic_ci_low)} – ${formatPct(logistic_ci_high)}] · ${essOrN(logistic_ess, logistic_sample_size)}` : essOrN(logistic_ess, logistic_sample_size)}
-          plainLine="A stricter second check using all of this report's diffusion features at once. If it agrees with Engine Prior, that's a good sign."
-          tooltip="Bayesian-logistic forward pass over this report's diffusion features (v_niche, v_middle, v_mainstream, niche_lead_cycles, q_z, qual_z). CI is the 95% interval after propagating coefficient variance through the linear predictor."
+          subValue={logistic_score != null ? `range: [${formatPct(logistic_ci_low)} – ${formatPct(logistic_ci_high)}] · ${essOrN(logistic_ess, logistic_sample_size)}` : essOrN(logistic_ess, logistic_sample_size)}
+          plainLine="A second check that combines all news/social features at once. If this agrees with the Track Record above, that's a good sign."
+          tooltip="A second model that runs all the news/social features together at once rather than averaging them. A cross-check on the Track Record estimate."
         />
         <MetricCard
-          label="Adversarial Null"
-          value={formatBrier(brier_in_sample)}
-          subValue={brier_null != null ? `null ${formatBrier(brier_null)} · ${brier_in_sample != null && brier_in_sample < brier_null ? 'beats' : 'loses to'} chance` : 'n/a'}
-          plainLine="Did the engine actually beat a random shuffled version of itself? Lower is better — if 'beats chance', the pattern carries real signal."
-          tooltip="Brier score (mean squared error vs outcome) of the real predictor compared with shuffled-outcome nulls. Lower is better; if real < null, the pattern carries real signal beyond chance."
+          label="Beats Random?"
+          value={brier_in_sample != null && brier_null != null
+            ? (brier_in_sample < brier_null ? '✓ YES' : '✗ NO')
+            : '—'}
+          subValue={brier_null != null ? `scores: ${formatBrier(brier_in_sample)} vs ${formatBrier(brier_null)} random` : 'n/a'}
+          plainLine="Does the engine do better than pure random? ✓ YES means the pattern carries real signal. ✗ NO means it doesn't outperform chance."
+          tooltip="Checks whether the engine's predictions are better than randomly shuffled outcomes. If YES, the pattern has genuine predictive signal beyond luck."
         />
       </div>
 
@@ -1208,11 +1207,51 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
     && primarySectorEtfIsCurrent
     && (calibration.sample_size ?? 0) === 0;
 
+  const [expanded, setExpanded] = useState(false);
+
+  // Compact summary line shown when collapsed
+  const summaryPct = calibration.posterior_mean != null
+    ? `${Math.round(calibration.posterior_mean * 100)}% track record`
+    : null;
+  const summaryAgreement = agreementState !== 'unknown' ? AGREEMENT_BADGE[agreementState].text : null;
+  const summaryStatus = STATUS_LABEL[calibration.status] ?? calibration.status;
+
   return (
     <section
       data-testid="engine-calibration-panel"
-      className="bg-surface-container border border-surface-container-high p-6 rounded-lg relative overflow-hidden"
+      className="bg-surface-container border border-surface-container-high rounded-lg relative overflow-hidden"
     >
+      {/* Always-visible compact header — click to expand */}
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 gap-4 hover:bg-surface-container-high transition-colors text-left"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="material-symbols-outlined text-tertiary text-sm shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
+          <span className="text-[11px] font-bold tracking-widest uppercase text-tertiary shrink-0">Engine Track Record</span>
+          {summaryPct && (
+            <span className="text-[11px] font-mono text-on-surface ml-1 shrink-0">{summaryPct}</span>
+          )}
+          {summaryAgreement && (
+            <span className="hidden sm:inline text-[10px] font-bold tracking-widest uppercase text-on-surface-variant border border-outline-variant rounded-full px-2 py-0.5 ml-1 shrink-0">
+              {summaryAgreement}
+            </span>
+          )}
+          <span className={`text-[10px] font-black tracking-widest uppercase border rounded-full px-2 py-0.5 ml-1 shrink-0 ${STATUS_BADGE[calibration.status]}`}>
+            {summaryStatus}
+          </span>
+        </div>
+        <span className="text-[10px] text-on-surface-variant tracking-widest uppercase shrink-0 flex items-center gap-1">
+          {expanded ? 'Hide details' : 'How does the engine work?'}
+          <span className="material-symbols-outlined text-sm">{expanded ? 'expand_less' : 'expand_more'}</span>
+        </span>
+      </button>
+
+      {/* Expandable full panel */}
+      {expanded && (
+      <div className="px-6 pb-6 pt-2 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-48 h-48 bg-tertiary/5 blur-[100px]" aria-hidden="true" />
 
       {/* Header row */}
@@ -1229,7 +1268,7 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
               Calibration vs. {headlineBenchmark}
             </h3>
             <p className="text-[12px] text-on-surface-variant mt-0.5 leading-snug max-w-xl">
-              Historical sector-relative alpha for four independent signal classes on this ticker, and confidence in each.
+              What the engine has learned from tracking similar setups — four signal types, each with its own track record.
             </p>
             <div className="mt-2 text-[12px] text-on-surface-variant/90 leading-relaxed max-w-2xl space-y-1">
               <p>
@@ -1290,8 +1329,8 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
       {/* Drift gauge — UNCHANGED (diffusion-only) */}
       <div className="flex flex-col gap-2 mt-5 mb-5 pb-4 border-b border-surface-container-high">
         <p className="text-[11px] text-on-surface-variant/90 leading-snug max-w-2xl">
-          <strong className="text-on-surface uppercase tracking-widest text-[10px]">Concept drift</strong>
-          {' '}— is the engine still behaving the way it used to on this kind of setup? If it&apos;s drifting, trust today&apos;s confidence a little less.
+          <strong className="text-on-surface uppercase tracking-widest text-[10px]">Staying consistent?</strong>
+          {' '}— is the engine behaving the same way it used to on this kind of setup? If it&apos;s drifting, trust today&apos;s numbers a little less.
         </p>
         <div className="flex items-center justify-between gap-3">
           <DriftGauge z={drift_z} />
@@ -1359,8 +1398,10 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
 
       {/* Footer note — verbatim per UI-SPEC (both phases) */}
       <p className="mt-4 text-[10px] text-on-surface-variant tracking-wide leading-relaxed">
-        This prediction is verified at 3, 7, 14, 30, 60, and 90 days. Posterior probabilities update automatically as outcomes complete, so re-running this report after the next calibration cycle may show different numbers. <strong className="text-on-surface">30 days is the primary horizon.</strong>
+        The engine checks how accurate its predictions were at 3, 7, 14, 30, 60, and 90 days later. Its confidence numbers update automatically as real outcomes come in — so re-running this report after the nightly update may show slightly different numbers. <strong className="text-on-surface">30 days is the primary time frame.</strong>
       </p>
+      </div>
+      )}
     </section>
   );
 }

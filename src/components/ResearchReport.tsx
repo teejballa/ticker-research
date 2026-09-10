@@ -199,7 +199,7 @@ function InstitutionalFlowCard({ snap }: { snap: InstitutionalSnapshot }) {
       {/* Engine bucket reference */}
       {bucketLabel && (
         <p className="mt-3 text-[10px] text-on-surface-variant tracking-widest uppercase">
-          Engine bucket: {bucketLabel}
+          Pattern type: {bucketLabel}
         </p>
       )}
     </div>
@@ -272,7 +272,7 @@ function InsiderActivityCard({ snap }: { snap: InsiderSnapshot }) {
       {/* Engine bucket reference */}
       {bucketLabel && (
         <p className="mt-3 text-[10px] text-on-surface-variant tracking-widest uppercase">
-          Engine bucket: {bucketLabel}
+          Pattern type: {bucketLabel}
         </p>
       )}
     </div>
@@ -304,7 +304,7 @@ function SmartMoneyIntelligence({
           </h3>
         </div>
         <span className="text-[10px] text-on-surface-variant">
-          13F flows and Form 4 transactions from the most recent filing window.
+          Latest big-fund and exec trading activity, from regulatory filings.
         </span>
       </div>
 
@@ -774,7 +774,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                           {bullDisplay != null ? `${bullDisplay}%` : '—'}
                         </span>
                         {showAggregated && (
-                          <span className="text-[9px] tracking-widest uppercase text-on-surface-variant">SMOOTHED · {sentiment_intelligence.sentiment_source_count} src</span>
+                          <span className="text-[9px] tracking-widest uppercase text-on-surface-variant">avg. across {sentiment_intelligence.sentiment_source_count} sources</span>
                         )}
                       </div>
                       {/* Bear % chip */}
@@ -813,7 +813,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                 {sentiment_intelligence.sentiment_components && sentiment_intelligence.sentiment_components.length > 0 && (
                   <div className="border-t border-surface-container-highest pt-2 mt-2">
                     <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant mb-1">
-                      Per-source breakdown
+                      By source
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
                       {sentiment_intelligence.sentiment_components.map((c) => {
@@ -828,7 +828,7 @@ export default function ResearchReport({ analysisResult, ticker }: ResearchRepor
                             <span className={c.bullish_pct >= 50 ? 'text-secondary' : 'text-error'}>
                               {c.bullish_pct}%
                             </span>
-                            <span className="text-on-surface-variant ml-2">n={c.raw_mention_count}</span>
+                            <span className="text-on-surface-variant ml-2">{c.raw_mention_count} posts</span>
                             {showTierW && (
                               <span
                                 className="text-on-surface-variant ml-2"
