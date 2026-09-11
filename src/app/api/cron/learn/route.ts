@@ -1291,7 +1291,7 @@ async function maybeWriteCycleSummary(stats: {
   let message = `Cycle summary: ${stats.outcomes_processed} outcomes resolved (${stats.hits} hits), ${stats.drift_alerts} drift alerts, ${stats.cells_active} active cells.`;
   try {
     const { text } = await generateText({
-      model: 'anthropic/claude-haiku-4.5',
+      model: 'meta/muse-spark-1.3-contributor',
       prompt: renderPrompt('gemini-cycle-summary', {
         outcomes_processed: String(stats.outcomes_processed),
         hits: String(stats.hits),
