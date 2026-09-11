@@ -101,7 +101,7 @@ export async function classifyDocumentsBatch(
       // Model pinned per S5 (CONTEXT.md pinned-versions invariant).
       // Phase 30 D-14 — explicit model pin (lightweight per-doc classifier — Flash-lite tier).
       const res = await generateText({
-        model: 'google/gemini-3.1-flash-lite',
+        model: 'meta/muse-spark-1.3-contributor',
         output: Output.object({ schema: ResponseSchema }),
         prompt: p,
       });
