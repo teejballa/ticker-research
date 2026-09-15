@@ -19,7 +19,7 @@ import { generateText, Output } from 'ai';
 import { z } from 'zod';
 import { renderPrompt } from '@/lib/prompts/render';
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
-import { GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
+import { MUSE_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
 import { ASPECT_TAGS, type AspectTag } from './aspects';
 import { temperatureScale } from './calibration';
 import {
@@ -99,7 +99,8 @@ export async function classifyDocumentsBatch(
     (async (p: string) => {
       // AI SDK v6: generateText + Output.object for structured outputs through the AI Gateway.
       // Model pinned per S5 (CONTEXT.md pinned-versions invariant).
-      // Phase 30 D-14 — explicit model pin (lightweight per-doc classifier — Flash-lite tier).
+      // Phase 30 D-14 — explicit model pin. Sep 2026: swapped from google/gemini-3.1-flash-lite
+      // to meta/muse-spark-1.3-contributor for cost.
       const res = await generateText({
         model: 'meta/muse-spark-1.3-contributor',
         output: Output.object({ schema: ResponseSchema }),
@@ -179,7 +180,7 @@ export async function classifyDocumentsBatch(
         if (!usage) return 0;
         const inTok = usage.inputTokens ?? 0;
         const outTok = usage.outputTokens ?? 0;
-        return inTok * GEMINI_TOKEN_RATES.input + outTok * GEMINI_TOKEN_RATES.output;
+        return inTok * MUSE_TOKEN_RATES.input + outTok * MUSE_TOKEN_RATES.output;
       },
     },
   );

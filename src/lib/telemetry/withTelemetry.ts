@@ -44,11 +44,11 @@ export interface WithTelemetryOptions<T> {
  * @example wrap an existing withRetry-wrapped fetch:
  *   const quote = await withTelemetry('yahoo', () => withRetry(() => yahooFinance.quote(ticker)), { ticker });
  *
- * @example with a result-derived cost (Gemini):
+ * @example with a result-derived cost (Muse Spark 1.3 — 'gemini' provider slot):
  *   const out = await withTelemetry('gemini', () => generateObject({...}), {
  *     ticker,
- *     cost_usd_estimator: (r) => r.usage.inputTokens * GEMINI_TOKEN_RATES.input
- *                              + r.usage.outputTokens * GEMINI_TOKEN_RATES.output,
+ *     cost_usd_estimator: (r) => r.usage.inputTokens * MUSE_TOKEN_RATES.input
+ *                              + r.usage.outputTokens * MUSE_TOKEN_RATES.output,
  *   });
  */
 export async function withTelemetry<T>(

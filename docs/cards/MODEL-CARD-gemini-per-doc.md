@@ -2,7 +2,7 @@
 model_name: gemini-per-doc-sentiment
 model_version: v1
 card_format: mitchell-2019
-last_validated: 2026-05-13
+last_validated: 2026-09-13
 retrain_cadence: P90D
 author: tjameswalsh@icloud.com
 source_files:
@@ -20,7 +20,7 @@ source_files:
 
 ## Model Details
 
-- **Model**: `google/gemini-3.1-flash-lite` routed via Vercel AI Gateway (OIDC auth — no provider key shipped to the runtime).
+- **Model**: `meta/muse-spark-1.3-contributor` routed via Vercel AI Gateway (OIDC auth — no provider key shipped to the runtime). Sep 2026 swap from `google/gemini-3.1-flash-lite` for cost. Note: this model has `no_training: none` — Meta reserves the right to train on inputs/outputs.
 - **Prompt pin**: `gemini-per-doc-sentiment@v1`, registered in the 20-Z-04 prompt registry (`src/lib/prompts/_v1/gemini-per-doc-sentiment.md`).
 - **Classifier pin**: `classifier_version='gemini-per-doc-v1'` + `model_version='gemini-per-doc-v1'` on every persisted `SentimentObservation` row.
 - **Implementation**: `src/lib/sentiment/per-doc-classifier.ts` — `classifyDocumentsBatch(docs, opts?)`.
@@ -93,7 +93,7 @@ Per-document polarity + aspect classification for news + community items, top-N 
 
 - **Per 30-doc batch:** ≤ $0.05 USD (T-20-B-01-02 ship gate).
 - **Per ticker per cron tick:** ≤ $0.05 USD.
-- **Token-rate basis:** `GEMINI_TOKEN_RATES = { input: $0.000125 / token, output: $0.000375 / token }` pinned 2026-Q1. Cost recorded per call in `ProviderCallLog.cost_usd`.
+- **Token-rate basis:** `MUSE_TOKEN_RATES = { input: $0.0000001 / token ($0.10/M), output: $0.0000002 / token ($0.20/M) }` — pinned Sep 2026 (meta/muse-spark-1.3-contributor). Cost recorded per call in `ProviderCallLog.cost_usd`. Prior basis: `GEMINI_TOKEN_RATES = { input: $0.000125, output: $0.000375 }` (2026-Q1).
 
 ## Calibration — *Plan 20-B-03* (Temperature scaling)
 

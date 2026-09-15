@@ -36,9 +36,9 @@ import { routeModel, estimateCost, type ModelChoice } from '@/lib/reasoning/rout
 import { prisma } from '@/lib/db';
 // Plan 20-Z-03 — wrap the Gemini generateText() call with per-call telemetry.
 // cost_usd_estimator reads usage.inputTokens/outputTokens off the SDK return
-// shape and multiplies by GEMINI_TOKEN_RATES (pinned 2026-Q1).
+// shape and multiplies by MUSE_TOKEN_RATES (pinned 2026-Q1).
 import { withTelemetry } from '@/lib/telemetry/withTelemetry';
-import { GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
+import { MUSE_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
 import { applyPriceTargetGuard, VALID_PRICE_TARGET_HORIZONS } from '@/lib/magnitude-calibration';
 // Plan 20-Z-04 — every Gemini prompt is a (id, version) artifact in the
 // registry. renderPrompt() substitutes {{var}} placeholders + throws on
@@ -1037,12 +1037,8 @@ async function generateAnalysis(
   const systemPrompt = buildSystemPrompt(engineCtx);
 
   // Phase 30 D-14 — explicit model pin, no AI-Gateway fuzzy routing.
-  // R-3 resolution: 3-tier slugs reflect the live codebase; CONTEXT.md mentions
-  // 2.5 slugs but the live codebase has been on 3-tier since Phase 19-C-09.
-  // The haiku fallback branch is removed because D-14 mandates explicit pinning
-  // to gemini-3-pro for analysis; haiku routing was previously a fuzzy-routing
-  // artifact from the now-deprecated AI-Gateway auto-route path and never
-  // reflected an intentional product decision for the main analysis call.
+  // Sep 2026: swapped from google/gemini-2.5-pro to meta/muse-spark-1.3-contributor
+  // for cost (~1500× cheaper per token; see MUSE_TOKEN_RATES).
   //
   // If you need to change this model, also update
   // tests/unit/gemini-analysis.model-pin.unit.test.ts and re-verify the
@@ -1058,7 +1054,7 @@ async function generateAnalysis(
   try {
     // Plan 20-Z-03: wrap the Gemini call with telemetry. cost_usd_estimator
     // reads token usage off the AI SDK return shape and multiplies by the
-    // pinned 2026-Q1 GEMINI_TOKEN_RATES. Wrapper is fire-and-forget on the
+    // pinned 2026-Q1 MUSE_TOKEN_RATES. Wrapper is fire-and-forget on the
     // INSERT; caller sees identical return value + timing.
     const { output, usage } = await withTelemetry(
       'gemini',
@@ -1081,7 +1077,7 @@ async function generateAnalysis(
           const u = (r as { usage?: { inputTokens?: number; outputTokens?: number } }).usage;
           const inT = u?.inputTokens ?? 0;
           const outT = u?.outputTokens ?? 0;
-          return inT * GEMINI_TOKEN_RATES.input + outT * GEMINI_TOKEN_RATES.output;
+          return inT * MUSE_TOKEN_RATES.input + outT * MUSE_TOKEN_RATES.output;
         },
       },
     );

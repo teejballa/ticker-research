@@ -1,22 +1,21 @@
 // Phase: 30 — Provider Health Hardening
-// Phase 30 D-14 (with Amendment 2026-05-14 slug values)
+// Phase 30 D-14 (Sep 2026 Muse-Spark swap — commits 3baaeaf / 927d6ab)
 //
-// GREEN-state tests for explicit per-call-site Gemini model pinning. No more
+// GREEN-state tests for explicit per-call-site model pinning. No more
 // fuzzy AI-Gateway routing — every generateText / generateObject call passes
-// an explicit `model:` field hard-coded to the slug appropriate for its tier:
+// an explicit `model:` field hard-coded to the slug appropriate for its tier.
+// Both main-analysis and per-doc classifier call sites route through
+// meta/muse-spark-1.3-contributor via Vercel AI Gateway after Sep 2026
+// (previously google/gemini-2.5-pro and google/gemini-3.1-flash-lite
+// respectively; swap driven by ~1500× per-token cost reduction).
 //
-//   - src/lib/gemini-analysis.ts (main analysis):
-//       model: 'google/gemini-3-pro'        (Pro tier — reasoning-heavy)
-//   - src/lib/sentiment/per-doc-classifier.ts:
-//       model: 'google/gemini-3.1-flash-lite' (Flash-lite tier)
-//
-// The slug values come from the 2026-05-14 amendment to D-14; the underlying
-// intent (explicit per-call-site pins, no implicit defaults) is unchanged.
+// The underlying D-14 intent (explicit per-call-site pins, no implicit
+// defaults) is unchanged.
 //
 // These tests use a hybrid strategy:
 //   - The first three tests grep source files to pin the contract (no fuzzy
 //     routing artifact, no dynamic model variable, slugs match).
-//   - The 4th test invokes per-doc-classifier with a mocked Gemini stub and
+//   - The 4th test invokes per-doc-classifier with a mocked stub and
 //     asserts the slug propagates to the generateText call.
 
 import { describe, it, expect, vi } from 'vitest';
@@ -29,19 +28,19 @@ const COST_ESTIMATORS_SRC = fs.readFileSync(
   'utf-8',
 );
 
-describe('Phase 30 / D-14: explicit per-call-site Gemini model pins', () => {
-  it('D-14: runGeminiAnalysis call passes model: "google/gemini-2.5-pro" — no fallback to flash for analysis', () => {
+describe('Phase 30 / D-14: explicit per-call-site model pins (Muse Spark 1.3 after Sep 2026)', () => {
+  it('D-14: runGeminiAnalysis call passes model: "meta/muse-spark-1.3-contributor" — no fuzzy routing', () => {
     // Pin the model line as a string literal — NOT a dynamic ternary.
     expect(ANALYSIS_SRC).toMatch(
-      /const\s+modelString\s*=\s*['"]google\/gemini-2\.5-pro['"];/,
+      /const\s+modelString\s*=\s*['"]meta\/muse-spark-1\.3-contributor['"];/,
     );
     // The wrapped generateText call uses modelString.
     expect(ANALYSIS_SRC).toMatch(/generateText\(\s*\{[\s\S]*?model:\s*modelString/);
   });
 
-  it('D-14: per-doc-classifier passes model: "google/gemini-3.1-flash-lite"', () => {
+  it('D-14: per-doc-classifier passes model: "meta/muse-spark-1.3-contributor"', () => {
     expect(PER_DOC_SRC).toMatch(
-      /model:\s*['"]google\/gemini-3\.1-flash-lite['"]/,
+      /model:\s*['"]meta\/muse-spark-1\.3-contributor['"]/,
     );
     expect(PER_DOC_SRC).toMatch(/Phase 30 D-14/);
   });
@@ -58,13 +57,10 @@ describe('Phase 30 / D-14: explicit per-call-site Gemini model pins', () => {
     expect(ANALYSIS_SRC).toMatch(/Phase 30 D-14/);
   });
 
-  it('D-14: GEMINI_TOKEN_RATES comments cite the 3.x slug family or note the rate source', () => {
+  it('D-14: MUSE_TOKEN_RATES comment cites the muse-spark-1.3-contributor slug', () => {
     // The token rate constants must be paired with a citation comment that
-    // makes review-time edits easier. Either the 3-tier slug family OR the
-    // Gemini 2.5 Flash legacy pricing comment is acceptable (the rate is the
-    // same; the live slug rolled forward 2.5 → 3 in Phase 19-C-09 without a
-    // pricing change). What we forbid: NO citation at all.
-    expect(COST_ESTIMATORS_SRC).toMatch(/Gemini.*(2\.5|3\.\d).*Flash/i);
+    // makes review-time edits easier. What we forbid: NO citation at all.
+    expect(COST_ESTIMATORS_SRC).toMatch(/muse-spark-1\.3-contributor/i);
   });
 
   it('D-14: per-doc-classifier invocation propagates pinned slug to generateText', async () => {

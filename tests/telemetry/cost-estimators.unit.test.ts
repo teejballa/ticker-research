@@ -5,7 +5,7 @@
  * suite — force the editor to update both the value and this assertion.
  */
 import { describe, it, expect } from 'vitest';
-import { COST_PER_CALL_USD, GEMINI_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
+import { COST_PER_CALL_USD, MUSE_TOKEN_RATES } from '@/lib/telemetry/cost-estimators';
 
 describe('COST_PER_CALL_USD — pinned per-provider rates (T-20-Z-03-03 quarterly review)', () => {
   it('anthropic-search = $0.01/call (https://docs.anthropic.com/.../web-search-tool)', () => {
@@ -45,11 +45,11 @@ describe('COST_PER_CALL_USD — pinned per-provider rates (T-20-Z-03-03 quarterl
   });
 });
 
-describe('GEMINI_TOKEN_RATES — pinned 2026-Q1 (https://ai.google.dev/pricing)', () => {
-  it('input = $0.000125/token', () => {
-    expect(GEMINI_TOKEN_RATES.input).toBe(0.000125);
+describe('MUSE_TOKEN_RATES — pinned Sep 2026 (meta/muse-spark-1.3-contributor)', () => {
+  it('input = $0.0000001/token ($0.10/M)', () => {
+    expect(MUSE_TOKEN_RATES.input).toBe(0.0000001);
   });
-  it('output = $0.000375/token', () => {
-    expect(GEMINI_TOKEN_RATES.output).toBe(0.000375);
+  it('output = $0.0000002/token ($0.20/M)', () => {
+    expect(MUSE_TOKEN_RATES.output).toBe(0.0000002);
   });
 });
