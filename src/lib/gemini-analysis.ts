@@ -3,8 +3,9 @@
 // Auth: VERCEL_OIDC_TOKEN auto-read from process.env (local) or injected by Vercel runtime (deployed).
 // No provider import needed — plain model string 'google/gemini-3-flash' routes through AI Gateway.
 
-import { generateText, Output, NoObjectGeneratedError } from 'ai';
+import { generateText, Output, NoObjectGeneratedError, jsonSchema } from 'ai';
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 // Direct Anthropic SDK retained for non-community-scan call sites (web_search_20250305 tool
 // is an Anthropic-native feature not available through the AI Gateway). Phase 30.1-05
 // removed the Haiku-driven community-scrape branch entirely (D-26).
@@ -219,6 +220,50 @@ export const AnalysisResultSchema = z.object({
     insider_status: z.string().nullable().optional(),
   }).optional(),
 });
+
+// ---- Muse-strict JSON Schema (2026-09) ────────────────────────────────────
+// meta/muse-spark-1.3-contributor enforces OpenAI-style strict structured
+// outputs: every property in `properties` must appear in `required`, and it
+// rejects the `not` keyword outright. zod-to-json-schema's default output
+// omits `.optional()` fields from `required`, which Muse rejects with
+// "'required' is required to be supplied and to be an array including every
+// key in properties." We post-process the compiled schema so every property
+// is required. Nullability declared in Zod (`.nullable()`) is preserved via
+// the openApi3 target's `type: [X, "null"]` shape, so the LLM can still emit
+// null for legitimately-nullable fields (price_target, engine_alignment,
+// etc.). Fields that were `.optional()` (but not nullable) become required
+// non-null values — Muse constrains the LLM to emit an appropriate default
+// (empty string / empty array / 0) which Zod's `.default()` never has to
+// fire for downstream.
+function makeAllPropertiesRequired(node: unknown): unknown {
+  if (!node || typeof node !== 'object') return node;
+  if (Array.isArray(node)) return node.map(makeAllPropertiesRequired);
+  const out = { ...(node as Record<string, unknown>) } as Record<string, unknown>;
+  const type = out.type;
+  const properties = out.properties as Record<string, unknown> | undefined;
+  if (type === 'object' && properties && typeof properties === 'object') {
+    const newProps: Record<string, unknown> = {};
+    for (const key of Object.keys(properties)) {
+      newProps[key] = makeAllPropertiesRequired(properties[key]);
+    }
+    out.properties = newProps;
+    out.required = Object.keys(properties);
+  }
+  if (type === 'array' && out.items) {
+    out.items = makeAllPropertiesRequired(out.items);
+  }
+  for (const combinator of ['anyOf', 'oneOf', 'allOf'] as const) {
+    if (Array.isArray(out[combinator])) {
+      out[combinator] = (out[combinator] as unknown[]).map(makeAllPropertiesRequired);
+    }
+  }
+  return out;
+}
+
+// Precomputed once at module load — Zod → JSON Schema conversion is not free.
+const MUSE_STRICT_ANALYSIS_SCHEMA = makeAllPropertiesRequired(
+  zodToJsonSchema(AnalysisResultSchema, { target: 'openApi3' }),
+);
 
 // ---- System prompt ----
 
@@ -1064,7 +1109,16 @@ async function generateAnalysis(
       () =>
         generateText({
           model: modelString,
-          output: Output.object({ schema: AnalysisResultSchema }),
+          // Muse-strict schema (see MUSE_STRICT_ANALYSIS_SCHEMA above). We
+          // bypass AI SDK's Zod-to-JSONSchema conversion because Muse rejects
+          // both the `not` keyword and the missing-required-keys pattern that
+          // Zod's `.optional()` produces. The runtime shape is compatible with
+          // AnalysisResultSchema so downstream .parse() would succeed.
+          output: Output.object({
+            schema: jsonSchema<z.infer<typeof AnalysisResultSchema>>(
+              MUSE_STRICT_ANALYSIS_SCHEMA as Parameters<typeof jsonSchema>[0],
+            ),
+          }),
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
