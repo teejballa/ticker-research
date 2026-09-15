@@ -113,7 +113,10 @@ export const AnalysisResultSchema = z.object({
   }),
   confidence_level: z.enum(['Low', 'Medium', 'High']),
   confidence_explanation: z.string(),
-  price_target: z.string().optional().nullable(),
+  // Order matters: .nullable().optional() (never .optional().nullable()).
+  // The reverse compiles to a JSON Schema containing `{ "not": {} }` inside
+  // an anyOf, which Muse Spark 1.3 rejects as an unsupported keyword.
+  price_target: z.string().nullable().optional(),
   // Phase 29 (D-01, D-07, DEMO-07) — structured numeric forecast alongside
   // the retained narrative price_target string. Both fields are nullable +
   // optional; applyPriceTargetGuard() post-process nulls both when the
