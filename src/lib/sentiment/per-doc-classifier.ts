@@ -105,6 +105,9 @@ export async function classifyDocumentsBatch(
         model: 'meta/muse-spark-1.3-contributor',
         output: Output.object({ schema: ResponseSchema }),
         prompt: p,
+        // Per-doc polarity/aspect is a classification task; chain-of-thought is
+        // pure overhead. Disabling reasoning cut ~33% latency in Sep 2026 probe.
+        providerOptions: { gateway: { reasoning: { enabled: false } } },
       });
       return (res as unknown as { experimental_output?: unknown }).experimental_output ?? res;
     });

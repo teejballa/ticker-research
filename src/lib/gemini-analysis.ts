@@ -1123,7 +1123,14 @@ async function generateAnalysis(
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
-          // 150s hard cap — without this a hung AI Gateway / Gemini request
+          // Muse Spark 1.3 is a reasoning model and by default burns ~10-15x more
+          // reasoning tokens than text tokens per call (measured Sep 2026: 1513
+          // reasoning vs 123 text on a 6k-token research prompt). We opt out of
+          // reasoning to cut per-call latency by ~33%; the report body doesn't
+          // benefit from chain-of-thought since we deterministically overwrite
+          // engine_calibration numerics post-hoc anyway.
+          providerOptions: { gateway: { reasoning: { enabled: false } } },
+          // 150s hard cap — without this a hung AI Gateway / Muse request
           // rides the route's 300s maxDuration ceiling. 150s leaves headroom
           // for the community scan + post-processing inside the 300s budget.
           abortSignal: AbortSignal.timeout(150_000),
