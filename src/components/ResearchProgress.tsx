@@ -69,6 +69,53 @@ const INITIAL_STEPS: Step[] = [
   { label: 'Cleaning up',          status: 'pending' },
 ];
 
+// Expected per-pipeline-step wall-clock duration in seconds — anchors the ETA.
+// Measured Sep 2026 against 5-ticker suite; step 3 (community scan + Muse call)
+// dominates. Update these numbers if measured p50 shifts materially.
+const STEP_EXPECTED_S: readonly number[] = [
+  1,    // 0: Creating research context
+  0.5,  // 1: Adding market data
+  0.5,  // 2: Adding news sources
+  60,   // 3: Community scan + Muse analysis call
+  3,    // 4: Confidence + price + technical + persist
+  2,    // 5: Cleanup + finalize
+];
+const EXPECTED_TOTAL_S = STEP_EXPECTED_S.reduce((a, b) => a + b, 0);
+
+function formatRemaining(sec: number): string {
+  if (sec <= 0) return 'Almost done…';
+  if (sec < 60) return `~${Math.ceil(sec)}s remaining`;
+  const m = Math.floor(sec / 60);
+  const s = Math.ceil(sec - m * 60);
+  return s === 0 ? `~${m}m remaining` : `~${m}m ${s}s remaining`;
+}
+
+function computeRemainingSeconds(steps: Step[], now: number): number {
+  const activeIdx = steps.findIndex((s) => s.status === 'active');
+  const doneCount = steps.filter((s) => s.status === 'done').length;
+
+  // Not started yet
+  if (activeIdx < 0 && doneCount === 0) return EXPECTED_TOTAL_S;
+
+  // All done
+  if (doneCount === steps.length) return 0;
+
+  // Active step in flight — remaining = (expected for current - elapsed in current)
+  // clamped to 0 as floor, plus sum of expected for all future steps.
+  if (activeIdx >= 0) {
+    const stepExpected = STEP_EXPECTED_S[activeIdx] ?? 0;
+    const stepStarted = steps[activeIdx]?.startedAt ?? now;
+    const elapsedInStep = (now - stepStarted) / 1000;
+    const remainingInStep = Math.max(0, stepExpected - elapsedInStep);
+    const futureSum = STEP_EXPECTED_S.slice(activeIdx + 1).reduce((a, b) => a + b, 0);
+    return remainingInStep + futureSum;
+  }
+
+  // Between steps (done > 0 but nothing active — brief gap)
+  const futureSum = STEP_EXPECTED_S.slice(doneCount).reduce((a, b) => a + b, 0);
+  return futureSum;
+}
+
 function matchStepIndex(message: string): number {
   const lower = message.toLowerCase();
   if (lower.includes('creating'))         return 0;
@@ -114,11 +161,23 @@ export default function ResearchProgress({
   const [steps, setSteps]           = useState<Step[]>(INITIAL_STEPS);
   const [logLines, setLogLines]     = useState<string[]>([]);
   const [errorMessage, setErrorMsg] = useState<string | null>(null);
+  // `nowMs` ticks once per second so the derived ETA re-renders without needing
+  // per-step interval logic. Errored/completed states halt the tick via effect
+  // dependency below.
+  const [nowMs, setNowMs]           = useState<number>(() => Date.now());
   const onCompleteRef               = useRef(onComplete);
   const onErrorRef                  = useRef(onError);
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { onErrorRef.current    = onError;    }, [onError]);
+
+  // Tick every second to drive the ETA countdown. Halts on error (component
+  // stays mounted showing the error state; no reason to keep ticking).
+  useEffect(() => {
+    if (errorMessage) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [errorMessage]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -269,6 +328,11 @@ export default function ResearchProgress({
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             <span className="tracking-wide uppercase text-[11px] font-bold">Researching {ticker}...</span>
           </div>
+          {!errorMessage && steps.some((s) => s.status !== 'done') && (
+            <div className="mt-2 text-[11px] font-mono tabular-nums text-on-surface-variant/70 tracking-wide">
+              {formatRemaining(computeRemainingSeconds(steps, nowMs))}
+            </div>
+          )}
         </div>
 
         {/* Analysis Process Stepper */}
