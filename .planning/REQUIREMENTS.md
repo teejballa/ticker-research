@@ -67,6 +67,7 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 - [ ] **REASON-03**: Reports surface composite as the headline calibration number, with per-class breakdown beneath
 - [ ] **REASON-04**: Reliability diagram (calibration curve) for the composite published in `/insights`
 - [ ] **REASON-05**: Authoritative numerics rule preserved — composite probability and CI come from `engine-context.ts`, never from the LLM
+- [ ] **REASON-10**: Composite Brier beats non-LLM logistic-36 baseline by ≥ 0.5pp on backfill holdout (CLAUDE.md §8 — non-LLM baseline mandatory; per CS229 "Discriminative Classifiers" + ISL Ch. 4)
 
 #### Phase 25 — Counterfactual reasoning in prompt
 
@@ -145,7 +146,7 @@ Updated by roadmapper agent during ROADMAP.md generation.
 | CORE-ML-15..19 | Phase 21.1 | Planned |
 | CORE-ML-20, CORE-ML-21, CORE-ML-22, CORE-ML-23, CORE-ML-24, CORE-ML-25 | Phase 21.1 | Planned |
 | CORE-ML-26, CORE-ML-27, CORE-ML-28 | Phase 22 | Complete (2026-08-26) |
-| REASON-01..05 | Phase 24 | Planned |
+| REASON-01..05, REASON-10 | Phase 24 | Planned |
 | REASON-06..09 | Phase 25 | Planned |
 | COVERAGE-01..05 | Phase 26 | Planned |
 | COVERAGE-06..10 | Phase 27 | Planned |
@@ -153,7 +154,7 @@ Updated by roadmapper agent during ROADMAP.md generation.
 | DEMO-07..11 | Phase 29 | Planned |
 | CORE-ML-15..19 | Phase 23 (absorbed into Phase 21.1) | Retired |
 
-**Coverage:** 56 v2.0 requirements / 10 phases / 4 capability groups. All mapped.
+**Coverage:** 57 v2.0 requirements / 10 phases / 4 capability groups. All mapped.
 
 ---
 *Requirements defined: 2026-05-03 — derived from PROJECT.md v2.0 vision + research/SUMMARY.md*
