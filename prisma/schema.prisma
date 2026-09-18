@@ -721,3 +721,53 @@ model MagnitudeCalibrationBucket {
   @@index([computed_at(sort: Desc)])
   @@map("magnitude_calibration_buckets")
 }
+
+// ─── Phase 24 — Composite Signal Synthesis (D-01..D-06, REASON-01..05) ─────
+// Append-only snapshot per (classifier_version × regime × cap_class × computed_at).
+// Runtime reads latest row per (classifier_version × regime × cap_class);
+// backtests replay by joining on computed_at <= snapshot_time. Cron writes daily
+// (03:00 UTC) via /api/cron/composite-calibration; NEVER UPDATE.
+//
+// isotonic_curves: JSON blob keyed by SignalClass ('diffusion' | 'technical' |
+//   'institutional' | 'insider') → { x_breakpoints: number[], y_values: number[] }
+//   fit on historical (raw posterior at predict_time, is_sigma_hit_k1 outcome).
+// bootstrap_ci fields: n_resamples + method + point/low/high on composite Brier.
+// reliability_bins: JSON payload matching CorpReliabilityResult shape.
+// status: 'ship-eligible' | 'shadow' | 'degraded' | 'insufficient_data'.
+model CompositeCalibrationSnapshot {
+  id                     String   @id @default(cuid())
+  classifier_version     String   // 'cipher-composite-v1' (locked per D-06)
+  computed_at            DateTime @default(now()) @db.Timestamptz
+
+  // Cell key (regime × cap_class) — one row per cell per computed_at batch.
+  regime                 String   @default("ALL")
+  cap_class              String
+
+  // Fit outputs
+  isotonic_curves        Json
+  n_fit_samples          Int
+  min_classes_active     Int      @default(2)
+
+  // CI on composite Brier (D-02 — BCa row-resample on the holdout window)
+  composite_brier        Float
+  ci_low                 Float
+  ci_high                Float
+  bootstrap_method       String
+  bootstrap_n_resamples  Int
+
+  // Reliability (D-06 — CORP method)
+  reliability_bins       Json
+  ece                    Float
+  n_holdout              Int
+
+  // Ship-gate baseline diagnostics (CLAUDE.md #8 — non-LLM baseline mandatory)
+  baseline_brier_naive_mean   Float?
+  baseline_brier_logistic_36  Float?
+
+  status                 String
+  notes                  String?
+
+  @@index([classifier_version, computed_at(sort: Desc)], map: "idx_composite_cal_ver_at")
+  @@index([classifier_version, regime, cap_class, computed_at(sort: Desc)], map: "idx_composite_cal_cell_at")
+  @@map("composite_calibration_snapshots")
+}
