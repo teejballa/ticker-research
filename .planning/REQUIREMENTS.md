@@ -62,7 +62,7 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 
 #### Phase 24 — Composite signal synthesis
 
-- [ ] **REASON-01**: `engine-context.ts` produces a single composite headline probability synthesized from all 4 signal-class posteriors via per-class isotonic-calibrated weighted combination (not naive averaging)
+- [x] **REASON-01**: `engine-context.ts` produces a single composite headline probability synthesized from all 4 signal-class posteriors via per-class isotonic-calibrated weighted combination (not naive averaging)
 - [ ] **REASON-02**: Composite includes credible interval accounting for per-class correlation (no double-counting correlated signals)
 - [ ] **REASON-03**: Reports surface composite as the headline calibration number, with per-class breakdown beneath
 - [ ] **REASON-04**: Reliability diagram (calibration curve) for the composite published in `/insights`
