@@ -1,0 +1,13 @@
+{
+  "note": "Reference values for composeSignal K=4 all-ACTIVE case.",
+  "inputs": {
+    "diffusion":     { "raw": 0.60, "ess": 100 },
+    "technical":     { "raw": 0.70, "ess": 50 },
+    "institutional": { "raw": 0.80, "ess": 25 },
+    "insider":       { "raw": 0.90, "ess": 25 }
+  },
+  "expected": {
+    "weights": { "diffusion": 0.5, "technical": 0.25, "institutional": 0.125, "insider": 0.125 },
+    "composite_prob": 0.6875
+  }
+}
