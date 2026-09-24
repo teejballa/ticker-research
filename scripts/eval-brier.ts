@@ -389,6 +389,68 @@ export async function runEvalBrier(
     });
   }
 
+  // ─── Phase 24 (REASON-04) — composite classifier reliability card ────────
+  // The 'cipher-composite-v1' classifier does NOT live in SentimentObservation;
+  // its Brier + CORP reliability are pre-computed daily by
+  // /api/cron/composite-calibration into CompositeCalibrationSnapshot. Surface
+  // the latest ALL-regime × large_cap snapshot so /insights/calibration renders
+  // the composite reliability card alongside the other classifiers.
+  const compositeVersions = ['cipher-composite-v1'];
+  for (const compositeVersion of compositeVersions) {
+    const snapshot = await prisma.compositeCalibrationSnapshot.findFirst({
+      where: {
+        classifier_version: compositeVersion,
+        regime: 'ALL',
+        cap_class: 'large_cap',
+        status: { not: 'insufficient_data' },
+      },
+      orderBy: { computed_at: 'desc' },
+    });
+    if (!snapshot) {
+      results.push({
+        computed_at: computedAt,
+        classifier_version: compositeVersion,
+        n: 0,
+        base_rate: 0,
+        brier: 0,
+        reliability: 0,
+        resolution: 0,
+        uncertainty: 0,
+        bs_check: 0,
+        corp: { recalibrated_curve: { x: [], y: [] }, bin_counts: [] },
+        status: 'insufficient_data',
+        ship_gate: { threshold: SHIP_GATE_THRESHOLD, met: false },
+      });
+      continue;
+    }
+    // reliability_bins is stored as the CorpReliabilityResult shape
+    // (recalibrated_curve + bin_counts). Defensive shape check — if the JSON
+    // does not match, surface an insufficient_data row rather than throwing.
+    const rel = snapshot.reliability_bins as unknown as {
+      recalibrated_curve?: { x: number[]; y: number[] };
+      bin_counts?: number[];
+    } | null;
+    const brierPt = snapshot.composite_brier ?? 0;
+    const shipMet = brierPt <= SHIP_GATE_THRESHOLD;
+    results.push({
+      computed_at: computedAt,
+      classifier_version: compositeVersion,
+      n: snapshot.n_holdout,
+      base_rate: 0, // base_rate is not stored per snapshot; UI treats 0 as N/A for composite
+      brier: brierPt,
+      reliability: snapshot.ece,
+      resolution: 0,
+      uncertainty: 0,
+      bs_check: 0,
+      corp: {
+        recalibrated_curve: rel?.recalibrated_curve ?? { x: [], y: [] },
+        bin_counts: rel?.bin_counts ?? [],
+      },
+      status: shipMet ? 'evaluated' : 'ship_gate_failed',
+      ship_gate: { threshold: SHIP_GATE_THRESHOLD, met: shipMet },
+    });
+  }
+
   // Write artifacts.
   const outDir = opts.outDir ?? path.resolve(process.cwd(), 'reports');
   if (!fs.existsSync(outDir)) {
