@@ -67,7 +67,8 @@
     "measure-claim-verification": "npx tsx scripts/measure-claim-verification.ts",
     "rotate-micro-cap": "npx tsx scripts/rotate-micro-cap.ts",
     "check-golden-tickers": "npx tsx scripts/check-golden-tickers.ts",
-    "provider-health-report": "npx tsx scripts/provider-health-report.ts"
+    "provider-health-report": "npx tsx scripts/provider-health-report.ts",
+    "fit:composite-isotonic": "npx tsx scripts/fit-composite-isotonic.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
