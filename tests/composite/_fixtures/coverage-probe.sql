@@ -1,19 +1,21 @@
 -- Pitfall 5 coverage probe: measure current MIN_CLASSES_ACTIVE=2 coverage on live backfill.
--- Run against Neon: SELECT of tickers where ≥2 signal_class rows have patternStatus='ACTIVE'
--- at (cap_class, horizon_days=30) cell. Result MUST be ≥0.50 or D-07 ship gate cannot pass.
--- Note: assumes LearnedPattern.patternStatus column exists per P21.1 (verify before running).
-WITH per_ticker_active AS (
+-- Run against Neon: fraction of cap_class cells where ≥2 distinct signal_class rows have status='ACTIVE'
+-- at horizon_days=30, regime='ALL'. Result MUST be ≥0.50 or D-07 ship gate cannot pass.
+-- Note: LearnedPattern.status column (not patternStatus) per prisma schema — P21.1 5-gate values land in `status`.
+WITH per_cap_active AS (
   SELECT
     cap_class,
     COUNT(DISTINCT signal_class) AS active_class_count
   FROM learned_patterns
   WHERE horizon_days = 30
     AND regime = 'ALL'
-    AND patternStatus = 'ACTIVE'
+    AND status = 'ACTIVE'
   GROUP BY cap_class
 ),
 covered AS (
-  SELECT cap_class FROM per_ticker_active WHERE active_class_count >= 2
+  SELECT cap_class FROM per_cap_active WHERE active_class_count >= 2
 )
 SELECT
-  (SELECT COUNT(*) FROM covered)::float / NULLIF((SELECT COUNT(DISTINCT cap_class) FROM learned_patterns WHERE horizon_days=30), 0) AS coverage_fraction;
+  (SELECT COUNT(*) FROM covered)::float
+  / NULLIF((SELECT COUNT(DISTINCT cap_class) FROM learned_patterns WHERE horizon_days = 30), 0)
+  AS coverage_fraction;

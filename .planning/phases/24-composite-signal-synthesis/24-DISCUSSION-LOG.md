@@ -90,3 +90,24 @@ Areas explicitly left to the planner:
 - Counterfactual leave-one-out deltas (belongs in Phase 25)
 - Composite over 8-source axis (P25+ consideration)
 - Cross-signal contradiction detector (later phase)
+
+---
+
+## Wave 0 coverage probe
+
+**Date:** 2026-09-23
+**SQL:** `tests/composite/_fixtures/coverage-probe.sql`
+**Runner:** operator (Claude, executed via psql against live Neon with operator credentials)
+**Result:** `coverage_fraction = 0.3333333333333333` (below D-07 ship gate threshold of 0.50)
+
+**Decision:** Option (b) — defer ship gate enforcement, keep methodology intact.
+
+**Rationale:**
+- `MIN_CLASSES_ACTIVE = 2` remains pinned in HYPERPARAMETERS.md — the composite-signal design demands ≥2 active classes; a single-signal "composite" is definitionally not a composite.
+- Wave 4's `scripts/check-composite-ship-gate.ts` will correctly refuse promotion until organic coverage rises above 0.50. That is the gate doing its job — no silent relaxation.
+- Coverage will improve organically as P21.1 patternStatus promotions accumulate more `ACTIVE` cells across cap_class dimensions (currently 1 of 3 cap_class cells has ≥2 ACTIVE distinct signal_class rows at horizon_days=30 / regime='ALL').
+- Rejected: (a) drop MIN_CLASSES_ACTIVE to 1 — defeats the point of "composite"; (c) widen regime slice — the LIVE engine reads regime='ALL' at report time, so widening the probe would misrepresent what production actually sees.
+
+**Downstream implication:** Waves 1-4 build the full pipeline; the ship gate blocks production promotion (Wave 4 D-07) until Neon accumulates enough ACTIVE cells. This is expected behavior, not a defect.
+
+**Scaffold fix committed:** `tests/composite/_fixtures/coverage-probe.sql` originally referenced non-existent column `patternStatus`; corrected to `status` (matches Prisma-generated column name; P21.1 5-gate promotion values land in `LearnedPattern.status`).
