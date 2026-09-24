@@ -1240,6 +1240,22 @@ async function generateAnalysis(
         primary_sector_etf:            engineCtx.primary_sector_etf,
         primary_sector_etf_is_current: engineCtx.primary_sector_etf_is_current,
         spy_alpha_hit_rate:            engineCtx.spy_alpha_hit_rate,
+
+        // ── Phase 24 (D-05, REASON-01..05) — Composite headline overwrite ─────
+        // Blocker #1 in 24-REVISION-TODO.md — closes the trust boundary: the LLM
+        // never sees these fields on the Zod schema (schema-negative-shape.unit
+        // .test.ts guards this), and the post-process copy here propagates the
+        // engine-authored numerics into analysis.engine_calibration so Wave 4
+        // renderers (CompositeHeadline + EngineCalibrationPanel) can read them.
+        // Copied unconditionally — even null propagates so the UI can render
+        // the "insufficient history" copy.
+        composite_prob:                  engineCtx.composite_prob,
+        composite_ci_low:                engineCtx.composite_ci_low,
+        composite_ci_high:               engineCtx.composite_ci_high,
+        composite_class_count:           engineCtx.composite_class_count,
+        composite_gate_status:           engineCtx.composite_gate_status,
+        composite_class_weights:         engineCtx.composite_class_weights,
+        composite_per_class_calibrated:  engineCtx.composite_per_class_calibrated,
       };
 
       // Compute signal strength deterministically from engineCtx — never from LLM.
