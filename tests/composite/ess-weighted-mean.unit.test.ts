@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
-// Wave 1 will export composeSignal from @/lib/composite/compose
+import { composeSignal } from '@/lib/composite/compose';
+
 describe('composeSignal — K=4 all ACTIVE (REASON-01)', () => {
   it('returns ESS-weighted calibrated composite', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { composeSignal } = require('@/lib/composite/compose');
     const identityCurve = (x: number) => x;
     const result = composeSignal(
       {
@@ -25,8 +24,6 @@ describe('composeSignal — K=4 all ACTIVE (REASON-01)', () => {
 
 describe('composeSignal — K=3 renormalize (REASON-01, D-03)', () => {
   it('renormalizes weights when one class is EXPLORATORY', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { composeSignal } = require('@/lib/composite/compose');
     const identityCurve = (x: number) => x;
     const result = composeSignal(
       {
@@ -48,8 +45,6 @@ describe('composeSignal — K=3 renormalize (REASON-01, D-03)', () => {
 
 describe('composeSignal — K<2 suppress (D-03)', () => {
   it('returns null composite + insufficient_coverage when K=1', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { composeSignal } = require('@/lib/composite/compose');
     const identityCurve = (x: number) => x;
     const result = composeSignal(
       {
