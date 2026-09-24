@@ -600,6 +600,20 @@ export interface EngineCalibration {
 
   // Deterministically computed from engineCtx post-generation — never from LLM output.
   engine_signal_strength?: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell' | 'insufficient_data';
+
+  // ── Phase 24 (D-05, REASON-01..05) — Composite headline (7 fields) ────────
+  // Authoritative numerics — written by engine-context.ts + copied here by the
+  // gemini-analysis.ts post-process overwrite (Wave 3 Task 24-03-04). LLM
+  // NEVER writes these; Zod schema does NOT contain them (REASON-05 trust
+  // boundary; schema-negative-shape.unit.test.ts guards this). All optional
+  // for back-compat with pre-Phase-24 persisted reports.
+  composite_prob?: number | null;
+  composite_ci_low?: number | null;
+  composite_ci_high?: number | null;
+  composite_class_count?: number;
+  composite_gate_status?: 'active' | 'insufficient_coverage' | 'insufficient_history';
+  composite_class_weights?: Record<'diffusion' | 'technical' | 'institutional' | 'insider', number>;
+  composite_per_class_calibrated?: Record<'diffusion' | 'technical' | 'institutional' | 'insider', number | null>;
 }
 
 // ---- MarketSnapshot — embedded market stats for the report header (Phase 3) ----

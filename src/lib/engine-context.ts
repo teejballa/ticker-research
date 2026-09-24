@@ -35,6 +35,18 @@ import {
   type CapClass,
   type SnapshotInput,
 } from './diffusion-trace';
+// Phase 24 Wave 3 (D-05, REASON-01..05): composite headline computed here at
+// report time from the CompositeCalibrationSnapshot cron output. Snapshot-driven
+// read — zero fit at report time (fit lives in /api/cron/composite-calibration).
+import {
+  composeSignal,
+  widenCi,
+  deserialize,
+  type SignalClass,
+  type IsotonicPredictor,
+  type IsotonicCurveJSON,
+  type ClassInput,
+} from '@/lib/composite';
 
 const yfQuote = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
@@ -330,6 +342,18 @@ export interface EngineContext {
   // Optional so old persisted reports (pre-Wave 5) render the panel unchanged.
   // Numerics are pre-computed here — the UI component does zero math.
   source_mix?: SourceMix;
+
+  // ── Phase 24 (D-05, REASON-01..05): composite headline synthesized from all
+  // 4 signal classes via CompositeCalibrationSnapshot (isotonic curves + BCa CI).
+  // Authored ONLY by engine-context — LLM never sees these fields on the Zod schema.
+  // Wave 3 Task 24-03-04 post-process copies them into analysis.engine_calibration.
+  composite_prob: number | null;
+  composite_ci_low: number | null;
+  composite_ci_high: number | null;
+  composite_class_count: number;
+  composite_gate_status: 'active' | 'insufficient_coverage' | 'insufficient_history';
+  composite_class_weights: Record<'diffusion' | 'technical' | 'institutional' | 'insider', number>;
+  composite_per_class_calibrated: Record<'diffusion' | 'technical' | 'institutional' | 'insider', number | null>;
 }
 
 function sigmoid(z: number): number {
@@ -1083,6 +1107,84 @@ export async function getEngineContextForTicker(
     source_mix = undefined;
   }
 
+  // ── Section 15: Composite Signal Synthesis (Phase 24, D-01..D-06) ──────
+  // Snapshot-driven read. Fit + CI happen in /api/cron/composite-calibration.
+  // Report-time cost = O(K): one deserialize + composeSignal + widenCi.
+  //
+  // Cold-start fallback: if no snapshot for (regime, cap_class), retry with
+  // regime='ALL' (P22 D-09 pattern). Warning #3: both queries exclude
+  // status='insufficient_data' so a starved cell can't defeat the fallback.
+  let composite_prob: number | null = null;
+  let composite_ci_low: number | null = null;
+  let composite_ci_high: number | null = null;
+  let composite_class_count = 0;
+  let composite_gate_status: 'active' | 'insufficient_coverage' | 'insufficient_history' = 'insufficient_history';
+  const composite_class_weights: Record<SignalClass, number> = { diffusion: 0, technical: 0, institutional: 0, insider: 0 };
+  const composite_per_class_calibrated: Record<SignalClass, number | null> = { diffusion: null, technical: null, institutional: null, insider: null };
+
+  try {
+    const compositeSnapshot =
+      (await prisma.compositeCalibrationSnapshot.findFirst({
+        where: {
+          classifier_version: 'cipher-composite-v1',
+          regime: regimeForSourceMix,
+          cap_class,
+          status: { not: 'insufficient_data' },
+        },
+        orderBy: { computed_at: 'desc' },
+      })) ??
+      (await prisma.compositeCalibrationSnapshot.findFirst({
+        where: {
+          classifier_version: 'cipher-composite-v1',
+          regime: 'ALL',
+          cap_class,
+          status: { not: 'insufficient_data' },
+        },
+        orderBy: { computed_at: 'desc' },
+      }));
+
+    if (compositeSnapshot) {
+      const curvesJson = compositeSnapshot.isotonic_curves as unknown as Record<SignalClass, IsotonicCurveJSON | null>;
+      const curves: Record<SignalClass, IsotonicPredictor | null> = {
+        diffusion:     curvesJson.diffusion     ? deserialize(curvesJson.diffusion)     : null,
+        technical:     curvesJson.technical     ? deserialize(curvesJson.technical)     : null,
+        institutional: curvesJson.institutional ? deserialize(curvesJson.institutional) : null,
+        insider:       curvesJson.insider       ? deserialize(curvesJson.insider)       : null,
+      };
+      type ClassInputStatus = ClassInput['status'];
+      // Map current per-class status (CellStatus) into ClassInput['status'] union.
+      // The composite treats non-ACTIVE cells as excluded from the ESS-weighted mean.
+      const toClassInputStatus = (s: CellStatus | null | undefined): ClassInputStatus => {
+        if (s === 'ACTIVE' || s === 'EXPLORATORY' || s === 'EXPLORATORY-WATCH' || s === 'DEPRECATED' || s === 'NO_DATA') return s;
+        return 'NO_DATA';
+      };
+      const result = composeSignal(
+        {
+          diffusion:     { raw_posterior: posterior_mean,                        ess: diffusionCell?.effective_sample_size ?? 0,      status: toClassInputStatus(status) },
+          technical:     { raw_posterior: technical_posterior_mean,              ess: technicalCell?.effective_sample_size ?? 0,      status: toClassInputStatus(technical_status) },
+          institutional: { raw_posterior: institutionalResult.posterior,         ess: institutionalResult.ess,                        status: toClassInputStatus(institutionalResult.status) },
+          insider:       { raw_posterior: insiderResult.posterior,               ess: insiderResult.ess,                              status: toClassInputStatus(insiderResult.status) },
+        },
+        curves,
+        { minClassesActive: 2 },
+      );
+      composite_prob = result.composite_prob;
+      composite_class_count = result.class_count;
+      composite_gate_status = result.gate_status;
+      Object.assign(composite_class_weights, result.class_weights);
+      Object.assign(composite_per_class_calibrated, result.per_class_calibrated);
+
+      if (composite_prob != null) {
+        const widened = widenCi(composite_prob, compositeSnapshot.ci_low, compositeSnapshot.ci_high, composite_class_count);
+        composite_ci_low = widened.low;
+        composite_ci_high = widened.high;
+      }
+    }
+  } catch {
+    // Never fail the report render because composite resolution failed.
+    // The default 'insufficient_history' state is already set above.
+  }
+
   return {
     flow_pattern,
     cap_class,
@@ -1176,6 +1278,18 @@ export async function getEngineContextForTicker(
 
     // ── Phase 22 Wave 5 (D-17, CORE-ML-27) — Source-mix payload ────────────
     source_mix,
+
+    // ── Phase 24 (D-05, REASON-01..05) — Composite headline (7 fields) ─────
+    // Snapshot-driven. LLM never authors these — post-process overwrite in
+    // gemini-analysis.ts (Wave 3 Task 24-03-04) copies them into
+    // analysis.engine_calibration. Zod schema stays clean per REASON-05.
+    composite_prob,
+    composite_ci_low,
+    composite_ci_high,
+    composite_class_count,
+    composite_gate_status,
+    composite_class_weights,
+    composite_per_class_calibrated,
   };
 }
 

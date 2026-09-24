@@ -121,6 +121,16 @@ function buildEngineCtx(overrides: Partial<EngineContext> = {}): EngineContext {
     primary_sector_etf: null,
     primary_sector_etf_is_current: false,
     spy_alpha_hit_rate: null,
+    // Phase 24 (D-05, REASON-01..05) — Composite headline (7 fields). Suppressed
+    // defaults mirror composeSignal's K < MIN_CLASSES_ACTIVE return contract:
+    // no snapshot / no active classes → composite gated, weights zeroed, per-class calibrated null.
+    composite_prob: null,
+    composite_ci_low: null,
+    composite_ci_high: null,
+    composite_class_count: 0,
+    composite_gate_status: 'insufficient_history',
+    composite_class_weights: { diffusion: 0, technical: 0, institutional: 0, insider: 0 },
+    composite_per_class_calibrated: { diffusion: null, technical: null, institutional: null, insider: null },
     ...overrides,
   };
 }
