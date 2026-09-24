@@ -874,3 +874,66 @@ Updated by: Plans 22-00 through 22-05 (2026-06-09 → 2026-08-26)
 | Cell weight formula | `cell_n / (cell_n + λ)` | D-06 |
 | λ range | `[eb_shrinkage_lambda_min, eb_shrinkage_lambda_max]` — set in source-tier-hyperparameters | D-06 |
 | Weight clamp | Clamped softmax — no source weight < floor or > ceiling | D-06 |
+
+## Phase 24 — Composite Signal Synthesis
+
+Locked hyperparameters from CONTEXT D-01..D-07. Change requires CONTEXT amendment.
+
+### MIN_CLASSES_ACTIVE (D-03)
+- **Value:** 2
+- **Semantics:** minimum ACTIVE-status classes required for composite emission
+- **Rationale:** K=1 is not a composite (it's just that one class); K=2 is the smallest meaningful weighted combination
+- **Referenced by:** `src/lib/composite/compose.ts` `composeSignal()`
+
+### CI_WIDEN_FACTOR (D-03)
+- **Formula:** `√(4/K)` where K = active class count
+- **Values:** K=4 → 1.00 (no widening), K=3 → 1.155, K=2 → 1.414, K=1 → suppressed
+- **Semantics:** CI half-width multiplier to reflect fewer independent classes
+- **Referenced by:** `src/lib/composite/weights.ts` `widenCi()`
+- **Golden-vector test:** `weights.test.ts`
+
+### MIN_N_FIT_PER_CLASS (isotonic curve)
+- **Value:** 50
+- **Semantics:** minimum (raw_posterior, outcome) pairs per class per (regime × cap_class) cell to fit an isotonic curve
+- **Fallback below threshold:** use `regime='ALL'` cell's curve for that class (cold-start chain matching P22 D-09)
+- **Referenced by:** `src/lib/composite/isotonic-fit.ts`
+
+### MIN_N_HOLDOUT (composite reliability + Brier)
+- **Value:** 100
+- **Semantics:** minimum holdout rows before composite Brier + CORP reliability diagram are trusted
+- **Fallback:** snapshot written with `status='insufficient_data'`; UI shows "insufficient history"
+- **Precedent:** T-20-C-02-02 uses n=100 for per-classifier reliability
+
+### BOOTSTRAP_N_RESAMPLES (D-02)
+- **Value:** 1000
+- **Semantics:** BCa bootstrap resamples for composite CI
+- **Rationale:** matches P21.1 usage; sufficient for BCa stability at n≥100 rows per cell; validated to fit `maxDuration=300` on largest cell in Wave 0 prototype
+- **Referenced by:** `/api/cron/composite-calibration/route.ts`
+
+### CI_CRON_SCHEDULE
+- **Value:** `0 3 * * *` (daily 03:00 UTC)
+- **Isotonic refit sub-schedule:** `dayOfWeek === 1` (Mondays only) — internal guard inside route
+- **Rationale:** CI drifts daily as outcomes close; isotonic curves are stable — weekly refit sufficient
+- **Referenced by:** `vercel.json` crons array
+
+### CIPHER_COMPOSITE_CLASSIFIER_VERSION (D-06)
+- **Value:** `'cipher-composite-v1'`
+- **Semantics:** classifier_version used for reliability diagram publication AND CompositeCalibrationSnapshot rows
+- **Bumping:** increment to `v2` on any material change to weighting scheme, calibration algorithm, or gate logic — triggers auto-refit + reliability diagram regeneration
+
+### SHIP_GATE_BRIER_MAX (D-07)
+- **Value:** 0.24
+- **Precedent:** same as `scripts/eval-brier.ts` per-classifier gate (T-20-C-02-01)
+
+### SHIP_GATE_ECE_MAX (D-07)
+- **Value:** 0.05
+- **Precedent:** aligned with CLAUDE.md load-bearing rule #2 (calibration is first-class)
+
+### SHIP_GATE_COVERAGE_MIN (D-07)
+- **Value:** 0.50
+- **Semantics:** ≥50% of tickers must have ≥2 classes ACTIVE (i.e., composite emits a non-null probability for ≥50% of the universe)
+
+### SHIP_GATE_BASELINE_LIFT_MIN (CLAUDE.md #8)
+- **Value:** 0.005 (Brier score)
+- **Semantics:** composite Brier must undercut BOTH naive-mean baseline AND logistic-36 baseline by at least 0.005 on the same holdout window
+- **Referenced by:** `scripts/check-composite-ship-gate.ts`
