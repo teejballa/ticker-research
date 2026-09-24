@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fitAndSerialize, deserialize } from '@/lib/composite/isotonic-serde';
+import { fitPerClassCurves, type CompositeRow } from '@/lib/composite/isotonic-fit';
 import goldenFit from './_fixtures/golden-isotonic.json';
 
 describe('fitAndSerialize (Wave 1)', () => {
@@ -20,10 +21,17 @@ describe('fitAndSerialize (Wave 1)', () => {
 
 describe('fitPerClassCurves — look-ahead defense (CLAUDE.md #6)', () => {
   it('rejects rows where resolved_at <= predicted_at + horizon', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { fitPerClassCurves } = require('@/lib/composite/isotonic-fit');
-    const rows = [
-      { predicted_at: new Date('2026-01-01'), resolved_at: new Date('2026-01-10'), horizon_days: 30, raw_posteriors: { diffusion: 0.5 }, outcome: 1 },
+    const rows: CompositeRow[] = [
+      {
+        ticker: 'AAPL',
+        predicted_at: new Date('2026-01-01'),
+        resolved_at: new Date('2026-01-10'),  // 9 days later — less than 30d horizon (LEAK)
+        horizon_days: 30,
+        raw_posteriors: { diffusion: 0.5, technical: null, institutional: null, insider: null },
+        ess: { diffusion: 50, technical: 0, institutional: 0, insider: 0 },
+        status: { diffusion: 'ACTIVE', technical: 'NO_DATA', institutional: 'NO_DATA', insider: 'NO_DATA' },
+        outcome: 1,
+      },
     ];
     // Row should be filtered because resolved_at (Jan 10) < predicted_at + 30d (Jan 31)
     expect(() => fitPerClassCurves(rows, { minN: 50, horizonDays: 30 })).toThrow(/insufficient|no valid|leak/i);
