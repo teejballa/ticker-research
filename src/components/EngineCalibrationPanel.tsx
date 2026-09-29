@@ -27,6 +27,8 @@ import type { EngineCalibration, HorizonCalibration, InstitutionalBucket, Inside
 import { WatchBadge } from './WatchBadge';
 import { SourceMixExpanded } from './SourceMixExpanded';
 import { MagnitudeCalibrationTile } from './MagnitudeCalibrationTile';
+// Phase 24 Wave 4 (D-04, REASON-03) — composite headline atop panel body
+import { CompositeHeadline } from './CompositeHeadline';
 
 // ── Phase 18 (Plan 18-08) — local type widening ────────────────────────────
 //
@@ -1315,6 +1317,24 @@ export function EngineCalibrationPanel({ calibration }: EngineCalibrationPanelPr
           </p>
         </div>
       )}
+
+      {/* Phase 24 (D-04, REASON-03) — Composite headline: visual anchor above per-class breakdown. */}
+      <CompositeHeadline
+        prob={calibration.composite_prob ?? null}
+        ciLow={calibration.composite_ci_low ?? null}
+        ciHigh={calibration.composite_ci_high ?? null}
+        classCount={calibration.composite_class_count ?? 0}
+        gateStatus={calibration.composite_gate_status ?? 'insufficient_history'}
+      />
+
+      {/* Phase 24 (D-04) — Eyebrow reframes the existing 4-tile QuadClassPanel
+          as the per-class breakdown BENEATH the composite headline. */}
+      <div
+        data-testid="per-class-breakdown-eyebrow"
+        className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant mb-3 mt-2"
+      >
+        Per-Class Breakdown
+      </div>
 
       {/* Phase 17: quad-class panel + horizon table OR legacy single-column */}
       {showQuadClass ? (
