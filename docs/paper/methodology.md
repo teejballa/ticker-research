@@ -510,3 +510,49 @@ Weights are normalized via clamped softmax so no single source dominates and the
 - Ang, A. & Bekaert, G. (2002). "Regime Switches in Interest Rates." *Journal of Business & Economic Statistics* 20(2):163–182.
 - Benjamini, Y. & Bogomolov, M. (2014). "Selective inference on multiple families of hypotheses." *Journal of the Royal Statistical Society: Series B* 76(1):297–318.
 - Benjamini, Y. & Yekutieli, D. (2001). "The control of the false discovery rate in multiple testing under dependency." *Annals of Statistics* 29(4):1165–1188.
+
+## Composite Signal Synthesis (Phase 24)
+
+### Motivation
+
+Cipher computes four independent per-class posteriors — diffusion, technical, institutional, insider — each measuring a distinct dimension of a ticker's near-term trajectory. Prior to Phase 24, only the diffusion posterior was surfaced as the report's headline calibration number, leaving the other three classes as isolated tiles. Phase 24 introduces a single **composite signal** that unifies all four into one calibrated headline probability with a confidence band.
+
+### Method
+
+The composite signal is defined as:
+
+$$
+p_{\text{composite}} = \sum_{k \in \mathcal{A}} w_k \cdot p_k^{\text{cal}}
+$$
+
+where $\mathcal{A}$ is the set of classes with `patternStatus = ACTIVE` (per Phase 21.1 gating), $w_k = \text{ESS}_k / \sum_{j \in \mathcal{A}} \text{ESS}_j$ is the ESS-normalized weight, and $p_k^{\text{cal}}$ is the raw per-class posterior after per-class isotonic calibration.
+
+**Per-class calibration** uses the Pool-Adjacent-Violators (PAV) isotonic regression fit on historical `(raw posterior at predict time, is_sigma_hit_k1 outcome)` triples with strict time-series discipline — rows are only eligible if `PriceOutcome.resolved_at ≥ Report.analyzed_at + 30d` (already-resolved) AND `Report.analyzed_at < fit_asOf − 30d` (label-leakage buffer, CLAUDE.md load-bearing rule #6). Calibration follows the framework of ISL Ch. 4 (Classification / Calibration) and Bröcker & Smith (2007) for reliability-diagram sampling variance.
+
+**Reliability diagrams** use the CORP method (Dimitriadis, Gneiting & Jordan 2021), which employs PAV isotonic regression rather than equal-width binning to avoid arbitrary bucket choices. Expected Calibration Error (ECE) is computed as the sample-weighted mean absolute deviation between binned prediction means and empirical outcome frequencies, per CS229 "Evaluation Metrics."
+
+**Confidence intervals** on the composite Brier score use the BCa (bias-corrected-and-accelerated) bootstrap with $B = 1000$ resamples and seed = 42 for reproducibility. Row-level resampling automatically preserves the per-class correlation structure without requiring explicit correlation-matrix estimation. Methodology follows Efron (1987) and ISL Ch. 5 (Resampling Methods).
+
+**Fallback gate.** If fewer than $K_{\min} = 2$ classes are ACTIVE for a ticker, the composite is suppressed (`gate_status = insufficient_coverage`) rather than emitted with low K. When $2 \le K < 4$, the CI is widened by a factor of $\sqrt{4/K}$ to reflect the reduced number of independent signal classes.
+
+### Ship Gate
+
+Following CLAUDE.md load-bearing rules #2 (calibration first-class) and #8 (non-LLM baseline mandatory), the composite must clear five gates on the backfill holdout window before shipping:
+
+1. Composite Brier ≤ 0.24
+2. Composite ECE ≤ 0.05
+3. ≥ 50% of universe cells emit a composite (proxy for the "≥ 50% of universe tickers with $K \ge 2$" definition)
+4. Composite Brier < naive-equal-weight-mean baseline Brier − 0.005
+5. Composite Brier < P21.1 logistic-36 baseline Brier − 0.005
+
+The naive-equal-weight-mean baseline isolates the value contribution of ESS-weighting — if the composite does not beat an unweighted mean, ESS-weighting adds no value. The logistic-36 baseline (36-feature logistic regression from Phase 21.1, per ISL Ch. 4) satisfies CLAUDE.md #8 literally — the LLM-plus-calibration pipeline must beat a plain logistic regression on the same features by a non-trivial Brier lift.
+
+Enforcement lives in `scripts/check-composite-ship-gate.ts` (standalone; runnable via `npm run check-composite-ship-gate`) and is exercised by the daily composite calibration cron. The `tests/composite/baseline-benchmark.int.test.ts` integration test asserts Gates 4 and 5 hold across all ship-eligible / shadow snapshots at the plan boundary.
+
+### References
+
+- CS229 (Stanford) main notes — "Evaluation Metrics" (reliability diagrams, ECE).
+- James, G., Witten, D., Hastie, T., Tibshirani, R. (2021). *An Introduction to Statistical Learning*, 2nd ed. — Chapter 4 (Classification / Calibration), Chapter 5 (Resampling Methods, Bootstrap).
+- Bröcker, J. & Smith, L. A. (2007). "Increasing the reliability of reliability diagrams." *Weather and Forecasting* 22(3):651–661.
+- Dimitriadis, T., Gneiting, T., & Jordan, A. I. (2021). "Stable reliability diagrams for probabilistic classifiers." *PNAS* 118(8):e2016191118.
+- Efron, B. (1987). "Better bootstrap confidence intervals." *Journal of the American Statistical Association* 82(397):171–185.

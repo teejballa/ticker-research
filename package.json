@@ -61,6 +61,7 @@
     "check-lm-lexicon-age": "npx tsx scripts/check-lm-lexicon-age.ts",
     "check-feature-asof": "npx tsx scripts/check-feature-asof.ts",
     "check-firecrawl-removed": "npx tsx scripts/check-firecrawl-removed.ts",
+    "check-composite-ship-gate": "npx tsx scripts/check-composite-ship-gate.ts",
     "audit-fairness": "npx tsx scripts/audit-fairness.ts",
     "eval-citation-coverage": "npx tsx scripts/eval-citation-coverage.ts",
     "check-citation-coverage": "npx tsx scripts/eval-citation-coverage.ts --ci",
