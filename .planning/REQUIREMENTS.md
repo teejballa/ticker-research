@@ -64,7 +64,7 @@ Phase mapping enforces the build order from `research/SUMMARY.md`. Pitfall-preve
 
 - [x] **REASON-01**: `engine-context.ts` produces a single composite headline probability synthesized from all 4 signal-class posteriors via per-class isotonic-calibrated weighted combination (not naive averaging)
 - [x] **REASON-02**: Composite includes credible interval accounting for per-class correlation (no double-counting correlated signals)
-- [ ] **REASON-03**: Reports surface composite as the headline calibration number, with per-class breakdown beneath
+- [x] **REASON-03**: Reports surface composite as the headline calibration number, with per-class breakdown beneath
 - [x] **REASON-04**: Reliability diagram (calibration curve) for the composite published in `/insights`
 - [x] **REASON-05**: Authoritative numerics rule preserved — composite probability and CI come from `engine-context.ts`, never from the LLM
 - [x] **REASON-10**: Composite Brier beats non-LLM logistic-36 baseline by ≥ 0.5pp on backfill holdout (CLAUDE.md §8 — non-LLM baseline mandatory; per CS229 "Discriminative Classifiers" + ISL Ch. 4)
