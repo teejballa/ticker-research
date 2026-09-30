@@ -99,12 +99,32 @@ function computeLogisticBaselineBrier(rows: CompositeRow[]): number | null {
   );
 }
 
-function deriveStatus(brier_pt: number, ece: number, n_holdout: number): string {
+// MJ-01 fix: include baseline-lift check so `status='ship-eligible'` in the DB
+// matches what `scripts/check-composite-ship-gate.ts` (Gates 4 + 5) actually
+// approves. Previously status ignored baseline lift, so an operator querying
+// ship-eligible cells got a superset of what the CLI would approve.
+//
+// A `null` baseline_logistic is NOT passing (per BL-02 pragmatic path): the
+// gate script still labels the SKIP visibly, but the DB status cannot claim
+// ship-eligible without a real logistic lift number.
+function deriveStatus(
+  brier_pt: number,
+  ece: number,
+  n_holdout: number,
+  baseline_naive: number | null,
+  baseline_logistic: number | null,
+): string {
   if (n_holdout < MIN_N_HOLDOUT) return 'insufficient_data';
   const brierOk = brier_pt <= 0.24;
   const eceOk = ece <= 0.05;
-  if (brierOk && eceOk) return 'ship-eligible';
-  if (brierOk || eceOk) return 'shadow';
+  const naiveLiftOk =
+    baseline_naive == null || baseline_naive - brier_pt >= 0.005;
+  const logisticLiftOk =
+    baseline_logistic == null
+      ? false // per BL-02 — null is not passing at DB status level
+      : baseline_logistic - brier_pt >= 0.005;
+  if (brierOk && eceOk && naiveLiftOk && logisticLiftOk) return 'ship-eligible';
+  if ((brierOk || eceOk) && naiveLiftOk) return 'shadow';
   return 'degraded';
 }
 
@@ -121,11 +141,15 @@ export async function GET(request: NextRequest) {
   for (const regime of REGIMES) {
     for (const cap_class of CAP_CLASSES) {
       try {
+        // Train/holdout separation (BL-01): purge fit rows that would leak into
+        // the holdout window (CLAUDE.md #1, ISL Ch. 5 forward-chaining split).
         const fitRows = await loadFitDataset({
           asOf: computedAt,
           regime,
           cap_class,
           horizonDays: HORIZON_DAYS,
+          holdoutEndDate: new Date(computedAt.getTime() - HORIZON_DAYS * 86_400_000),
+          holdoutWindowDays: HOLDOUT_WINDOW_DAYS,
         });
         const holdRows = await loadHoldoutDataset({
           asOf: computedAt,
@@ -271,7 +295,13 @@ export async function GET(request: NextRequest) {
         const baseline_brier_naive_mean = naiveMeanBrier(holdRows);
         const baseline_brier_logistic_36 = computeLogisticBaselineBrier(holdRows);
 
-        const status = deriveStatus(composite_brier, ece, holdRows.length);
+        const status = deriveStatus(
+          composite_brier,
+          ece,
+          holdRows.length,
+          baseline_brier_naive_mean,
+          baseline_brier_logistic_36,
+        );
 
         await prisma.compositeCalibrationSnapshot.create({
           data: {

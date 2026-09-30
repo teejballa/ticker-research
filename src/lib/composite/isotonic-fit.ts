@@ -49,16 +49,33 @@ export function brier(preds: Array<{ p: number; y: number }>): number {
  *
  * Look-ahead defense (CLAUDE.md #6): outcome must be recorded AT OR AFTER
  * predicted_at + horizonDays. Rows that fail this are filtered out.
+ *
+ * Train/holdout separation (CLAUDE.md #1, ISL Ch. 5): when `holdoutEndDate` is
+ * supplied, fit rows are purged of any `analyzed_at >= (holdoutEndDate - windowDays)`
+ * so the fit window never overlaps the holdout window. This is the
+ * forward-chaining walk-forward split — random k-fold is NEVER acceptable for
+ * time-series labels.
  */
 export async function loadFitDataset(opts: {
   asOf: Date;
   regime: string;
   cap_class: string;
   horizonDays: number;
+  holdoutEndDate?: Date;
+  holdoutWindowDays?: number;
 }): Promise<CompositeRow[]> {
   const cutoff = new Date(opts.asOf.getTime() - opts.horizonDays * MS_PER_DAY);
+  // Train/holdout separation: if a holdout window is defined, fit rows must end
+  // strictly before holdoutStart to prevent leakage (CLAUDE.md #1).
+  const holdoutStart =
+    opts.holdoutEndDate != null && opts.holdoutWindowDays != null
+      ? new Date(opts.holdoutEndDate.getTime() - opts.holdoutWindowDays * MS_PER_DAY)
+      : null;
+  const fitUpperBound = holdoutStart != null && holdoutStart.getTime() < cutoff.getTime()
+    ? holdoutStart
+    : cutoff;
   const reports = await prisma.report.findMany({
-    where: { analyzed_at: { lt: cutoff } },
+    where: { analyzed_at: { lt: fitUpperBound } },
     select: {
       id: true,
       ticker: true,
@@ -124,7 +141,16 @@ export async function loadFitDataset(opts: {
 
 /**
  * Load holdout rows (for reliability + Brier evaluation).
- * Same shape/source as fit; caller separates by asOf window.
+ *
+ * BL-01 fix: previous version defined `startAt = asOf - windowDays*ms` and
+ * filtered rows from `loadFitDataset` whose upper bound was `asOf - horizonDays*ms`.
+ * With `HOLDOUT_WINDOW_DAYS == HORIZON_DAYS` (both 30), the two boundaries
+ * collapsed and every holdout window was empty by construction. The correct
+ * semantics:
+ *   holdoutEnd   = asOf - horizonDays        (last predicted_at whose outcome is realized)
+ *   holdoutStart = holdoutEnd - windowDays   (start of the holdout window)
+ * Fit rows are then required to satisfy `predicted_at < holdoutStart` — that
+ * enforcement lives in `loadFitDataset` via `holdoutEndDate` / `holdoutWindowDays`.
  */
 export async function loadHoldoutDataset(opts: {
   asOf: Date;
@@ -133,9 +159,17 @@ export async function loadHoldoutDataset(opts: {
   cap_class: string;
   horizonDays: number;
 }): Promise<CompositeRow[]> {
-  const startAt = new Date(opts.asOf.getTime() - opts.windowDays * MS_PER_DAY);
-  const rows = await loadFitDataset({ asOf: opts.asOf, regime: opts.regime, cap_class: opts.cap_class, horizonDays: opts.horizonDays });
-  return rows.filter((r) => r.predicted_at >= startAt);
+  const holdoutEnd = new Date(opts.asOf.getTime() - opts.horizonDays * MS_PER_DAY);
+  const holdoutStart = new Date(holdoutEnd.getTime() - opts.windowDays * MS_PER_DAY);
+  const rows = await loadFitDataset({
+    asOf: opts.asOf,
+    regime: opts.regime,
+    cap_class: opts.cap_class,
+    horizonDays: opts.horizonDays,
+  });
+  return rows.filter(
+    (r) => r.predicted_at >= holdoutStart && r.predicted_at < holdoutEnd,
+  );
 }
 
 /**
