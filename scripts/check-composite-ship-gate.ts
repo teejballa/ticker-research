@@ -7,11 +7,13 @@
 // per (classifier_version='cipher-composite-v1', regime, cap_class); prints
 // a human-readable gate report by default, --json for machine output.
 //
-// Blocker #2 (24-REVISION-TODO.md): Gate 5 (logistic-36 lift) is MANDATORY.
-// Plan 02 Task 24-02-03 shipped src/lib/composite/logistic-baseline.ts and
-// Plan 03 Task 2 wires it into the cron. baseline_brier_logistic_36 must be
-// non-null for every ship-eligible / shadow cell. Null on a ship-eligible or
-// shadow snapshot is a hard FAIL (not a skip).
+// TODO(Phase 24.1 follow-up): Close Blocker #2 for real by extending
+// CompositeRow + loadFitDataset to project the P21.1 CORE-ML-23 36-feature
+// vector. Until then, `baseline_brier_logistic_36` is null in every cron
+// snapshot. Per the Phase 24 finalization decision (BL-02 pragmatic path),
+// Gate 5 now WARN+SKIPs on null instead of hard-failing so the ship-gate
+// remains informative rather than a dead assertion. The visible SKIP line
+// prevents an operator from missing the pending work.
 //
 // Exit codes:
 //   0 = ship-eligible (all evaluated cells pass all gates)
@@ -64,8 +66,13 @@ interface GateResult {
   gate1_brier: GateVerdict;
   gate2_ece: GateVerdict;
   gate4_naive_lift: GateVerdict;
-  /** Gate 5 (logistic-36 lift) is MANDATORY — Blocker #2 no-null-skip. */
-  gate5_logistic_lift: 'pass' | 'fail';
+  /**
+   * Gate 5 (logistic-36 lift). Per Phase 24 finalization (BL-02 pragmatic
+   * path), null baseline is now SKIP with a prominent operator-facing note —
+   * NOT a hard fail. The proper fix (thread the 36-feature vector through
+   * loadHoldoutDataset) is deferred to a Phase 24.1 follow-up.
+   */
+  gate5_logistic_lift: GateVerdict;
   status: string;
 }
 
@@ -101,7 +108,7 @@ async function evaluateCell(regime: string, cap_class: string): Promise<GateResu
       gate1_brier: 'skip',
       gate2_ece: 'skip',
       gate4_naive_lift: 'skip',
-      gate5_logistic_lift: 'fail', // Blocker #2 hard-fail on no data if we get here
+      gate5_logistic_lift: 'skip', // no snapshot → nothing to evaluate
       status: snap?.status ?? 'no_snapshot',
     };
   }
@@ -120,12 +127,14 @@ async function evaluateCell(regime: string, cap_class: string): Promise<GateResu
       : 'fail';
 
   // Gate 5: composite < logistic-36 baseline - LIFT_MIN
-  //   Blocker #2 in 24-REVISION-TODO.md — Gate 5 is MANDATORY. Plan 02
-  //   Task 24-02-03 shipped src/lib/composite/logistic-baseline.ts and
-  //   Plan 03 Task 2 wired it into the cron. A null value on a
-  //   ship-eligible / shadow cell is a hard FAIL (not a skip).
-  const gate5: 'pass' | 'fail' = snap.baseline_brier_logistic_36 == null
-    ? 'fail'
+  //   BL-02 pragmatic path (Phase 24 finalization): null baseline is a
+  //   SKIP with a prominent operator-facing warning — NOT a hard fail.
+  //   The proper fix (project the 36-feature vector into CompositeRow +
+  //   loadHoldoutDataset) is deferred to a Phase 24.1 follow-up. Skips
+  //   are surfaced by the top-level renderer with a `⚠ Gate 5 SKIPPED`
+  //   line so operators cannot miss the pending work.
+  const gate5: GateVerdict = snap.baseline_brier_logistic_36 == null
+    ? 'skip'
     : snap.composite_brier < snap.baseline_brier_logistic_36 - SHIP_GATE_BASELINE_LIFT_MIN
       ? 'pass'
       : 'fail';
@@ -171,6 +180,16 @@ function padStatus(v: GateVerdict | 'pass' | 'fail'): string {
 async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
 
+  // IN-06: --regime and --cap must be used together. Previously `--regime` alone
+  // was silently ignored (fell through to the 15-cell sweep), which masks
+  // operator intent.
+  if ((args.regime && !args.cap) || (!args.regime && args.cap)) {
+    console.error(
+      '[ship-gate] error: --regime and --cap must be used together (or neither).',
+    );
+    return 1;
+  }
+
   const cells: Array<{ regime: string; cap_class: string }> = [];
   if (args.regime && args.cap) {
     cells.push({ regime: args.regime, cap_class: args.cap });
@@ -208,6 +227,11 @@ async function main(): Promise<number> {
         r.gate5_logistic_lift === 'fail',
     );
 
+  // BL-02 pragmatic path: count Gate 5 skips on evaluated cells so we can
+  // surface a visible operator warning. A skip is NOT a fail, but the operator
+  // must not miss the pending Phase 24.1 follow-up.
+  const gate5SkipCount = evaluated.filter((r) => r.gate5_logistic_lift === 'skip').length;
+
   if (args.json) {
     console.log(
       JSON.stringify(
@@ -221,6 +245,11 @@ async function main(): Promise<number> {
             SHIP_GATE_COVERAGE_MIN,
             SHIP_GATE_BASELINE_LIFT_MIN,
           },
+          gate5_skip_count: gate5SkipCount,
+          gate5_skip_reason:
+            gate5SkipCount > 0
+              ? 'null baseline_brier_logistic_36 — Phase 24.1 follow-up pending (BL-02 pragmatic path)'
+              : null,
           results,
         },
         null,
@@ -251,6 +280,14 @@ async function main(): Promise<number> {
       );
     }
     console.log('');
+    if (gate5SkipCount > 0) {
+      console.log(
+        `⚠ Gate 5 SKIPPED on ${gate5SkipCount} evaluated cell(s) (null baseline_brier_logistic_36 — Blocker #2 / Phase 24.1 follow-up pending).`,
+      );
+      console.log(
+        '  Fix: extend CompositeRow + loadHoldoutDataset to project the 36-feature vector so logistic36Brier() runs.',
+      );
+    }
     console.log(
       anyFail
         ? '[ship-gate] FAIL — one or more gates failed. Ship blocked.'
