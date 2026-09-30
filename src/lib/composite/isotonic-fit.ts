@@ -214,6 +214,15 @@ export function fitPerClassCurves(
  * Wraps bootstrapBCa from @/lib/evaluation. For each resampled row, invokes
  * composeSignal to get the ESS-weighted composite posterior, then computes
  * Brier over the resampled predictions.
+ *
+ * MJ-02 note: `brier([])` returns `NaN` (see line 42). If a resample drops
+ * every row (all classes NO_DATA or below minClassesActive after the
+ * ESS-weighted gate), the resulting per-resample Brier is NaN — this
+ * propagates through bootstrapBCa into `ci.low` / `ci.high`. Callers MUST
+ * guard `Number.isFinite(ci.low && ci.high)` before persisting into the
+ * non-nullable Float columns on CompositeCalibrationSnapshot. The cron
+ * (`src/app/api/cron/composite-calibration/route.ts`) enforces this and
+ * marks the snapshot `status: 'insufficient_data'` when NaN is detected.
  */
 export function computeCompositeCi(
   rows: CompositeRow[],

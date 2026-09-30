@@ -295,6 +295,44 @@ export async function GET(request: NextRequest) {
         const baseline_brier_naive_mean = naiveMeanBrier(holdRows);
         const baseline_brier_logistic_36 = computeLogisticBaselineBrier(holdRows);
 
+        // MJ-02: guard NaN. `brier([])` returns NaN, and empty-preds resamples
+        // in computeCompositeCi propagate NaN into ci.low/ci.high. Neon's
+        // non-nullable Float columns will accept NaN but downstream widenCi()
+        // + JSON serialization can silently break the UI. If any of the
+        // core numeric fields are non-finite, degrade the snapshot to
+        // insufficient_data rather than persist garbage.
+        if (
+          !Number.isFinite(composite_brier) ||
+          !Number.isFinite(ci.low) ||
+          !Number.isFinite(ci.high)
+        ) {
+          await prisma.compositeCalibrationSnapshot.create({
+            data: {
+              classifier_version: CLASSIFIER_VERSION,
+              computed_at: computedAt,
+              regime,
+              cap_class,
+              isotonic_curves: {} as Prisma.InputJsonValue,
+              n_fit_samples: fitRows.length,
+              min_classes_active: 2,
+              composite_brier: 0,
+              ci_low: 0,
+              ci_high: 0,
+              bootstrap_method: 'bca',
+              bootstrap_n_resamples: 0,
+              reliability_bins: {} as Prisma.InputJsonValue,
+              ece: 0,
+              n_holdout: holdRows.length,
+              baseline_brier_naive_mean: null,
+              baseline_brier_logistic_36: null,
+              status: 'insufficient_data',
+              notes: `NaN in Brier/CI: brier=${composite_brier} ci_low=${ci.low} ci_high=${ci.high} — see MJ-02.`,
+            },
+          });
+          snapshotsInsufficient++;
+          continue;
+        }
+
         const status = deriveStatus(
           composite_brier,
           ece,
@@ -315,7 +353,11 @@ export async function GET(request: NextRequest) {
             composite_brier,
             ci_low: ci.low,
             ci_high: ci.high,
-            bootstrap_method: (ci as unknown as { method?: string }).method ?? 'bca',
+            // MJ-03: bootstrapBCa's return shape has no `.method` field — the
+            // `?? 'bca'` fallback always fired. Hardcode the literal since
+            // computeCompositeCi is BCa-only. If future variants are added,
+            // thread through opts explicitly rather than through a phantom cast.
+            bootstrap_method: 'bca',
             bootstrap_n_resamples: BOOTSTRAP_N_RESAMPLES,
             reliability_bins: reliability as unknown as Prisma.InputJsonValue,
             ece,
