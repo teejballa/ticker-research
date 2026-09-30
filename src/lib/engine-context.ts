@@ -1180,9 +1180,12 @@ export async function getEngineContextForTicker(
         composite_ci_high = widened.high;
       }
     }
-  } catch {
-    // Never fail the report render because composite resolution failed.
-    // The default 'insufficient_history' state is already set above.
+  } catch (e) {
+    // IN-05: surface composite resolution errors to logs. Never fail the
+    // report render (the default 'insufficient_history' state is already
+    // set above), but silent swallowing was hiding real snapshot-shape
+    // regressions from operators.
+    console.error('[engine-context] composite resolution failed:', e);
   }
 
   return {

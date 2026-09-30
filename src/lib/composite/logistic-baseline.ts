@@ -189,7 +189,23 @@ export function logistic36Brier(
   const evalRows = rows.slice(evalWindow.eval_start, evalWindow.eval_end);
   if (fitRows.length === 0) throw new Error('logistic36Brier: empty fit window');
   if (evalRows.length === 0) throw new Error('logistic36Brier: empty eval window');
+  // WR-01: sample-size floor. IRLS produces a singular XᵀWX when N ≤ P (P=37).
+  // The inverse() call silently sets `converged=false` and returns a meaningless
+  // Brier. Refuse to fit when the fit window is too small to be identifiable.
+  if (fitRows.length < N_FEATURES + 10) {
+    throw new Error(
+      `logistic36Brier: fit window too small for ${N_FEATURES} features (n=${fitRows.length} < ${N_FEATURES + 10}). Singular systems produce meaningless Brier.`,
+    );
+  }
   const model = fitLogisticBaseline(fitRows);
+  // WR-01: refuse to return Brier when the IRLS solver failed to converge.
+  // An unconverged model's coefficients are undefined behavior — do NOT let
+  // downstream ship-gate arithmetic operate on it.
+  if (!model.converged) {
+    throw new Error(
+      `logistic36Brier: IRLS failed to converge after ${model.iterations} iterations — refusing to return Brier from an unconverged model.`,
+    );
+  }
   let sse = 0;
   for (const r of evalRows) {
     const p = predictLogisticBaseline(model, r);

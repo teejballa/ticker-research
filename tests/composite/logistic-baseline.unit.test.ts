@@ -28,8 +28,18 @@ describe('fitLogisticBaseline — deterministic on golden 36-feature vector (CLA
 
 describe('logistic36Brier — forward-chaining CV (CLAUDE.md #1 — never random k-fold)', () => {
   it('returns a numeric Brier score on a fit/eval window split', () => {
+    // Well-conditioned synthetic design: each column is a distinct
+    // deterministic hash of (i, k). WR-01 (converged-model gate) requires the
+    // design matrix to have full column rank; previous version used
+    // `((i + k) % 100) / 100` which produces a rank-1 pathological system
+    // (every column is a shifted copy of the same sequence), causing IRLS
+    // to hit the 50-iteration cap without converging.
     const rows: LogisticRow[] = Array.from({ length: 300 }, (_, i) => ({
-      features: Array.from({ length: 36 }, (_, k) => ((i + k) % 100) / 100),
+      features: Array.from({ length: 36 }, (_, k) => {
+        // Deterministic pseudo-random per (i, k) — no PRNG state, no test flake.
+        const h = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
+        return h - Math.floor(h); // ∈ [0, 1)
+      }),
       outcome: (i % 3 === 0 ? 1 : 0) as 0 | 1,
       predicted_at: new Date(2026, 0, 1 + i), // forward-chaining timestamps
     }));
